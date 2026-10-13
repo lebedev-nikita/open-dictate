@@ -81,7 +81,9 @@ Before sign-in can work, configure one Google Cloud project:
 3. Create a **Desktop app** OAuth client in the **same project**. On macOS enter
    its client ID and secret in Settings → Google Drive. The ID stays in local
    preferences; the secret and refresh token use device-only, non-synchronizing
-   Keychain storage. Do not commit credentials. Google's Desktop client secret
+   Keychain storage. On reconnection, a blank secret reuses the saved secret only
+   when the client ID matches; entering a secret overrides the saved one after
+   successful authorization. Do not commit credentials. Google's Desktop client secret
    is not a confidential server secret; PKCE protects the code exchange too.
 4. Connect Google Drive on both platforms and accept the app-data permission.
    macOS opens the system browser and validates PKCE S256 and OAuth state through
@@ -95,6 +97,26 @@ saving credentials.
 
 The OAuth clients must belong to the same Cloud project to share the application
 data space. No permission to ordinary Drive files is requested. There is no backend.
+
+### Repeated sign-in or connection failures on macOS
+
+Google Cloud projects with External / Testing status issue refresh tokens that
+expire after **seven days** for `drive.appdata`.
+[Google documents this limit](https://developers.google.com/identity/protocols/oauth2#expiration).
+An expired or revoked grant pauses automatic sync and offers **Connect Google
+Drive**. Complete a new browser sign-in; the saved Desktop client secret is reused
+for the same client ID. Local settings stay intact.
+
+If the app reports a client configuration error, check that the OAuth client is
+**Desktop app** and enter its matching secret. Missing secrets fail before opening
+the browser. Google error descriptions and token responses are never displayed.
+
+To avoid the Testing seven-day expiry, the project owner must complete Google Auth
+Platform → Branding and change Audience → Publishing status to **In production**.
+Publishing makes sign-in available outside the test-user list and may require
+Google verification. It does not restore already expired tokens: reconnect once
+after changing the status. The current project's Publish app button remains
+disabled until its Branding configuration is complete.
 
 ## Connecting and choosing a source
 

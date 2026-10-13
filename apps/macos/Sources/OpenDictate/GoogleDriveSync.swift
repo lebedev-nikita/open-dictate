@@ -6,10 +6,10 @@ import OpenDictateCore
 
 @MainActor
 final class GoogleDriveSync: ObservableObject {
-    enum Status { case disconnected, waiting, busy, synced, failed, sourceSelection, authorization, signInTimedOut, configuration }
+    enum Status { case disconnected, waiting, busy, synced, failed, sourceSelection, authorization, signInTimedOut, configuration, clientConfiguration }
     @Published private(set) var status: Status = .disconnected
     @Published private(set) var lastSyncedAt: Date?
-    var needsSignIn: Bool { status == .authorization || status == .signInTimedOut }
+    var needsSignIn: Bool { status == .authorization || status == .signInTimedOut || status == .configuration || status == .clientConfiguration }
     private let preferences: Preferences
     private let client: GoogleDriveClient
     private let deleteCredentials: () throws -> Void
@@ -100,7 +100,7 @@ final class GoogleDriveSync: ObservableObject {
                 completion = try await synchronize(token: token, run: run) ? .success : .deferred
             }
             catch {
-                completion = error as? DriveError == .authorization || error as? DriveError == .signInTimedOut ? .authorization : .retry
+                completion = pausesForSignIn(error) ? .authorization : .retry
                 if generation == run { show(error) }
             }
         }
@@ -131,7 +131,7 @@ final class GoogleDriveSync: ObservableObject {
                 preferences.driveSyncEnabled = true
                 completion = try await synchronize(token: token, run: run) ? .success : .deferred
             } catch {
-                completion = error as? DriveError == .authorization || error as? DriveError == .signInTimedOut ? .authorization : .retry
+                completion = pausesForSignIn(error) ? .authorization : .retry
                 if generation == run { show(error) }
             }
         }
@@ -205,11 +205,17 @@ final class GoogleDriveSync: ObservableObject {
 
     deinit { pathMonitor.cancel() }
 
+    private func pausesForSignIn(_ error: Error) -> Bool {
+        guard let error = error as? DriveError else { return false }
+        return [.authorization, .signInTimedOut, .configuration, .clientConfiguration].contains(error)
+    }
+
     private func show(_ error: Error) {
         if error is CancellationError { status = preferences.driveSyncEnabled ? .waiting : .disconnected }
         else if let error = error as? DriveError, error == .signInTimedOut { status = .signInTimedOut }
         else if let error = error as? DriveError, error == .authorization { status = .authorization }
         else if let error = error as? DriveError, error == .configuration { status = .configuration }
+        else if let error = error as? DriveError, error == .clientConfiguration { status = .clientConfiguration }
         else { status = .failed }
     }
 }

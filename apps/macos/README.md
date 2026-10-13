@@ -228,9 +228,19 @@ mode and selected models with Android. It uses a Desktop OAuth client from the s
 Google Cloud project as the Android client, browser sign-in with PKCE and a
 temporary loopback callback listener. OAuth secrets/refresh tokens stay in a
 separate device-only Keychain item. Sync runs while the app is running and never
-includes API keys, audio or history. See [setup and format](../../docs/google-drive-sync.md).
+includes API keys, audio or history. When reconnecting, leave the secret blank to
+reuse the saved secret for the same client ID. A different client needs its own
+secret. Google projects in Testing issue refresh tokens that expire after seven
+days; reconnect when requested. See [setup and troubleshooting](../../docs/google-drive-sync.md).
 
 ## Packaging and releases
+
+Stable releases are distributed through
+[`lebedev-nikita/tap/open-dictate`](https://github.com/lebedev-nikita/homebrew-tap#opendictate).
+The tap's updater checks releases every six hours, verifies the DMG against its
+checksum attachment and updates the pinned version and SHA-256. Its `livecheck`
+matches stable `macos-vX.Y.Z` tags, independently of the latest Android release.
+See the [installation commands](../../README.md#install-on-macos).
 
 Both platform icons use the approved [shared application artwork](../../docs/app-icon.md).
 macOS packaging renders the original Android vector without adding lighting or shadows.

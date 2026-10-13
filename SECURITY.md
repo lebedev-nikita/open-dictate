@@ -35,6 +35,9 @@ Android uses Google Identity Services and Play services' token cache; Google
 tokens are not stored in preferences. macOS uses the system browser, PKCE S256,
 random OAuth state and a temporary IPv4 loopback listener. OAuth secrets and
 refresh tokens use a separate device-only, non-synchronizing Keychain item.
+Reconnection reuses a saved client secret only for the same client ID; failed
+authorization does not replace credentials. OAuth errors are mapped to known
+categories without displaying provider descriptions or payloads.
 Access tokens stay in memory. Disconnect stops local delivery and removes
 macOS credentials, without deleting cloud data or revoking Google's grant.
 

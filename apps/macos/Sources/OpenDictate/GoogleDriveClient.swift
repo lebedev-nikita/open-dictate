@@ -1,7 +1,7 @@
 import Foundation
 import OpenDictateCore
 
-enum DriveError: Error { case authorization, signInTimedOut, network, configuration, invalidData }
+enum DriveError: Error { case authorization, signInTimedOut, network, configuration, clientConfiguration, invalidData }
 
 actor GoogleDriveClient {
     struct Remote {
@@ -88,14 +88,21 @@ actor GoogleDriveClient {
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         let (bytes, response) = try await session.bytes(for: request)
         guard let http = response as? HTTPURLResponse else { throw DriveError.network }
-        if http.statusCode == 401 { throw DriveError.authorization }
-        if http.statusCode == 400 && request.url?.host == "oauth2.googleapis.com" { throw DriveError.authorization }
-        guard (200..<300).contains(http.statusCode) else { throw DriveError.network }
         var data = Data()
         for try await byte in bytes {
             guard data.count < SettingsSyncDocument.maximumBytes else { throw DriveError.invalidData }
             data.append(byte)
         }
+        if !(200..<300).contains(http.statusCode), request.url?.host == "oauth2.googleapis.com" {
+            // Interpret only known OAuth error codes. Never surface the provider's payload or description.
+            let error = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+            if ["invalid_client", "unauthorized_client", "invalid_request"].contains(error ?? "") {
+                throw DriveError.clientConfiguration
+            }
+            if http.statusCode == 400 { throw DriveError.authorization }
+        }
+        if http.statusCode == 401 { throw DriveError.authorization }
+        guard (200..<300).contains(http.statusCode) else { throw DriveError.network }
         return data
     }
 }
