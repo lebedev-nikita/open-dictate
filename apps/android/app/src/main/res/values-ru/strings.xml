@@ -216,7 +216,7 @@
     <string name="settings_mode_accurate">Точнее</string>
     <string name="settings_mode_live">Сразу</string>
     <string name="replacements_title">Автозамена</string>
-    <string name="replacements_summary">Заменять распознанные слова и фразы</string>
+    <string name="replacements_summary">Настроено автозамен: %1$d</string>
     <string name="replacements_description">Нужное написание в Live и Accurate. Изменения действуют со следующей записи.</string>
     <string name="replacements_enable">Включить автозамену</string>
     <string name="replacements_add">Добавить замену</string>

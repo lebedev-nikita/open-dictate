@@ -219,7 +219,7 @@
     <string name="settings_mode_accurate">Accurate</string>
     <string name="settings_mode_live">Live</string>
     <string name="replacements_title">Word replacements</string>
-    <string name="replacements_summary">Replace recognized words and phrases</string>
+    <string name="replacements_summary">Configured replacements: %1$d</string>
     <string name="replacements_description">Apply your preferred spelling to Live and Accurate dictation. Changes apply to the next recording.</string>
     <string name="replacements_enable">Enable word replacements</string>
     <string name="replacements_add">Add replacement</string>
