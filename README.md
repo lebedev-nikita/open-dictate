@@ -34,6 +34,28 @@ no backend, analytics or account to create.
 
 ## Install on macOS
 
+Install the latest stable macOS release with Homebrew:
+
+```bash
+brew install --cask lebedev-nikita/tap/open-dictate
+```
+
+Quit OpenDictate before updating:
+
+```bash
+brew update
+brew upgrade --cask lebedev-nikita/tap/open-dictate
+```
+
+The [tap](https://github.com/lebedev-nikita/homebrew-tap#opendictate-maintenance)
+checks stable macOS releases every six hours and verifies the DMG checksum before
+updating the cask. Android releases and release candidates are excluded.
+For an identical manually installed release, quit the app and use
+`brew install --cask --adopt lebedev-nikita/tap/open-dictate`.
+Settings, history and Keychain credentials are retained.
+
+To install from a DMG instead:
+
 1. Choose a release from [macOS Releases](https://github.com/OpenDictate/open-dictate/releases?q=macos-v)
    and download its universal DMG for Apple Silicon and Intel. Releases marked
    **Pre-release** are release candidates.

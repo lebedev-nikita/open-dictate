@@ -47,18 +47,25 @@ final class GoogleDriveAuthorization {
     private var connections = [NWConnection]()
     private let queue = DispatchQueue(label: "com.opendictate.drive.oauth")
     private let openBrowser: (URL) -> Bool
+    private let loadCredentials: () throws -> DriveCredentials?
     private let saveCredentials: (DriveCredentials) throws -> Void
     private let signInTimeoutNanoseconds: UInt64
 
     init(openBrowser: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
+         loadCredentials: @escaping () throws -> DriveCredentials? = DriveCredentialStore.load,
          saveCredentials: @escaping (DriveCredentials) throws -> Void = DriveCredentialStore.save,
          signInTimeoutNanoseconds: UInt64 = 600_000_000_000) {
-        self.openBrowser = openBrowser; self.saveCredentials = saveCredentials
+        self.openBrowser = openBrowser; self.loadCredentials = loadCredentials; self.saveCredentials = saveCredentials
         self.signInTimeoutNanoseconds = signInTimeoutNanoseconds
     }
 
     func connect(clientID: String, clientSecret: String, client: GoogleDriveClient) async throws -> String {
         guard clientID.hasSuffix(".apps.googleusercontent.com"), !clientID.contains(where: \.isWhitespace) else { throw DriveError.configuration }
+        var clientSecret = clientSecret.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clientSecret.isEmpty, let saved = try loadCredentials(), saved.clientID == clientID {
+            clientSecret = saved.clientSecret
+        }
+        guard !clientSecret.isEmpty else { throw DriveError.clientConfiguration }
         let verifier = try randomString(), state = try randomString()
         let challenge = base64URL(Data(SHA256.hash(data: Data(verifier.utf8))))
         let parameters = NWParameters.tcp
@@ -109,7 +116,7 @@ final class GoogleDriveAuthorization {
     }
 
     func refresh(client: GoogleDriveClient) async throws -> String {
-        guard let credentials = try DriveCredentialStore.load() else { throw DriveError.authorization }
+        guard let credentials = try loadCredentials() else { throw DriveError.authorization }
         let result = try await tokenRequest(["client_id": credentials.clientID, "client_secret": credentials.clientSecret,
             "refresh_token": credentials.refreshToken, "grant_type": "refresh_token"], client: client)
         guard let token = result["access_token"] as? String, !token.isEmpty else { throw DriveError.authorization }

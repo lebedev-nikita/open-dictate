@@ -21,6 +21,9 @@ struct GoogleDriveSettingsView: View {
                 Text(t("Use a Desktop client from the same Google Cloud project as the Android app. Sign-in opens your browser.",
                        "Используйте клиент типа Desktop из того же проекта Google Cloud, что и Android-приложение. Вход откроется в браузере."))
                     .font(.caption).foregroundStyle(.secondary)
+                Text(t("Leave the secret blank to reuse the saved secret for this client. Google Cloud projects in Testing require sign-in again after seven days.",
+                       "Оставьте секрет пустым, чтобы использовать сохранённый секрет этого клиента. В режиме Testing проекта Google Cloud вход нужно повторять через семь дней."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Text(statusText).font(.caption).foregroundStyle(.secondary).accessibilityLabel(statusText)
             HStack {
@@ -57,10 +60,13 @@ struct GoogleDriveSettingsView: View {
         case .sourceSelection: return t("Choose a settings source to finish connecting.", "Выберите источник настроек, чтобы завершить подключение.")
         case .failed: return t("Could not sync. Local settings are saved. Check your connection and try again.",
                                "Не удалось синхронизировать. Локальные настройки сохранены. Проверьте соединение и повторите.")
-        case .authorization: return t("Sign in again to resume synchronization.", "Войдите снова, чтобы возобновить синхронизацию.")
+        case .authorization: return t("Google authorization expired or was revoked. Connect again to resume synchronization.",
+                                     "Авторизация Google истекла или была отозвана. Подключитесь снова, чтобы возобновить синхронизацию.")
         case .signInTimedOut: return t("Google sign-in timed out. Connect again and finish sign-in within 10 minutes.",
                                       "Время ожидания входа в Google истекло. Подключитесь снова и завершите вход в течение 10 минут.")
         case .configuration: return t("Enter a valid Desktop OAuth client ID.", "Введите корректный ID OAuth-клиента типа Desktop.")
+        case .clientConfiguration: return t("Check the Desktop OAuth client ID and secret. Enter the secret if it has not been saved for this client.",
+                                           "Проверьте ID и секрет OAuth-клиента типа Desktop. Введите секрет, если он ещё не сохранён для этого клиента.")
         }
     }
 }
