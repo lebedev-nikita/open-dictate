@@ -5,6 +5,7 @@ struct SettingsView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var preferences: Preferences
     @ObservedObject var history: HistoryStore
+    @ObservedObject var replacements: ReplacementStore
     @State private var selection = "dictation"
     @State private var apiKey = ""
     @State private var query = ""
@@ -22,8 +23,8 @@ struct SettingsView: View {
                 }.padding(.top, 9)
                 VStack(spacing: 5) {
                     navigation("dictation", t("Dictation", "Диктовка"), "waveform")
-                    navigation("dictionary", t("Dictionary", "Словарь"), "book.closed")
-                    navigation("replacements", t("Replacements", "Автозамена"), "arrow.left.arrow.right")
+                    navigation("dictionary", t("Dictionary", "Словарь") + " (\(DictionaryTerms.normalize(preferences.dictionary).count))", "book.closed")
+                    navigation("replacements", t("Replacements", "Автозамена") + " (\(replacements.document.rules.count))", "arrow.left.arrow.right")
                     navigation("history", t("History", "История"), "clock")
                     navigation("general", t("Settings", "Настройки"), "slider.horizontal.3")
                 }
@@ -36,7 +37,7 @@ struct SettingsView: View {
                 Divider()
                 Text("macOS · \(Bundle.main.object(forInfoDictionaryKey: "OpenDictateReleaseVersion") as? String ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0-rc.3")")
                     .font(.caption).foregroundStyle(.secondary)
-            }.padding(20).frame(width: 190).background(Color(nsColor: .controlBackgroundColor))
+            }.padding(20).frame(width: 220).background(Color(nsColor: .controlBackgroundColor))
             Divider()
             VStack(alignment: .leading, spacing: 0) {
                 HStack {

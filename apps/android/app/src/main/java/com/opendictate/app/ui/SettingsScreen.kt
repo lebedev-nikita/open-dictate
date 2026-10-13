@@ -75,6 +75,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -121,6 +122,7 @@ internal fun SettingsScreen(
     var dictionaryOpen by rememberSaveable { mutableStateOf(false) }
     var languagesOpen by rememberSaveable { mutableStateOf(false) }
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
+    val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
     val missingSteps = listOf(state.hasApiKey, state.microphoneGranted, state.accessibilityEnabled).count { !it }
     val colors = MaterialTheme.colorScheme
@@ -222,7 +224,7 @@ internal fun SettingsScreen(
                         state.languages.summary(), { languagesOpen = true })
                     SettingsDivider()
                     ActionRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.replacements_title),
-                        stringResource(R.string.replacements_summary), { replacementsOpen = true })
+                        stringResource(R.string.replacements_summary, replacements.document.rules.size), { replacementsOpen = true })
                     SettingsDivider()
                     ActionRow(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.settings_dictionary),
                         if (state.prompt.isBlank()) stringResource(R.string.settings_dictionary_empty)
