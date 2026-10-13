@@ -7,7 +7,6 @@ import com.opendictate.app.R
 import com.opendictate.app.audio.PcmAudioRecorder
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
-import com.opendictate.app.service.PunctuationCorrection
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -175,15 +174,6 @@ class OpenAiTranscriptionClient(
         throw error
     } catch (error: IOException) {
         throw OpenAiException(error.userMessage(), error)
-    }
-
-    internal suspend fun correctPunctuation(apiKey: String, sourceText: String): String = withContext(Dispatchers.IO) {
-        val request = authorizedRequest(apiKey, RESPONSES_URL)
-            .post(punctuationCorrectionRequest(sourceText).toString().toRequestBody(JSON)).build()
-        client.newCall(request).await().use { response ->
-            if (!response.isSuccessful) throw OpenAiException("Punctuation correction failed")
-            extractPunctuationResult(JSONObject(response.body.string()))
-        }
     }
 
     suspend fun searchTranscriptHistory(
@@ -561,20 +551,6 @@ private const val MAX_HISTORY_DOCUMENTS_PER_REQUEST = 50
 private const val MAX_HISTORY_DOCUMENT_CHARS = 4_000
 private const val MAX_HISTORY_REQUEST_CHARS = 40_000
 
-internal fun extractPunctuationResult(response: JSONObject): String {
-    require(response.getString("status") == "completed")
-    val result = JSONObject(extractResponseText(response))
-    require(result.has("message") && result.isNull("message"))
-    val text = result.get("transformed_text")
-    require(text is String && text.isNotBlank())
-    return text
-}
-
-internal fun punctuationCorrectionRequest(sourceText: String): JSONObject =
-    textTransformationRequest(PunctuationCorrection.MODEL, sourceText, "Correct punctuation only.")
-        .put("instructions", PunctuationCorrection.INSTRUCTIONS)
-        .put("reasoning", JSONObject().put("effort", "none"))
-
 internal fun textTransformationRequest(
     model: String,
     sourceText: String,
@@ -717,9 +693,9 @@ internal fun realtimeTranscriptionSessionUpdate(
 
 private const val RUSSIAN_ORTHOGRAPHY_CONTEXT = "Cyrillic text uses Russian orthography."
 private const val PUNCTUATION_CONTEXT =
-    "Multilingual dictation for written text. Standard punctuation and capitalization appropriate " +
-        "to each spoken language, including grammatically required commas. " +
-        "Original wording and language switches are preserved."
+    "Multilingual dictation for written text. STRICTLY follow the punctuation rules of each spoken " +
+        "language, including all grammatically required commas. Use correct capitalization. " +
+        "Preserve the original words, their order, and language switches."
 
 internal fun transcriptionPrompt(
     languages: Set<DictationLanguage>,

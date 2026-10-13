@@ -28,31 +28,25 @@ class ReplacementSyncTest {
         } finally { names.forEach { base.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() } }
     }
 
-    @Test fun punctuationDefaultsOffPersistsLocallyAndIgnoresLegacySync() = scoped { context, settings, store ->
+    @Test fun removedPunctuationSettingIsExcludedFromLegacyJournalsAndSync() = scoped { context, settings, store ->
         val prefs = context.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE)
-        assertFalse(settings.accuratePunctuationEnabled)
+        prefs.edit().putBoolean("accurate_punctuation_enabled", true).commit()
         assertNull(settings.syncDocument().entries["accuratePunctuationEnabled"])
         val remote = SettingsSyncDocument(mapOf("accuratePunctuationEnabled" to SettingsSyncEntry("true", 42, "mac")))
         settings.mergeSyncDocument(remote, store)
-        assertFalse(settings.accuratePunctuationEnabled)
-        settings.accuratePunctuationEnabled = true
-        assertTrue(SettingsStore(context).accuratePunctuationEnabled)
         assertEquals(0L, prefs.getLong("sync_local_revision", 0))
         assertNull(settings.syncDocument().entries["accuratePunctuationEnabled"])
         val legacy = settings.syncDocument().copy(entries = settings.syncDocument().entries + remote.entries)
         // Simulate a journal left by the previous app version.
         prefs.edit().putString("sync_document", """{"schemaVersion":1,"entries":{"accuratePunctuationEnabled":{"value":"true","modifiedAt":42,"deviceId":"mac"}}}""").commit()
         assertNull(settings.syncDocument().entries["accuratePunctuationEnabled"])
-        assertTrue(SettingsStore(context).accuratePunctuationEnabled)
         val incoming = legacy.copy(entries = legacy.entries + mapOf(
             "accuratePunctuationEnabled" to SettingsSyncEntry("invalid", Long.MAX_VALUE - 10, "mac"),
             "dictionary" to SettingsSyncEntry("Cloud", 100, "mac")))
         settings.mergeSyncDocument(incoming, store)
-        assertTrue(settings.accuratePunctuationEnabled)
         assertEquals("Cloud", settings.prompt)
-        settings.accuratePunctuationEnabled = false
         settings.mergeSyncDocument(remote, store)
-        assertFalse(SettingsStore(context).accuratePunctuationEnabled)
+        assertNull(settings.syncDocument().entries["accuratePunctuationEnabled"])
         assertEquals(0L, prefs.getLong("sync_local_revision", 0))
     }
 

@@ -50,7 +50,6 @@ data class MainUiState(
     val languages: Set<DictationLanguage> = emptySet(),
     val prompt: String = "",
     val selectionDictionaryActionEnabled: Boolean = true,
-    val accuratePunctuationEnabled: Boolean = false,
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
     val excludedPackages: Set<String> = emptySet(),
     val installedApps: List<InstalledApp> = emptyList(),
@@ -109,8 +108,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
                     liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId,
-                    transformationModelId = settings.transformationModelId,
-                    accuratePunctuationEnabled = settings.accuratePunctuationEnabled) }
+                    transformationModelId = settings.transformationModelId) }
             }
         }
     }
@@ -299,11 +297,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> false
         }
 
-    fun setAccuratePunctuationEnabled(enabled: Boolean) {
-        settings.accuratePunctuationEnabled = enabled
-        mutableState.update { it.copy(accuratePunctuationEnabled = enabled) }
-    }
-
     fun setTranscriptionResponseTimeout(seconds: Int?) {
         settings.transcriptionResponseTimeoutSeconds = seconds
         mutableState.update { it.copy(transcriptionResponseTimeoutSeconds = seconds) }
@@ -424,7 +417,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         languages = settings.languages,
         prompt = settings.prompt,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
-        accuratePunctuationEnabled = settings.accuratePunctuationEnabled,
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
         excludedPackages = settings.excludedPackages,
     )

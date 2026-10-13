@@ -168,14 +168,13 @@ internal fun SettingsScreen(
                                 DictationPhase.CONNECTING -> R.string.settings_connecting
                                 DictationPhase.LISTENING -> R.string.settings_listening
                                 DictationPhase.PROCESSING -> R.string.settings_processing
-                                DictationPhase.CORRECTING_PUNCTUATION -> R.string.settings_correcting_punctuation
                                 else -> if (ready) R.string.settings_ready else R.string.settings_setup
                             }
                             Text(stringResource(status), style = MaterialTheme.typography.titleSmall)
                             Text(
                                 when (dictation.phase) {
                                     DictationPhase.CONNECTING, DictationPhase.LISTENING -> stringResource(R.string.settings_active_hint)
-                                    DictationPhase.PROCESSING, DictationPhase.CORRECTING_PUNCTUATION -> stringResource(R.string.settings_processing_hint)
+                                    DictationPhase.PROCESSING -> stringResource(R.string.settings_processing_hint)
                                     else -> if (ready) stringResource(R.string.settings_ready_hint)
                                         else stringResource(R.string.settings_setup_steps, missingSteps)
                                 },
@@ -219,12 +218,6 @@ internal fun SettingsScreen(
                         onSelect = if (live) viewModel::selectLiveModel else viewModel::selectAccurateModel,
                     )
                     SettingsDivider()
-                    if (!live) {
-                        ToggleRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.accurate_punctuation_title),
-                            stringResource(R.string.accurate_punctuation_subtitle), state.accuratePunctuationEnabled,
-                            viewModel::setAccuratePunctuationEnabled, enabled = !dictation.isActive)
-                        SettingsDivider()
-                    }
                     ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                         state.languages.summary(), { languagesOpen = true })
                     SettingsDivider()

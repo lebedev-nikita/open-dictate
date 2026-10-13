@@ -246,10 +246,6 @@
     <string name="drive_sync_connect">Connect Google Drive</string>
     <string name="drive_sync_disconnect">Disconnect</string>
     <string name="drive_sync_privacy">Only these settings are sent to Google. API keys, audio and history stay out of sync. Disconnecting keeps local and cloud settings.</string>
-    <string name="accurate_punctuation_title">Correct punctuation</string>
-    <string name="accurate_punctuation_subtitle">Via OpenAI. Only on this device.</string>
-    <string name="overlay_correcting_punctuation_description">Correcting punctuation. Swipe left to cancel.</string>
-    <string name="settings_correcting_punctuation">Correcting punctuation…</string>
     <string name="drive_sync_source_title">Choose a settings source</string>
     <string name="drive_sync_source_message">Cloud and local settings differ. Choose which dictionary, word replacements, dictation mode and models to use.</string>
     <string name="drive_sync_source_cloud">Cloud settings</string>

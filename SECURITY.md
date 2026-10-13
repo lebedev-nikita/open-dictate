@@ -9,8 +9,11 @@ text, and never alter the captured original field or voice-edit instructions.
 Rules are applied on-device. Optional Drive sync uses the same app-data scope
 for the rule list and enabled states.
 
-Optional Accurate punctuation correction sends only recognized text directly to
-OpenAI with Responses storage disabled. It is off by default, never runs on Live
+Android punctuation is requested in the original transcription; there is no
+separate punctuation correction request.
+
+On macOS, optional Accurate punctuation correction sends only recognized text
+directly to OpenAI with Responses storage disabled. It is off by default, never runs on Live
 or voice-edit instructions, and rejects output that changes word boundaries,
 spelling, order, numbers or address contents beyond allowed capitalization.
 Failures retain the original transcript; cancellation still prevents delivery.
