@@ -65,7 +65,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
 
     companion object {
         val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled")
-        // Remove the former synced field from old journals and replicas without touching its local value.
+        // Discard legacy punctuation correction entries from old journals and replicas.
         private val DEVICE_LOCAL_KEYS = setOf("accuratePunctuationEnabled")
         const val MAXIMUM_BYTES = 1_048_576L
         fun fromJson(json: String): SettingsSyncDocument {

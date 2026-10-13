@@ -8,12 +8,14 @@ synchronizes rules and their enabled states with your other devices.
 Completed text saved to history or copied to the clipboard includes replacements.
 An explicit AI history search may send that saved text to OpenAI.
 
-## Optional punctuation correction
+## Punctuation
 
-**Correct punctuation** appears only in Accurate mode and is off by default on
-both platforms. When
-enabled, Accurate sends only the recognized transcript directly to OpenAI's
-`gpt-6-luna` through the Responses API with `store: false`, before local word
+Android requests punctuation as part of the original Live or Accurate
+transcription. It does not send recognized text for a separate punctuation pass.
+
+On macOS, **Correct punctuation** appears only in Accurate mode and is off by
+default. When enabled, Accurate sends only the recognized transcript directly
+to OpenAI's `gpt-6-luna` through the Responses API with `store: false`, before local word
 replacements. It adds a separate processing step; failures keep the original
 transcript. Live and voice editing do not use this step. The switch is saved
 only on the current device and is excluded from Google Drive sync; the transcript is never included in sync.

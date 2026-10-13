@@ -9,12 +9,11 @@ enum class DictationPhase {
     CONNECTING,
     LISTENING,
     PROCESSING,
-    CORRECTING_PUNCTUATION,
     COMPLETED,
     ERROR;
 
     val isProcessing: Boolean
-        get() = this == PROCESSING || this == CORRECTING_PUNCTUATION
+        get() = this == PROCESSING
 
     val isActive: Boolean
         get() = this == CONNECTING || this == LISTENING || isProcessing
