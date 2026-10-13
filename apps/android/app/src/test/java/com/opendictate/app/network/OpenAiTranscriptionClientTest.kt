@@ -102,7 +102,7 @@ class OpenAiTranscriptionClientTest {
         assertEquals(24_000, input.getJSONObject("format").getInt("rate"))
         assertEquals("gpt-live-transcribe", transcription.getString("model"))
         assertEquals(
-            "Cyrillic text uses Russian orthography.\nOpenDictate",
+            transcriptionPrompt(emptySet(), "") + "\nCyrillic text uses Russian orthography.\nOpenDictate",
             transcription.getString("prompt"),
         )
         assertEquals(listOf("en", "ru"), transcription.getJSONArray("languages").let { languages ->
@@ -125,7 +125,38 @@ class OpenAiTranscriptionClientTest {
             .getJSONObject("input")
             .getJSONObject("transcription")
 
-        assertEquals("OpenDictate", transcription.getString("prompt"))
+        assertEquals(transcriptionPrompt(emptySet(), "") + "\nOpenDictate", transcription.getString("prompt"))
+        assertFalse(transcription.getString("prompt").contains("Russian orthography"))
+    }
+
+    @Test
+    fun `punctuation context covers every configured language and automatic detection`() {
+        val languageSelections = listOf(emptySet<DictationLanguage>()) + DictationLanguage.entries.map { setOf(it) } +
+            listOf(DictationLanguage.entries.toSet())
+
+        languageSelections.forEach { languages ->
+            val context = transcriptionPrompt(languages, "  OpenDictate\nWebSocket  ")
+            assertTrue(context.startsWith("Multilingual dictation for written text."))
+            assertTrue(context.contains("punctuation and capitalization appropriate to each spoken language"))
+            assertTrue(context.contains("grammatically required commas"))
+            assertTrue(context.contains("Original wording and language switches are preserved."))
+            assertTrue(context.endsWith("\nOpenDictate\nWebSocket"))
+        }
+    }
+
+    @Test
+    fun `live transcription includes punctuation context without a dictionary or language hint`() {
+        val input = realtimeTranscriptionSessionUpdate(
+            modelId = "gpt-live-transcribe",
+            languages = emptySet(),
+            prompt = "   ",
+        ).getJSONObject("session").getJSONObject("audio").getJSONObject("input")
+        val transcription = input.getJSONObject("transcription")
+
+        assertEquals(transcriptionPrompt(emptySet(), ""), transcription.getString("prompt"))
+        assertFalse(transcription.has("languages"))
+        assertFalse(transcription.has("delay"))
+        assertTrue(input.isNull("turn_detection"))
     }
 
     @Test

@@ -716,11 +716,16 @@ internal fun realtimeTranscriptionSessionUpdate(
 }
 
 private const val RUSSIAN_ORTHOGRAPHY_CONTEXT = "Cyrillic text uses Russian orthography."
+private const val PUNCTUATION_CONTEXT =
+    "Multilingual dictation for written text. Standard punctuation and capitalization appropriate " +
+        "to each spoken language, including grammatically required commas. " +
+        "Original wording and language switches are preserved."
 
 internal fun transcriptionPrompt(
     languages: Set<DictationLanguage>,
     userPrompt: String,
 ): String = buildList {
+    add(PUNCTUATION_CONTEXT)
     if (DictationLanguage.RUSSIAN in languages && DictationLanguage.UKRAINIAN !in languages) {
         add(RUSSIAN_ORTHOGRAPHY_CONTEXT)
     }
