@@ -19,6 +19,14 @@ import org.json.JSONObject
 
 class OpenAiTranscriptionClientTest {
     @Test
+    fun `transcription prompt matches the validated benchmark`() {
+        val root = listOf(".", "..", "../..", "../../..")
+            .first { java.io.File(it, "scripts/transcription-prompts.json").isFile }
+        val prompts = JSONObject(java.io.File(root, "scripts/transcription-prompts.json").readText())
+        assertEquals(prompts.getString("rc2"), transcriptionPrompt(
+            setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH), ""))
+    }
+    @Test
     fun `file transcription uses configured overall timeout or none`() {
         val base = OkHttpClient.Builder()
             .callTimeout(60, TimeUnit.SECONDS)

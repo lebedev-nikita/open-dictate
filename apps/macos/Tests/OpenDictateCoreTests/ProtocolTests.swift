@@ -2,6 +2,29 @@ import XCTest
 @testable import OpenDictateCore
 
 final class ProtocolTests: XCTestCase {
+    func testPunctuationPromptMatchesValidatedAndroidBenchmark() throws {
+        var root = URL(fileURLWithPath: #filePath)
+        for _ in 0..<5 { root.deleteLastPathComponent() }
+        let prompts = try JSONDecoder().decode([String: String].self,
+            from: Data(contentsOf: root.appendingPathComponent("scripts/transcription-prompts.json")))
+        XCTAssertEqual(TranscriptionContext(languages: ["ru", "en"]).prompt, prompts["rc2"])
+    }
+    func testPunctuationContextReachesBothProtocolsForEveryLanguageAndAutomaticDetection() throws {
+        let selections = [[]] + SpeechLanguage.all.map { [$0.id] } + [["ru", "uk"], ["ru", "en"]]
+        for languages in selections {
+            let context = TranscriptionContext(languages: languages, dictionary: ["OpenDictate"])
+            XCTAssertTrue(context.prompt.contains("STRICTLY follow the punctuation rules of each spoken language"))
+            XCTAssertEqual(context.prompt.contains("Russian orthography"), languages.contains("ru") && !languages.contains("uk"))
+            let session = try XCTUnwrap(OpenAIRequest.sessionUpdate(context: context)["session"] as? [String: Any])
+            let audio = try XCTUnwrap(session["audio"] as? [String: Any])
+            let input = try XCTUnwrap(audio["input"] as? [String: Any])
+            let transcription = try XCTUnwrap(input["transcription"] as? [String: Any])
+            XCTAssertEqual(transcription["prompt"] as? String, context.prompt)
+            XCTAssertEqual(transcription["keywords"] as? [String], ["OpenDictate"])
+            let body = String(decoding: OpenAIRequest.multipart(wav: Data(), context: context, boundary: "test"), as: UTF8.self)
+            XCTAssertTrue(body.contains("name=\"prompt\"\r\n\r\n\(context.prompt)\r\n"))
+        }
+    }
     func testLiveConfigurationUsesDocumentedTranscriptionSchema() throws {
         let event = OpenAIRequest.sessionUpdate(context: TranscriptionContext(languages: ["ru", "en"], dictionary: ["OpenDictate"]))
         let session = try XCTUnwrap(event["session"] as? [String: Any])

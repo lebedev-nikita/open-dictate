@@ -14,8 +14,16 @@ public struct TranscriptionContext: Sendable {
         self.languages = languages; self.dictionary = dictionary
     }
     public var prompt: String {
-        languages.contains("ru") && !languages.contains("uk") ? "Cyrillic text uses Russian orthography." : ""
+        var context = [Self.punctuationContext]
+        if languages.contains("ru") && !languages.contains("uk") {
+            context.append("Cyrillic text uses Russian orthography.")
+        }
+        return context.joined(separator: "\n")
     }
+    private static let punctuationContext =
+        "Multilingual dictation for written text. STRICTLY follow the punctuation rules of each spoken " +
+        "language, including all grammatically required commas. Use correct capitalization. " +
+        "Preserve the original words, their order, and language switches."
 }
 
 public enum OpenAIRequest {

@@ -10,8 +10,8 @@ An explicit AI history search may send that saved text to OpenAI.
 
 ## Punctuation
 
-Android requests punctuation as part of the original Live or Accurate
-transcription. It does not send recognized text for a separate punctuation pass.
+Both apps request punctuation as part of the original Live or Accurate
+transcription. Android does not send recognized text for a separate punctuation pass.
 
 On macOS, **Correct punctuation** appears only in Accurate mode and is off by
 default. When enabled, Accurate sends only the recognized transcript directly
