@@ -92,6 +92,13 @@ save immediately and apply to the next Live or Accurate session; selection is
 disabled during dictation. Existing single-language and Russian + English
 preferences migrate automatically. Language hints remain local preferences.
 
+### Transcription punctuation
+
+Live and Accurate include strict punctuation guidance for each spoken language
+in their original transcription request. The same guidance applies when
+retranscribing the last recording. Selected language hints and dictionary terms
+are preserved; the prompt does not add a processing step.
+
 ### Optional punctuation correction
 
 Settings → Dictation → **Correct punctuation** appears only in Accurate mode

@@ -123,15 +123,16 @@ Android requires JDK 17+ and Android SDK 37. The root wrapper forwards to
 ./gradlew lintRelease assembleRelease
 ```
 
-Run the punctuation/runtime and native Accessibility delivery checks on a fresh
+Run the dictation settings and native Accessibility delivery checks on a fresh
 emulator debug installation (without an API key):
 
 ```bash
-./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.opendictate.app.service.PunctuationRuntimeTest,com.opendictate.app.service.DictationDeliveryTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.opendictate.app.ui.DictationSettingsTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.opendictate.app.service.DictationDeliveryTest
 ```
 
-These checks use synthetic provider results, verify Android regex compatibility,
-text insertion, punctuation progress animation and cancellation, and make no
+These checks verify settings after upgrading, text insertion, processing
+animation and cancellation using synthetic provider results, and make no
 OpenAI requests. The editor fixture is included only in debug builds.
 
 APKs are under `apps/android/app/build/outputs/apk/`.

@@ -7,6 +7,8 @@ build/
 **/build/
 captures/
 .DS_Store
+.env
+__pycache__/
 *.jks
 *.keystore
 release-key.properties

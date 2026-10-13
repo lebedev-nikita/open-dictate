@@ -105,7 +105,6 @@ class DictationForegroundService : Service() {
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
         val transformationModelId = settings.transformationModelId
-        val accuratePunctuationEnabled = settings.accuratePunctuationEnabled
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
         val prompt = settings.prompt
@@ -256,8 +255,7 @@ class DictationForegroundService : Service() {
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    val corrected = correctPunctuation(sessionId, transcript, accuratePunctuationEnabled, model, operation, apiKey)
-                    replacements.apply(corrected)
+                    replacements.apply(transcript)
                 }
                 if (result.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_transformation_empty))
@@ -328,7 +326,6 @@ class DictationForegroundService : Service() {
         val languages = settings.languages
         val prompt = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
-        val accuratePunctuationEnabled = settings.accuratePunctuationEnabled
         activeOperation = DictationOperation.DICTATION
         startForeground(NOTIFICATION_ID, notification(true, DictationOperation.DICTATION))
         DictationStateBus.set(
@@ -350,8 +347,7 @@ class DictationForegroundService : Service() {
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val corrected = correctPunctuation(sessionId, transcript, accuratePunctuationEnabled, model, DictationOperation.DICTATION, apiKey)
-                val result = replacements.apply(corrected)
+                val result = replacements.apply(transcript)
                 val completed = publishWhileActive(
                     sessionId,
                     DictationState(
@@ -390,26 +386,6 @@ class DictationForegroundService : Service() {
                 stopSelf()
             }
         }
-    }
-
-    private suspend fun correctPunctuation(
-        sessionId: Long,
-        transcript: String,
-        enabled: Boolean,
-        model: TranscriptionModel,
-        operation: DictationOperation,
-        apiKey: String,
-    ): String = PunctuationCorrection.apply(transcript, enabled, model) {
-        publishWhileActive(
-            sessionId,
-            DictationState(
-                sessionId = sessionId,
-                phase = DictationPhase.CORRECTING_PUNCTUATION,
-                operation = operation,
-                model = model,
-            ),
-        )
-        apiClient.correctPunctuation(apiKey, transcript)
     }
 
     private fun requestStop() {

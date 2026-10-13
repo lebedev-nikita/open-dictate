@@ -281,7 +281,6 @@ private class OverlayPrimaryActionView(
                 phase.isProcessing &&
                     operation == DictationOperation.TRANSFORMATION ->
                     R.string.overlay_transforming_description
-                phase == DictationPhase.CORRECTING_PUNCTUATION -> R.string.overlay_correcting_punctuation_description
                 phase.isProcessing -> R.string.overlay_processing_description
                 isActionActive() && operation == DictationOperation.TRANSFORMATION ->
                     R.string.overlay_active_transformation_description

@@ -15,7 +15,6 @@ import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.test.DeliveryFixtureActivity
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,14 +41,12 @@ class DictationDeliveryTest {
         shell("settings put secure accessibility_enabled 1")
         val settings = SettingsStore(context)
         val previousModel = settings.model
-        val previousPunctuation = settings.accuratePunctuationEnabled
         settings.model = TranscriptionModel.ACCURATE
         // No network request is made: recording is stopped by teardown, not ACTION_STOP.
         SecureApiKeyStore(context).save("instrumentation-placeholder")
         try {
-            for ((enabled, cancel) in listOf(false to false, true to false, true to true)) {
+            for (cancel in listOf(false, true)) {
                 instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
-                settings.accuratePunctuationEnabled = enabled
                 ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
                     await { overlay(context.getString(R.string.overlay_start_dictation_with_actions)) != null }
                     assertTrue(overlay(context.getString(R.string.overlay_start_dictation_with_actions))!!
@@ -58,29 +55,21 @@ class DictationDeliveryTest {
                     val session = DictationStateBus.state.value
                     instrumentation.runOnMainSync { DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING)) }
                     await { overlay(context.getString(R.string.overlay_processing_description)) != null }
-                    val result = runBlocking {
-                        PunctuationCorrection.apply("привет мир", enabled, TranscriptionModel.ACCURATE) {
-                            instrumentation.runOnMainSync {
-                                DictationStateBus.set(session.copy(phase = DictationPhase.CORRECTING_PUNCTUATION))
-                            }
-                            await { overlay(context.getString(R.string.overlay_correcting_punctuation_description)) != null }
-                            // Two actual overlay frames must differ while the correction result is pending.
-                            val bounds = Rect()
-                            overlay(context.getString(R.string.overlay_correcting_punctuation_description))!!.getBoundsInScreen(bounds)
-                            val first = spinnerFrame(bounds)
-                            SystemClock.sleep(150)
-                            val second = spinnerFrame(bounds)
-                            assertFalse("Spinner must continue animating", first.sameAs(second))
-                            first.recycle(); second.recycle()
-                            assertTrue(DictationStateBus.state.value.isActive)
-                            if (cancel) {
-                                assertTrue(overlay(context.getString(R.string.overlay_correcting_punctuation_description))!!
-                                    .performAction(R.id.accessibility_action_cancel_dictation))
-                                await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
-                            }
-                            "Привет, мир!"
-                        }
+                    // Two actual overlay frames must differ while the transcription result is pending.
+                    val bounds = Rect()
+                    overlay(context.getString(R.string.overlay_processing_description))!!.getBoundsInScreen(bounds)
+                    val first = spinnerFrame(bounds)
+                    SystemClock.sleep(150)
+                    val second = spinnerFrame(bounds)
+                    assertFalse("Spinner must continue animating", first.sameAs(second))
+                    first.recycle(); second.recycle()
+                    assertTrue(DictationStateBus.state.value.isActive)
+                    if (cancel) {
+                        assertTrue(overlay(context.getString(R.string.overlay_processing_description))!!
+                            .performAction(R.id.accessibility_action_cancel_dictation))
+                        await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
                     }
+                    val result = "По идее, у вас ещё реклама должна блокироваться, по крайней мере её часть."
                     instrumentation.runOnMainSync {
                         DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = result))
                     }
@@ -101,7 +90,6 @@ class DictationDeliveryTest {
             context.stopService(Intent(context, DictationForegroundService::class.java))
             SecureApiKeyStore(context).clear()
             settings.model = previousModel
-            settings.accuratePunctuationEnabled = previousPunctuation
             restoreSetting("enabled_accessibility_services", previousServices)
             restoreSetting("accessibility_enabled", previousAccessibility)
             restoreSetting("show_ime_with_hard_keyboard", previousKeyboard)

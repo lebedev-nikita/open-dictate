@@ -91,10 +91,6 @@ class SettingsStore(context: Context) {
         get() = normalizeDictionaryTerms(prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty())
         set(value) = saveSynced { putString(KEY_PROMPT, normalizeDictionaryTerms(value).trim()) }
 
-    var accuratePunctuationEnabled: Boolean
-        get() = prefs.getBoolean(KEY_ACCURATE_PUNCTUATION_ENABLED, false)
-        set(value) = prefs.edit { putBoolean(KEY_ACCURATE_PUNCTUATION_ENABLED, value) }
-
     var transformationButtonEnabled: Boolean
         get() = prefs.getBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, true)
         set(value) = prefs.edit { putBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, value) }
@@ -223,7 +219,6 @@ class SettingsStore(context: Context) {
         private const val KEY_LANGUAGES = "languages"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_PROMPT = "prompt"
-        private const val KEY_ACCURATE_PUNCTUATION_ENABLED = "accurate_punctuation_enabled"
         private const val KEY_TRANSFORMATION_BUTTON_ENABLED = "transformation_button_enabled"
         private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
         private const val KEY_TRANSCRIPTION_RESPONSE_TIMEOUT = "transcription_response_timeout_seconds"
