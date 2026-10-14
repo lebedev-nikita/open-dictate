@@ -98,8 +98,8 @@ Live and Accurate include strict punctuation guidance for each spoken language
 in their original transcription request. The same guidance applies when
 retranscribing the last recording. Selected language hints and dictionary terms
 are preserved; the prompt does not add a processing step.
-Selecting Russian also includes written examples of introductory expressions
-and predicate uses to guide comma placement.
+Selecting Russian also includes a Russian punctuation prompt with examples of
+sentence boundaries, commas, colons, dashes, quotations and parenthetical text.
 
 ### Optional punctuation correction
 

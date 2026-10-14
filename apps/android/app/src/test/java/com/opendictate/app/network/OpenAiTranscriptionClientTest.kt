@@ -19,7 +19,7 @@ import org.json.JSONObject
 
 class OpenAiTranscriptionClientTest {
     @Test
-    fun `transcription prompt matches the validated benchmark`() {
+    fun `transcription prompt matches the configured benchmark`() {
         val root = listOf(".", "..", "../..", "../../..")
             .first { java.io.File(it, "scripts/transcription-prompts.json").isFile }
         val prompts = JSONObject(java.io.File(root, "scripts/transcription-prompts.json").readText())
@@ -120,7 +120,7 @@ class OpenAiTranscriptionClientTest {
             .getJSONObject("input")
             .getJSONObject("transcription")
 
-        assertTrue(transcription.getString("prompt").contains("Written style examples"))
+        assertTrue(transcription.getString("prompt").contains("Ниже — образцы пунктуационного оформления"))
         assertEquals("OpenDictate", transcription.getJSONArray("keywords").getString(0))
         assertFalse(transcription.getString("prompt").contains("Russian orthography"))
     }
@@ -136,7 +136,7 @@ class OpenAiTranscriptionClientTest {
             assertTrue(context.contains("STRICTLY follow the punctuation rules of each spoken language"))
             assertTrue(context.contains("all grammatically required commas"))
             assertTrue(context.contains("Preserve the original words, their order, and language switches."))
-            assertEquals(DictationLanguage.RUSSIAN in languages, context.contains("Written style examples"))
+            assertEquals(DictationLanguage.RUSSIAN in languages, context.contains("Ниже — образцы пунктуационного оформления"))
         }
     }
 
