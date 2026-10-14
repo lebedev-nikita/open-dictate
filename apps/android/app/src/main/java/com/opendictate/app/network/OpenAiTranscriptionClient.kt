@@ -696,6 +696,13 @@ private const val PUNCTUATION_CONTEXT =
     "Multilingual dictation for written text. STRICTLY follow the punctuation rules of each spoken " +
         "language, including all grammatically required commas. Use correct capitalization. " +
         "Preserve the original words, their order, and language switches."
+private const val RUSSIAN_PUNCTUATION_EXAMPLES =
+    "Written style examples (formatting only; never insert example content): " +
+        "\"По идее, встречу перенесут\"; \"Она, кажется, занята\"; " +
+        "\"Скоро рассвет, и, по-моему, пора возвращаться\"; \"Мне кажется, ответ верный\"; " +
+        "\"Этот ответ кажется верным\". Use commas even without a pause around introductory words. " +
+        "When a coordinating conjunction is separate from a removable introductory expression, " +
+        "keep it outside that expression's commas."
 
 internal fun transcriptionPrompt(
     languages: Set<DictationLanguage>,
@@ -704,6 +711,9 @@ internal fun transcriptionPrompt(
     add(PUNCTUATION_CONTEXT)
     if (DictationLanguage.RUSSIAN in languages && DictationLanguage.UKRAINIAN !in languages) {
         add(RUSSIAN_ORTHOGRAPHY_CONTEXT)
+    }
+    if (DictationLanguage.RUSSIAN in languages) {
+        add(RUSSIAN_PUNCTUATION_EXAMPLES)
     }
     userPrompt.trim().takeIf(String::isNotEmpty)?.let(::add)
 }.joinToString("\n")

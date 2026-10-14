@@ -113,7 +113,7 @@ def main():
     parser.add_argument("--prompts-file", type=Path, default=Path(__file__).with_name("transcription-prompts.json"))
     parser.add_argument("--reference-file", type=Path)
     parser.add_argument("--reference-template", type=Path, help="Bootstrap: save one transcript for manual annotation and exit")
-    parser.add_argument("--bootstrap-prompt", default="rc2")
+    parser.add_argument("--bootstrap-prompt", default="punctuation_examples")
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--order-seed", type=int, default=42, help="Shuffle trial order; does not set an API seed")
     parser.add_argument("--confirm", help="Prompt ID to recheck in an independent final series")

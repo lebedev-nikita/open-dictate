@@ -23,7 +23,7 @@ class OpenAiTranscriptionClientTest {
         val root = listOf(".", "..", "../..", "../../..")
             .first { java.io.File(it, "scripts/transcription-prompts.json").isFile }
         val prompts = JSONObject(java.io.File(root, "scripts/transcription-prompts.json").readText())
-        assertEquals(prompts.getString("rc2"), transcriptionPrompt(
+        assertEquals(prompts.getString("punctuation_examples"), transcriptionPrompt(
             setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH), ""))
     }
     @Test
@@ -92,7 +92,7 @@ class OpenAiTranscriptionClientTest {
         assertEquals(24_000, input.getJSONObject("format").getInt("rate"))
         assertEquals("gpt-live-transcribe", transcription.getString("model"))
         assertEquals(
-            transcriptionPrompt(emptySet(), "") + "\nCyrillic text uses Russian orthography.\nOpenDictate",
+            transcriptionPrompt(setOf(DictationLanguage.ENGLISH, DictationLanguage.RUSSIAN), "OpenDictate"),
             transcription.getString("prompt"),
         )
         assertEquals(listOf("en", "ru"), transcription.getJSONArray("languages").let { languages ->
@@ -115,7 +115,8 @@ class OpenAiTranscriptionClientTest {
             .getJSONObject("input")
             .getJSONObject("transcription")
 
-        assertEquals(transcriptionPrompt(emptySet(), "") + "\nOpenDictate", transcription.getString("prompt"))
+        assertTrue(transcription.getString("prompt").contains("Written style examples"))
+        assertTrue(transcription.getString("prompt").endsWith("\nOpenDictate"))
         assertFalse(transcription.getString("prompt").contains("Russian orthography"))
     }
 
@@ -130,6 +131,7 @@ class OpenAiTranscriptionClientTest {
             assertTrue(context.contains("STRICTLY follow the punctuation rules of each spoken language"))
             assertTrue(context.contains("all grammatically required commas"))
             assertTrue(context.contains("Preserve the original words, their order, and language switches."))
+            assertEquals(DictationLanguage.RUSSIAN in languages, context.contains("Written style examples"))
             assertTrue(context.endsWith("\nOpenDictate\nWebSocket"))
         }
     }

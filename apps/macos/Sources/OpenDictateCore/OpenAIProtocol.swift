@@ -18,12 +18,22 @@ public struct TranscriptionContext: Sendable {
         if languages.contains("ru") && !languages.contains("uk") {
             context.append("Cyrillic text uses Russian orthography.")
         }
+        if languages.contains("ru") {
+            context.append(Self.russianPunctuationExamples)
+        }
         return context.joined(separator: "\n")
     }
     private static let punctuationContext =
         "Multilingual dictation for written text. STRICTLY follow the punctuation rules of each spoken " +
         "language, including all grammatically required commas. Use correct capitalization. " +
         "Preserve the original words, their order, and language switches."
+    private static let russianPunctuationExamples =
+        "Written style examples (formatting only; never insert example content): " +
+        "\"По идее, встречу перенесут\"; \"Она, кажется, занята\"; " +
+        "\"Скоро рассвет, и, по-моему, пора возвращаться\"; \"Мне кажется, ответ верный\"; " +
+        "\"Этот ответ кажется верным\". Use commas even without a pause around introductory words. " +
+        "When a coordinating conjunction is separate from a removable introductory expression, " +
+        "keep it outside that expression's commas."
 }
 
 public enum OpenAIRequest {

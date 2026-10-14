@@ -7,7 +7,7 @@ final class ProtocolTests: XCTestCase {
         for _ in 0..<5 { root.deleteLastPathComponent() }
         let prompts = try JSONDecoder().decode([String: String].self,
             from: Data(contentsOf: root.appendingPathComponent("scripts/transcription-prompts.json")))
-        XCTAssertEqual(TranscriptionContext(languages: ["ru", "en"]).prompt, prompts["rc2"])
+        XCTAssertEqual(TranscriptionContext(languages: ["ru", "en"]).prompt, prompts["punctuation_examples"])
     }
     func testPunctuationContextReachesBothProtocolsForEveryLanguageAndAutomaticDetection() throws {
         let selections = [[]] + SpeechLanguage.all.map { [$0.id] } + [["ru", "uk"], ["ru", "en"]]
@@ -15,6 +15,7 @@ final class ProtocolTests: XCTestCase {
             let context = TranscriptionContext(languages: languages, dictionary: ["OpenDictate"])
             XCTAssertTrue(context.prompt.contains("STRICTLY follow the punctuation rules of each spoken language"))
             XCTAssertEqual(context.prompt.contains("Russian orthography"), languages.contains("ru") && !languages.contains("uk"))
+            XCTAssertEqual(context.prompt.contains("Written style examples"), languages.contains("ru"))
             let session = try XCTUnwrap(OpenAIRequest.sessionUpdate(context: context)["session"] as? [String: Any])
             let audio = try XCTUnwrap(session["audio"] as? [String: Any])
             let input = try XCTUnwrap(audio["input"] as? [String: Any])
