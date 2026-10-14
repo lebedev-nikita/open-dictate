@@ -2,7 +2,7 @@
 version: 1
 slug: "android-settings"
 primary_target: "apps/android/app/src/main/java/com/opendictate/app/ui/SettingsScreen.kt"
-related_targets: ["apps/android/app/src/main/java/com/opendictate/app/ui/SettingsTheme.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ReplacementSheet.kt"]
+related_targets: ["apps/android/app/src/main/java/com/opendictate/app/ui/SettingsTheme.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ReplacementSheet.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/GesturesScreen.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/OpenDictateApp.kt"]
 ---
 
 SCOPE: Android settings redesign. Mode: Operate. The existing dictation overlay, launcher mark, and website identity are outside this surface.
@@ -27,7 +27,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 - Readiness disclosure: API key, microphone, and Accessibility actions; summary reflects missing steps or connecting/listening/processing state. It starts collapsed and can reopen for setup changes.
 - Dictation: Accurate/Live selector, recognition model, languages, trailing punctuation, word replacements, and dictionary. Selected mode has a check and contrast fill; IDs use monospace.
-- Keyboard: transformation toggle and conditional editing model, selected-text dictionary toggle, and app exclusions. Transformation controls disable during active dictation.
+- Keyboard: Gestures guide, transformation toggle and conditional editing model, selected-text dictionary toggle, and app exclusions. Transformation controls disable during active dictation.
 - Advanced: response timeout and model refresh, with missing-key, loading, retry, and newly available model feedback.
 - Test field, privacy note, and version finish the scroll.
 
@@ -62,3 +62,15 @@ The durable pending-connection state gates automatic merging across errors and r
 Implementation authority: `GoogleDriveSyncSettings.kt`, English/Russian strings in `apps/android/app/src/main/res/values*/strings.xml`, and `GoogleDriveSync.kt`. Final native captures are `.impeccable/review/drive-source-android-phone.png` (English light), `.impeccable/review/drive-source-android-phone-dark-large-ru.png` (Russian dark, 1.3 font scale), and `.impeccable/review/drive-source-android-tablet-dark-ru.png` (Russian dark tablet emulation). Instrumentation covers source-choice actions and the network gate. These are native emulator and tablet-emulation evidence, without an HTML detector or a claim of real-device Google sign-in coverage.
 
 Finish reviewer disposition: **ship** for this narrow addition; all five finish-review sections passed, with no material fixes. Existing tokens, native theme, provider hierarchy and asset provenance remain the authority. Review captures are evidence, not shipping raster assets.
+
+## Floating-button Gestures guide
+
+Gestures opens from Keyboard as a full-screen Read surface within Operate settings, preserving the neutral Material 3 palette and system typography. The user selected modern concept 1, `.impeccable/review/modern-gesture-concepts/01-fine-echo.png`, as a direction reference within the app's native identity; exact pixel matching is not required. Three picture-and-heading rows have no visible captions or introduction. English headings are “Hold to open the menu”, “Swipe left to cancel dictation” and “Swipe right to hide the button”; Russian copy remains unchanged. English/Russian screen-reader descriptions explain idle/active applicability, cancellation and keyboard close/reopen recovery.
+
+The native group has 16 dp corners, minimum-84 dp rows with 12 dp horizontal/6 dp vertical padding, and 0.5 dp theme-outline-variant borders/dividers at 0.65 opacity. Fixed 116 × 72 dp zones center complete illustrations; a 20 dp text gap aligns all heading left edges. Hold uses a 72 dp box with 34/30 dp ripple radii, 1 dp theme-outline strokes and 0.25/0.5 opacity. Swipe blocks are 108 dp wide: 44 × 44 dp chevrons, a 12 dp internal gap and the 52 dp actual button. Chevrons lead left swipe and trail right swipe, so button centers shift with direction while complete blocks share one axis. Each three-chevron echo uses 12 dp arms, 14 dp offsets and 1.75 dp strokes with rounded caps/joins, in SettingsMuted at outward opacity 1/0.55/0.25. The existing 52 dp white circular button, 24 dp microphone/stop drawable and 5 dp elevation remain. Canvas vectors and existing drawables introduce no shipping raster assets; these measurements remain guide-specific.
+
+“Menu actions” is a native ledger with 16 dp vertical padding and inset dividers. Explanations cover Accurate retranscription, pasting at the cursor, editing selected text or all text through a voice command with Text transformation enabled, and adding selected text to Dictionary. Dictionary requires selected text in a non-password field independently of the selected-text context-menu toggle. `GesturesScreen.kt`, `OpenDictateApp.kt`, the Keyboard entry in `SettingsScreen.kt` and localized strings are the implementation authority; `OpenDictateAccessibilityService.kt` establishes action availability.
+
+The scrollable guide retains a centered 680 dp maximum column, 24 dp gutters, growing text, heading semantics and status/navigation insets. Toolbar/system Back preserve the settings scroll; the saveable route survives recreation. No new theme tokens or shipping raster assets are introduced.
+
+Final native finish-review disposition: **ship**; all five sections passed with no material fixes. Review covered current source, all eight captures and reconciled records; the approved Fine Echo direction and native style are preserved. Eight fresh guide captures in `.impeccable/review/` are `gestures-phone-ru.png`, `gestures-menu-ru.png`, `gestures-phone-dark-large-ru.png`, `gestures-menu-dark-large-ru.png`, `gestures-tablet-dark-ru.png`, `gestures-phone-en.png`, `gestures-phone-dark-large-en.png` and `gestures-menu-dark-large-en.png`. Primary aliases are `gestures-fine-echo-phone-ru.png` and `gestures-fine-echo-phone-en.png`. Dedicated-emulator captures cover English/Russian, dark appearance at 1.3 font scale and Russian tablet emulation at 1600 × 2560 with density 200. They are native review evidence, not shipping assets; an HTML detector does not apply. Required local Gradle checks passed with 151 unit tests, Debug/Release lint and assembly; one navigation/recreation/content/heading-alignment instrumentation test passed with no failures.

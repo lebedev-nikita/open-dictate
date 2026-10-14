@@ -91,6 +91,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     var showKeyDialog by remember { mutableStateOf(false) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
     var showAppExclusions by rememberSaveable { mutableStateOf(false) }
+    var showGestures by rememberSaveable { mutableStateOf(false) }
     val settingsScrollState = rememberScrollState()
     val maximumDisplayRefreshRate = LocalView.current.display
         ?.supportedModes
@@ -107,8 +108,12 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     LaunchedEffect(showAppExclusions) {
         if (showAppExclusions) viewModel.loadInstalledApps()
     }
-    BackHandler(enabled = showHistory || showAppExclusions) {
-        if (showAppExclusions) showAppExclusions = false else showHistory = false
+    BackHandler(enabled = showHistory || showAppExclusions || showGestures) {
+        when {
+            showGestures -> showGestures = false
+            showAppExclusions -> showAppExclusions = false
+            else -> showHistory = false
+        }
     }
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -128,7 +133,9 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
             containerColor = SettingsCanvas,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { padding ->
-            if (showAppExclusions) {
+            if (showGestures) {
+                GesturesScreen(onBack = { showGestures = false }, modifier = Modifier.padding(padding))
+            } else if (showAppExclusions) {
                 AppExclusionsScreen(
                     apps = state.installedApps,
                     excludedPackages = state.excludedPackages,
@@ -173,6 +180,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
                     onAppExclusions = { showAppExclusions = true },
+                    onGestures = { showGestures = true },
                     viewModel = viewModel,
                     modifier = Modifier.padding(padding),
                 )
