@@ -5,6 +5,19 @@ import org.junit.Test
 
 class DictionaryTermsTest {
     @Test
+    fun `keyword hints clean legacy terms and remove case-insensitive duplicates`() {
+        val dictionary = " <OpenDictate>, Jetpack Compose\r\nOPENDICTATE\r\n <> \n"
+        assertEquals(listOf("OpenDictate", "Jetpack Compose"), transcriptionKeywords(dictionary))
+    }
+
+    @Test
+    fun `keyword hints preserve multilingual phrases and punctuation`() {
+        assertEquals(listOf("Никита Лебедев", "GPT-6", "C++", "AC-42"),
+            transcriptionKeywords("Никита Лебедев\nGPT-6\nC++\nAC-42"))
+        assertEquals(emptyList<String>(), transcriptionKeywords(" \r\n<>\n "))
+    }
+
+    @Test
     fun `keeps one term per line`() {
         assertEquals(
             "Kotlin\nOpenDictate\nJetpack Compose",

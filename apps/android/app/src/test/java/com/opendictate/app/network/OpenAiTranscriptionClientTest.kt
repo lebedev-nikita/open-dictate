@@ -24,7 +24,7 @@ class OpenAiTranscriptionClientTest {
             .first { java.io.File(it, "scripts/transcription-prompts.json").isFile }
         val prompts = JSONObject(java.io.File(root, "scripts/transcription-prompts.json").readText())
         assertEquals(prompts.getString("punctuation_examples"), transcriptionPrompt(
-            setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH), ""))
+            setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH)))
     }
     @Test
     fun `file transcription uses configured overall timeout or none`() {
@@ -80,7 +80,7 @@ class OpenAiTranscriptionClientTest {
         val event = realtimeTranscriptionSessionUpdate(
             modelId = "gpt-live-transcribe",
             languages = setOf(DictationLanguage.ENGLISH, DictationLanguage.RUSSIAN),
-            prompt = "OpenDictate",
+            dictionary = "OpenDictate\r\n WebSocket \n<OpenDictate>\n<>",
         )
         val session = event.getJSONObject("session")
         val input = session.getJSONObject("audio").getJSONObject("input")
@@ -92,9 +92,14 @@ class OpenAiTranscriptionClientTest {
         assertEquals(24_000, input.getJSONObject("format").getInt("rate"))
         assertEquals("gpt-live-transcribe", transcription.getString("model"))
         assertEquals(
-            transcriptionPrompt(setOf(DictationLanguage.ENGLISH, DictationLanguage.RUSSIAN), "OpenDictate"),
+            transcriptionPrompt(setOf(DictationLanguage.ENGLISH, DictationLanguage.RUSSIAN)),
             transcription.getString("prompt"),
         )
+        assertEquals(listOf("OpenDictate", "WebSocket"), transcription.getJSONArray("keywords").let { keywords ->
+            List(keywords.length()) { index -> keywords.getString(index) }
+        })
+        assertFalse(transcription.getString("prompt").contains("OpenDictate"))
+        assertFalse(transcription.getString("prompt").contains("WebSocket"))
         assertEquals(listOf("en", "ru"), transcription.getJSONArray("languages").let { languages ->
             List(languages.length()) { index -> languages.getString(index) }
         })
@@ -107,7 +112,7 @@ class OpenAiTranscriptionClientTest {
         val event = realtimeTranscriptionSessionUpdate(
             modelId = "gpt-live-transcribe",
             languages = setOf(DictationLanguage.RUSSIAN, DictationLanguage.UKRAINIAN),
-            prompt = "OpenDictate",
+            dictionary = "OpenDictate",
         )
         val transcription = event
             .getJSONObject("session")
@@ -116,7 +121,7 @@ class OpenAiTranscriptionClientTest {
             .getJSONObject("transcription")
 
         assertTrue(transcription.getString("prompt").contains("Written style examples"))
-        assertTrue(transcription.getString("prompt").endsWith("\nOpenDictate"))
+        assertEquals("OpenDictate", transcription.getJSONArray("keywords").getString(0))
         assertFalse(transcription.getString("prompt").contains("Russian orthography"))
     }
 
@@ -126,13 +131,12 @@ class OpenAiTranscriptionClientTest {
             listOf(DictationLanguage.entries.toSet())
 
         languageSelections.forEach { languages ->
-            val context = transcriptionPrompt(languages, "  OpenDictate\nWebSocket  ")
+            val context = transcriptionPrompt(languages)
             assertTrue(context.startsWith("Multilingual dictation for written text."))
             assertTrue(context.contains("STRICTLY follow the punctuation rules of each spoken language"))
             assertTrue(context.contains("all grammatically required commas"))
             assertTrue(context.contains("Preserve the original words, their order, and language switches."))
             assertEquals(DictationLanguage.RUSSIAN in languages, context.contains("Written style examples"))
-            assertTrue(context.endsWith("\nOpenDictate\nWebSocket"))
         }
     }
 
@@ -141,14 +145,52 @@ class OpenAiTranscriptionClientTest {
         val input = realtimeTranscriptionSessionUpdate(
             modelId = "gpt-live-transcribe",
             languages = emptySet(),
-            prompt = "   ",
+            dictionary = " \r\n<>\n ",
         ).getJSONObject("session").getJSONObject("audio").getJSONObject("input")
         val transcription = input.getJSONObject("transcription")
 
-        assertEquals(transcriptionPrompt(emptySet(), ""), transcription.getString("prompt"))
+        assertEquals(transcriptionPrompt(emptySet()), transcription.getString("prompt"))
+        assertFalse(transcription.has("keywords"))
         assertFalse(transcription.has("languages"))
         assertFalse(transcription.has("delay"))
         assertTrue(input.isNull("turn_detection"))
+    }
+
+    @Test
+    fun `accurate transcription sends normalized dictionary as repeated keyword fields`() {
+        val file = java.io.File.createTempFile("transcription-test-", ".wav")
+        try {
+            file.writeBytes(byteArrayOf(1, 2, 3))
+            val languages = setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH)
+            val body = transcriptionMultipartBody("gpt-transcribe", file, languages,
+                " OpenDictate, Jetpack Compose\r\n<opendictate>\n<>")
+            val fields = body.parts.filter { it.headers?.get("Content-Disposition")?.contains("filename=") != true }
+                .map { part ->
+                    val buffer = okio.Buffer()
+                    part.body.writeTo(buffer)
+                    part.headers?.get("Content-Disposition") to buffer.readUtf8()
+                }
+            fun values(name: String) = fields.filter { it.first == "form-data; name=\"$name\"" }.map { it.second }
+
+            assertEquals(listOf("gpt-transcribe"), values("model"))
+            assertEquals(listOf("ru", "en"), values("languages[]"))
+            assertEquals(listOf("OpenDictate", "Jetpack Compose"), values("keywords[]"))
+            assertEquals(listOf(transcriptionPrompt(languages)), values("prompt"))
+            val audio = body.parts.single { it.headers?.get("Content-Disposition")?.contains("filename=") == true }
+            assertEquals("audio/wav", audio.body.contentType().toString())
+            val buffer = okio.Buffer()
+            audio.body.writeTo(buffer)
+            org.junit.Assert.assertArrayEquals(byteArrayOf(1, 2, 3), buffer.readByteArray())
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun `accurate automatic language and empty dictionary omit array hints`() {
+        val body = transcriptionMultipartBody("gpt-transcribe", java.io.File("unused.wav"), emptySet(), " \r\n<> ")
+        val headers = body.parts.map { it.headers?.get("Content-Disposition").orEmpty() }
+        assertFalse(headers.any { it.contains("keywords") || it.contains("languages") })
     }
 
     @Test

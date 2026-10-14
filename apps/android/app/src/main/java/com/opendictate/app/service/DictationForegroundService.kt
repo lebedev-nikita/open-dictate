@@ -107,7 +107,7 @@ class DictationForegroundService : Service() {
         val transformationModelId = settings.transformationModelId
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
-        val prompt = settings.prompt
+        val dictionary = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
         val sessionId = nextSession.incrementAndGet()
         activeOperation = operation
@@ -141,7 +141,7 @@ class DictationForegroundService : Service() {
                             scope = scope,
                             recorder = recorder,
                             languages = languages,
-                            prompt = prompt,
+                            dictionary = dictionary,
                             responseTimeoutSeconds = responseTimeoutSeconds,
                             waitForStop = { stopSignal.await() },
                             onReady = {
@@ -227,7 +227,7 @@ class DictationForegroundService : Service() {
                             accurateModelId,
                             file,
                             languages,
-                            prompt,
+                            dictionary,
                             responseTimeoutSeconds,
                         )
                     }
@@ -324,7 +324,7 @@ class DictationForegroundService : Service() {
         val model = TranscriptionModel.ACCURATE
         val accurateModelId = settings.accurateModelId
         val languages = settings.languages
-        val prompt = settings.prompt
+        val dictionary = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
         activeOperation = DictationOperation.DICTATION
         startForeground(NOTIFICATION_ID, notification(true, DictationOperation.DICTATION))
@@ -341,7 +341,7 @@ class DictationForegroundService : Service() {
                     accurateModelId,
                     file,
                     languages,
-                    prompt,
+                    dictionary,
                     responseTimeoutSeconds,
                 )
                 if (transcript.isBlank()) {
