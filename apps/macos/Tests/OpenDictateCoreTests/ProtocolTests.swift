@@ -2,7 +2,7 @@ import XCTest
 @testable import OpenDictateCore
 
 final class ProtocolTests: XCTestCase {
-    func testPunctuationPromptMatchesValidatedAndroidBenchmark() throws {
+    func testPunctuationPromptMatchesConfiguredAndroidBenchmark() throws {
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<5 { root.deleteLastPathComponent() }
         let prompts = try JSONDecoder().decode([String: String].self,
@@ -15,7 +15,7 @@ final class ProtocolTests: XCTestCase {
             let context = TranscriptionContext(languages: languages, dictionary: ["OpenDictate"])
             XCTAssertTrue(context.prompt.contains("STRICTLY follow the punctuation rules of each spoken language"))
             XCTAssertEqual(context.prompt.contains("Russian orthography"), languages.contains("ru") && !languages.contains("uk"))
-            XCTAssertEqual(context.prompt.contains("Written style examples"), languages.contains("ru"))
+            XCTAssertEqual(context.prompt.contains("Ниже — образцы пунктуационного оформления"), languages.contains("ru"))
             let session = try XCTUnwrap(OpenAIRequest.sessionUpdate(context: context)["session"] as? [String: Any])
             let audio = try XCTUnwrap(session["audio"] as? [String: Any])
             let input = try XCTUnwrap(audio["input"] as? [String: Any])
