@@ -21,13 +21,13 @@ python3 scripts/evaluate-transcription-punctuation.py \
 ```
 
 Compare the bundled prompts five times each in shuffled order, then run ten
-additional checks of the RC2 prompt:
+additional checks of the current app prompt:
 
 ```bash
 python3 scripts/evaluate-transcription-punctuation.py \
   --audio /tmp/punctuation-input.wav \
   --reference-file /tmp/punctuation-reference.txt \
-  --repeats 5 --confirm rc2 --confirmation-repeats 10 \
+  --repeats 5 --confirm punctuation_examples --confirmation-repeats 10 \
   --report /tmp/punctuation-results.json
 ```
 
@@ -36,11 +36,12 @@ word-preservation checks and request timings, without keys, audio, transcripts
 or raw API payloads. The bootstrap reference is the only saved transcript; keep
 it outside Git. Existing reference and report files are never overwritten.
 
-Defaults reproduce the RC2 Accurate prompt with Russian and English language
+Defaults reproduce the current Accurate prompt with Russian and English language
 hints and an empty user dictionary. Use `--languages`, `--model` and
 `--prompts-file` to test another configuration. Compare comma positions against
-an independently checked reference; capitalization and Russian е/ё differences
-are ignored when comparing words. These checks cover Latin/Cyrillic prose, not
+an independently checked reference that accounts for valid punctuation variants.
+Capitalization and Russian е/ё differences are ignored when comparing words.
+These checks cover Latin/Cyrillic prose, not
 language-independent tokenization or the correctness of other punctuation.
 
 Request timings include networking from this computer. They do not measure
