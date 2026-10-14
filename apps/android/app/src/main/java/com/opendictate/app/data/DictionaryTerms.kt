@@ -18,6 +18,13 @@ internal fun normalizeDictionaryTerms(value: String): String =
         .replace('\r', '\n')
         .replace(LEGACY_COMMA_SEPARATOR, "\n")
 
+internal fun transcriptionKeywords(value: String): List<String> =
+    normalizeDictionaryTerms(value).lineSequence()
+        .map { it.replace("<", "").replace(">", "").trim() }
+        .filter(String::isNotEmpty)
+        .distinctBy { it.lowercase() }
+        .toList()
+
 internal fun addDictionaryTerm(existing: String, selection: String): DictionaryAddition {
     val term = selection.trim().replace(SELECTION_WHITESPACE, " ")
     if (term.isEmpty()) return DictionaryAddition.Empty

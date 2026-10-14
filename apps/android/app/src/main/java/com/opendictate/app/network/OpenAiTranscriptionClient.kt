@@ -5,6 +5,7 @@ import android.util.Base64
 import androidx.annotation.StringRes
 import com.opendictate.app.R
 import com.opendictate.app.audio.PcmAudioRecorder
+import com.opendictate.app.data.transcriptionKeywords
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import kotlinx.coroutines.CompletableDeferred
@@ -59,19 +60,10 @@ class OpenAiTranscriptionClient(
         modelId: String,
         audioFile: File,
         languages: Set<DictationLanguage>,
-        prompt: String,
+        dictionary: String,
         responseTimeoutSeconds: Int?,
     ): String = withContext(Dispatchers.IO) {
-        val multipart = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("model", modelId)
-            .addFormDataPart("file", "dictation.wav", audioFile.asRequestBody(WAV))
-            .apply {
-                val context = transcriptionPrompt(languages, prompt)
-                if (context.isNotBlank()) addFormDataPart("prompt", context)
-                languages.forEach { addFormDataPart("languages[]", it.code) }
-            }
-            .build()
+        val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary)
         val request = authorizedRequest(apiKey, TRANSCRIPTIONS_URL)
             .post(multipart)
             .build()
@@ -95,14 +87,14 @@ class OpenAiTranscriptionClient(
         scope: CoroutineScope,
         recorder: PcmAudioRecorder,
         languages: Set<DictationLanguage>,
-        prompt: String,
+        dictionary: String,
         responseTimeoutSeconds: Int?,
         waitForStop: suspend () -> Unit,
         onReady: () -> Unit,
         onPartial: (String) -> Unit,
         onAudio: (ByteArray) -> Unit = {},
     ): String {
-        val session = LiveSession(apiKey, modelId, languages, prompt, onPartial)
+        val session = LiveSession(apiKey, modelId, languages, dictionary, onPartial)
         try {
             session.connect()
             recorder.start(scope) { chunk ->
@@ -241,7 +233,7 @@ class OpenAiTranscriptionClient(
         private val apiKey: String,
         private val modelId: String,
         private val languages: Set<DictationLanguage>,
-        private val prompt: String,
+        private val dictionary: String,
         private val onPartial: (String) -> Unit,
     ) : WebSocketListener() {
         val ready = CompletableDeferred<Unit>()
@@ -261,7 +253,7 @@ class OpenAiTranscriptionClient(
         }
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, prompt).toString())
+            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary).toString())
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -431,7 +423,6 @@ class OpenAiTranscriptionClient(
         private const val TRANSFORMATION_TIMEOUT_MS = 30_000L
         private const val HISTORY_SEARCH_TIMEOUT_MS = 30_000L
         private const val MAX_QUEUED_CHUNKS = 300
-        private val WAV = "audio/wav".toMediaType()
         private val JSON = "application/json; charset=utf-8".toMediaType()
     }
 }
@@ -665,15 +656,33 @@ internal fun extractResponseText(response: JSONObject): String {
 internal fun realtimeTranscriptionUrl(): String =
     "wss://api.openai.com/v1/realtime?intent=transcription"
 
+internal fun transcriptionMultipartBody(
+    modelId: String,
+    audioFile: File,
+    languages: Set<DictationLanguage>,
+    dictionary: String,
+): MultipartBody = MultipartBody.Builder()
+    .setType(MultipartBody.FORM)
+    .addFormDataPart("model", modelId)
+    .addFormDataPart("file", "dictation.wav", audioFile.asRequestBody("audio/wav".toMediaType()))
+    .addFormDataPart("prompt", transcriptionPrompt(languages))
+    .apply {
+        languages.forEach { addFormDataPart("languages[]", it.code) }
+        transcriptionKeywords(dictionary).forEach { addFormDataPart("keywords[]", it) }
+    }
+    .build()
+
 internal fun realtimeTranscriptionSessionUpdate(
     modelId: String,
     languages: Set<DictationLanguage>,
-    prompt: String,
+    dictionary: String,
 ): JSONObject {
     val transcription = JSONObject()
         .put("model", modelId)
-    val context = transcriptionPrompt(languages, prompt)
+    val context = transcriptionPrompt(languages)
     if (context.isNotBlank()) transcription.put("prompt", context)
+    val keywords = transcriptionKeywords(dictionary)
+    if (keywords.isNotEmpty()) transcription.put("keywords", JSONArray(keywords))
     if (languages.isNotEmpty()) {
         transcription.put("languages", JSONArray(languages.map { it.code }))
     }
@@ -706,7 +715,6 @@ private const val RUSSIAN_PUNCTUATION_EXAMPLES =
 
 internal fun transcriptionPrompt(
     languages: Set<DictationLanguage>,
-    userPrompt: String,
 ): String = buildList {
     add(PUNCTUATION_CONTEXT)
     if (DictationLanguage.RUSSIAN in languages && DictationLanguage.UKRAINIAN !in languages) {
@@ -715,7 +723,6 @@ internal fun transcriptionPrompt(
     if (DictationLanguage.RUSSIAN in languages) {
         add(RUSSIAN_PUNCTUATION_EXAMPLES)
     }
-    userPrompt.trim().takeIf(String::isNotEmpty)?.let(::add)
 }.joinToString("\n")
 
 class OpenAiException(message: String, cause: Throwable? = null) : IOException(message, cause)
