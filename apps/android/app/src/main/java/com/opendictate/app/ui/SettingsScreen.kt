@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SettingsAccessibility
 import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -114,6 +115,7 @@ internal fun SettingsScreen(
     onMicrophone: () -> Unit,
     onAccessibility: () -> Unit,
     onAppExclusions: () -> Unit,
+    onGestures: () -> Unit,
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -234,6 +236,9 @@ internal fun SettingsScreen(
 
                 SectionTitle(stringResource(R.string.settings_keyboard))
                 SettingsGroup {
+                    ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
+                        stringResource(R.string.gestures_summary), onGestures)
+                    SettingsDivider()
                     ToggleRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.transformation_model_title),
                         stringResource(R.string.settings_transformation_hint), state.transformationButtonEnabled,
                         viewModel::setTransformationButtonEnabled, enabled = !dictation.isActive)
