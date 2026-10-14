@@ -1,4 +1,13 @@
 {
   "$schema": "https://t3.codes/schema/t3.json",
-  "iconPath": "docs/mark.svg"
+  "iconPath": "docs/mark.svg",
+  "scripts": [
+    {
+      "name": "Copy local environment from main",
+      "command": "main_worktree=\"$(git worktree list --porcelain | awk '/^worktree / { path = substr($0, 10) } $0 == \"branch refs/heads/main\" { print path; exit }')\"; if [ -n \"$main_worktree\" ] && [ -f \"$main_worktree/.env\" ] && [ ! -e .env ]; then (umask 077; cp \"$main_worktree/.env\" .env); fi",
+      "icon": "configure",
+      "runOnWorktreeCreate": true,
+      "async": false
+    }
+  ]
 }
