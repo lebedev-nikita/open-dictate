@@ -37,3 +37,13 @@ jobs:
           gh release create "$GITHUB_REF_NAME" "$dmg" "$dmg.sha256" \
             --verify-tag --title "OpenDictate for macOS $version" \
             --notes-file apps/macos/RELEASE_NOTES.md --latest=false "${flags[@]}"
+
+  homebrew:
+    # Releases created with GITHUB_TOKEN do not trigger release-event workflows.
+    needs: release
+    if: ${{ !contains(github.ref_name, '-rc.') }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/macos-homebrew.yml
+    secrets:
+      HOMEBREW_TAP_SSH_KEY: ${{ secrets.HOMEBREW_TAP_SSH_KEY }}

@@ -1,0 +1,57 @@
+name: Update macOS Homebrew cask
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      HOMEBREW_TAP_SSH_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-homebrew
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: >-
+      github.event_name != 'release' ||
+      (!github.event.release.draft && !github.event.release.prerelease &&
+       startsWith(github.event.release.tag_name, 'macos-v') &&
+       !contains(github.event.release.tag_name, '-rc.'))
+    runs-on: macos-15
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_ANALYTICS: "1"
+    steps:
+      - name: Check tap credential
+        env:
+          TAP_SSH_KEY: ${{ secrets.HOMEBREW_TAP_SSH_KEY }}
+        run: test -n "$TAP_SSH_KEY"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: lebedev-nikita/homebrew-tap
+          ref: main
+          fetch-depth: 0
+          ssh-key: ${{ secrets.HOMEBREW_TAP_SSH_KEY }}
+      - name: Test updater
+        run: python3 -m unittest discover -s tests -p test_update_cask.py
+      - name: Update from verified stable release
+        run: python3 scripts/update-cask.py
+      - name: Check cask style
+        run: brew style Casks/open-dictate.rb
+      - name: Publish cask update
+        run: |
+          if git diff --quiet -- Casks/open-dictate.rb; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Casks/open-dictate.rb
+          git commit -m 'Update OpenDictate cask from stable macOS release'
+          git pull --rebase origin main
+          git push origin HEAD:main

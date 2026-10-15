@@ -47,9 +47,11 @@ brew update
 brew upgrade --cask lebedev-nikita/tap/open-dictate
 ```
 
-The [tap](https://github.com/lebedev-nikita/homebrew-tap#opendictate-maintenance)
-checks stable macOS releases every six hours and verifies the DMG checksum before
-updating the cask. Android releases and release candidates are excluded.
+Stable macOS releases automatically update the
+[tap](https://github.com/lebedev-nikita/homebrew-tap#opendictate-maintenance)
+after publication, with a scheduled check every six hours as a fallback. The
+updater verifies the DMG checksum before updating the cask. Android releases and
+release candidates are excluded.
 For an identical manually installed release, quit the app and use
 `brew install --cask --adopt lebedev-nikita/tap/open-dictate`.
 Settings, history and Keychain credentials are retained.
