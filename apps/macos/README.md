@@ -3,6 +3,15 @@
 A native menu bar application built with SwiftUI, AppKit, AVAudioEngine,
 Accessibility, Keychain and URLSession. No third-party dependencies or backend.
 
+## Installation
+
+```bash
+brew install --cask lebedev-nikita/tap/open-dictate
+```
+
+See the [setup guide](../../README.md#install-on-macos) for permissions,
+upgrades, migration from a manually installed DMG and manual installation.
+
 ## Development
 
 Requires macOS 14+ and Xcode 16+ (Swift 5.9 package, compatible with Swift 6).
