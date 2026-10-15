@@ -252,10 +252,20 @@ days; reconnect when requested. See [setup and troubleshooting](../../docs/googl
 
 Stable releases are distributed through
 [`lebedev-nikita/tap/open-dictate`](https://github.com/lebedev-nikita/homebrew-tap#opendictate).
-The tap's updater checks releases every six hours, verifies the DMG against its
-checksum attachment and updates the pinned version and SHA-256. Its `livecheck`
-matches stable `macos-vX.Y.Z` tags, independently of the latest Android release.
+After publishing a stable release, the release workflow updates the tap's pinned
+version and SHA-256 using the tap's updater, which verifies the DMG against its
+checksum attachment. The tap also checks every six hours as a fallback. Its
+`livecheck` matches stable `macos-vX.Y.Z` tags, independently of the latest Android
+release.
 See the [installation commands](../../README.md#install-on-macos).
+
+The Homebrew job uses `HOMEBREW_TAP_SSH_KEY`, a repository secret containing a
+dedicated write-enabled deploy key for `lebedev-nikita/homebrew-tap`. Keep the
+private key outside Git. To retry the update without republishing a release:
+
+```sh
+gh workflow run macos-homebrew.yml --ref main
+```
 
 Both platform icons use the approved [shared application artwork](../../docs/app-icon.md).
 macOS packaging renders the original Android vector without adding lighting or shadows.
