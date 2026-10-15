@@ -56,7 +56,7 @@
     <string name="models_new">%1$d new models available</string>
 
     <string name="transformation_model_title">Text transformation</string>
-    <string name="transformation_model_subtitle">Select text or leave the cursor in the field, long-press the floating button, choose Edit text, and speak the instruction</string>
+    <string name="transformation_model_subtitle">Edit text with your voice.</string>
     <string name="transformation_button_toggle">Show Edit text in the floating button menu</string>
     <string name="transformation_model_luna_description">Fastest and most economical · default</string>
     <string name="transformation_model_sol_description">Highest quality for complex edits</string>
@@ -81,8 +81,6 @@
     <string name="app_filter_excluded_summary">Hidden in %1$d apps</string>
     <string name="app_filter_allowed_summary">Only in %1$d apps</string>
     <string name="app_filter_back">Back to settings</string>
-    <string name="app_filter_exclude_description">Select apps where the dictation button should be hidden.</string>
-    <string name="app_filter_allow_description">Select apps where the dictation button should appear. It stays hidden everywhere else, including system screens.</string>
     <string name="app_filter_allow_empty">No apps selected. The dictation button is hidden everywhere until you select an app.</string>
     <string name="app_filter_search">Filter by app name</string>
     <string name="app_filter_clear_search">Clear filter</string>

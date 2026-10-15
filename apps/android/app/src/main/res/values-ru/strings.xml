@@ -54,7 +54,7 @@
     <string name="models_new">Новых моделей: %1$d</string>
 
     <string name="transformation_model_title">Преобразование текста</string>
-    <string name="transformation_model_subtitle">Выделите текст или оставьте курсор в поле, удерживайте плавающую кнопку, выберите «Изменить текст» и надиктуйте инструкцию</string>
+    <string name="transformation_model_subtitle">Редактируйте текст голосом.</string>
     <string name="transformation_button_toggle">Показывать «Изменить текст» в меню плавающей кнопки</string>
     <string name="transformation_model_luna_description">Самая быстрая и экономичная · по умолчанию</string>
     <string name="transformation_model_sol_description">Лучшее качество для сложных правок</string>
@@ -78,8 +78,6 @@
     <string name="app_filter_excluded_summary">Скрыто в приложениях: %1$d</string>
     <string name="app_filter_allowed_summary">Только в приложениях: %1$d</string>
     <string name="app_filter_back">Вернуться к настройкам</string>
-    <string name="app_filter_exclude_description">Выберите приложения, в которых нужно скрывать кнопку диктовки.</string>
-    <string name="app_filter_allow_description">Выберите приложения, в которых нужна кнопка диктовки. В остальных приложениях и системных интерфейсах она будет скрыта.</string>
     <string name="app_filter_allow_empty">Приложения не выбраны. Кнопка диктовки скрыта везде, пока вы не выберете приложение.</string>
     <string name="app_filter_search">Фильтр по названию приложения</string>
     <string name="app_filter_clear_search">Очистить фильтр</string>

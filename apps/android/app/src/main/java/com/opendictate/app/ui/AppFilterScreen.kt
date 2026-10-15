@@ -113,16 +113,8 @@ internal fun AppFilterScreen(
                 }
             }
         }
-        item {
-            Text(
-                stringResource(
-                    if (appFilter.mode == AppFilterMode.ONLY_SELECTED) R.string.app_filter_allow_description
-                    else R.string.app_filter_exclude_description,
-                ),
-                color = SettingsMuted,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-            )
-            if (appFilter.mode == AppFilterMode.ONLY_SELECTED && appFilter.allowedPackages.isEmpty()) {
+        if (appFilter.mode == AppFilterMode.ONLY_SELECTED && appFilter.allowedPackages.isEmpty()) {
+            item {
                 Text(
                     stringResource(R.string.app_filter_allow_empty),
                     color = SettingsText,
