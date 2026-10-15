@@ -35,6 +35,7 @@ struct SettingsView: View {
                         .font(.caption).foregroundStyle(.secondary).lineSpacing(3)
                 }
                 Divider()
+                SettingsSyncControl(sync: model.driveSync, preferences: preferences)
                 HStack {
                     Text("macOS · \(Bundle.main.object(forInfoDictionaryKey: "OpenDictateReleaseVersion") as? String ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0-rc.3")")
                         .font(.caption).foregroundStyle(.secondary)
@@ -44,12 +45,6 @@ struct SettingsView: View {
             }.padding(20).frame(width: 220).background(Color(nsColor: .controlBackgroundColor))
             Divider()
             VStack(alignment: .leading, spacing: 0) {
-                if preferences.driveSyncEnabled {
-                    HStack {
-                        Spacer()
-                        SettingsSyncControl(sync: model.driveSync, preferences: preferences)
-                    }.padding(.horizontal, 28).padding(.top, 16)
-                }
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         switch selection {
