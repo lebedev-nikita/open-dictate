@@ -252,18 +252,13 @@
     <string name="drive_sync_use_local">Использовать локальные</string>
     <string name="gestures_title">Жесты</string>
     <string name="gestures_summary">Удержание и свайпы</string>
-    <string name="gestures_back">Вернуться в настройки</string>
+    <string name="gestures_close">Закрыть жесты</string>
     <string name="gestures_hold_title"><annotation gesture="hold">Удержание</annotation>: открыть меню</string>
     <string name="gestures_hold_description">Удерживайте неактивную кнопку, чтобы открыть или закрыть меню.</string>
     <string name="gestures_left_title"><annotation gesture="left">Влево</annotation>: отменить диктовку</string>
     <string name="gestures_left_description">Во время записи или обработки потяните влево и отпустите.</string>
     <string name="gestures_right_title"><annotation gesture="right">Вправо</annotation>: скрыть кнопку</string>
     <string name="gestures_right_description">Скройте неактивную кнопку свайпом вправо. Для возврата закройте и откройте клавиатуру.</string>
-    <string name="gestures_menu_title">Действия в меню</string>
-    <string name="gestures_retry_body">Повторно распознать последнюю запись в режиме «Точнее».</string>
-    <string name="gestures_paste_body">Вставить последнюю расшифровку у курсора.</string>
-    <string name="gestures_edit_body">Изменить выделение или весь текст голосовой командой. Включите «Преобразование текста».</string>
-    <string name="gestures_dictionary_body">Добавить выделенный текст в словарь. Недоступно в полях паролей.</string>
 
     <string name="dictation_button_title">Кнопка диктовки</string>
     <string name="dictation_button_appearance">Внешний вид</string>

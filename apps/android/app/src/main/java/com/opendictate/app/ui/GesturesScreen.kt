@@ -1,36 +1,35 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.opendictate.app.ui
 
 import android.text.Annotation
 import android.text.Spanned
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,45 +52,43 @@ import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 
 @Composable
-internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, mirrorGestures: Boolean = false) {
-    Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.widthIn(max = 680.dp).fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.gestures_back))
+internal fun GesturesSheet(onDismiss: () -> Unit, mirrorGestures: Boolean = false) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = SettingsSurface,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.gestures_title),
+                    Modifier.weight(1f).semantics { heading() },
+                    style = MaterialTheme.typography.headlineSmall)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Outlined.Close, stringResource(R.string.gestures_close), tint = SettingsMuted)
                 }
-                Text(stringResource(R.string.gestures_title), Modifier.padding(start = 8.dp).semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge)
             }
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
-                Surface(Modifier.fillMaxWidth().padding(top = 16.dp), shape = RoundedCornerShape(16.dp),
-                    color = SettingsSurface,
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))) {
-                    Column {
-                        GestureRow(ButtonGesture.HOLD, R.string.gestures_hold_title, R.string.gestures_hold_description)
-                        GuideDivider()
-                        GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_RIGHT else ButtonGesture.SWIPE_LEFT,
-                            if (mirrorGestures) R.string.gestures_cancel_right_title else R.string.gestures_left_title,
-                            if (mirrorGestures) R.string.gestures_cancel_right_description else R.string.gestures_left_description, active = true)
-                        GuideDivider()
-                        GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_LEFT else ButtonGesture.SWIPE_RIGHT,
-                            if (mirrorGestures) R.string.gestures_dismiss_left_title else R.string.gestures_right_title,
-                            if (mirrorGestures) R.string.gestures_dismiss_left_description else R.string.gestures_right_description)
-                    }
+            Surface(shape = RoundedCornerShape(12.dp), color = SettingsInset, contentColor = SettingsText) {
+                Column {
+                    GestureRow(ButtonGesture.HOLD, R.string.gestures_hold_title, R.string.gestures_hold_description)
+                    GuideDivider()
+                    GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_RIGHT else ButtonGesture.SWIPE_LEFT,
+                        if (mirrorGestures) R.string.gestures_cancel_right_title else R.string.gestures_left_title,
+                        if (mirrorGestures) R.string.gestures_cancel_right_description else R.string.gestures_left_description, active = true)
+                    GuideDivider()
+                    GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_LEFT else ButtonGesture.SWIPE_RIGHT,
+                        if (mirrorGestures) R.string.gestures_dismiss_left_title else R.string.gestures_right_title,
+                        if (mirrorGestures) R.string.gestures_dismiss_left_description else R.string.gestures_right_description)
                 }
-
-                Text(stringResource(R.string.gestures_menu_title),
-                    Modifier.padding(top = 24.dp, bottom = 8.dp).semantics { heading() },
-                    style = MaterialTheme.typography.titleSmall, color = SettingsMuted, fontWeight = FontWeight.Medium)
-                MenuInstruction(R.string.overlay_last_dictation, R.string.gestures_retry_body)
-                GuideDivider()
-                MenuInstruction(R.string.overlay_paste_last, R.string.gestures_paste_body)
-                GuideDivider()
-                MenuInstruction(R.string.overlay_edit_text, R.string.gestures_edit_body)
-                GuideDivider()
-                MenuInstruction(R.string.overlay_add_to_dictionary, R.string.gestures_dictionary_body)
-                Spacer(Modifier.height(28.dp))
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Button(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.settings_done))
+                }
             }
         }
     }
@@ -195,12 +192,4 @@ private fun FloatingButtonPicture(drawable: Int) {
 private fun GuideDivider() {
     HorizontalDivider(Modifier.padding(horizontal = 12.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f), thickness = 0.5.dp)
-}
-
-@Composable
-private fun MenuInstruction(title: Int, body: Int) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringResource(title), Modifier.semantics { heading() }, style = MaterialTheme.typography.bodyLarge)
-        Text(stringResource(body), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
-    }
 }

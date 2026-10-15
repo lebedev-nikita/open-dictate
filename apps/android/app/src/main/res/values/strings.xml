@@ -256,18 +256,13 @@
     <string name="drive_sync_use_local">Use local settings</string>
     <string name="gestures_title">Gestures</string>
     <string name="gestures_summary">Hold and swipe gestures</string>
-    <string name="gestures_back">Back to settings</string>
+    <string name="gestures_close">Close gestures</string>
     <string name="gestures_hold_title"><annotation gesture="hold">Hold</annotation> to open the menu</string>
     <string name="gestures_hold_description">Press and hold the idle button to open or close its menu.</string>
     <string name="gestures_left_title"><annotation gesture="left">Swipe left</annotation> to cancel dictation</string>
     <string name="gestures_left_description">While recording or processing dictation, swipe the button left and release to cancel.</string>
     <string name="gestures_right_title"><annotation gesture="right">Swipe right</annotation> to hide the button</string>
     <string name="gestures_right_description">Swipe the idle button right to hide it. Close and reopen the keyboard to bring it back.</string>
-    <string name="gestures_menu_title">Menu actions</string>
-    <string name="gestures_retry_body">Transcribe your last recording again in Accurate mode.</string>
-    <string name="gestures_paste_body">Insert your last transcript at the cursor.</string>
-    <string name="gestures_edit_body">Use a voice command to edit selected text, or all text if nothing is selected. Enable Text transformation in Settings.</string>
-    <string name="gestures_dictionary_body">Add the selected text to your dictionary. Not available in password fields.</string>
 
     <string name="dictation_button_title">Dictation button</string>
     <string name="dictation_button_appearance">Appearance</string>
