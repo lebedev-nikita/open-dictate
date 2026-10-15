@@ -6,7 +6,11 @@ struct SettingsSyncControl: View {
 
     var body: some View {
         if preferences.driveSyncEnabled {
-            VStack(alignment: .trailing, spacing: 6) {
+            HStack(spacing: 12) {
+                Text(sync.statusText(preferences: preferences, compact: true))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .help(sync.statusText(preferences: preferences))
                 Button(action: sync.syncNow) {
                     HStack(spacing: 6) {
                         if sync.status == .busy {
@@ -20,12 +24,8 @@ struct SettingsSyncControl: View {
                 }
                 .keyboardShortcut("r", modifiers: .command)
                 .disabled(!sync.canSyncNow)
+                .fixedSize()
                 .help(preferences.t("Sync settings now (⌘R)", "Синхронизировать настройки сейчас (⌘R)"))
-                Text(sync.statusText(preferences: preferences, compact: true))
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .opacity(sync.status == .busy ? 0 : 1)
-                    .accessibilityHidden(sync.status == .busy)
             }
         }
     }

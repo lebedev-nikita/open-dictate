@@ -23,6 +23,7 @@ final class SettingsViewLayoutTests: XCTestCase {
             let topInset = host.isFlipped ? scrollFrame.minY : host.bounds.maxY - scrollFrame.maxY
             if enabled {
                 XCTAssertGreaterThan(topInset, 16, "Visible sync controls need their own header")
+                XCTAssertLessThanOrEqual(topInset, 42, "Sync status and button must share one row")
             } else {
                 XCTAssertEqual(topInset, 0, accuracy: 0.5, "Hidden sync controls must not reserve header space")
             }

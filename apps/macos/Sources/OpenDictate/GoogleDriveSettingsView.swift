@@ -74,25 +74,29 @@ extension GoogleDriveSync {
         func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
         switch status {
         case .disconnected: return t("Not connected", "Не подключено")
-        case .waiting: return t("Waiting to synchronize", "Ожидание синхронизации")
+        case .waiting: return compact ? t("Waiting to sync", "Ожидание синхронизации")
+            : t("Waiting to synchronize", "Ожидание синхронизации")
         case .busy: return compact ? t("Synchronizing…", "Синхронизация…")
             : t("Synchronizing or waiting for Google sign-in…", "Синхронизация или ожидание входа в Google…")
         case .synced:
             let date = lastSyncedAt?.formatted(date: .abbreviated, time: .shortened) ?? ""
-            if compact { return t("Last synced: \(date)", "Последняя синхронизация: \(date)") }
+            if compact { return t("Last synced: \(date)", "Синхронизировано: \(date)") }
             return t("Last synced: \(date). Changes sync automatically while the app is running.",
                      "Последняя синхронизация: \(date). Изменения синхронизируются автоматически, пока приложение работает.")
-        case .sourceSelection: return t("Choose a settings source to finish connecting.", "Выберите источник настроек, чтобы завершить подключение.")
-        case .failed: return compact ? t("Could not sync. Check your connection and try again.", "Не удалось синхронизировать. Проверьте соединение и повторите.")
+        case .sourceSelection: return compact ? t("Choose settings source", "Выберите источник настроек")
+            : t("Choose a settings source to finish connecting.", "Выберите источник настроек, чтобы завершить подключение.")
+        case .failed: return compact ? t("Sync failed", "Ошибка синхронизации")
             : t("Could not sync. Local settings are saved. Check your connection and try again.",
                                "Не удалось синхронизировать. Локальные настройки сохранены. Проверьте соединение и повторите.")
-        case .authorization: return compact ? t("Reconnect Google Drive in Settings.", "Подключите Google Drive снова в Настройках.")
+        case .authorization: return compact ? t("Reconnect Google Drive", "Подключите Google Drive снова")
             : t("Google authorization expired or was revoked. Connect again to resume synchronization.",
                                      "Авторизация Google истекла или была отозвана. Подключитесь снова, чтобы возобновить синхронизацию.")
-        case .signInTimedOut: return t("Google sign-in timed out. Connect again and finish sign-in within 10 minutes.",
+        case .signInTimedOut: return compact ? t("Sign-in timed out", "Время входа истекло")
+            : t("Google sign-in timed out. Connect again and finish sign-in within 10 minutes.",
                                       "Время ожидания входа в Google истекло. Подключитесь снова и завершите вход в течение 10 минут.")
         case .configuration, .clientConfiguration:
-            return t("Google Drive is not configured in this build. Install an official build or contact support.",
+            return compact ? t("Google Drive not configured", "Google Drive не настроен")
+                : t("Google Drive is not configured in this build. Install an official build or contact support.",
                      "Google Drive не настроен в этой сборке. Установите официальную сборку или обратитесь в поддержку.")
         }
     }
