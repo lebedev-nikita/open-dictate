@@ -1,5 +1,8 @@
 package com.opendictate.app.ui
 
+import android.view.KeyEvent
+import androidx.test.platform.app.InstrumentationRegistry
+
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -18,7 +21,7 @@ import org.junit.Assert.assertTrue
 class GesturesScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    @Test fun settingsGuideCoversGesturesAndMenuAndSurvivesRecreation() {
+    @Test fun settingsSheetShowsOnlyGesturesAndSurvivesRecreation() {
         val context = compose.activity
         compose.onNodeWithText(context.getString(R.string.gestures_title)).performScrollTo().performClick()
         compose.activityRule.scenario.recreate()
@@ -43,12 +46,17 @@ class GesturesScreenTest {
             R.string.overlay_edit_text,
             R.string.overlay_add_to_dictionary,
         ).forEach { title ->
-            compose.onNodeWithText(context.getString(title)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(context.getString(title)).assertDoesNotExist()
         }
-        compose.onNodeWithContentDescription(context.getString(R.string.gestures_back)).performClick()
+        compose.onNodeWithContentDescription(context.getString(R.string.gestures_close)).performClick()
         compose.onNodeWithText(context.getString(R.string.gestures_title)).assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription(context.getString(R.string.gestures_back)).assertIsDisplayed()
-        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithContentDescription(context.getString(R.string.gestures_close)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.settings_done)).performScrollTo().performClick()
+        compose.onNodeWithText(context.getString(R.string.gestures_title)).assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription(context.getString(R.string.gestures_close)).assertIsDisplayed()
+        compose.waitForIdle()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        compose.waitForIdle()
         compose.onNodeWithText(context.getString(R.string.dictation_button_title)).assertIsDisplayed()
     }
 }

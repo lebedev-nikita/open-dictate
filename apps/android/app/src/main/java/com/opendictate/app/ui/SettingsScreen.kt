@@ -114,7 +114,6 @@ internal fun SettingsScreen(
     onMicrophone: () -> Unit,
     onAccessibility: () -> Unit,
     onAppFilter: () -> Unit,
-    onGestures: () -> Unit,
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -123,6 +122,7 @@ internal fun SettingsScreen(
     var dictionaryOpen by rememberSaveable { mutableStateOf(false) }
     var languagesOpen by rememberSaveable { mutableStateOf(false) }
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
+    var gesturesOpen by rememberSaveable { mutableStateOf(false) }
     var buttonAppearanceOpen by rememberSaveable { mutableStateOf(false) }
     val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
     val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
@@ -248,7 +248,7 @@ internal fun SettingsScreen(
                             { buttonAppearanceOpen = true })
                         SettingsDivider()
                         ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
-                            stringResource(R.string.gestures_summary), onGestures)
+                            stringResource(R.string.gestures_summary), { gesturesOpen = true })
                         SettingsDivider()
                         ToggleRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.transformation_model_title),
                             stringResource(R.string.settings_transformation_hint), state.transformationButtonEnabled,
@@ -326,6 +326,10 @@ internal fun SettingsScreen(
             }
         }
     }
+    if (gesturesOpen) GesturesSheet(
+        onDismiss = { gesturesOpen = false },
+        mirrorGestures = state.dictationButtonAppearance.gestureDirection == -1,
+    )
     if (buttonAppearanceOpen) DictationButtonAppearanceSheet(
         state.dictationButtonAppearance, viewModel::setDictationButtonAppearance,
     ) { buttonAppearanceOpen = false }

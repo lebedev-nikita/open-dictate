@@ -90,7 +90,6 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     var showKeyDialog by remember { mutableStateOf(false) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
     var showAppFilter by rememberSaveable { mutableStateOf(false) }
-    var showGestures by rememberSaveable { mutableStateOf(false) }
     val settingsScrollState = rememberScrollState()
     val maximumDisplayRefreshRate = LocalView.current.display
         ?.supportedModes
@@ -107,9 +106,8 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     LaunchedEffect(showAppFilter) {
         if (showAppFilter) viewModel.loadInstalledApps()
     }
-    BackHandler(enabled = showHistory || showAppFilter || showGestures) {
+    BackHandler(enabled = showHistory || showAppFilter) {
         when {
-            showGestures -> showGestures = false
             showAppFilter -> showAppFilter = false
             else -> showHistory = false
         }
@@ -132,10 +130,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
             containerColor = SettingsCanvas,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { padding ->
-            if (showGestures) {
-                GesturesScreen(onBack = { showGestures = false }, modifier = Modifier.padding(padding),
-                    mirrorGestures = state.dictationButtonAppearance.gestureDirection == -1)
-            } else if (showAppFilter) {
+            if (showAppFilter) {
                 AppFilterScreen(
                     apps = state.installedApps,
                     appFilter = state.appFilter,
@@ -181,7 +176,6 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
                     onAppFilter = { showAppFilter = true },
-                    onGestures = { showGestures = true },
                     viewModel = viewModel,
                     modifier = Modifier.padding(padding),
                 )
