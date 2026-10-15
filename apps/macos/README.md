@@ -241,7 +241,9 @@ provider access and transcription accuracy; mock tests cannot establish either.
 
 ## Google Drive synchronization
 
-Changes sync after 15 seconds without edits; background checks run every 15 minutes.
+Changes sync automatically after 15 seconds without edits; background checks run every 15 minutes.
+**Sync now** (Command-R) bypasses the edit delay and retry backoff.
+Edits made during a request remain queued for the next sync.
 Opening Settings or waking this Mac checks only if the last successful sync is at
 least five minutes old. Network recovery resumes queued work; errors back off and
 authorization failures pause automatic attempts. Unchanged Drive replicas are

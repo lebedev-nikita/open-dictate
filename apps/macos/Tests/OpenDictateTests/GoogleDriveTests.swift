@@ -149,6 +149,62 @@ final class GoogleDriveTests: XCTestCase {
         XCTAssertFalse(sync.canSyncNow)
     }
 
+    @MainActor func testManualSyncUploadsPendingEditsImmediately() async throws {
+        let suite = "drive-immediate-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults); preferences.driveSyncEnabled = true
+        var writes = 0
+        DriveHTTP.handler = { request in
+            if request.httpMethod != "GET" { writes += 1; return (200, Data("{}".utf8)) }
+            return (200, Data("{\"files\":[]}".utf8))
+        }
+        let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: { "synthetic" },
+            automaticallySync: false, deleteCredentials: {})
+        defer { sync.disconnect() }
+        preferences.dictionary = "Edited just before manual sync"
+        sync.syncNow()
+        XCTAssertEqual(sync.status, .busy)
+        try await awaitStatus(sync, .synced)
+        XCTAssertEqual(writes, 1)
+        XCTAssertEqual(preferences.dictionary, "Edited just before manual sync")
+    }
+
+    @MainActor func testEditsDuringManualSyncRemainLocalUntilTheNextSync() async throws {
+        let suite = "drive-in-flight-edit-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults); preferences.driveSyncEnabled = true
+        var writes = 0
+        DriveHTTP.handler = { request in
+            if request.httpMethod != "GET" { writes += 1; return (200, Data("{}".utf8)) }
+            return (200, Data("{\"files\":[]}".utf8))
+        }
+        let started = expectation(description: "Manual sync started")
+        var resume: CheckedContinuation<String, Never>?
+        var refreshes = 0
+        let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: {
+            refreshes += 1
+            guard refreshes == 1 else { return "synthetic" }
+            return await withCheckedContinuation { continuation in
+                resume = continuation
+                started.fulfill()
+            }
+        }, automaticallySync: false, deleteCredentials: {})
+        defer { sync.disconnect() }
+        preferences.dictionary = "Before manual sync"
+        sync.syncNow()
+        await fulfillment(of: [started], timeout: 5)
+        preferences.dictionary = "Edited during manual sync"
+        resume?.resume(returning: "synthetic")
+        try await awaitStatus(sync, .waiting)
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(preferences.dictionary, "Edited during manual sync")
+        sync.syncNow(); try await awaitStatus(sync, .synced)
+        XCTAssertEqual(writes, 1)
+        XCTAssertEqual(preferences.dictionary, "Edited during manual sync")
+    }
+
     @MainActor func testManualRetryBypassesFailureBackoffAndRecovers() async throws {
         let suite = "drive-manual-retry-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -166,6 +222,7 @@ final class GoogleDriveTests: XCTestCase {
             automaticallySync: false, deleteCredentials: {})
         sync.syncNow(); try await awaitStatus(sync, .failed)
         XCTAssertTrue(sync.canSyncNow)
+        preferences.dictionary = "Edited just before retry"
         sync.syncNow(); try await awaitStatus(sync, .synced)
         XCTAssertEqual(reads, 2)
         XCTAssertNotNil(sync.lastSyncedAt)

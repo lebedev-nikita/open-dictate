@@ -148,7 +148,7 @@ final class GoogleDriveSync: ObservableObject {
     func syncNow() {
         guard canSyncNow else { return }
         status = .waiting
-        schedule.refresh()
+        schedule.refresh(immediately: true)
         pump()
     }
 
@@ -162,7 +162,7 @@ final class GoogleDriveSync: ObservableObject {
         let remote = try await client.download(token: token, deviceID: preferences.syncDeviceID, forceRefresh: preferences.driveConnectionPending)
         try Task.checkCancellation()
         guard generation == run else { return false }
-        // Do not apply or publish a dictionary edit until its quiet period has elapsed.
+        // Edits made after this exchange started must wait for their own quiet period.
         if schedule.hasPendingChange {
             status = .waiting
             return false
