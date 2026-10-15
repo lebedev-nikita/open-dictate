@@ -253,11 +253,11 @@
     <string name="gestures_title">Жесты</string>
     <string name="gestures_summary">Удержание и свайпы</string>
     <string name="gestures_back">Вернуться в настройки</string>
-    <string name="gestures_hold_title">Удержание: меню</string>
+    <string name="gestures_hold_title"><annotation gesture="hold">Удержание</annotation>: меню</string>
     <string name="gestures_hold_description">Удерживайте неактивную кнопку, чтобы открыть или закрыть меню.</string>
-    <string name="gestures_left_title">Влево: отменить диктовку</string>
+    <string name="gestures_left_title"><annotation gesture="left">Влево</annotation>: отменить диктовку</string>
     <string name="gestures_left_description">Во время записи или обработки потяните влево и отпустите.</string>
-    <string name="gestures_right_title">Вправо: скрыть</string>
+    <string name="gestures_right_title"><annotation gesture="right">Вправо</annotation>: скрыть кнопку</string>
     <string name="gestures_right_description">Скройте неактивную кнопку свайпом вправо. Для возврата закройте и откройте клавиатуру.</string>
     <string name="gestures_menu_title">Действия в меню</string>
     <string name="gestures_retry_body">Повторно распознать последнюю запись в режиме «Точнее».</string>

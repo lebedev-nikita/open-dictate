@@ -1,5 +1,7 @@
 package com.opendictate.app.ui
 
+import android.text.Annotation
+import android.text.Spanned
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
@@ -39,11 +41,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 
@@ -94,8 +99,22 @@ private fun GestureRow(gesture: ButtonGesture, title: Int, description: Int) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ButtonIllustration(gesture, stringResource(description))
-        Text(stringResource(title), Modifier.weight(1f).semantics { heading() },
+        Text(gestureTitleResource(title), Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun gestureTitleResource(title: Int) = buildAnnotatedString {
+    val text = LocalResources.current.getText(title)
+    append(text.toString())
+    if (text is Spanned) {
+        text.getSpans(0, text.length, Annotation::class.java)
+            .filter { it.key == "gesture" }
+            .forEach { annotation ->
+                addStyle(SpanStyle(fontWeight = FontWeight.Bold),
+                    text.getSpanStart(annotation), text.getSpanEnd(annotation))
+            }
     }
 }
 
