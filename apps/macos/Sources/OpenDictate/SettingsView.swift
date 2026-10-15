@@ -40,8 +40,9 @@ struct SettingsView: View {
             }.padding(20).frame(width: 220).background(Color(nsColor: .controlBackgroundColor))
             Divider()
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
+                HStack(alignment: .top, spacing: 16) {
                     Spacer()
+                    SettingsSyncControl(sync: model.driveSync, preferences: preferences)
                     themeSwitcher
                 }.padding(.horizontal, 28).padding(.top, 16)
                 ScrollView {

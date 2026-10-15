@@ -27,7 +27,9 @@ import kotlin.coroutines.resumeWithException
 
 data class DriveSyncState(val enabled: Boolean = false, val busy: Boolean = false,
     val lastSyncedAt: Long = 0, val needsAuthorization: Boolean = false, val failed: Boolean = false,
-    val settingsRevision: Long = 0, val needsSourceSelection: Boolean = false)
+    val settingsRevision: Long = 0, val needsSourceSelection: Boolean = false, val waiting: Boolean = false) {
+    val canSyncNow: Boolean get() = enabled && !busy && !needsAuthorization && !needsSourceSelection
+}
 
 /** Process-owned: includes dictionary edits from the share and selection activities. */
 class GoogleDriveSync(context: Context, private val replacements: ReplacementStore,
@@ -113,7 +115,8 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
     }
 
     fun requestSync() {
-        if (!settings.driveSyncEnabled) return
+        if (!mutableState.value.canSyncNow) return
+        mutableState.value = mutableState.value.copy(waiting = true, failed = false)
         schedule.refresh()
         pump()
     }
@@ -152,7 +155,7 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
     private suspend fun performSync(suppliedToken: String?) = mutex.withLock {
         if (!settings.driveSyncEnabled) return@withLock SettingsSyncSchedule.Completion.DEFERRED
         val runGeneration = generation
-        mutableState.value = mutableState.value.copy(busy = true, failed = false)
+        mutableState.value = mutableState.value.copy(busy = true, failed = false, waiting = false)
         var token: String? = suppliedToken
         try {
             if (token == null && tokenProvider != null) token = tokenProvider.invoke()
@@ -169,7 +172,7 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
             if (runGeneration != generation) return@withLock SettingsSyncSchedule.Completion.DEFERRED
             // A pull must not publish an unfinished dictionary edit made during the download.
             if (schedule.hasPendingChange) {
-                mutableState.value = mutableState.value.copy(busy = false)
+                mutableState.value = mutableState.value.copy(busy = false, waiting = true)
                 return@withLock SettingsSyncSchedule.Completion.DEFERRED
             }
             var source: SettingsSyncDocument.ConnectionSource? = null

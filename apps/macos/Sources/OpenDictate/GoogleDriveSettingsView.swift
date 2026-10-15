@@ -25,7 +25,7 @@ struct GoogleDriveSettingsView: View {
                        "Оставьте секрет пустым, чтобы использовать сохранённый секрет этого клиента. В режиме Testing проекта Google Cloud вход нужно повторять через семь дней."))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text(statusText).font(.caption).foregroundStyle(.secondary).accessibilityLabel(statusText)
+            Text(sync.statusText(preferences: preferences)).font(.caption).foregroundStyle(.secondary)
             HStack {
                 if sync.status == .busy { ProgressView().controlSize(.small) }
                 Button(preferences.driveSyncEnabled && !sync.needsSignIn
@@ -48,19 +48,27 @@ struct GoogleDriveSettingsView: View {
             DriveSourceSelectionView(preferences: preferences, onChoose: sync.chooseSource, onCancel: sync.disconnect)
         }
     }
-    private var statusText: String {
-        switch sync.status {
+}
+
+extension GoogleDriveSync {
+    func statusText(preferences: Preferences, compact: Bool = false) -> String {
+        func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
+        switch status {
         case .disconnected: return t("Not connected", "Не подключено")
         case .waiting: return t("Waiting to synchronize", "Ожидание синхронизации")
-        case .busy: return t("Synchronizing or waiting for Google sign-in…", "Синхронизация или ожидание входа в Google…")
+        case .busy: return compact ? t("Synchronizing…", "Синхронизация…")
+            : t("Synchronizing or waiting for Google sign-in…", "Синхронизация или ожидание входа в Google…")
         case .synced:
-            let date = sync.lastSyncedAt?.formatted(date: .abbreviated, time: .shortened) ?? ""
+            let date = lastSyncedAt?.formatted(date: .abbreviated, time: .shortened) ?? ""
+            if compact { return t("Last synced: \(date)", "Последняя синхронизация: \(date)") }
             return t("Last synced: \(date). Changes sync automatically while the app is running.",
                      "Последняя синхронизация: \(date). Изменения синхронизируются автоматически, пока приложение работает.")
         case .sourceSelection: return t("Choose a settings source to finish connecting.", "Выберите источник настроек, чтобы завершить подключение.")
-        case .failed: return t("Could not sync. Local settings are saved. Check your connection and try again.",
+        case .failed: return compact ? t("Could not sync. Check your connection and try again.", "Не удалось синхронизировать. Проверьте соединение и повторите.")
+            : t("Could not sync. Local settings are saved. Check your connection and try again.",
                                "Не удалось синхронизировать. Локальные настройки сохранены. Проверьте соединение и повторите.")
-        case .authorization: return t("Google authorization expired or was revoked. Connect again to resume synchronization.",
+        case .authorization: return compact ? t("Reconnect Google Drive in Settings.", "Подключите Google Drive снова в Настройках.")
+            : t("Google authorization expired or was revoked. Connect again to resume synchronization.",
                                      "Авторизация Google истекла или была отозвана. Подключитесь снова, чтобы возобновить синхронизацию.")
         case .signInTimedOut: return t("Google sign-in timed out. Connect again and finish sign-in within 10 minutes.",
                                       "Время ожидания входа в Google истекло. Подключитесь снова и завершите вход в течение 10 минут.")

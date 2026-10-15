@@ -123,6 +123,7 @@ internal fun SettingsScreen(
     var languagesOpen by rememberSaveable { mutableStateOf(false) }
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
     val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
+    val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
     val missingSteps = listOf(state.hasApiKey, state.microphoneGranted, state.accessibilityEnabled).count { !it }
     val colors = MaterialTheme.colorScheme
@@ -143,174 +144,178 @@ internal fun SettingsScreen(
                 AppThemeSwitcher(state.theme, viewModel::selectTheme)
                 AppLanguageSwitcher()
             }
-            Column(
-                Modifier.weight(1f).navigationBarsPadding().imePadding().verticalScroll(scrollState)
-                    .preferredFrameRate(if (scrollState.isScrollInProgress) maximumDisplayRefreshRate else 0f)
-                    .padding(horizontal = 20.dp),
-            ) {
-                Text(
-                    stringResource(R.string.settings_title),
-                    modifier = Modifier.padding(top = 16.dp, bottom = 6.dp).semantics { heading() },
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(stringResource(R.string.settings_subtitle), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
-                Spacer(Modifier.height(24.dp))
-                Surface(
-                    onClick = { setupExpanded = !setupExpanded },
-                    shape = RoundedCornerShape(16.dp),
-                    color = colors.surface,
-                    modifier = Modifier.fillMaxWidth(),
+            SettingsSyncRefresh(syncState, viewModel.driveSync::requestSync,
+                Modifier.weight(1f).fillMaxWidth().navigationBarsPadding().imePadding()) {
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(scrollState)
+                        .preferredFrameRate(if (scrollState.isScrollInProgress) maximumDisplayRefreshRate else 0f)
+                        .padding(horizontal = 20.dp),
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (ready) Icons.Outlined.CheckCircle else Icons.Outlined.Tune, null, tint = colors.primary)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            val status = when (dictation.phase) {
-                                DictationPhase.CONNECTING -> R.string.settings_connecting
-                                DictationPhase.LISTENING -> R.string.settings_listening
-                                DictationPhase.PROCESSING -> R.string.settings_processing
-                                else -> if (ready) R.string.settings_ready else R.string.settings_setup
-                            }
-                            Text(stringResource(status), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                when (dictation.phase) {
-                                    DictationPhase.CONNECTING, DictationPhase.LISTENING -> stringResource(R.string.settings_active_hint)
-                                    DictationPhase.PROCESSING -> stringResource(R.string.settings_processing_hint)
-                                    else -> if (ready) stringResource(R.string.settings_ready_hint)
-                                        else stringResource(R.string.settings_setup_steps, missingSteps)
-                                },
-                                style = MaterialTheme.typography.bodySmall, color = SettingsMuted,
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Icon(if (setupExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = SettingsMuted)
-                    }
-                }
-                AnimatedVisibility(setupExpanded) {
-                    Column(Modifier.padding(top = 8.dp)) {
-                        SettingsGroup {
-                            ActionRow(Icons.Outlined.Key, stringResource(R.string.api_key_title),
-                                stringResource(if (state.hasApiKey) R.string.api_key_saved else R.string.api_key_needed), onApiKey)
-                            SettingsDivider()
-                            ActionRow(Icons.Outlined.MicNone, stringResource(R.string.microphone_title),
-                                stringResource(if (state.microphoneGranted) R.string.microphone_granted else R.string.microphone_usage), onMicrophone)
-                            SettingsDivider()
-                            ActionRow(Icons.Outlined.SettingsAccessibility, stringResource(R.string.keyboard_button_title),
-                                stringResource(if (state.accessibilityEnabled) R.string.accessibility_enabled else R.string.accessibility_enable_hint), onAccessibility)
-                        }
-                    }
-                }
-
-                SectionTitle(stringResource(R.string.settings_dictation))
-                SettingsGroup {
-                    ModeSelector(state.model, viewModel::selectModel)
                     Text(
-                        stringResource(if (state.model == TranscriptionModel.LIVE) R.string.model_live_description else R.string.model_accurate_description),
-                        Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                        style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
+                        stringResource(R.string.settings_title),
+                        modifier = Modifier.padding(top = 16.dp, bottom = 6.dp).semantics { heading() },
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.SemiBold,
                     )
-                    SettingsDivider()
-                    val live = state.model == TranscriptionModel.LIVE
-                    ModelPicker(
-                        label = stringResource(R.string.settings_recognition_model),
-                        selected = if (live) state.liveModelId else state.accurateModelId,
-                        options = if (live) modelOptions(state.modelCatalog.live, ModelCatalog.DEFAULT.live)
-                            else modelOptions(state.modelCatalog.accurate, ModelCatalog.DEFAULT.accurate),
-                        onSelect = if (live) viewModel::selectLiveModel else viewModel::selectAccurateModel,
-                    )
-                    SettingsDivider()
-                    ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
-                        state.languages.summary(), { languagesOpen = true })
-                    SettingsDivider()
-                    ActionRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.replacements_title),
-                        stringResource(R.string.replacements_summary, replacements.document.rules.size), { replacementsOpen = true })
-                    SettingsDivider()
-                    ActionRow(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.settings_dictionary),
-                        if (state.prompt.isBlank()) stringResource(R.string.settings_dictionary_empty)
-                        else stringResource(R.string.settings_dictionary_count, state.prompt.lineSequence().count { it.isNotBlank() }),
-                        { dictionaryOpen = true })
-                }
-
-                SectionTitle(stringResource(R.string.dictation_button_title))
-                SettingsGroup {
-                    DictationButtonSettings(state.dictationButtonAppearance, viewModel::setDictationButtonAppearance)
-                    SettingsDivider()
-                    ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
-                        stringResource(R.string.gestures_summary), onGestures)
-                    SettingsDivider()
-                    ToggleRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.transformation_model_title),
-                        stringResource(R.string.settings_transformation_hint), state.transformationButtonEnabled,
-                        viewModel::setTransformationButtonEnabled, enabled = !dictation.isActive)
-                    AnimatedVisibility(state.transformationButtonEnabled) {
-                        ModelPicker(stringResource(R.string.settings_editing_model), state.transformationModelId,
-                            modelOptions(state.modelCatalog.text, ModelCatalog.DEFAULT.text),
-                            viewModel::selectTransformationModel, enabled = !dictation.isActive)
-                    }
-                    SettingsDivider()
-                    ToggleRow(Icons.Outlined.BookmarkAdd, stringResource(R.string.settings_selection_dictionary),
-                        stringResource(R.string.dictionary_selection_action_subtitle), state.selectionDictionaryActionEnabled,
-                        viewModel::setSelectionDictionaryActionEnabled)
-                    SettingsDivider()
-                    ActionRow(Icons.Outlined.VisibilityOff, stringResource(R.string.app_filter_title),
-                        stringResource(
-                            if (state.appFilter.mode == AppFilterMode.ONLY_SELECTED) R.string.app_filter_allowed_summary
-                            else R.string.app_filter_excluded_summary,
-                            state.appFilter.selectedPackages.size,
-                        ), onAppFilter)
-                }
-
-                SectionTitle(stringResource(R.string.advanced_settings_title))
-                SettingsGroup {
-                    ActionRow(Icons.Outlined.Timer, stringResource(R.string.transcription_timeout_title),
-                        state.transcriptionResponseTimeoutSeconds?.let { stringResource(R.string.transcription_timeout_value, it) }
-                            ?: stringResource(R.string.transcription_timeout_unlimited), { timeoutOpen = true })
-                    SettingsDivider()
+                    Text(stringResource(R.string.settings_subtitle), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
+                    SettingsSyncStatus(syncState, viewModel.driveSync::requestSync)
+                    Spacer(Modifier.height(24.dp))
                     Surface(
-                        onClick = { viewModel.refreshModelCatalog(force = true) },
-                        enabled = state.hasApiKey && !state.modelsLoading,
-                        color = SettingsSurface,
+                        onClick = { setupExpanded = !setupExpanded },
+                        shape = RoundedCornerShape(16.dp),
+                        color = colors.surface,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (state.modelsLoading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                            else Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp), tint = SettingsMuted)
-                            Spacer(Modifier.width(14.dp))
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (ready) Icons.Outlined.CheckCircle else Icons.Outlined.Tune, null, tint = colors.primary)
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(stringResource(R.string.settings_refresh_models), style = MaterialTheme.typography.bodyLarge)
-                                Text(stringResource(when {
-                                    state.modelsLoading -> R.string.models_loading
-                                    state.modelsError -> R.string.settings_models_retry
-                                    !state.hasApiKey -> R.string.api_key_needed
-                                    else -> R.string.settings_models_hint
-                                }), style = MaterialTheme.typography.bodySmall, color = if (state.modelsError) colors.error else SettingsMuted)
-                                if (state.newModelCount > 0 && !state.modelsLoading && !state.modelsError) {
-                                    Text(stringResource(R.string.models_new, state.newModelCount), style = MaterialTheme.typography.bodySmall)
+                                val status = when (dictation.phase) {
+                                    DictationPhase.CONNECTING -> R.string.settings_connecting
+                                    DictationPhase.LISTENING -> R.string.settings_listening
+                                    DictationPhase.PROCESSING -> R.string.settings_processing
+                                    else -> if (ready) R.string.settings_ready else R.string.settings_setup
+                                }
+                                Text(stringResource(status), style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    when (dictation.phase) {
+                                        DictationPhase.CONNECTING, DictationPhase.LISTENING -> stringResource(R.string.settings_active_hint)
+                                        DictationPhase.PROCESSING -> stringResource(R.string.settings_processing_hint)
+                                        else -> if (ready) stringResource(R.string.settings_ready_hint)
+                                            else stringResource(R.string.settings_setup_steps, missingSteps)
+                                    },
+                                    style = MaterialTheme.typography.bodySmall, color = SettingsMuted,
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Icon(if (setupExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = SettingsMuted)
+                        }
+                    }
+                    AnimatedVisibility(setupExpanded) {
+                        Column(Modifier.padding(top = 8.dp)) {
+                            SettingsGroup {
+                                ActionRow(Icons.Outlined.Key, stringResource(R.string.api_key_title),
+                                    stringResource(if (state.hasApiKey) R.string.api_key_saved else R.string.api_key_needed), onApiKey)
+                                SettingsDivider()
+                                ActionRow(Icons.Outlined.MicNone, stringResource(R.string.microphone_title),
+                                    stringResource(if (state.microphoneGranted) R.string.microphone_granted else R.string.microphone_usage), onMicrophone)
+                                SettingsDivider()
+                                ActionRow(Icons.Outlined.SettingsAccessibility, stringResource(R.string.keyboard_button_title),
+                                    stringResource(if (state.accessibilityEnabled) R.string.accessibility_enabled else R.string.accessibility_enable_hint), onAccessibility)
+                            }
+                        }
+                    }
+
+                    SectionTitle(stringResource(R.string.settings_dictation))
+                    SettingsGroup {
+                        ModeSelector(state.model, viewModel::selectModel)
+                        Text(
+                            stringResource(if (state.model == TranscriptionModel.LIVE) R.string.model_live_description else R.string.model_accurate_description),
+                            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
+                        )
+                        SettingsDivider()
+                        val live = state.model == TranscriptionModel.LIVE
+                        ModelPicker(
+                            label = stringResource(R.string.settings_recognition_model),
+                            selected = if (live) state.liveModelId else state.accurateModelId,
+                            options = if (live) modelOptions(state.modelCatalog.live, ModelCatalog.DEFAULT.live)
+                                else modelOptions(state.modelCatalog.accurate, ModelCatalog.DEFAULT.accurate),
+                            onSelect = if (live) viewModel::selectLiveModel else viewModel::selectAccurateModel,
+                        )
+                        SettingsDivider()
+                        ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
+                            state.languages.summary(), { languagesOpen = true })
+                        SettingsDivider()
+                        ActionRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.replacements_title),
+                            stringResource(R.string.replacements_summary, replacements.document.rules.size), { replacementsOpen = true })
+                        SettingsDivider()
+                        ActionRow(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.settings_dictionary),
+                            if (state.prompt.isBlank()) stringResource(R.string.settings_dictionary_empty)
+                            else stringResource(R.string.settings_dictionary_count, state.prompt.lineSequence().count { it.isNotBlank() }),
+                            { dictionaryOpen = true })
+                    }
+
+                    SectionTitle(stringResource(R.string.dictation_button_title))
+                    SettingsGroup {
+                        DictationButtonSettings(state.dictationButtonAppearance, viewModel::setDictationButtonAppearance)
+                        SettingsDivider()
+                        ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
+                            stringResource(R.string.gestures_summary), onGestures)
+                        SettingsDivider()
+                        ToggleRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.transformation_model_title),
+                            stringResource(R.string.settings_transformation_hint), state.transformationButtonEnabled,
+                            viewModel::setTransformationButtonEnabled, enabled = !dictation.isActive)
+                        AnimatedVisibility(state.transformationButtonEnabled) {
+                            ModelPicker(stringResource(R.string.settings_editing_model), state.transformationModelId,
+                                modelOptions(state.modelCatalog.text, ModelCatalog.DEFAULT.text),
+                                viewModel::selectTransformationModel, enabled = !dictation.isActive)
+                        }
+                        SettingsDivider()
+                        ToggleRow(Icons.Outlined.BookmarkAdd, stringResource(R.string.settings_selection_dictionary),
+                            stringResource(R.string.dictionary_selection_action_subtitle), state.selectionDictionaryActionEnabled,
+                            viewModel::setSelectionDictionaryActionEnabled)
+                        SettingsDivider()
+                        ActionRow(Icons.Outlined.VisibilityOff, stringResource(R.string.app_filter_title),
+                            stringResource(
+                                if (state.appFilter.mode == AppFilterMode.ONLY_SELECTED) R.string.app_filter_allowed_summary
+                                else R.string.app_filter_excluded_summary,
+                                state.appFilter.selectedPackages.size,
+                            ), onAppFilter)
+                    }
+
+                    SectionTitle(stringResource(R.string.advanced_settings_title))
+                    SettingsGroup {
+                        ActionRow(Icons.Outlined.Timer, stringResource(R.string.transcription_timeout_title),
+                            state.transcriptionResponseTimeoutSeconds?.let { stringResource(R.string.transcription_timeout_value, it) }
+                                ?: stringResource(R.string.transcription_timeout_unlimited), { timeoutOpen = true })
+                        SettingsDivider()
+                        Surface(
+                            onClick = { viewModel.refreshModelCatalog(force = true) },
+                            enabled = state.hasApiKey && !state.modelsLoading,
+                            color = SettingsSurface,
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (state.modelsLoading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp), tint = SettingsMuted)
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.settings_refresh_models), style = MaterialTheme.typography.bodyLarge)
+                                    Text(stringResource(when {
+                                        state.modelsLoading -> R.string.models_loading
+                                        state.modelsError -> R.string.settings_models_retry
+                                        !state.hasApiKey -> R.string.api_key_needed
+                                        else -> R.string.settings_models_hint
+                                    }), style = MaterialTheme.typography.bodySmall, color = if (state.modelsError) colors.error else SettingsMuted)
+                                    if (state.newModelCount > 0 && !state.modelsLoading && !state.modelsError) {
+                                        Text(stringResource(R.string.models_new, state.newModelCount), style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                SectionTitle(stringResource(R.string.drive_sync_title))
-                SettingsGroup { GoogleDriveSyncSettings() }
+                    SectionTitle(stringResource(R.string.drive_sync_title))
+                    SettingsGroup { GoogleDriveSyncSettings() }
 
-                val testFieldLabel = stringResource(R.string.test_field_label)
-                SectionTitle(testFieldLabel)
-                var testText by remember { mutableStateOf("") }
-                OutlinedTextField(
-                    value = testText, onValueChange = { testText = it },
-                    modifier = Modifier.fillMaxWidth().keepFullBoundsInView().semantics { contentDescription = testFieldLabel },
-                    placeholder = { Text(stringResource(R.string.test_field_placeholder)) },
-                    minLines = 3, maxLines = 5, shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = SettingsSurface, focusedContainerColor = SettingsSurface),
-                )
-                Row(Modifier.padding(top = 24.dp, bottom = 12.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Outlined.Lock, null, Modifier.padding(top = 2.dp).size(16.dp), tint = SettingsMuted)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.privacy_note), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+                    val testFieldLabel = stringResource(R.string.test_field_label)
+                    SectionTitle(testFieldLabel)
+                    var testText by remember { mutableStateOf("") }
+                    OutlinedTextField(
+                        value = testText, onValueChange = { testText = it },
+                        modifier = Modifier.fillMaxWidth().keepFullBoundsInView().semantics { contentDescription = testFieldLabel },
+                        placeholder = { Text(stringResource(R.string.test_field_placeholder)) },
+                        minLines = 3, maxLines = 5, shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = SettingsSurface, focusedContainerColor = SettingsSurface),
+                    )
+                    Row(Modifier.padding(top = 24.dp, bottom = 12.dp), verticalAlignment = Alignment.Top) {
+                        Icon(Icons.Outlined.Lock, null, Modifier.padding(top = 2.dp).size(16.dp), tint = SettingsMuted)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.privacy_note), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+                    }
+                    Text("OpenDictate · ${BuildConfig.VERSION_NAME}",
+                        Modifier.fillMaxWidth().padding(bottom = 28.dp), style = MaterialTheme.typography.labelSmall, color = SettingsMuted)
                 }
-                Text("OpenDictate · ${BuildConfig.VERSION_NAME}",
-                    Modifier.fillMaxWidth().padding(bottom = 28.dp), style = MaterialTheme.typography.labelSmall, color = SettingsMuted)
             }
         }
     }
