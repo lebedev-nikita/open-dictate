@@ -26,7 +26,8 @@ import org.junit.runner.RunWith
 class DictationDeliveryTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
-    private val automation = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+    private val automation: UiAutomation
+        get() = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
 
     @Test fun accurateDeliverySpinnerAndCancellationWorkOnAndroid() = withAccessibility { _ ->
         for (cancel in listOf(false, true)) {
@@ -155,12 +156,11 @@ class DictationDeliveryTest {
             await { automation.rootInActiveWindow?.findAccessibilityNodeInfosByViewId("com.android.settings:id/search_action_bar")?.isNotEmpty() == true }
             assertTrue(automation.rootInActiveWindow.findAccessibilityNodeInfosByViewId("com.android.settings:id/search_action_bar")
                 .first().performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            await {
-                automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
-                    automation.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true
-            }
-            await { !hasOverlay() }
+            await { automation.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true }
             val systemEditor = automation.rootInActiveWindow.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            assertTrue(systemEditor.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            await { automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } }
+            await { !hasOverlay() }
             val original = systemEditor.text?.toString().orEmpty()
             instrumentation.runOnMainSync {
                 DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late result "))
@@ -200,6 +200,7 @@ class DictationDeliveryTest {
     }
 
     private fun withAccessibility(block: (SettingsStore) -> Unit) {
+        instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
         automation.serviceInfo = automation.serviceInfo.apply {
             flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
                 AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
