@@ -78,7 +78,6 @@ class DictationDeliveryTest {
                     val displayWidth = context.resources.displayMetrics.widthPixels
                     bounds.width() == appearance.diameterPx(density) && when (position) {
                         DictationButtonPosition.LEFT -> bounds.left == (14 * density).toInt()
-                        DictationButtonPosition.CENTER -> kotlin.math.abs(bounds.centerX() - displayWidth / 2) <= 1
                         DictationButtonPosition.RIGHT -> bounds.right == displayWidth - (14 * density).toInt()
                     }
                 }

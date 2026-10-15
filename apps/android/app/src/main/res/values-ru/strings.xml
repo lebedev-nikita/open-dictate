@@ -272,7 +272,6 @@
     <string name="dictation_button_preview">Превью кнопки диктовки</string>
     <string name="dictation_button_position">Расположение</string>
     <string name="dictation_button_left">Слева</string>
-    <string name="dictation_button_center">По центру</string>
     <string name="dictation_button_right">Справа</string>
     <string name="overlay_active_transformation_description_left">Остановить запись инструкции. Потяните вправо, чтобы отменить преобразование.</string>
     <string name="overlay_active_dictation_description_left">Остановить диктовку. Потяните вправо, чтобы отменить изменения.</string>
