@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -75,16 +77,16 @@ internal fun DictationButtonSettings(
             onValueChange = { onChange(appearance.copy(diameterDp = it.roundToInt())) },
             valueRange = DictationButtonAppearance.MIN_DIAMETER_DP.toFloat()..
                 DictationButtonAppearance.MAX_DIAMETER_DP.toFloat(),
-            steps = DictationButtonAppearance.MAX_DIAMETER_DP - DictationButtonAppearance.MIN_DIAMETER_DP - 1,
             modifier = Modifier.fillMaxWidth().semantics {
                 contentDescription = sizeLabel
                 stateDescription = diameter
             },
         )
         Text(stringResource(R.string.dictation_button_position), style = MaterialTheme.typography.bodyMedium)
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             DictationButtonPosition.entries.forEachIndexed { index, position ->
                 SegmentedButton(
+                    modifier = Modifier.fillMaxHeight(),
                     selected = appearance.position == position,
                     onClick = { onChange(appearance.copy(position = position)) },
                     shape = SegmentedButtonDefaults.itemShape(index, DictationButtonPosition.entries.size),

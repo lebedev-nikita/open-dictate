@@ -33,6 +33,15 @@ class DictationButtonSettingsTest {
             compose.onNodeWithText(pixels).assertIsDisplayed()
             compose.activityRule.scenario.recreate()
             compose.onNodeWithText(context.getString(R.string.dictation_button_left)).performScrollTo().assertIsSelected()
+            compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_size))
+                .performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(24f) }
+            compose.waitForIdle()
+            assertEquals(24, settings.dictationButtonAppearance.diameterDp)
+            val minimumPixels = context.getString(R.string.dictation_button_pixels,
+                settings.dictationButtonAppearance.diameterPx(context.resources.displayMetrics.density))
+            compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_preview))
+                .performScrollTo().assert(SemanticsMatcher.expectValue(
+                    androidx.compose.ui.semantics.SemanticsProperties.StateDescription, minimumPixels))
             compose.onNodeWithText(context.getString(R.string.gestures_title)).performScrollTo().performClick()
             compose.onNodeWithText(context.getString(R.string.gestures_cancel_right_title)).assertIsDisplayed()
             compose.onNodeWithText(context.getString(R.string.gestures_dismiss_left_title)).assertIsDisplayed()

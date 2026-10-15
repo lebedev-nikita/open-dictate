@@ -55,16 +55,19 @@ class DictationDeliveryTest {
                 await { overlay(description) != null }
             }
             instrumentation.runOnMainSync {
-                settings.dictationButtonAppearance = DictationButtonAppearance(48, DictationButtonPosition.LEFT)
+                settings.dictationButtonAppearance = DictationButtonAppearance(24, DictationButtonPosition.LEFT)
             }
             val description = context.getString(R.string.overlay_start_dictation_with_actions_left)
             val bounds = Rect()
             await {
                 overlay(description)?.getBoundsInScreen(bounds)
-                bounds.width() == settings.dictationButtonAppearance.diameterPx(density)
+                bounds.width() == settings.dictationButtonAppearance.touchDiameterPx(density)
             }
+            // Resizing near the top margin also animates the vertical anchor.
+            SystemClock.sleep(600)
+            overlay(description)!!.getBoundsInScreen(bounds)
             // The outward swipe hides the idle button, and reopening the keyboard restores it.
-            shell("input swipe ${bounds.centerX()} ${bounds.centerY()} ${bounds.centerX() - (34 * density).toInt()} ${bounds.centerY()} 300")
+            shell("input swipe ${bounds.centerX()} ${bounds.centerY()} ${bounds.centerX() - (34 * density).toInt()} ${bounds.centerY()} 600")
             await { !hasOverlay() }
             activity.onActivity {
                 it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
@@ -79,7 +82,7 @@ class DictationDeliveryTest {
             await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
             val session = DictationStateBus.state.value
             overlay(context.getString(R.string.overlay_active_dictation_description_left))!!.getBoundsInScreen(bounds)
-            shell("input swipe ${bounds.centerX()} ${bounds.centerY()} ${bounds.centerX() + (80 * density).toInt()} ${bounds.centerY()} 300")
+            shell("input swipe ${bounds.centerX()} ${bounds.centerY()} ${bounds.centerX() + (80 * density).toInt()} ${bounds.centerY()} 600")
             await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
             instrumentation.runOnMainSync { DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late synthetic result")) }
             instrumentation.waitForIdleSync()
@@ -216,7 +219,10 @@ class DictationDeliveryTest {
                 .first().performAction(AccessibilityNodeInfo.ACTION_CLICK))
             await { automation.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true }
             val systemEditor = automation.rootInActiveWindow.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            assertTrue(systemEditor.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            // Settings' focused search editor does not expose ACTION_CLICK on every Android image.
+            val systemEditorBounds = Rect()
+            systemEditor.getBoundsInScreen(systemEditorBounds)
+            shell("input tap ${systemEditorBounds.centerX()} ${systemEditorBounds.centerY()}")
             await { automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } }
             await { !hasOverlay() }
             val original = systemEditor.text?.toString().orEmpty()
