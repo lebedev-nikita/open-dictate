@@ -107,9 +107,12 @@ Model discovery calls OpenAI directly and stores only model IDs in app-private
 preferences. The model list API does not supply endpoint capabilities or prices,
 so the picker keeps the transcription aliases and up to five recent general GPT
 text models, excluding Astra and specialized models.
-The app exclusion picker queries launchable apps only. Excluded package names
-stay in app-private preferences; the accessibility service checks them before
-showing the overlay or starting an action.
+The app picker queries launchable apps only. The filter mode and separate allowed
+and excluded package lists stay in app-private preferences, outside Drive sync.
+The accessibility service checks the filter before showing the overlay, starting
+an action or inserting a result. Only-selected mode rejects unlisted and unknown
+packages, including system interfaces. Cancellation can still restore the original
+field after its app is disabled, using the existing target and restoration guards.
 Release signing material is expected to live only in GitHub Actions secrets.
 The text selection and floating-menu actions store only selected text that the
 user explicitly adds to the dictionary. The Share action stores only the shared

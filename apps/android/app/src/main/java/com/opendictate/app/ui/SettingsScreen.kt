@@ -95,6 +95,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.BuildConfig
 import com.opendictate.app.R
+import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.data.MAX_DICTIONARY_LENGTH
 import com.opendictate.app.data.normalizeDictionaryTerms
 import com.opendictate.app.model.DictationLanguage
@@ -114,7 +115,7 @@ internal fun SettingsScreen(
     onApiKey: () -> Unit,
     onMicrophone: () -> Unit,
     onAccessibility: () -> Unit,
-    onAppExclusions: () -> Unit,
+    onAppFilter: () -> Unit,
     onGestures: () -> Unit,
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
@@ -257,8 +258,12 @@ internal fun SettingsScreen(
                         stringResource(R.string.dictionary_selection_action_subtitle), state.selectionDictionaryActionEnabled,
                         viewModel::setSelectionDictionaryActionEnabled)
                     SettingsDivider()
-                    ActionRow(Icons.Outlined.VisibilityOff, stringResource(R.string.app_exclusions_title),
-                        stringResource(R.string.app_exclusions_summary, state.excludedPackages.size), onAppExclusions)
+                    ActionRow(Icons.Outlined.VisibilityOff, stringResource(R.string.app_filter_title),
+                        stringResource(
+                            if (state.appFilter.mode == AppFilterMode.ONLY_SELECTED) R.string.app_filter_allowed_summary
+                            else R.string.app_filter_excluded_summary,
+                            state.appFilter.selectedPackages.size,
+                        ), onAppFilter)
                 }
 
                 SectionTitle(stringResource(R.string.advanced_settings_title))

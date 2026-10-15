@@ -1,16 +1,20 @@
 package com.opendictate.app.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.Resources
 import androidx.core.content.edit
+import com.opendictate.app.model.AppFilter
+import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.AppTheme
-import java.util.UUID
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TextTransformationModel
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.model.preferredModelId
+import java.io.Closeable
+import java.util.UUID
 
 class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
@@ -95,13 +99,25 @@ class SettingsStore(context: Context) {
         get() = prefs.getBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, true)
         set(value) = prefs.edit { putBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, value) }
 
-    var excludedPackages: Set<String>
-        get() = prefs.getStringSet(KEY_EXCLUDED_PACKAGES, emptySet()).orEmpty().toSet()
-        set(value) = prefs.edit { putStringSet(KEY_EXCLUDED_PACKAGES, value.toSet()) }
+    var appFilter: AppFilter
+        get() = AppFilter(
+            mode = AppFilterMode.fromStored(prefs.getString(KEY_APP_FILTER_MODE, null)),
+            excludedPackages = prefs.getStringSet(KEY_EXCLUDED_PACKAGES, null).orEmpty().toSet(),
+            allowedPackages = prefs.getStringSet(KEY_ALLOWED_PACKAGES, null).orEmpty().toSet(),
+        )
+        set(value) = prefs.edit {
+            putString(KEY_APP_FILTER_MODE, value.mode.name)
+            putStringSet(KEY_EXCLUDED_PACKAGES, value.excludedPackages.toSet())
+            putStringSet(KEY_ALLOWED_PACKAGES, value.allowedPackages.toSet())
+        }
 
-    fun isPackageExcluded(packageName: CharSequence?): Boolean =
-        packageName != null && prefs.getStringSet(KEY_EXCLUDED_PACKAGES, null)
-            ?.contains(packageName.toString()) == true
+    fun observeAppFilter(onChange: (AppFilter) -> Unit): Closeable {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key in APP_FILTER_KEYS) onChange(appFilter)
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     var transcriptionResponseTimeoutSeconds: Int?
         get() = TranscriptionResponseTimeout.fromStored(
@@ -221,6 +237,9 @@ class SettingsStore(context: Context) {
         private const val KEY_PROMPT = "prompt"
         private const val KEY_TRANSFORMATION_BUTTON_ENABLED = "transformation_button_enabled"
         private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
+        private const val KEY_ALLOWED_PACKAGES = "allowed_packages"
+        private const val KEY_APP_FILTER_MODE = "app_filter_mode"
+        private val APP_FILTER_KEYS = setOf(KEY_APP_FILTER_MODE, KEY_EXCLUDED_PACKAGES, KEY_ALLOWED_PACKAGES)
         private const val KEY_TRANSCRIPTION_RESPONSE_TIMEOUT = "transcription_response_timeout_seconds"
         private const val DEFAULT_PROMPT = "OpenDictate\nDictate"
     }

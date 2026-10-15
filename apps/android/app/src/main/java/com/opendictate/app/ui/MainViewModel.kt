@@ -19,6 +19,8 @@ import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.data.fuzzySearch
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.AppTheme
+import com.opendictate.app.model.AppFilter
+import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
@@ -51,7 +53,7 @@ data class MainUiState(
     val prompt: String = "",
     val selectionDictionaryActionEnabled: Boolean = true,
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
-    val excludedPackages: Set<String> = emptySet(),
+    val appFilter: AppFilter = AppFilter(),
     val installedApps: List<InstalledApp> = emptyList(),
     val appsLoading: Boolean = false,
 )
@@ -226,7 +228,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadInstalledApps() {
         if (appsLoadJob?.isActive == true) return
         appsLoadJob = viewModelScope.launch {
-            mutableState.update { it.copy(appsLoading = true, excludedPackages = settings.excludedPackages) }
+            mutableState.update { it.copy(appsLoading = true, appFilter = settings.appFilter) }
             val apps = withContext(Dispatchers.IO) {
                 val packageManager = getApplication<Application>().packageManager
                 val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -243,11 +245,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setAppExcluded(packageName: String, excluded: Boolean) {
-        val packages = mutableState.value.excludedPackages.toMutableSet()
-        if (excluded) packages.add(packageName) else packages.remove(packageName)
-        settings.excludedPackages = packages
-        mutableState.update { it.copy(excludedPackages = packages) }
+    fun setAppFilterMode(mode: AppFilterMode) {
+        val filter = settings.appFilter.copy(mode = mode)
+        settings.appFilter = filter
+        mutableState.update { it.copy(appFilter = filter) }
+    }
+
+    fun setAppSelected(packageName: String, selected: Boolean) {
+        val filter = settings.appFilter.withPackageSelected(packageName, selected)
+        settings.appFilter = filter
+        mutableState.update { it.copy(appFilter = filter) }
     }
 
     fun toggleLanguage(language: DictationLanguage) {
@@ -418,7 +425,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prompt = settings.prompt,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
-        excludedPackages = settings.excludedPackages,
+        appFilter = settings.appFilter,
     )
 
     private fun isAccessibilityEnabled(context: Context): Boolean {

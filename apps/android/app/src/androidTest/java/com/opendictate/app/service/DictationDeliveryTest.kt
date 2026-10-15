@@ -14,6 +14,8 @@ import com.opendictate.app.R
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.model.TranscriptionModel
+import com.opendictate.app.model.AppFilter
+import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.test.DeliveryFixtureActivity
 import org.junit.Assert.*
 import org.junit.Test
@@ -26,9 +28,181 @@ class DictationDeliveryTest {
     private val context = instrumentation.targetContext
     private val automation = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
 
-    @Test fun accurateDeliverySpinnerAndCancellationWorkOnAndroid() {
+    @Test fun accurateDeliverySpinnerAndCancellationWorkOnAndroid() = withAccessibility { _ ->
+        for (cancel in listOf(false, true)) {
+            instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
+            ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+                await { overlay(context.getString(R.string.overlay_start_dictation_with_actions)) != null }
+                assertTrue(overlay(context.getString(R.string.overlay_start_dictation_with_actions))!!
+                    .performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+                val session = DictationStateBus.state.value
+                instrumentation.runOnMainSync { DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING)) }
+                await { overlay(context.getString(R.string.overlay_processing_description)) != null }
+                // Two actual overlay frames must differ while the transcription result is pending.
+                val bounds = Rect()
+                overlay(context.getString(R.string.overlay_processing_description))!!.getBoundsInScreen(bounds)
+                val first = spinnerFrame(bounds)
+                SystemClock.sleep(150)
+                val second = spinnerFrame(bounds)
+                assertFalse("Spinner must continue animating", first.sameAs(second))
+                first.recycle(); second.recycle()
+                assertTrue(DictationStateBus.state.value.isActive)
+                if (cancel) {
+                    assertTrue(overlay(context.getString(R.string.overlay_processing_description))!!
+                        .performAction(R.id.accessibility_action_cancel_dictation))
+                    await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+                }
+                val result = "По идее, у вас ещё реклама должна блокироваться, по крайней мере её часть."
+                instrumentation.runOnMainSync {
+                    DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = result))
+                }
+                if (cancel) {
+                    instrumentation.waitForIdleSync()
+                    activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
+                } else await {
+                    var inserted = false
+                    activity.onActivity { inserted = it.editor.text.toString() == "before ${result}after" }
+                    inserted
+                }
+                if (!cancel) activity.onActivity { assertEquals(7 + result.length, it.editor.selectionStart) }
+                context.stopService(Intent(context, DictationForegroundService::class.java))
+                await { !DictationStateBus.state.value.isActive }
+            }
+        }
+    }
+
+    @Test fun appFilterChangesImmediatelyHideTheOverlayAndKeepTheOtherModeSelection() = withAccessibility { settings ->
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            await { startButton() != null }
+            settings.appFilter = AppFilter(excludedPackages = setOf(context.packageName))
+            await { !hasOverlay() }
+            settings.appFilter = settings.appFilter.copy(mode = AppFilterMode.ONLY_SELECTED)
+            await { !hasOverlay() }
+            settings.appFilter = settings.appFilter.withPackageSelected(context.packageName, true)
+            await { startButton() != null }
+            settings.appFilter = settings.appFilter.copy(mode = AppFilterMode.ALL_EXCEPT_SELECTED)
+            await { !hasOverlay() }
+            settings.appFilter = settings.appFilter.copy(mode = AppFilterMode.ONLY_SELECTED)
+            await { startButton() != null }
+            activity.onActivity {
+                it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .hideSoftInputFromWindow(it.editor.windowToken, 0)
+            }
+            await { !hasOverlay() }
+            activity.onActivity {
+                it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .showSoftInput(it.editor, 0)
+            }
+            await { startButton() != null }
+        }
+    }
+
+    @Test fun revokedAppsRejectLateLiveAndAccurateResults() = withAccessibility { settings ->
+        for (model in TranscriptionModel.entries) {
+            settings.appFilter = AppFilter(mode = AppFilterMode.ONLY_SELECTED, allowedPackages = setOf(context.packageName))
+            instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
+            ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+                val session = captureTargetWithoutNetwork()
+                if (model == TranscriptionModel.LIVE) {
+                    instrumentation.runOnMainSync {
+                        DictationStateBus.set(session.copy(model = model, phase = DictationPhase.LISTENING, transcript = "partial "))
+                    }
+                    awaitEditor(activity, "before partial after")
+                }
+                settings.appFilter = settings.appFilter.withPackageSelected(context.packageName, false)
+                await { !hasOverlay() }
+                instrumentation.runOnMainSync {
+                    DictationStateBus.set(session.copy(model = model, phase = DictationPhase.COMPLETED, transcript = "late result "))
+                }
+                instrumentation.waitForIdleSync()
+                activity.onActivity {
+                    assertEquals(if (model == TranscriptionModel.LIVE) "before partial after" else "before after", it.editor.text.toString())
+                }
+                instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
+            }
+        }
+    }
+
+    @Test fun liveCancellationRestoresTextAndIgnoresLateResults() = withAccessibility { settings ->
+        settings.appFilter = AppFilter(mode = AppFilterMode.ONLY_SELECTED, allowedPackages = setOf(context.packageName))
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            val session = captureTargetWithoutNetwork().copy(model = TranscriptionModel.LIVE)
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING, transcript = "partial "))
+            }
+            awaitEditor(activity, "before partial after")
+            await { overlay(context.getString(R.string.overlay_processing_description)) != null }
+            assertTrue(overlay(context.getString(R.string.overlay_processing_description))!!
+                .performAction(R.id.accessibility_action_cancel_dictation))
+            awaitEditor(activity, "before after")
+            await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late result "))
+            }
+            instrumentation.waitForIdleSync()
+            activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
+        }
+    }
+
+    @Test fun focusChangeToAnotherAppPreventsDelivery() = withAccessibility { settings ->
+        settings.appFilter = AppFilter(mode = AppFilterMode.ONLY_SELECTED, allowedPackages = setOf(context.packageName))
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            val session = captureTargetWithoutNetwork()
+            context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+            await { automation.rootInActiveWindow?.packageName?.toString() == "com.android.settings" }
+            await { automation.rootInActiveWindow?.findAccessibilityNodeInfosByViewId("com.android.settings:id/search_action_bar")?.isNotEmpty() == true }
+            assertTrue(automation.rootInActiveWindow.findAccessibilityNodeInfosByViewId("com.android.settings:id/search_action_bar")
+                .first().performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            await {
+                automation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD } &&
+                    automation.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.isEditable == true
+            }
+            await { !hasOverlay() }
+            val systemEditor = automation.rootInActiveWindow.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            val original = systemEditor.text?.toString().orEmpty()
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late result "))
+            }
+            instrumentation.waitForIdleSync()
+            assertTrue(systemEditor.refresh())
+            assertEquals(original, systemEditor.text?.toString().orEmpty())
+            activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
+        }
+    }
+
+    /** Capture through the real overlay, then cancel the recorder before injecting provider states. */
+    private fun captureTargetWithoutNetwork(): DictationState {
+        await { startButton() != null }
+        assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+        val session = DictationStateBus.state.value
+        context.startService(Intent(context, DictationForegroundService::class.java)
+            .setAction(DictationForegroundService.ACTION_CANCEL)
+            .putExtra(DictationForegroundService.EXTRA_SESSION_ID, session.sessionId))
+        await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+        context.stopService(Intent(context, DictationForegroundService::class.java))
+        instrumentation.waitForIdleSync()
+        return session
+    }
+
+    private fun awaitEditor(activity: ActivityScenario<DeliveryFixtureActivity>, expected: String) = await {
+        var matches = false
+        activity.onActivity { matches = it.editor.text.toString() == expected }
+        matches
+    }
+
+    private fun startButton() = overlay(context.getString(R.string.overlay_start_dictation_with_actions))
+
+    private fun hasOverlay() = automation.windows.any {
+        it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY
+    }
+
+    private fun withAccessibility(block: (SettingsStore) -> Unit) {
         automation.serviceInfo = automation.serviceInfo.apply {
-            flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+            flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
         }
         val previousServices = shell("settings get secure enabled_accessibility_services").trim()
         val previousAccessibility = shell("settings get secure accessibility_enabled").trim()
@@ -41,55 +215,18 @@ class DictationDeliveryTest {
         shell("settings put secure accessibility_enabled 1")
         val settings = SettingsStore(context)
         val previousModel = settings.model
+        val previousFilter = settings.appFilter
+        settings.appFilter = AppFilter()
         settings.model = TranscriptionModel.ACCURATE
         // No network request is made: recording is stopped by teardown, not ACTION_STOP.
         SecureApiKeyStore(context).save("instrumentation-placeholder")
         try {
-            for (cancel in listOf(false, true)) {
-                instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
-                ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
-                    await { overlay(context.getString(R.string.overlay_start_dictation_with_actions)) != null }
-                    assertTrue(overlay(context.getString(R.string.overlay_start_dictation_with_actions))!!
-                        .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                    await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
-                    val session = DictationStateBus.state.value
-                    instrumentation.runOnMainSync { DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING)) }
-                    await { overlay(context.getString(R.string.overlay_processing_description)) != null }
-                    // Two actual overlay frames must differ while the transcription result is pending.
-                    val bounds = Rect()
-                    overlay(context.getString(R.string.overlay_processing_description))!!.getBoundsInScreen(bounds)
-                    val first = spinnerFrame(bounds)
-                    SystemClock.sleep(150)
-                    val second = spinnerFrame(bounds)
-                    assertFalse("Spinner must continue animating", first.sameAs(second))
-                    first.recycle(); second.recycle()
-                    assertTrue(DictationStateBus.state.value.isActive)
-                    if (cancel) {
-                        assertTrue(overlay(context.getString(R.string.overlay_processing_description))!!
-                            .performAction(R.id.accessibility_action_cancel_dictation))
-                        await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
-                    }
-                    val result = "По идее, у вас ещё реклама должна блокироваться, по крайней мере её часть."
-                    instrumentation.runOnMainSync {
-                        DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = result))
-                    }
-                    if (cancel) {
-                        instrumentation.waitForIdleSync()
-                        activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
-                    } else await {
-                        var inserted = false
-                        activity.onActivity { inserted = it.editor.text.toString() == "before ${result}after" }
-                        inserted
-                    }
-                    if (!cancel) activity.onActivity { assertEquals(7 + result.length, it.editor.selectionStart) }
-                    context.stopService(Intent(context, DictationForegroundService::class.java))
-                    await { !DictationStateBus.state.value.isActive }
-                }
-            }
+            block(settings)
         } finally {
             context.stopService(Intent(context, DictationForegroundService::class.java))
             SecureApiKeyStore(context).clear()
             settings.model = previousModel
+            settings.appFilter = previousFilter
             restoreSetting("enabled_accessibility_services", previousServices)
             restoreSetting("accessibility_enabled", previousAccessibility)
             restoreSetting("show_ime_with_hard_keyboard", previousKeyboard)

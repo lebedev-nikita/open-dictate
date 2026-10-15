@@ -90,7 +90,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var showKeyDialog by remember { mutableStateOf(false) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
-    var showAppExclusions by rememberSaveable { mutableStateOf(false) }
+    var showAppFilter by rememberSaveable { mutableStateOf(false) }
     var showGestures by rememberSaveable { mutableStateOf(false) }
     val settingsScrollState = rememberScrollState()
     val maximumDisplayRefreshRate = LocalView.current.display
@@ -105,13 +105,13 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     LaunchedEffect(showHistory) {
         if (showHistory) viewModel.refreshHistory()
     }
-    LaunchedEffect(showAppExclusions) {
-        if (showAppExclusions) viewModel.loadInstalledApps()
+    LaunchedEffect(showAppFilter) {
+        if (showAppFilter) viewModel.loadInstalledApps()
     }
-    BackHandler(enabled = showHistory || showAppExclusions || showGestures) {
+    BackHandler(enabled = showHistory || showAppFilter || showGestures) {
         when {
             showGestures -> showGestures = false
-            showAppExclusions -> showAppExclusions = false
+            showAppFilter -> showAppFilter = false
             else -> showHistory = false
         }
     }
@@ -135,13 +135,14 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
         ) { padding ->
             if (showGestures) {
                 GesturesScreen(onBack = { showGestures = false }, modifier = Modifier.padding(padding))
-            } else if (showAppExclusions) {
-                AppExclusionsScreen(
+            } else if (showAppFilter) {
+                AppFilterScreen(
                     apps = state.installedApps,
-                    excludedPackages = state.excludedPackages,
+                    appFilter = state.appFilter,
                     loading = state.appsLoading,
-                    onBack = { showAppExclusions = false },
-                    onExcludedChange = viewModel::setAppExcluded,
+                    onBack = { showAppFilter = false },
+                    onModeChange = viewModel::setAppFilterMode,
+                    onSelectedChange = viewModel::setAppSelected,
                     modifier = Modifier.padding(padding),
                 )
             } else if (showHistory) {
@@ -179,7 +180,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                     onAccessibility = {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
-                    onAppExclusions = { showAppExclusions = true },
+                    onAppFilter = { showAppFilter = true },
                     onGestures = { showGestures = true },
                     viewModel = viewModel,
                     modifier = Modifier.padding(padding),

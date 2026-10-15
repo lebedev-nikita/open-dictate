@@ -3,7 +3,7 @@ package com.opendictate.app.ui
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class AppExclusionsScreenTest {
+class AppFilterScreenTest {
     @Test
     fun filtersByDisplayNameAsUserTypes() {
         val apps = listOf(
@@ -17,7 +17,7 @@ class AppExclusionsScreenTest {
     }
 
     @Test
-    fun excludedAppsStayAtTopWhileFiltering() {
+    fun selectedAppsStayAtTopWhileFiltering() {
         val apps = listOf(
             InstalledApp("calendar", "Calendar"),
             InstalledApp("camera", "Camera"),
