@@ -158,7 +158,7 @@ the master switch with Android.
 
 ### Appearance
 
-The theme button at the top right of Settings offers System, Light and Dark.
+The theme button beside the version at the bottom of the sidebar offers System, Light and Dark.
 The choice is saved locally and applies across all settings pages. Dark preserves
 the previous default; System follows macOS. The recording indicator remains dark.
 
