@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 
 @Composable
-internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, mirrorGestures: Boolean = false) {
     Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 680.dp).fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp),
@@ -71,9 +71,13 @@ internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     Column {
                         GestureRow(ButtonGesture.HOLD, R.string.gestures_hold_title, R.string.gestures_hold_description)
                         GuideDivider()
-                        GestureRow(ButtonGesture.SWIPE_LEFT, R.string.gestures_left_title, R.string.gestures_left_description)
+                        GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_RIGHT else ButtonGesture.SWIPE_LEFT,
+                            if (mirrorGestures) R.string.gestures_cancel_right_title else R.string.gestures_left_title,
+                            if (mirrorGestures) R.string.gestures_cancel_right_description else R.string.gestures_left_description)
                         GuideDivider()
-                        GestureRow(ButtonGesture.SWIPE_RIGHT, R.string.gestures_right_title, R.string.gestures_right_description)
+                        GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_LEFT else ButtonGesture.SWIPE_RIGHT,
+                            if (mirrorGestures) R.string.gestures_dismiss_left_title else R.string.gestures_right_title,
+                            if (mirrorGestures) R.string.gestures_dismiss_left_description else R.string.gestures_right_description)
                     }
                 }
 

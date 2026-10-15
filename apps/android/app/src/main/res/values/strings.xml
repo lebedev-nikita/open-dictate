@@ -269,4 +269,20 @@
     <string name="gestures_paste_body">Insert your last transcript at the cursor.</string>
     <string name="gestures_edit_body">Use a voice command to edit selected text, or all text if nothing is selected. Enable Text transformation in Settings.</string>
     <string name="gestures_dictionary_body">Add the selected text to your dictionary. Not available in password fields.</string>
+
+    <string name="dictation_button_title">Dictation button</string>
+    <string name="dictation_button_size">Size</string>
+    <string name="dictation_button_pixels">%1$d px</string>
+    <string name="dictation_button_preview">Dictation button preview</string>
+    <string name="dictation_button_position">Position</string>
+    <string name="dictation_button_left">Left</string>
+    <string name="dictation_button_center">Center</string>
+    <string name="dictation_button_right">Right</string>
+    <string name="overlay_active_transformation_description_left">Stop recording the instruction. Swipe right to cancel the transformation.</string>
+    <string name="overlay_active_dictation_description_left">Stop dictation. Swipe right to cancel and undo changes.</string>
+    <string name="overlay_start_dictation_with_actions_left">Start dictation. Long-press for more actions. Swipe left to hide until the keyboard closes.</string>
+    <string name="gestures_cancel_right_title"><annotation gesture="right">Swipe right</annotation> to cancel dictation</string>
+    <string name="gestures_cancel_right_description">While recording or processing dictation, swipe the button right and release to cancel.</string>
+    <string name="gestures_dismiss_left_title"><annotation gesture="left">Swipe left</annotation> to hide the button</string>
+    <string name="gestures_dismiss_left_description">Swipe the idle button left to hide it. Close and reopen the keyboard to bring it back.</string>
 </resources>

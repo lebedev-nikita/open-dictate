@@ -134,7 +134,8 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { padding ->
             if (showGestures) {
-                GesturesScreen(onBack = { showGestures = false }, modifier = Modifier.padding(padding))
+                GesturesScreen(onBack = { showGestures = false }, modifier = Modifier.padding(padding),
+                    mirrorGestures = state.dictationButtonAppearance.gestureDirection == -1)
             } else if (showAppFilter) {
                 AppFilterScreen(
                     apps = state.installedApps,

@@ -237,6 +237,8 @@ internal fun SettingsScreen(
 
                 SectionTitle(stringResource(R.string.settings_keyboard))
                 SettingsGroup {
+                    DictationButtonSettings(state.dictationButtonAppearance, viewModel::setDictationButtonAppearance)
+                    SettingsDivider()
                     ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
                         stringResource(R.string.gestures_summary), onGestures)
                     SettingsDivider()
