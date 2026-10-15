@@ -27,8 +27,7 @@ class DictationButtonSettingsTest {
             compose.activityRule.scenario.recreate()
 
             assertEquals(DictationButtonAppearance(72, DictationButtonPosition.RIGHT), settings.dictationButtonAppearance)
-            compose.onNodeWithText(context.getString(R.string.dictation_button_right))
-                .performScrollTo().assertIsSelected()
+            assertPosition(R.string.dictation_button_right)
             listOf("Center", "По центру").forEach { label ->
                 compose.onNodeWithText(label).assertDoesNotExist()
             }
@@ -44,7 +43,20 @@ class DictationButtonSettingsTest {
         try {
             compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_size))
                 .performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(96f) }
-            compose.onNodeWithText(context.getString(R.string.dictation_button_left)).performScrollTo().performClick()
+            val positionButton = compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_position))
+            if (settings.dictationButtonAppearance.position == DictationButtonPosition.LEFT) {
+                positionButton.performScrollTo().performClick()
+                compose.waitForIdle()
+            }
+            assertPosition(R.string.dictation_button_right)
+            positionButton.performClick()
+            compose.waitForIdle()
+            assertEquals(DictationButtonAppearance(96, DictationButtonPosition.LEFT), settings.dictationButtonAppearance)
+            assertPosition(R.string.dictation_button_left)
+            positionButton.performClick()
+            compose.waitForIdle()
+            assertEquals(DictationButtonAppearance(96, DictationButtonPosition.RIGHT), settings.dictationButtonAppearance)
+            positionButton.performClick()
             compose.waitForIdle()
             assertEquals(DictationButtonAppearance(96, DictationButtonPosition.LEFT), settings.dictationButtonAppearance)
             val pixels = context.getString(R.string.dictation_button_pixels,
@@ -66,7 +78,7 @@ class DictationButtonSettingsTest {
             compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_reset_size))
                 .performScrollTo().assertIsNotEnabled()
             assertEquals(DictationButtonAppearance.DEFAULT_DIAMETER_DP, settings.dictationButtonAppearance.diameterDp)
-            compose.onNodeWithText(context.getString(R.string.dictation_button_left)).performScrollTo().assertIsSelected()
+            assertPosition(R.string.dictation_button_left)
             compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_size))
                 .performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(24f) }
             compose.waitForIdle()
@@ -83,4 +95,12 @@ class DictationButtonSettingsTest {
             settings.dictationButtonAppearance = original
         }
     }
+    private fun assertPosition(label: Int) {
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.dictation_button_position))
+            .performScrollTo().assertHasClickAction().assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(
+                androidx.compose.ui.semantics.SemanticsProperties.StateDescription, compose.activity.getString(label)))
+        compose.onNodeWithText(compose.activity.getString(label)).assertIsDisplayed()
+    }
+
 }

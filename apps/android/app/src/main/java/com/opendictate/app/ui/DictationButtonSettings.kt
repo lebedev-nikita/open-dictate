@@ -8,15 +8,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Replay
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,17 +50,6 @@ internal fun DictationButtonSettings(
     val sizeLabel = stringResource(R.string.dictation_button_size)
     val previewLabel = stringResource(R.string.dictation_button_preview)
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.dictation_button_position), style = MaterialTheme.typography.bodyMedium)
-        SettingsChoiceRow(
-            options = DictationButtonPosition.entries.map { position ->
-                stringResource(when (position) {
-                    DictationButtonPosition.LEFT -> R.string.dictation_button_left
-                    DictationButtonPosition.RIGHT -> R.string.dictation_button_right
-                })
-            },
-            selectedIndex = DictationButtonPosition.entries.indexOf(appearance.position),
-            onSelect = { onChange(appearance.copy(position = DictationButtonPosition.entries[it])) },
-        )
         Surface(shape = RoundedCornerShape(12.dp), color = SettingsInset) {
             Box(Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 14.dp)
                 .semantics { contentDescription = previewLabel; stateDescription = diameter },
@@ -98,6 +90,40 @@ internal fun DictationButtonSettings(
                 },
             )
         }
-
+        val positionLabel = stringResource(R.string.dictation_button_position)
+        val currentSide = stringResource(appearance.position.labelResource())
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(positionLabel, Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
+            OutlinedButton(
+                onClick = {
+                    val nextPosition = when (appearance.position) {
+                        DictationButtonPosition.LEFT -> DictationButtonPosition.RIGHT
+                        DictationButtonPosition.RIGHT -> DictationButtonPosition.LEFT
+                    }
+                    onChange(appearance.copy(position = nextPosition))
+                },
+                modifier = Modifier.heightIn(min = 48.dp).semantics {
+                    contentDescription = positionLabel
+                    stateDescription = currentSide
+                },
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Outlined.SwapHoriz, null, Modifier.size(18.dp), tint = SettingsMuted)
+                    Text(currentSide, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
     }
+}
+
+private fun DictationButtonPosition.labelResource(): Int = when (this) {
+    DictationButtonPosition.LEFT -> R.string.dictation_button_left
+    DictationButtonPosition.RIGHT -> R.string.dictation_button_right
 }

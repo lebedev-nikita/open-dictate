@@ -117,7 +117,7 @@
       },
       "interaction": [
         "Readiness disclosure for API key, microphone, and Accessibility setup",
-        "Shared wrapping filled mode/position selector; floating-button editor remains expanded",
+        "Filled dictation-mode selector and quiet single position button that toggles Left/Right; floating-button editor remains expanded",
         "History and app exclusions share the 680dp column; populated history controls and entries scroll together",
         "Full-row switches with one semantic target",
         "Native language, word-replacement and dictionary sheets, model menus, and timeout dialog",
@@ -167,7 +167,7 @@
           "overlay/OverlayMotion.kt",
           "service/OpenDictateAccessibilityService.kt"
         ],
-        "presentation": "Expanded inline control under the single Dictation button section heading; no repeated title inside the group. Position choices precede the preview and size controls. Existing neutral Material 3 themes and system typography; size, pixel diameter and position labels use bodyMedium.",
+        "presentation": "Expanded inline control under the single Dictation button section heading; no repeated title inside the group. Preview and size controls precede the compact position row with one outlined button that immediately toggles Left/Right. Existing neutral Material 3 themes and system typography; size, pixel diameter and position labels use bodyMedium.",
         "diameter": {
           "units": "dp",
           "minimum": 24,
@@ -201,7 +201,7 @@
           "padding": "16dp",
           "spacing": "12dp",
           "slider": "Native continuous Material 3 Slider, rounded to whole dp; no discrete tick scale; a 48dp Restore icon target on its left resets only the diameter to 52dp, preserves position and disables at the default size",
-          "positionControl": "Shared SettingsChoiceRow above the preview, with equal intrinsic option heights and wrapping labels"
+          "positionControl": "Below preview and size: muted label and one compact outlined button with current side and horizontal-swap icon; immediately toggles Left/Right and updates the preview, with a 48dp minimum target and accessible current value; no menu or filled track"
         },
         "interaction": "Autosave locally with no confirmation. Apply appearance to the active overlay without restarting Accessibility. Keep menu geometry clear of the full touch target; preserve focus and insertion guards. Button and menu placement share the visible display frame’s top boundary, including system decorations, so a menu opening below a large button retains its 8dp content gap.",
         "gestures": "At right/center, cancel left and hide right. At left, cancel right toward the screen interior and hide left toward the edge. Native accessibility hints and the guide mirror the directions; the guide uses the stop glyph for cancellation regardless of direction.",
