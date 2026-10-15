@@ -3,6 +3,8 @@ package com.opendictate.app.ui
 import android.widget.ImageView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -42,10 +46,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.opendictate.app.R
 import com.opendictate.app.model.AppFilter
@@ -65,127 +69,133 @@ internal fun AppFilterScreen(
     val visibleApps = filterAndPrioritizeApps(apps, query, appFilter.selectedPackages)
     val packageManager = LocalContext.current.packageManager
 
-    LazyColumn(
-        modifier.fillMaxSize().background(SettingsCanvas).statusBarsPadding().navigationBarsPadding().imePadding(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 20.dp),
+    Box(
+        modifier.fillMaxSize().background(SettingsCanvas).statusBarsPadding().navigationBarsPadding(),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        item {
-            Row(
-                Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.app_filter_back))
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.app_filter_title),
-                    color = SettingsText,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp,
-                )
-            }
-        }
-        item {
-            Column(Modifier.selectableGroup().padding(horizontal = 12.dp, vertical = 8.dp)) {
-                AppFilterMode.entries.forEach { mode ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                            .selectable(
-                                selected = appFilter.mode == mode,
-                                onClick = { onModeChange(mode) },
-                                role = Role.RadioButton,
-                            ).padding(horizontal = 8.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = appFilter.mode == mode, onClick = null)
-                        Text(
-                            stringResource(
-                                when (mode) {
-                                    AppFilterMode.ALL_EXCEPT_SELECTED -> R.string.app_filter_mode_exclude
-                                    AppFilterMode.ONLY_SELECTED -> R.string.app_filter_mode_allow
-                                },
-                            ),
-                            color = SettingsText,
-                        )
-                    }
-                }
-            }
-        }
-        if (appFilter.mode == AppFilterMode.ONLY_SELECTED && appFilter.allowedPackages.isEmpty()) {
+        LazyColumn(
+            Modifier.widthIn(max = 680.dp).fillMaxSize().imePadding(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 20.dp),
+        ) {
             item {
-                Text(
-                    stringResource(R.string.app_filter_allow_empty),
-                    color = SettingsText,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
-                )
-            }
-        }
-        item {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                label = { Text(stringResource(R.string.app_filter_search)) },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                trailingIcon = if (query.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(Icons.Outlined.Close, stringResource(R.string.app_filter_clear_search))
-                        }
-                    }
-                } else null,
-                singleLine = true,
-            )
-            Spacer(Modifier.height(12.dp))
-        }
-        if (loading) {
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-        } else if (visibleApps.isEmpty()) {
-            item {
-                Text(
-                    stringResource(if (apps.isEmpty()) R.string.app_filter_empty else R.string.app_filter_no_matches),
-                    color = SettingsMuted,
-                    modifier = Modifier.padding(20.dp),
-                )
-            }
-        } else {
-            items(visibleApps, key = InstalledApp::packageName) { app ->
-                val selected = app.packageName in appFilter.selectedPackages
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(
-                        value = selected,
-                        role = Role.Switch,
-                        onValueChange = { onSelectedChange(app.packageName, it) },
-                    ).padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AndroidView(
-                        factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
-                        update = { image ->
-                            image.setImageDrawable(runCatching {
-                                packageManager.getApplicationIcon(app.packageName)
-                            }.getOrNull())
-                        },
-                        modifier = Modifier.size(40.dp),
-                    )
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.app_filter_back))
+                    }
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        app.label,
-                        modifier = Modifier.weight(1f),
+                        stringResource(R.string.app_filter_title),
                         color = SettingsText,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLarge,
                     )
-                    Switch(
-                        checked = selected,
-                        onCheckedChange = null,
+                }
+            }
+            item {
+                Column(Modifier.selectableGroup().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    AppFilterMode.entries.forEach { mode ->
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                .selectable(
+                                    selected = appFilter.mode == mode,
+                                    onClick = { onModeChange(mode) },
+                                    role = Role.RadioButton,
+                                ).padding(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = appFilter.mode == mode, onClick = null)
+                            Text(
+                                stringResource(
+                                    when (mode) {
+                                        AppFilterMode.ALL_EXCEPT_SELECTED -> R.string.app_filter_mode_exclude
+                                        AppFilterMode.ONLY_SELECTED -> R.string.app_filter_mode_allow
+                                    },
+                                ),
+                                color = SettingsText,
+                            )
+                        }
+                    }
+                }
+            }
+            if (appFilter.mode == AppFilterMode.ONLY_SELECTED && appFilter.allowedPackages.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.app_filter_allow_empty),
+                        color = SettingsText,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
                     )
+                }
+            }
+            item {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    label = { Text(stringResource(R.string.app_filter_search)) },
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    trailingIcon = if (query.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Outlined.Close, stringResource(R.string.app_filter_clear_search))
+                            }
+                        }
+                    } else null,
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+            if (loading) {
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else if (visibleApps.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(if (apps.isEmpty()) R.string.app_filter_empty else R.string.app_filter_no_matches),
+                        color = SettingsMuted,
+                        modifier = Modifier.padding(20.dp),
+                    )
+                }
+            } else {
+                items(visibleApps, key = InstalledApp::packageName) { app ->
+                    val selected = app.packageName in appFilter.selectedPackages
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 56.dp).toggleable(
+                            value = selected,
+                            role = Role.Switch,
+                            onValueChange = { onSelectedChange(app.packageName, it) },
+                        ).padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AndroidView(
+                            factory = { context -> ImageView(context).apply { scaleType = ImageView.ScaleType.FIT_CENTER } },
+                            update = { image ->
+                                image.setImageDrawable(runCatching {
+                                    packageManager.getApplicationIcon(app.packageName)
+                                }.getOrNull())
+                            },
+                            modifier = Modifier.size(40.dp),
+                        )
+                        Text(
+                            app.label,
+                            modifier = Modifier.weight(1f),
+                            color = SettingsText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Switch(
+                            checked = selected,
+                            onCheckedChange = null,
+                        )
+                    }
                 }
             }
         }

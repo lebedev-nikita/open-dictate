@@ -4,7 +4,6 @@ package com.opendictate.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Box
@@ -23,8 +22,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -415,27 +412,13 @@ private fun ToggleRow(icon: ImageVector, title: String, subtitle: String, checke
 
 @Composable
 private fun ModeSelector(selected: TranscriptionModel, onSelect: (TranscriptionModel) -> Unit) {
-    Row(Modifier.padding(16.dp).fillMaxWidth().background(SettingsInset, RoundedCornerShape(12.dp))
-        .padding(4.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf(TranscriptionModel.ACCURATE, TranscriptionModel.LIVE).forEach { model ->
-            val active = selected == model
-            val colors = MaterialTheme.colorScheme
-            Row(
-                Modifier.weight(1f).background(if (active) colors.primary else SettingsInset, RoundedCornerShape(9.dp))
-                    .selectable(active, role = Role.RadioButton, onClick = { onSelect(model) })
-                    .heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (active) {
-                    Icon(Icons.Outlined.Check, null, Modifier.size(16.dp), tint = colors.onPrimary)
-                    Spacer(Modifier.width(6.dp))
-                }
-                Text(stringResource(if (model == TranscriptionModel.ACCURATE) R.string.settings_mode_accurate else R.string.settings_mode_live),
-                    style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if (active) colors.onPrimary else SettingsMuted)
-            }
-        }
-    }
+    val models = listOf(TranscriptionModel.ACCURATE, TranscriptionModel.LIVE)
+    SettingsChoiceRow(
+        options = listOf(stringResource(R.string.settings_mode_accurate), stringResource(R.string.settings_mode_live)),
+        selectedIndex = models.indexOf(selected),
+        onSelect = { onSelect(models[it]) },
+        modifier = Modifier.padding(16.dp),
+    )
 }
 
 @Composable

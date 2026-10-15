@@ -39,6 +39,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -64,12 +65,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.relocation.BringIntoViewModifierNode
 import androidx.compose.ui.relocation.bringIntoView
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -217,8 +216,7 @@ internal fun AppLanguageSwitcher() {
             onClick = { expanded = true },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.textButtonColors(
-                containerColor = SettingsInset,
-                contentColor = SettingsText,
+                contentColor = SettingsMuted,
             ),
             contentPadding = PaddingValues(horizontal = 10.dp),
         ) {
@@ -230,9 +228,7 @@ internal fun AppLanguageSwitcher() {
             Spacer(Modifier.width(6.dp))
             Text(
                 selected.shortLabel(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
+                style = MaterialTheme.typography.labelLarge,
             )
         }
         DropdownMenu(

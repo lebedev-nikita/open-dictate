@@ -102,6 +102,7 @@
       },
       "typography": {
         "ui": "Material 3 system sans-serif roles",
+        "auxiliaryHeaders": "Default-weight titleLarge; history metadata uses bodySmall sans-serif",
         "modelIds": "FontFamily.Monospace"
       },
       "layout": {
@@ -116,6 +117,8 @@
       },
       "interaction": [
         "Readiness disclosure for API key, microphone, and Accessibility setup",
+        "Shared wrapping filled mode/position selector; floating-button editor remains expanded",
+        "History and app exclusions share the 680dp column; populated history controls and entries scroll together",
         "Full-row switches with one semantic target",
         "Native language, word-replacement and dictionary sheets, model menus, and timeout dialog",
         "Status/navigation/IME insets and scrollable content"
