@@ -88,15 +88,15 @@ Before sign-in can work, configure one Google Cloud project:
    when the client ID matches; entering a secret overrides the saved one after
    successful authorization. Do not commit credentials. Google's Desktop client secret
    is not a confidential server secret; PKCE protects the code exchange too.
-4. Connect Google Drive on both platforms and accept the app-data permission.
+4. Turn on the Google Drive switch on both platforms and accept the app-data permission.
    macOS opens the system browser and validates PKCE S256 and OAuth state through
    a temporary callback listener bound only to `127.0.0.1`. Android uses native
    Google Identity Services AuthorizationClient consent resolution.
 
-The macOS browser sign-in waits up to ten minutes. If it expires, use **Connect
-Google Drive** to start a new attempt; reloading an expired local callback cannot
-complete sign-in. Cancellation and expiry close the temporary listener without
-saving credentials.
+The macOS browser sign-in waits up to ten minutes. If it expires, turn the Google
+Drive switch on again, or use **Sign in again** if it is already on; reloading an
+expired local callback cannot complete sign-in. Turn the switch off to cancel.
+Cancellation and expiry close the temporary listener without saving credentials.
 
 The OAuth clients must belong to the same Cloud project to share the application
 data space. No permission to ordinary Drive files is requested. There is no backend.
@@ -175,10 +175,15 @@ list, so stale replicas cannot restore deleted rules. The master replacement
 switch merges independently from the list. Offline changes use device clocks,
 so keep system clocks reasonably accurate.
 
-Disconnect stops future sync and removes macOS OAuth credentials. Local settings
-and cloud files remain. Android leaves token caching to Google Play services.
+Disconnect signs this installation out of synchronization and cancels its current
+sync task. On macOS it also removes the local OAuth credentials from Keychain.
+Every manual connection on both platforms asks you to select a Google account,
+even when Google has cached authorization. On macOS, re-enter the Desktop client
+secret after disconnecting; it was removed with the local credentials.
+Local settings and cloud files remain. Android leaves token caching to Google Play services.
 An upload already accepted by Google may finish during disconnection. Disconnect
-does not revoke Google's grant: use Google Account → third-party connections.
+does not revoke Google's grant or sign out other devices. To revoke the grant,
+use Google Account → third-party connections.
 Delete replicas through Google Drive → Settings → Manage apps → OpenDictate →
 Delete hidden app data.
 

@@ -249,8 +249,8 @@ least five minutes old. Network recovery resumes queued work; errors back off an
 authorization failures pause automatic attempts. Unchanged Drive replicas are
 cached only in memory.
 
-Connect Google Drive in Settings to sync the dictionary, word replacements, dictation
-mode and selected models with Android. It uses a Desktop OAuth client from the same
+Turn on the native Google Drive switch in Settings to sync the dictionary, word
+replacements, dictation mode and selected models with Android. It uses a Desktop OAuth client from the same
 Google Cloud project as the Android client, browser sign-in with PKCE and a
 temporary loopback callback listener. OAuth secrets/refresh tokens stay in a
 separate device-only Keychain item. Sync runs while the app is running and never
@@ -258,6 +258,12 @@ includes API keys, audio or history. When reconnecting, leave the secret blank t
 reuse the saved secret for the same client ID. A different client needs its own
 secret. Google projects in Testing issue refresh tokens that expire after seven
 days; reconnect when requested. See [setup and troubleshooting](../../docs/google-drive-sync.md).
+
+Turning the switch off cancels a pending sign-in or sync, signs out only this Mac
+and removes its OAuth credentials from Keychain. Local and cloud settings remain,
+and other devices stay connected.
+The next connection asks you to select a Google account; re-enter the matching
+Desktop client secret because disconnect removed the saved copy.
 
 ## Packaging and releases
 

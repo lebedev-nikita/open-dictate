@@ -50,8 +50,11 @@ Keychain storage. The client ID stays in preferences. macOS sign-in opens your
 browser and briefly listens on loopback for the OAuth response. That listener
 closes on success, failure, cancellation or timeout. No tokens, dictionary contents or replacement rules are logged.
 
-Disconnect stops sync and removes macOS OAuth credentials; local and cloud
-settings remain. An upload already accepted by Google may finish. Delete hidden
+Disconnect signs out synchronization on the current device and removes macOS
+OAuth credentials. Manual reconnection asks you to select a Google account on
+both platforms. Other devices stay connected, and local and cloud settings remain.
+Android leaves token caching to Google Play services. Disconnect does not revoke
+Google's grant. An upload already accepted by Google may finish. Delete hidden
 data through Google Drive's Manage apps settings and revoke access through your
 Google Account. See [setup and conflict behavior](https://github.com/lebedev-nikita/open-dictate/blob/main/docs/google-drive-sync.md).
 

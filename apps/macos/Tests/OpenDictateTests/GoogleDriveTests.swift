@@ -149,6 +149,43 @@ final class GoogleDriveTests: XCTestCase {
         XCTAssertFalse(sync.canSyncNow)
     }
 
+    @MainActor func testDisconnectRemovesOnlyLocalAuthorizationAndPreservesSettings() async throws {
+        let suite = "drive-local-sign-out-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults)
+        preferences.driveSyncEnabled = true
+        preferences.dictionary = "Keep local settings"
+        var credentials: DriveCredentials? = DriveCredentials(clientID: "synthetic.apps.googleusercontent.com",
+            clientSecret: "synthetic-secret", refreshToken: "synthetic-refresh")
+        var deletions = 0, requests = 0
+        DriveHTTP.handler = { request in
+            requests += 1
+            // Local sign-out must not send a Google grant-revocation request.
+            XCTAssertEqual(request.url?.host, "www.googleapis.com")
+            return (200, Data("{\"files\":[]}".utf8))
+        }
+        let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: {
+            guard credentials != nil else { throw DriveError.authorization }
+            return "synthetic-access"
+        }, automaticallySync: false, deleteCredentials: { credentials = nil; deletions += 1 })
+        sync.syncNow()
+        try await awaitStatus(sync, .synced)
+        let document = try preferences.syncDocument(), completedRequests = requests
+        sync.disconnect()
+        XCTAssertNil(credentials)
+        XCTAssertEqual(deletions, 1)
+        XCTAssertEqual(sync.status, .disconnected)
+        XCTAssertNil(sync.lastSyncedAt)
+        XCTAssertFalse(preferences.driveSyncEnabled)
+        XCTAssertFalse(preferences.driveConnectionPending)
+        XCTAssertFalse(sync.canSyncNow)
+        XCTAssertEqual(try preferences.syncDocument(), document)
+        sync.refreshIfStale()
+        sync.syncNow()
+        XCTAssertEqual(requests, completedRequests)
+    }
+
     @MainActor func testManualSyncUploadsPendingEditsImmediately() async throws {
         let suite = "drive-immediate-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -242,15 +279,18 @@ final class GoogleDriveTests: XCTestCase {
             for language in ["en", "ru"] {
                 preferences.interfaceLanguage = language
                 for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-                    let host = NSHostingView(rootView: HStack(alignment: .top, spacing: 16) {
-                        Spacer()
-                        SettingsSyncControl(sync: sync, preferences: preferences)
-                        Image(systemName: "circle.lefthalf.filled").frame(width: 24, height: 24)
-                    }.padding(16).frame(width: 460).background(Color(nsColor: .windowBackgroundColor)))
+                    let host = NSHostingView(rootView: VStack(alignment: .leading, spacing: 20) {
+                        HStack(alignment: .top, spacing: 16) {
+                            Spacer()
+                            SettingsSyncControl(sync: sync, preferences: preferences)
+                            Image(systemName: "circle.lefthalf.filled").frame(width: 24, height: 24)
+                        }
+                        GoogleDriveSettingsView(sync: sync, preferences: preferences)
+                    }.padding(28).frame(width: 464).background(Color(nsColor: .windowBackgroundColor)))
                     host.appearance = NSAppearance(named: appearance)
                     host.setFrameSize(host.fittingSize); host.layoutSubtreeIfNeeded()
-                    XCTAssertEqual(host.frame.width, 460, accuracy: 1)
-                    XCTAssertLessThan(host.frame.height, 160)
+                    XCTAssertEqual(host.frame.width, 464, accuracy: 1)
+                    XCTAssertLessThan(host.frame.height, 650)
                     if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
                         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                         host.cacheDisplay(in: host.bounds, to: bitmap)
@@ -267,7 +307,54 @@ final class GoogleDriveTests: XCTestCase {
         try await awaitStatus(sync, .synced); try render("synced")
         fail = true; sync.syncNow()
         try await awaitStatus(sync, .failed); try render("failed")
+        DriveHTTP.handler = { _ in (401, Data()) }
+        sync.syncNow(); try await awaitStatus(sync, .authorization); try render("authorization")
         sync.disconnect()
+        try render("disconnected")
+    }
+
+    @MainActor func testDriveSwitchBindingCancelsSyncAndSignsOutLocally() async throws {
+        let suite = "drive-native-switch-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults)
+        preferences.driveSyncEnabled = true
+        preferences.dictionary = "Keep this dictionary"
+        var deletedCredentials = false
+        let started = expectation(description: "Token refresh started")
+        let cancelled = expectation(description: "Token refresh cancelled")
+        let sync = GoogleDriveSync(preferences: preferences, refreshToken: {
+            started.fulfill()
+            do {
+                try await Task.sleep(nanoseconds: 60_000_000_000)
+                XCTFail("The switch should cancel token refresh")
+                return "synthetic"
+            } catch {
+                cancelled.fulfill()
+                throw error
+            }
+        }, automaticallySync: false, deleteCredentials: { deletedCredentials = true })
+        defer { sync.disconnect() }
+        sync.syncNow()
+        await fulfillment(of: [started], timeout: 5)
+        let view = GoogleDriveSettingsView(sync: sync, preferences: preferences)
+        XCTAssertTrue(view.connection.wrappedValue)
+        view.connection.wrappedValue = false
+        await fulfillment(of: [cancelled], timeout: 5)
+        XCTAssertTrue(deletedCredentials)
+        XCTAssertFalse(preferences.driveSyncEnabled)
+        XCTAssertEqual(sync.status, .disconnected)
+        XCTAssertEqual(preferences.dictionary, "Keep this dictionary")
+        XCTAssertFalse(view.connection.wrappedValue)
+        // A new browser connection is represented as on immediately, so off can cancel it.
+        view.connection.wrappedValue = true
+        XCTAssertEqual(sync.status, .busy)
+        XCTAssertTrue(view.connection.wrappedValue)
+        XCTAssertFalse(preferences.driveSyncEnabled)
+        view.connection.wrappedValue = false
+        await Task.yield()
+        XCTAssertEqual(sync.status, .disconnected)
+        XCTAssertFalse(view.connection.wrappedValue)
     }
 
     func testInitialUploadUsesAppDataAndMultipart() async throws {
@@ -321,6 +408,7 @@ final class GoogleDriveTests: XCTestCase {
             challenge = value("code_challenge")
             XCTAssertEqual(value("code_challenge_method"), "S256")
             XCTAssertEqual(value("scope"), GoogleDriveAuthorization.scope)
+            XCTAssertEqual(Set(value("prompt").split(separator: " ")), ["consent", "select_account"])
             let redirect = value("redirect_uri"), state = value("state")
             XCTAssertTrue(redirect.hasPrefix("http://127.0.0.1:"))
             Task { @MainActor in
@@ -371,6 +459,7 @@ final class GoogleDriveTests: XCTestCase {
         var saved: DriveCredentials?
         let authorization = GoogleDriveAuthorization(openBrowser: { url in
             let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+            XCTAssertTrue(query.first { $0.name == "prompt" }!.value!.split(separator: " ").contains("select_account"))
             let redirect = query.first { $0.name == "redirect_uri" }!.value!
             let state = query.first { $0.name == "state" }!.value!
             Task { _ = try? await URLSession.shared.data(from: URL(string: redirect + "?code=synthetic-code&state=" + state)!) }

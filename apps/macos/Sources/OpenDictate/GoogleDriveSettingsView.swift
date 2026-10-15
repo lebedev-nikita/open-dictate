@@ -6,47 +6,84 @@ struct GoogleDriveSettingsView: View {
     @ObservedObject var preferences: Preferences
     @State private var clientSecret = ""
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
+    private var connectionRequested: Bool { preferences.driveSyncEnabled || sync.status == .busy }
+    var connection: Binding<Bool> {
+        Binding(get: { connectionRequested }, set: { enabled in
+            if enabled { connect() } else { sync.disconnect() }
+        })
+    }
+
+    private func connect() {
+        sync.connect(clientSecret: clientSecret)
+        clientSecret = ""
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Google Drive").fontWeight(.medium)
-            Text(t("Sync your dictionary, word replacements, dictation mode and selected models across Android and macOS.",
-                   "Синхронизация словаря, автозамен, режима диктовки и выбранных моделей между Android и macOS."))
-                .font(.callout).foregroundStyle(.secondary)
+            Toggle(isOn: connection) {
+                HStack(spacing: 12) {
+                    GoogleDriveMark()
+                    Text("Google Drive").fontWeight(.medium)
+                    Spacer(minLength: 12)
+                }
+            }
+            .toggleStyle(.switch).controlSize(.regular)
+            .disabled(!connectionRequested && preferences.driveClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("googleDriveConnection")
+            .help(t("Turn off to sign out on this Mac. The next connection lets you choose a Google account.",
+                    "Выключите, чтобы выйти на этом Mac. При следующем подключении можно выбрать аккаунт Google."))
             if !preferences.driveSyncEnabled || sync.needsSignIn {
                 TextField(t("Desktop OAuth client ID", "ID OAuth-клиента для ПК"), text: $preferences.driveClientID)
                     .textFieldStyle(.roundedBorder).disabled(sync.status == .busy)
+                    .help(t("Use a Desktop client from the same Google Cloud project as the Android app.",
+                            "Используйте клиент типа Desktop из того же проекта Google Cloud, что и Android-приложение."))
                 SecureField(t("Desktop OAuth client secret", "Секрет OAuth-клиента для ПК"), text: $clientSecret)
                     .textFieldStyle(.roundedBorder).disabled(sync.status == .busy)
-                Text(t("Use a Desktop client from the same Google Cloud project as the Android app. Sign-in opens your browser.",
-                       "Используйте клиент типа Desktop из того же проекта Google Cloud, что и Android-приложение. Вход откроется в браузере."))
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(t("Leave the secret blank to reuse the saved secret for this client. Google Cloud projects in Testing require sign-in again after seven days.",
-                       "Оставьте секрет пустым, чтобы использовать сохранённый секрет этого клиента. В режиме Testing проекта Google Cloud вход нужно повторять через семь дней."))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .help(t("Leave blank to reuse the saved secret for this client.",
+                            "Оставьте пустым, чтобы использовать сохранённый секрет этого клиента."))
             }
-            Text(sync.statusText(preferences: preferences)).font(.caption).foregroundStyle(.secondary)
-            HStack {
-                if sync.status == .busy { ProgressView().controlSize(.small) }
-                Button(preferences.driveSyncEnabled && !sync.needsSignIn
-                       ? t("Sync now", "Синхронизировать") : t("Connect Google Drive", "Подключить Google Drive")) {
-                    if preferences.driveSyncEnabled && !sync.needsSignIn { sync.syncNow() }
-                    else { sync.connect(clientSecret: clientSecret); clientSecret = "" }
-                }.disabled(sync.status == .busy || sync.needsSourceSelection || (!preferences.driveSyncEnabled && preferences.driveClientID.isEmpty))
-                if preferences.driveSyncEnabled || sync.status == .busy {
-                    Button(sync.status == .busy && !preferences.driveSyncEnabled ? t("Cancel", "Отмена") : t("Disconnect", "Отключить"),
-                           action: sync.disconnect)
-                }
+            if sync.needsSignIn || sync.status == .failed || (sync.status == .busy && !preferences.driveSyncEnabled) {
+                HStack(alignment: .top, spacing: 8) {
+                    if sync.status == .busy { ProgressView().controlSize(.small) }
+                    Text(sync.status == .busy
+                         ? t("Finish signing in to Google in your browser.", "Завершите вход в Google в браузере.")
+                         : sync.statusText(preferences: preferences))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if preferences.driveSyncEnabled && sync.needsSignIn {
+                        Button(t("Sign in again", "Войти снова"), action: connect)
+                            .disabled(preferences.driveClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }.controlSize(.small)
             }
-            Text(t("Only these settings go to Google. API keys, audio and history are never synced. Disconnecting keeps local and cloud settings.",
-                   "В Google отправляются только эти настройки. API-ключи, звук и история не синхронизируются. Отключение сохраняет локальные и облачные настройки."))
-                .font(.caption).foregroundStyle(.secondary)
         }
         .sheet(isPresented: Binding(get: { sync.needsSourceSelection }, set: { shown in
             if !shown && sync.needsSourceSelection { sync.disconnect() }
         })) {
             DriveSourceSelectionView(preferences: preferences, onChoose: sync.chooseSource, onCancel: sync.disconnect)
         }
+    }
+}
+
+/// The same vector geometry and provider colors as Android's ic_google_drive_24.xml.
+private struct GoogleDriveMark: View {
+    var body: some View {
+        Canvas { context, size in
+            func fill(_ rgb: UInt32, _ points: [CGPoint]) {
+                var path = Path()
+                path.addLines(points.map { CGPoint(x: $0.x * size.width / 24, y: $0.y * size.height / 24) })
+                path.closeSubpath()
+                context.fill(path, with: .color(Color(red: Double((rgb >> 16) & 255) / 255,
+                    green: Double((rgb >> 8) & 255) / 255, blue: Double(rgb & 255) / 255)))
+            }
+            fill(0x00832D, [.init(x: 9, y: 3), .init(x: 15, y: 3), .init(x: 12, y: 8.25)])
+            fill(0x00AC47, [.init(x: 9, y: 3), .init(x: 12, y: 8.25), .init(x: 7, y: 17), .init(x: 1, y: 17)])
+            fill(0xFFBA00, [.init(x: 15, y: 3), .init(x: 23, y: 17), .init(x: 17, y: 17), .init(x: 12, y: 8.25)])
+            fill(0x0066DA, [.init(x: 1, y: 17), .init(x: 7, y: 17), .init(x: 4, y: 22)])
+            fill(0x2684FC, [.init(x: 7, y: 17), .init(x: 17, y: 17), .init(x: 20, y: 22), .init(x: 4, y: 22)])
+            fill(0xEA4335, [.init(x: 17, y: 17), .init(x: 23, y: 17), .init(x: 20, y: 22)])
+        }.frame(width: 24, height: 24).accessibilityHidden(true)
     }
 }
 

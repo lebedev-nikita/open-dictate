@@ -50,6 +50,7 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
     private val mutableState = MutableStateFlow(DriveSyncState(enabled = settings.driveSyncEnabled))
     val state = mutableState.asStateFlow()
     private var changeJob: kotlinx.coroutines.Job? = null
+    private var syncJob: kotlinx.coroutines.Job? = null
     private val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "sync_local_revision" && settings.driveSyncEnabled) {
             schedule.changed(SystemClock.elapsedRealtime())
@@ -96,6 +97,7 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
         settings.driveConnectionPending = false
         connectionChoice = null
         changeJob?.cancel()
+        syncJob?.cancel(); syncJob = null
         schedule = SettingsSyncSchedule()
         mutableState.value = DriveSyncState()
     }
@@ -142,11 +144,14 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
             return
         }
         val run = generation
-        scope.launch {
+        syncJob = scope.launch {
             var completion = SettingsSyncSchedule.Completion.DEFERRED
             try { completion = performSync(suppliedToken) }
             finally {
-                if (generation == run) schedule.finish(SystemClock.elapsedRealtime(), completion)
+                if (generation == run) {
+                    syncJob = null
+                    schedule.finish(SystemClock.elapsedRealtime(), completion)
+                }
                 pump()
             }
         }
@@ -167,6 +172,7 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
                     }
                 }.addOnFailureListener { if (continuation.isActive) continuation.resumeWithException(DriveSyncException(401)) }
             }
+            if (runGeneration != generation) return@withLock SettingsSyncSchedule.Completion.DEFERRED
             val accessToken = token ?: throw DriveSyncException(401)
             val remote = client.download(accessToken, settings.syncDeviceId, forceRefresh = settings.driveConnectionPending)
             if (runGeneration != generation) return@withLock SettingsSyncSchedule.Completion.DEFERRED
@@ -218,6 +224,9 @@ class GoogleDriveSync(context: Context, private val replacements: ReplacementSto
 
     companion object {
         const val SCOPE = "https://www.googleapis.com/auth/drive.appdata"
-        fun request(): AuthorizationRequest = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(SCOPE))).build()
+        fun request(selectAccount: Boolean = false): AuthorizationRequest = AuthorizationRequest.builder()
+            .setRequestedScopes(listOf(Scope(SCOPE)))
+            .setPrompt(if (selectAccount) AuthorizationRequest.Prompt.SELECT_ACCOUNT else AuthorizationRequest.Prompt.NOT_SET)
+            .build()
     }
 }
