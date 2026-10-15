@@ -34,6 +34,7 @@ final class AppModel: ObservableObject {
     private let makeRecorder: () -> any AudioRecording
     private let accessibilityTrust: () -> Bool
     private let transcribeAudio: AudioTranscriber?
+    private let notifyError: (String) -> Void
     let hotKeys = HotKeys()
     private let client = OpenAIClient()
     private var current: Session?
@@ -44,7 +45,6 @@ final class AppModel: ObservableObject {
     private var searchID: UUID?
     private var recordingShortcut = false
     private var shuttingDown = false
-    var showSettings: (() -> Void)?
     var onStateChange: (() -> Void)?
 
     @MainActor private final class Session {
@@ -90,11 +90,13 @@ final class AppModel: ObservableObject {
          captureTarget: @escaping @MainActor ([String], Bool) throws -> TextTarget = { try TextTarget.capture(exclusions: $0, transform: $1) },
          makeRecorder: @escaping () -> any AudioRecording = { AudioRecorder() },
          accessibilityTrust: @escaping () -> Bool = { AXIsProcessTrusted() },
-         transcribeAudio: AudioTranscriber? = nil) {
+         transcribeAudio: AudioTranscriber? = nil,
+         notifyError: @escaping (String) -> Void = { _ in }) {
         self.captureTarget = captureTarget
         self.makeRecorder = makeRecorder
         self.accessibilityTrust = accessibilityTrust
         self.transcribeAudio = transcribeAudio
+        self.notifyError = notifyError
         self.localOnly = localOnly
         let defaults = defaults ?? (localOnly ? UserDefaults(suiteName: "com.opendictate.mac.local-tests")! : .standard)
         replacements = ReplacementStore(defaults: defaults)
@@ -216,7 +218,7 @@ final class AppModel: ObservableObject {
             current = session; phase = .preparing; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
             session.setup = Task { await start(session) }
-        } catch { present(error); showSettings?() }
+        } catch { present(error) }
     }
 
     #if DEBUG
@@ -255,7 +257,7 @@ final class AppModel: ObservableObject {
             current = session; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true)
             beginCompletion(session)
-        } catch { present(error); showSettings?() }
+        } catch { present(error) }
     }
 
     private func start(_ session: Session) async {
@@ -380,8 +382,7 @@ final class AppModel: ObservableObject {
             lastTranscript = result
             if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue) }
             message = delivered ? preferences.t("Text inserted.", "Текст вставлен.") :
-                preferences.t("No eligible field at stop, focus changed, or the editor refused the paste. Your text is ready to copy from the menu.",
-                              "При остановке не было подходящего поля, изменился фокус или редактор отклонил вставку. Скопируйте текст из меню.")
+                preferences.t("Your text is ready to copy from the menu.", "Текст готов. Скопируйте его из меню.")
             finish(session)
         } catch { if current?.id == session.id { fail(error, session: session) } }
     }
@@ -549,7 +550,14 @@ final class AppModel: ObservableObject {
         }
     }
     func present(_ error: Error) {
+        if case DictationError.noField = error { return }
+        guard !(error is CancellationError) else { return }
         message = (error as? DictationError)?.message(russian: preferences.isRussian) ?? error.localizedDescription
+        // Only curated messages may leave the app for Notification Center.
+        // System/provider descriptions can include private request or file details.
+        let notification = (error as? DictationError)?.message(russian: preferences.isRussian) ??
+            preferences.t("Something went wrong. Try again.", "Произошла ошибка. Попробуйте ещё раз.")
+        notifyError(notification)
         onStateChange?()
     }
     func clearMessage() { message = "" }

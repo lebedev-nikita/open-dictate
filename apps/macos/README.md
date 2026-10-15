@@ -189,6 +189,12 @@ in `~/Library/Application Support/OpenDictate/history.json` with owner-only
 permissions. Disable history to stop saving future results; delete existing
 history separately. Audio is never persisted on macOS.
 
+Errors use native macOS notifications without opening Settings or taking focus.
+Allow notifications when macOS first asks; banners follow System Settings →
+Notifications → OpenDictate. Denied notifications never trigger a fallback window.
+Missing editable fields are silent. Other error details remain available in the
+menu and in Settings when you open them yourself.
+
 ## Verification
 
 Unit tests exercise UTF-16 selections, cumulative updates, cursor guards,

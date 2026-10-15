@@ -386,16 +386,18 @@ final class DictationFocusTests: XCTestCase {
         let editor = FocusEditor("original "), transcriber = ReplayTranscriber()
         let recorder = FocusRecorder(pcm: Data(repeating: 5, count: 4_800))
         var next: any AudioRecording = recorder
+        var notifications: [String] = []
         let model = AppModel(localOnly: true, defaults: isolatedDefaults(), captureTarget: { _, _ in editor.target() },
                              makeRecorder: { next }, accessibilityTrust: { true }, transcribeAudio: { pcm, _, context, timeout in
             try await transcriber.transcribe(pcm, context: context, timeout: timeout)
-        })
+        }, notifyError: { notifications.append($0) })
         defer { model.shutdown() }
         model.toggleLocalRecording(mode: .live)
         await waitFor(.recording, in: model)
         await recorder.interrupt()
         await waitFor(.idle, in: model)
         XCTAssertTrue(model.canRetranscribe)
+        XCTAssertEqual(notifications, [DictationError.connection.message(russian: model.preferences.isRussian)])
         next = FocusRecorder(pcm: Data(repeating: 9, count: 4_800))
         model.toggleLocalRecording(transform: true)
         await waitFor(.recording, in: model)
@@ -406,6 +408,7 @@ final class DictationFocusTests: XCTestCase {
         await waitFor(.idle, in: model)
         let audio = await transcriber.calls.last?.audio
         XCTAssertEqual(audio, Data(repeating: 5, count: 4_800))
+        XCTAssertEqual(notifications.count, 1, "Cancellation and successful retry must not notify.")
     }
 
     @MainActor func testCancellingOriginalProcessingDiscardsAudioAndLateTranscript() async {
