@@ -138,8 +138,9 @@ Google Account. See [setup and conflict behavior](docs/google-drive-sync.md).
   no selection—and your spoken instruction are sent directly to OpenAI. Other
   screen contents are not collected, persisted, or transmitted.
 - The app picker reads names and icons of launchable apps installed on the
-  device. Your choice of apps where the dictation button is hidden is stored
-  locally as package names and is not sent to OpenAI.
+   device. The app filter mode and separate selections of allowed and excluded
+   apps are stored locally as package names. They are not sent to OpenAI or
+   included in Google Drive sync.
 - A transformation may return a short answer or error as a private Android
   notification. OpenDictate does not persist that message; Android notification
   history is controlled by the device's system settings.

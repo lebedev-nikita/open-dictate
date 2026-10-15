@@ -28,11 +28,13 @@ import com.opendictate.app.R
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.addToDictionary
-import com.opendictate.app.overlay.DictationOverlayView
+import com.opendictate.app.model.AppFilter
 import com.opendictate.app.overlay.DictationOverlayMenuView
+import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
 import com.opendictate.app.overlay.OverlayPositionMotion
 import com.opendictate.app.overlay.OverlayVisibilitySession
+import java.io.Closeable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +51,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private var textRestorationScheduled = false
     private lateinit var windowManager: WindowManager
     private lateinit var settings: SettingsStore
+    private var appFilter = AppFilter()
+    private var appFilterObserver: Closeable? = null
     private var overlay: DictationOverlayView? = null
     private var overlayMenu: DictationOverlayMenuView? = null
     private var overlayAttached = false
@@ -75,6 +79,11 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         windowManager = getSystemService(WindowManager::class.java)
         settings = SettingsStore(this)
+        appFilter = settings.appFilter
+        appFilterObserver = settings.observeAppFilter { filter ->
+            appFilter = filter
+            scheduleOverlayUpdate()
+        }
         overlay = DictationOverlayView(
             context = this,
             onDictationClick = ::onOverlayTapped,
@@ -109,6 +118,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        appFilterObserver?.close()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
         scope.coroutineContext[Job]?.cancel()
@@ -127,7 +137,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         // Node queries can block the main thread; there is no eligible target without an IME.
         val focused = if (ime != null) findFocusedEditable() else null
         val hasEligibleTarget = ime != null && focused?.isTextInput() == true &&
-            !settings.isPackageExcluded(focused.packageName)
+            appFilter.allows(focused.packageName)
         if (overlayVisibilitySession.shouldShow(hasEligibleTarget)) {
             showOrMoveOverlay(ime, requireNotNull(focused))
         } else {
@@ -370,7 +380,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         if (!isReadyToStart()) return
         val focused = findFocusedEditable()
         if (focused?.isTextInput() != true) return
-        if (settings.isPackageExcluded(focused.packageName)) return
+        if (!appFilter.allows(focused.packageName)) return
         editableSnapshot = focused.captureEditableText()
         clearPendingTextRestoration()
         targetPackage = focused.packageName
@@ -391,7 +401,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         if (!isReadyToStart()) return
         val focused = findFocusedEditable()
         if (focused?.isTextInput() != true) return
-        if (settings.isPackageExcluded(focused.packageName)) return
+        if (!appFilter.allows(focused.packageName)) return
         if (focused.isPassword) {
             showOverlayError(R.string.error_password_field_transformation)
             return
@@ -425,7 +435,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         val selected = focused
             ?.takeIf {
                 it.isTextInput() && it.isFocused && !it.isPassword &&
-                    !settings.isPackageExcluded(it.packageName) &&
+                    appFilter.allows(it.packageName) &&
                     it.packageName == overlayTargetPackage
             }
             ?.captureEditableText()
@@ -445,7 +455,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             Toast.makeText(this, R.string.overlay_paste_unavailable, Toast.LENGTH_SHORT).show()
             return
         }
-        if (settings.isPackageExcluded(target.packageName)) return
+        if (!appFilter.allows(target.packageName)) return
         if (target.isPassword) {
             Toast.makeText(this, R.string.overlay_paste_password, Toast.LENGTH_SHORT).show()
             return
@@ -508,7 +518,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         setOverlayMenuExpanded(false)
         val focused = findFocusedEditable()
         if (focused?.isTextInput() != true || !focused.isFocused ||
-            settings.isPackageExcluded(focused.packageName)
+            !appFilter.allows(focused.packageName)
         ) {
             Toast.makeText(this, R.string.overlay_paste_unavailable, Toast.LENGTH_SHORT).show()
             return
@@ -538,7 +548,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             if (DictationStateBus.state.value.isActive ||
                 windows.none { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } ||
                 current == null || !current.isFocused || current != focused ||
-                settings.isPackageExcluded(current.packageName)
+                !appFilter.allows(current.packageName)
             ) return@launch
             editableSnapshot = current.captureEditableText()
             clearPendingTextRestoration()
@@ -698,7 +708,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             return
         }
         val update = pendingTextRestoration.nextAttempt() ?: return
-        replaceFocusedText(update.text, update.selectionStart, update.selectionEnd)
+        // Cancellation may still restore our own partial text after the app is disabled.
+        replaceFocusedText(update.text, update.selectionStart, update.selectionEnd, restoringSnapshot = true)
         scheduleEditableSnapshotRestoration()
     }
 
@@ -725,11 +736,13 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         selectionEnd: Int,
         expectedPackage: CharSequence? = targetPackage,
         expectedNode: AccessibilityNodeInfo? = null,
+        restoringSnapshot: Boolean = false,
     ): Boolean {
         val focused = findFocusedEditable() ?: return false
         if (
             !focused.isTextInput() ||
             focused.packageName != expectedPackage ||
+            !restoringSnapshot && !appFilter.allows(focused.packageName) ||
             expectedNode != null && focused != expectedNode
         ) return false
         val setText = Bundle().apply {
