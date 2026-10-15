@@ -32,40 +32,31 @@ struct GoogleDriveSettingsView: View {
             .accessibilityIdentifier("googleDriveConnection")
             .help(t("Turn off to sign out on this Mac. The next connection lets you choose a Google account.",
                     "Выключите, чтобы выйти на этом Mac. При следующем подключении можно выбрать аккаунт Google."))
-            Text(t("Sync your dictionary, word replacements, dictation mode and selected models across Android and macOS.",
-                   "Синхронизация словаря, автозамен, режима диктовки и выбранных моделей между Android и macOS."))
-                .font(.callout).foregroundStyle(.secondary)
             if !preferences.driveSyncEnabled || sync.needsSignIn {
                 TextField(t("Desktop OAuth client ID", "ID OAuth-клиента для ПК"), text: $preferences.driveClientID)
                     .textFieldStyle(.roundedBorder).disabled(sync.status == .busy)
+                    .help(t("Use a Desktop client from the same Google Cloud project as the Android app.",
+                            "Используйте клиент типа Desktop из того же проекта Google Cloud, что и Android-приложение."))
                 SecureField(t("Desktop OAuth client secret", "Секрет OAuth-клиента для ПК"), text: $clientSecret)
                     .textFieldStyle(.roundedBorder).disabled(sync.status == .busy)
-                Text(t("Use a Desktop client from the same Google Cloud project as the Android app. Sign-in opens your browser.",
-                       "Используйте клиент типа Desktop из того же проекта Google Cloud, что и Android-приложение. Вход откроется в браузере."))
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(t("Leave the secret blank to reuse the saved secret for this client. Google Cloud projects in Testing require sign-in again after seven days.",
-                       "Оставьте секрет пустым, чтобы использовать сохранённый секрет этого клиента. В режиме Testing проекта Google Cloud вход нужно повторять через семь дней."))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .help(t("Leave blank to reuse the saved secret for this client.",
+                            "Оставьте пустым, чтобы использовать сохранённый секрет этого клиента."))
             }
-            HStack(alignment: .top, spacing: 8) {
-                if sync.status == .busy { ProgressView().controlSize(.small) }
-                Text(sync.statusText(preferences: preferences))
-                    .font(.caption).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                if preferences.driveSyncEnabled {
-                    if sync.needsSignIn {
+            if sync.needsSignIn || sync.status == .failed || (sync.status == .busy && !preferences.driveSyncEnabled) {
+                HStack(alignment: .top, spacing: 8) {
+                    if sync.status == .busy { ProgressView().controlSize(.small) }
+                    Text(sync.status == .busy
+                         ? t("Finish signing in to Google in your browser.", "Завершите вход в Google в браузере.")
+                         : sync.statusText(preferences: preferences))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if preferences.driveSyncEnabled && sync.needsSignIn {
                         Button(t("Sign in again", "Войти снова"), action: connect)
                             .disabled(preferences.driveClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    } else {
-                        Button(t("Sync now", "Синхронизировать"), action: sync.syncNow)
-                            .disabled(!sync.canSyncNow)
                     }
-                }
-            }.controlSize(.small)
-            Text(t("Only these settings go to Google. API keys, audio and history are never synced. Disconnecting keeps local and cloud settings.",
-                   "В Google отправляются только эти настройки. API-ключи, звук и история не синхронизируются. Отключение сохраняет локальные и облачные настройки."))
-                .font(.caption).foregroundStyle(.secondary)
+                }.controlSize(.small)
+            }
         }
         .sheet(isPresented: Binding(get: { sync.needsSourceSelection }, set: { shown in
             if !shown && sync.needsSourceSelection { sync.disconnect() }
