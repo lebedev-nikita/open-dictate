@@ -57,7 +57,7 @@ internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.gestures_back))
                 }
                 Text(stringResource(R.string.gestures_title), Modifier.padding(start = 8.dp).semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    style = MaterialTheme.typography.titleLarge)
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 Surface(Modifier.fillMaxWidth().padding(top = 16.dp), shape = RoundedCornerShape(16.dp),
@@ -74,7 +74,7 @@ internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
                 Text(stringResource(R.string.gestures_menu_title),
                     Modifier.padding(top = 24.dp, bottom = 8.dp).semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    style = MaterialTheme.typography.titleSmall, color = SettingsMuted, fontWeight = FontWeight.Medium)
                 MenuInstruction(R.string.overlay_last_dictation, R.string.gestures_retry_body)
                 GuideDivider()
                 MenuInstruction(R.string.overlay_paste_last, R.string.gestures_paste_body)
@@ -90,34 +90,40 @@ internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
 @Composable
 private fun GestureRow(gesture: ButtonGesture, title: Int, description: Int) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 84.dp).padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+    Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ButtonIllustration(gesture, stringResource(description))
         Text(stringResource(title), Modifier.weight(1f).semantics { heading() },
-            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 private enum class ButtonGesture { HOLD, SWIPE_LEFT, SWIPE_RIGHT }
 
-/** Static pictures use the overlay's own drawables, size, colors and elevation. */
+private const val ILLUSTRATION_SCALE = 0.75f
+
+/** Static pictures reuse the overlay's drawables at a reduced tutorial scale. */
 @Composable
 private fun ButtonIllustration(gesture: ButtonGesture, description: String) {
     val outline = MaterialTheme.colorScheme.outline
-    Box(Modifier.size(width = 116.dp, height = 72.dp).semantics { contentDescription = description },
+    Box(Modifier.size(width = 116.dp * ILLUSTRATION_SCALE, height = 72.dp * ILLUSTRATION_SCALE)
+        .semantics { contentDescription = description },
         contentAlignment = Alignment.Center) {
         if (gesture == ButtonGesture.HOLD) {
-            Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(72.dp * ILLUSTRATION_SCALE), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
-                    drawCircle(outline.copy(alpha = 0.25f), radius = 34.dp.toPx(), style = Stroke(1.dp.toPx()))
-                    drawCircle(outline.copy(alpha = 0.5f), radius = 30.dp.toPx(), style = Stroke(1.dp.toPx()))
+                    drawCircle(outline.copy(alpha = 0.25f), radius = 34.dp.toPx() * ILLUSTRATION_SCALE,
+                        style = Stroke(1.dp.toPx() * ILLUSTRATION_SCALE))
+                    drawCircle(outline.copy(alpha = 0.5f), radius = 30.dp.toPx() * ILLUSTRATION_SCALE,
+                        style = Stroke(1.dp.toPx() * ILLUSTRATION_SCALE))
                 }
                 FloatingButtonPicture(R.drawable.ic_mic_chatgpt_24)
             }
         } else {
             val pointsLeft = gesture == ButtonGesture.SWIPE_LEFT
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp * ILLUSTRATION_SCALE),
+                verticalAlignment = Alignment.CenterVertically) {
                 if (pointsLeft) SwipeChevrons(pointsLeft = true)
                 FloatingButtonPicture(if (pointsLeft) R.drawable.ic_stop_rounded_24 else R.drawable.ic_mic_chatgpt_24)
                 if (!pointsLeft) SwipeChevrons(pointsLeft = false)
@@ -129,11 +135,11 @@ private fun ButtonIllustration(gesture: ButtonGesture, description: String) {
 @Composable
 private fun SwipeChevrons(pointsLeft: Boolean) {
     val ink = SettingsMuted
-    Canvas(Modifier.size(width = 44.dp, height = 44.dp)) {
+    Canvas(Modifier.size(44.dp * ILLUSTRATION_SCALE)) {
         repeat(3) { index ->
-            val offset = index * 14.dp.toPx()
-            val tip = offset + (if (pointsLeft) 2.dp else 14.dp).toPx()
-            val wing = offset + (if (pointsLeft) 14.dp else 2.dp).toPx()
+            val offset = index * 14.dp.toPx() * ILLUSTRATION_SCALE
+            val tip = offset + (if (pointsLeft) 2.dp else 14.dp).toPx() * ILLUSTRATION_SCALE
+            val wing = offset + (if (pointsLeft) 14.dp else 2.dp).toPx() * ILLUSTRATION_SCALE
             val emphasis = if (pointsLeft) 2 - index else index
             val opacity = when (emphasis) {
                 2 -> 1f
@@ -141,21 +147,22 @@ private fun SwipeChevrons(pointsLeft: Boolean) {
                 else -> 0.25f
             }
             val chevron = Path().apply {
-                moveTo(wing, 2.dp.toPx())
+                moveTo(wing, 2.dp.toPx() * ILLUSTRATION_SCALE)
                 lineTo(tip, size.height / 2)
-                lineTo(wing, size.height - 2.dp.toPx())
+                lineTo(wing, size.height - 2.dp.toPx() * ILLUSTRATION_SCALE)
             }
             drawPath(chevron, ink.copy(alpha = opacity),
-                style = Stroke(1.75.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                style = Stroke(1.75.dp.toPx() * ILLUSTRATION_SCALE, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }
 }
 
 @Composable
 private fun FloatingButtonPicture(drawable: Int) {
-    Surface(Modifier.size(52.dp), shape = CircleShape, color = Color.White, shadowElevation = 5.dp) {
+    Surface(Modifier.size(52.dp * ILLUSTRATION_SCALE), shape = CircleShape, color = Color.White,
+        shadowElevation = 5.dp * ILLUSTRATION_SCALE) {
         Box(contentAlignment = Alignment.Center) {
-            Image(painterResource(drawable), contentDescription = null, modifier = Modifier.size(24.dp),
+            Image(painterResource(drawable), contentDescription = null, modifier = Modifier.size(24.dp * ILLUSTRATION_SCALE),
                 colorFilter = ColorFilter.tint(Color(0xFF080808)))
         }
     }
@@ -170,7 +177,7 @@ private fun GuideDivider() {
 @Composable
 private fun MenuInstruction(title: Int, body: Int) {
     Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringResource(title), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
+        Text(stringResource(title), Modifier.semantics { heading() }, style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(body), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
     }
 }
