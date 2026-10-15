@@ -40,7 +40,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - name: Validate release tag
         shell: bash
-        run: '[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]'
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]
+          printf 'RELEASE_NAME=android %s\n' "${RELEASE_TAG#v}" >> "$GITHUB_ENV"
       - name: Check signing configuration
         run: |
           test -n "$SIGNING_KEY"
@@ -63,6 +65,7 @@ jobs:
           fi
       - uses: softprops/action-gh-release@v3
         with:
+          name: ${{ env.RELEASE_NAME }}
           body_path: RELEASE_NOTES.md
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}

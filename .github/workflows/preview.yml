@@ -114,6 +114,6 @@ jobs:
         run: |
           gh release create "$PREVIEW_TAG" "OpenDictate-${PREVIEW_TAG}.apk" \
             --target "$GITHUB_SHA" \
-            --title "$PREVIEW_TAG" \
+            --title "android ${PREVIEW_TAG#v}" \
             --notes-file RELEASE_NOTES.md \
             --prerelease
