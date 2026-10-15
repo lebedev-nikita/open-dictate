@@ -34,7 +34,7 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -353,7 +353,7 @@ private fun AppTheme.titleResource(): Int = when (this) {
 }
 
 private fun AppTheme.icon(): ImageVector = when (this) {
-    AppTheme.SYSTEM -> Icons.Outlined.BrightnessAuto
+    AppTheme.SYSTEM -> Icons.Outlined.Contrast
     AppTheme.LIGHT -> Icons.Outlined.LightMode
     AppTheme.DARK -> Icons.Outlined.DarkMode
 }
