@@ -272,7 +272,7 @@ final class GoogleDriveTests: XCTestCase {
         sync.disconnect()
     }
 
-    @MainActor func testSyncControlRendersWaitingBusySuccessAndFailureInBothLanguagesAndThemes() async throws {
+    @MainActor func testSyncControlStaysOnOneRowInAllStatesLanguagesAndThemes() async throws {
         let suite = "drive-control-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -281,21 +281,26 @@ final class GoogleDriveTests: XCTestCase {
         DriveHTTP.handler = { _ in (fail ? 503 : 200, Data("{\"files\":[]}".utf8)) }
         let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: { "synthetic" },
             automaticallySync: false, deleteCredentials: {})
-        func render(_ state: String) throws {
+        func render(_ state: String, sync: GoogleDriveSync) throws {
             for language in ["en", "ru"] {
                 preferences.interfaceLanguage = language
                 for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                    // Available header width at the settings window's minimum size.
+                    let control = NSHostingView(rootView: SettingsSyncControl(sync: sync, preferences: preferences)
+                        .frame(width: 463))
+                    control.appearance = NSAppearance(named: appearance)
+                    control.setFrameSize(control.fittingSize); control.layoutSubtreeIfNeeded()
+                    XCTAssertLessThanOrEqual(control.frame.height, 26, "\(state), \(language): sync header wrapped")
                     let host = NSHostingView(rootView: VStack(alignment: .leading, spacing: 20) {
-                        HStack(alignment: .top, spacing: 16) {
+                        HStack {
                             Spacer()
                             SettingsSyncControl(sync: sync, preferences: preferences)
-                            Image(systemName: "circle.lefthalf.filled").frame(width: 24, height: 24)
                         }
                         GoogleDriveSettingsView(sync: sync, preferences: preferences)
-                    }.padding(28).frame(width: 464).background(Color(nsColor: .windowBackgroundColor)))
+                    }.padding(28).frame(width: 519).background(Color(nsColor: .windowBackgroundColor)))
                     host.appearance = NSAppearance(named: appearance)
                     host.setFrameSize(host.fittingSize); host.layoutSubtreeIfNeeded()
-                    XCTAssertEqual(host.frame.width, 464, accuracy: 1)
+                    XCTAssertEqual(host.frame.width, 519, accuracy: 1)
                     XCTAssertLessThan(host.frame.height, 650)
                     if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
                         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
@@ -308,15 +313,36 @@ final class GoogleDriveTests: XCTestCase {
                 }
             }
         }
-        try render("waiting")
-        sync.syncNow(); try render("busy")
-        try await awaitStatus(sync, .synced); try render("synced")
+        try render("waiting", sync: sync)
+        sync.syncNow(); try render("busy", sync: sync)
+        try await awaitStatus(sync, .synced); try render("synced", sync: sync)
         fail = true; sync.syncNow()
-        try await awaitStatus(sync, .failed); try render("failed")
+        try await awaitStatus(sync, .failed); try render("failed", sync: sync)
         DriveHTTP.handler = { _ in (401, Data()) }
-        sync.syncNow(); try await awaitStatus(sync, .authorization); try render("authorization")
+        sync.syncNow(); try await awaitStatus(sync, .authorization); try render("authorization", sync: sync)
         sync.disconnect()
-        try render("disconnected")
+        try render("disconnected", sync: sync)
+        for (error, status) in [(DriveError.signInTimedOut, GoogleDriveSync.Status.signInTimedOut),
+                                (.configuration, .configuration), (.clientConfiguration, .clientConfiguration)] {
+            preferences.driveSyncEnabled = true
+            let failedSync = GoogleDriveSync(preferences: preferences, refreshToken: { throw error },
+                automaticallySync: false, deleteCredentials: {})
+            failedSync.syncNow(); try await awaitStatus(failedSync, status)
+            try render(String(describing: status), sync: failedSync)
+            failedSync.disconnect()
+        }
+        preferences.driveSyncEnabled = true; preferences.driveConnectionPending = true
+        DriveHTTP.handler = { request in
+            if request.url?.query?.contains("alt=media") == true {
+                return (200, Data(#"{"schemaVersion":1,"entries":{"dictionary":{"value":"Cloud","modifiedAt":1,"deviceId":"android"}}}"#.utf8))
+            }
+            return (200, Data(#"{"files":[{"id":"cloud-file","name":"opendictate-settings-v1-android.json"}]}"#.utf8))
+        }
+        let choosingSync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: { "synthetic" },
+            automaticallySync: false, deleteCredentials: {})
+        choosingSync.syncNow(); try await awaitStatus(choosingSync, .sourceSelection)
+        try render("sourceSelection", sync: choosingSync)
+        choosingSync.disconnect()
     }
 
     @MainActor func testDriveSwitchBindingCancelsSyncAndSignsOutLocally() async throws {
