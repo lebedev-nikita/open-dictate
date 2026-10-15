@@ -154,32 +154,31 @@
       },
       "gesturesGuide": {
         "implementation": "GesturesScreen.kt; OpenDictateApp.kt saveable route; SettingsScreen.kt Keyboard entry; English/Russian strings.xml",
-        "presentation": "Full-screen Read guide within Operate settings; existing neutral Material 3 palette, system title/body roles and heading semantics. Actual 52dp white floating-button circles, 24dp microphone/stop drawables and 5dp elevation remain.",
-        "illustrations": "Centered 116x72dp zones hold complete blocks: 72dp hold box with ripple radii 34/30dp, 1dp theme-outline strokes and opacity 0.25/0.5; 108dp swipe row with 44x44dp chevrons, 12dp internal gap and 52dp button. Chevrons lead left swipe and trail right swipe, so individual button centers shift with direction while complete blocks share an axis. Three chevrons use 12dp arms, 14dp offsets, 1.75dp rounded strokes and SettingsMuted at outward opacity 1/0.55/0.25. Existing drawables and Canvas vectors add no shipping raster assets.",
-        "layout": "Centered 680dp maximum and 24dp reading gutters; 16dp native group corners; minimum 84dp rows with 12dp horizontal/6dp vertical padding, fixed 116x72dp zones and 20dp text gap align headings. Group border and inset dividers use 0.5dp outlineVariant at 0.65 opacity. Native menu ledger has 16dp vertical padding. Scrollable growing text and status/navigation insets remain; measurements are guide-specific, not global tokens.",
-        "direction": "User-approved modern concept 1 Fine Echo: .impeccable/review/modern-gesture-concepts/01-fine-echo.png. Direction is adapted to the app's original native identity; exact pixel matching is not required.",
-        "interaction": "Toolbar and system Back preserve settings scroll; saveable guide route survives recreation.",
-        "content": "Three contextual English headings: Hold to open the menu; Swipe left to cancel dictation; Swipe right to hide the button. Russian copy unchanged. No visible gesture captions/introduction; screen-reader descriptions retain idle/active applicability, cancellation and keyboard close/reopen recovery. Menu actions explain Accurate retranscription, paste at cursor, voice commands editing selection or all text with Text transformation enabled, and Dictionary insertion.",
-        "dictionaryAvailability": "Selection in a non-password field, independent of the selected-text context-menu toggle; OpenDictateAccessibilityService.kt establishes availability.",
+        "presentation": "Full-screen Read guide within Operate settings; existing neutral Material 3 palette and heading semantics. Standard settings typography: default-weight titleLarge header; default-weight bodyLarge gesture/menu labels; titleSmall/Medium/SettingsMuted menu heading matches SectionTitle; bodySmall/SettingsMuted explanations match RowCopy.",
+        "illustrations": "Private tutorial scale 0.75 gives centered 87x54dp zones. Hold uses a 54dp box, ripple radii 25.5/22.5dp, 0.75dp theme-outline strokes and opacity 0.25/0.5. Swipe blocks are 81dp: 33x33dp chevrons, 9dp gap, 39dp white tutorial button with 18dp actual microphone/stop drawable and 3.75dp elevation. Chevrons lead left swipe and trail right swipe; buttons shift directionally while complete blocks stay centered. Echoes use 9dp arms, 10.5dp offsets, 1.3125dp rounded strokes and SettingsMuted at outward opacity 1/0.55/0.25. Runtime overlay remains 52dp. Canvas/existing drawables add no shipping raster assets.",
+        "layout": "Centered 680dp maximum and 24dp gutters; native 16dp group corners; minimum 72dp rows with 12dp horizontal/6dp vertical padding, 87x54dp illustration zones and 16dp text gap align labels. Group border/inset dividers remain 0.5dp outlineVariant at 0.65 opacity. Menu ledger retains 16dp vertical padding. Scrollable growing text and status/navigation insets remain; measurements are guide-specific, not global tokens.",
+        "direction": "Fine Echo provenance: .impeccable/review/modern-gesture-concepts/01-fine-echo.png. Latest user instruction for standard settings type and 75 percent tutorial size overrides full-size concept geometry. Original native identity preserved; exact pixel matching not required.",
+        "interaction": "Toolbar/system Back preserve settings scroll; saveable guide route survives recreation.",
+        "content": "Contextual English/Russian copy unchanged. English: Hold to open the menu; Swipe left to cancel dictation; Swipe right to hide the button. No visible gesture captions/introduction; screen-reader descriptions retain idle/active applicability, cancellation and keyboard recovery. Menu actions explain Accurate retranscription, paste, voice editing selected/all text with Text transformation enabled, and Dictionary insertion.",
+        "dictionaryAvailability": "Selected text in a non-password field, independent of selected-text context-menu toggle; OpenDictateAccessibilityService.kt establishes availability.",
         "review": {
           "verdict": "ship",
-          "scope": "Approved modern Fine Echo native adaptation and contextual English copy",
-          "findings": "Final native finish review: all five sections passed, no material fixes, disposition ship. Current source, all eight captures and reconciled records reviewed; approved Fine Echo direction and native style preserved.",
-          "basis": "Current native source and eight fresh, validated dedicated-emulator English/Russian captures; no HTML detector.",
-          "primaryScreenshot": ".impeccable/review/gestures-fine-echo-phone-ru.png",
-          "englishPrimaryScreenshot": ".impeccable/review/gestures-fine-echo-phone-en.png",
+          "scope": "Standard settings typography and 75 percent tutorial illustration scale",
+          "findings": "Final compact-guide finish review: all five sections passed, no material fixes, disposition ship. Current source, all seven native captures and reconciled records checked for standard settings typography and 75 percent tutorial scale.",
+          "basis": "Current native source and seven current compact capture paths. All seven captures validated after the Russian dark-large recapture settled. No HTML detector.",
+          "primaryScreenshot": ".impeccable/review/gestures-compact-phone-ru.png",
+          "englishPrimaryScreenshot": ".impeccable/review/gestures-compact-phone-en.png",
           "screenshots": [
-            ".impeccable/review/gestures-phone-ru.png",
-            ".impeccable/review/gestures-menu-ru.png",
-            ".impeccable/review/gestures-phone-dark-large-ru.png",
-            ".impeccable/review/gestures-menu-dark-large-ru.png",
-            ".impeccable/review/gestures-tablet-dark-ru.png",
-            ".impeccable/review/gestures-phone-en.png",
-            ".impeccable/review/gestures-phone-dark-large-en.png",
-            ".impeccable/review/gestures-menu-dark-large-en.png"
+            ".impeccable/review/gestures-compact-phone-ru.png",
+            ".impeccable/review/gestures-compact-phone-en.png",
+            ".impeccable/review/gestures-compact-dark-large-ru.png",
+            ".impeccable/review/gestures-compact-dark-large-en.png",
+            ".impeccable/review/gestures-compact-menu-dark-large-ru.png",
+            ".impeccable/review/gestures-compact-menu-dark-large-en.png",
+            ".impeccable/review/gestures-compact-tablet-dark-ru.png"
           ],
-          "captureScope": "English/Russian native guide sections, dark phone at font scale 1.3 and Russian tablet emulation at 1600x2560 density 200. Dedicated emulator 5580. Review evidence, not shipping assets.",
-          "validation": "Required local Gradle checks passed: 151 unit tests, Debug/Release lint and assembly. One navigation/recreation/content/heading-alignment instrumentation test passed; zero failures."
+          "captureScope": "English/Russian phones, dark large text and Russian tablet emulation. Primary phone captures are actual paths, without extra aliases. Native review evidence, not shipping assets.",
+          "validation": "Required local Gradle checks passed: 151 unit tests, Debug/Release lint and assembly. One navigation/recreation/content/alignment instrumentation test passed; zero failures."
         }
       },
       "surfaceBrief": ".impeccable/surfaces/android-settings.md"
