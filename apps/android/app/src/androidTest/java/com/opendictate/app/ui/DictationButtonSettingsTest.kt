@@ -15,7 +15,7 @@ import org.junit.Test
 class DictationButtonSettingsTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    @Test fun sliderUpdatesPreviewPixelsAndPersistsPositionAcrossRecreation() {
+    @Test fun sliderAndResetUpdatePreviewPixelsAndPersistPositionAcrossRecreation() {
         val context = compose.activity
         val settings = SettingsStore(context)
         val original = settings.dictationButtonAppearance
@@ -31,7 +31,19 @@ class DictationButtonSettingsTest {
                 .performScrollTo().assertIsDisplayed().assert(SemanticsMatcher.expectValue(
                     androidx.compose.ui.semantics.SemanticsProperties.StateDescription, pixels))
             compose.onNodeWithText(pixels).assertIsDisplayed()
+            compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_reset_size))
+                .performScrollTo().assertIsEnabled().performClick()
+            compose.waitForIdle()
+            assertEquals(DictationButtonAppearance(position = DictationButtonPosition.LEFT), settings.dictationButtonAppearance)
+            val defaultPixels = context.getString(R.string.dictation_button_pixels,
+                settings.dictationButtonAppearance.diameterPx(context.resources.displayMetrics.density))
+            compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_preview))
+                .performScrollTo().assert(SemanticsMatcher.expectValue(
+                    androidx.compose.ui.semantics.SemanticsProperties.StateDescription, defaultPixels))
             compose.activityRule.scenario.recreate()
+            compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_reset_size))
+                .performScrollTo().assertIsNotEnabled()
+            assertEquals(DictationButtonAppearance.DEFAULT_DIAMETER_DP, settings.dictationButtonAppearance.diameterDp)
             compose.onNodeWithText(context.getString(R.string.dictation_button_left)).performScrollTo().assertIsSelected()
             compose.onNodeWithContentDescription(context.getString(R.string.dictation_button_size))
                 .performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(24f) }

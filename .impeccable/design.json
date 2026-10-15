@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T06:46:16.408Z",
+  "generatedAt": "2026-10-15T07:52:41.756Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -197,10 +197,10 @@
         "layout": {
           "padding": "16dp",
           "spacing": "12dp",
-          "slider": "Native continuous Material 3 Slider, rounded to whole dp; no discrete tick scale",
+          "slider": "Native continuous Material 3 Slider, rounded to whole dp; no discrete tick scale; a 48dp Restore icon target on its left resets only the diameter to 52dp, preserves position and disables at the default size",
           "positionControl": "Native single-choice segmented row with equal intrinsic button heights; labels wrap at larger font scales"
         },
-        "interaction": "Autosave locally with no confirmation. Apply appearance to the active overlay without restarting Accessibility. Keep menu geometry clear of the full touch target; preserve focus and insertion guards.",
+        "interaction": "Autosave locally with no confirmation. Apply appearance to the active overlay without restarting Accessibility. Keep menu geometry clear of the full touch target; preserve focus and insertion guards. Button and menu placement share the visible display frame’s top boundary, including system decorations, so a menu opening below a large button retains its 8dp content gap.",
         "gestures": "At right/center, cancel left and hide right. At left, cancel right toward the screen interior and hide left toward the edge. Native accessibility hints and the guide mirror the directions; the guide uses the stop glyph for cancellation regardless of direction.",
         "accessibility": "Named slider with pixel state description, named preview with pixel diameter, native selected-state semantics and at least 48dp runtime touch bounds",
         "scope": "Android-only local appearance settings; excluded from Google Drive sync. Runtime circle remains white in either settings theme; tutorial pictures keep their separate 75 percent scale.",

@@ -31,6 +31,39 @@ class DictationDeliveryTest {
     private val automation: UiAutomation
         get() = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
 
+    @Test fun menuBelowLargeButtonLeavesAVisibleGap() = withAccessibility { settings ->
+        instrumentation.runOnMainSync {
+            settings.dictationButtonAppearance = DictationButtonAppearance(96)
+        }
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            activity.onActivity { it.editor.setText("") }
+            await { startButton() != null }
+            // Settle the keyboard and button before opening the menu.
+            SystemClock.sleep(600)
+            assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK))
+            val button = Rect()
+            val firstAction = Rect()
+            await {
+                val close = overlay(context.getString(R.string.overlay_close_menu))
+                val menu = overlay(context.getString(R.string.overlay_last_dictation_description))
+                close?.getBoundsInScreen(button)
+                menu?.getBoundsInScreen(firstAction)
+                close != null && menu != null && !button.isEmpty && !firstAction.isEmpty
+            }
+            if (InstrumentationRegistry.getArguments().getString("captureOverlay") == "true") {
+                java.io.FileOutputStream(java.io.File(context.cacheDir, "menu-below-large-button.png")).use {
+                    val screenshot = automation.takeScreenshot()
+                    screenshot.compress(Bitmap.CompressFormat.PNG, 100, it)
+                    screenshot.recycle()
+                }
+            }
+            assertTrue("Fixture must open the menu below the button", firstAction.centerY() > button.centerY())
+            val requiredGap = (8 * context.resources.displayMetrics.density).toInt()
+            assertTrue("Menu overlaps button: button=$button firstAction=$firstAction requiredGap=$requiredGap",
+                firstAction.top - button.bottom >= requiredGap - 1)
+        }
+    }
+
     @Test fun customButtonMovesResizesOpensMenuAndCancelsWithMirroredSwipe() = withAccessibility { settings ->
         ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
             val density = context.resources.displayMetrics.density

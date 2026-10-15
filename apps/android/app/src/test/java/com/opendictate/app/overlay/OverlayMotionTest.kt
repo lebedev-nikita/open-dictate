@@ -8,6 +8,55 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayMotionTest {
+    @Test fun `menu follows a system-clamped button before its motion settles`() {
+        val appearance = DictationButtonAppearance(96)
+        val menuOffset = OverlayMotion.menuWindowOffsetY(
+            primaryOffsetY = 1_944,
+            displayHeightPx = 2_340,
+            density = 2.75f,
+            showTransformation = false,
+            appearance = appearance,
+            topInsetPx = 136,
+        )
+        // Actual native bounds from the reproduction: circle y=158..422, 8dp gap is 22px.
+        val menuContentTop = 2_340 - menuOffset - OverlayMotion.menuWindowHeightPx(2.75f, false) +
+            OverlayMotion.verticalShadowInsetPx(2.75f)
+        assertEquals(444, menuContentTop)
+    }
+
+    @Test fun `system decorations constrain both the button and menu anchor`() {
+        for (density in listOf(1f, 2.625f, 2.75f, 3f)) {
+            val displayHeight = 2_340
+            val topInset = (50 * density).toInt()
+            for (size in listOf(24, 52, 96)) {
+                val appearance = DictationButtonAppearance(size)
+                val primaryOffset = OverlayMotion.windowOffsetY(displayHeight, 700, 0, density,
+                    showMenu = false, appearance = appearance, topInsetPx = topInset)
+                val primaryWindowTop = displayHeight - primaryOffset -
+                    OverlayMotion.primaryWindowHeightPx(density, appearance)
+                assertEquals(topInset, primaryWindowTop)
+                for (transformation in listOf(false, true)) for (dictionary in listOf(false, true)) {
+                    val menuOffset = OverlayMotion.menuWindowOffsetY(primaryOffset, displayHeight,
+                        density, transformation, dictionary, appearance, topInsetPx = topInset)
+                    val primaryBottom = displayHeight - primaryOffset - OverlayMotion.verticalShadowInsetPx(density)
+                    val menuTop = displayHeight - menuOffset -
+                        OverlayMotion.menuWindowHeightPx(density, transformation, dictionary) +
+                        OverlayMotion.verticalShadowInsetPx(density)
+                    assertEquals(OverlayMotion.gapPx(density), menuTop - primaryBottom)
+                }
+            }
+            // A menu which clears the old 32dp margin but enters system decorations goes below.
+            val appearance = DictationButtonAppearance(96)
+            val menuHeight = OverlayMotion.menuWindowHeightPx(density, false)
+            val primaryOffset = displayHeight - (40 * density).toInt() - menuHeight -
+                appearance.touchDiameterPx(density) - OverlayMotion.gapPx(density)
+            val menuOffset = OverlayMotion.menuWindowOffsetY(primaryOffset, displayHeight, density,
+                false, appearance = appearance, topInsetPx = topInset)
+            assertEquals(primaryOffset - OverlayMotion.menuHeightPx(density, false) -
+                OverlayMotion.gapPx(density), menuOffset)
+        }
+    }
+
     @Test fun `custom sizes stay on screen and menus clear the entire button`() {
         for (size in listOf(24, 48, 52, 96)) for (density in listOf(1f, 2.625f, 3f)) {
             val appearance = DictationButtonAppearance(size)
