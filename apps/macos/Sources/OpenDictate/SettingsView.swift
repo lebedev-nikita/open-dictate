@@ -40,7 +40,7 @@ struct SettingsView: View {
             }.padding(20).frame(width: 220).background(Color(nsColor: .controlBackgroundColor))
             Divider()
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .settingsControlCenter, spacing: 16) {
                     Spacer()
                     SettingsSyncControl(sync: model.driveSync, preferences: preferences)
                     themeSwitcher
@@ -90,7 +90,7 @@ struct SettingsView: View {
         } label: {
             Image(systemName: preferences.theme.symbol).frame(width: 24, height: 24)
         }
-        .menuStyle(.borderlessButton).fixedSize()
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .help(t("Change app theme", "Изменить тему приложения"))
         .accessibilityLabel(t("Change app theme", "Изменить тему приложения"))
         .accessibilityValue(preferences.theme.title(russian: preferences.isRussian))
