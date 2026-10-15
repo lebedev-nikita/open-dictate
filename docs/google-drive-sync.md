@@ -42,9 +42,10 @@ never enter the cache or synchronization payload.
 
 The OpenDictate sync project is `opendictate-sync-20261001` (project number
 `951388859601`). Google Drive API and the `drive.appdata` consent scope are
-configured there. The consent screen currently uses External / Testing and the
-owner's Google account is registered as a test user. The following OAuth clients
-were created on 2026-10-01; each device still needs user sign-in and consent:
+configured there. The consent screen uses **External / In production**, published
+on 2026-10-15. Users no longer need to be added to a test-user list. The following
+OAuth clients were created on 2026-10-01; each device still needs user sign-in
+and consent:
 
 | Client | OAuth client ID |
 | --- | --- |
@@ -113,12 +114,24 @@ If the app reports a client configuration error, check that the OAuth client is
 **Desktop app** and enter its matching secret. Missing secrets fail before opening
 the browser. Google error descriptions and token responses are never displayed.
 
-To avoid the Testing seven-day expiry, the project owner must complete Google Auth
-Platform → Branding and change Audience → Publishing status to **In production**.
-Publishing makes sign-in available outside the test-user list and may require
-Google verification. It does not restore already expired tokens: reconnect once
-after changing the status. The current project's Publish app button remains
-disabled until its Branding configuration is complete.
+For a separate Cloud project, complete Google Auth Platform → Branding, then
+change Audience → Publishing status to **In production** to allow users outside
+the test-user list and remove the Testing seven-day expiry. Publishing does not
+restore already expired tokens: reconnect once after changing the status.
+
+The OpenDictate project is already in production. Its Branding configuration uses
+the [application homepage](https://lebedev-nikita.github.io/open-dictate/) and
+[privacy policy](https://lebedev-nikita.github.io/open-dictate/privacy.html), with
+`lebedev-nikita.github.io` registered as an authorized domain. Google classifies
+[`drive.appdata` as non-sensitive](https://developers.google.com/workspace/drive/api/guides/api-specific-auth);
+Verification Centre confirms that data-access verification is not required for
+this configuration. Brand verification is a separate step required to display
+the app name and logo.
+
+A Google sign-in error saying that the app is available only to approved testers
+indicates a Cloud project still in Testing. Check the project associated with the
+actual Android package/signing certificate or Desktop client; reinstalling the
+app does not change its OAuth publishing status.
 
 ## Connecting and choosing a source
 
