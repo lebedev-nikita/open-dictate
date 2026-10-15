@@ -59,6 +59,11 @@ files. It never logs keys, audio, transcripts, field contents or raw provider
 responses. Provider errors are mapped to safe status messages rather than
 displayed verbatim. Text Responses requests disable storage.
 
+Native macOS error notifications use only curated, localized status messages;
+unknown errors receive a generic notification. They never include raw system or
+provider descriptions, credentials, transcripts, audio or focused-field contents.
+Notification delivery failures do not open windows or generate further errors.
+
 Accessibility insertion checks the captured process and exact element, current
 text, selection and secure-field subrole before every write. UUID session guards
 discard stale callbacks. Ordinary dictation continues across focus changes and

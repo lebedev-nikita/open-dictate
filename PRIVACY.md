@@ -52,6 +52,10 @@ Google Account. See [setup and conflict behavior](docs/google-drive-sync.md).
 
 ## macOS
 
+- Error notifications contain only built-in status messages, never audio,
+  transcripts, focused-field contents, credentials or raw provider responses.
+  Notification Center retention and previews follow your macOS settings.
+
 - Your OpenAI API key is stored in a non-synchronizing, device-only Keychain
   item, available while your login keychain is unlocked. It is never saved in
   preferences, the app bundle, logs or release artifacts.

@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var settingsWindow: NSWindow?
     private var accessibilityActivationObserver: NSObjectProtocol?
     private let recordingIndicator = RecordingIndicator()
+    private lazy var errorNotifications = ErrorNotifications()
     #if DEBUG
     private var localChecks: LocalSmokeChecks?
     private var hudPreviewPhase: AppModel.Phase?
@@ -30,9 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         #if DEBUG
         let localOnly = CommandLine.arguments.contains("--local-smoke-test") ||
             Bundle.main.object(forInfoDictionaryKey: "OpenDictateLocalSmokeTest") as? Bool == true
-        model = AppModel(localOnly: localOnly)
+        model = AppModel(localOnly: localOnly, notifyError: errorNotifications.post)
         #else
-        model = AppModel()
+        model = AppModel(notifyError: errorNotifications.post)
         #endif
         #if DEBUG
         if localOnly {
@@ -54,7 +55,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         prepareAccessibility()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        model.showSettings = { [weak self] in self?.openSettings() }
         model.onStateChange = { [weak self] in self?.updateState() }
         let menu = NSMenu(); menu.delegate = self
         statusItem.menu = menu
@@ -119,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if localChecks != nil {
             menu.addItem(.separator())
             add(menu, "Local check: record microphone (2 seconds)", #selector(checkMicrophone))
+            add(menu, "Local check: show error notification", #selector(checkErrorNotification))
+            add(menu, "Local check: missing editable field", #selector(checkMissingField))
         }
         #endif
     }
@@ -264,6 +266,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     @objc private func previewRecording() { hudPreviewPhase = .recording; updateState() }
     @objc private func previewProcessing() { hudPreviewPhase = .processing; updateState() }
+    @objc private func checkErrorNotification() { model.present(DictationError.connection) }
+    @objc private func checkMissingField() { model.present(DictationError.noField) }
     @objc private func checkInsertion() {
         Task { try? await Task.sleep(nanoseconds: 3_000_000_000); await localChecks?.toggle() }
     }

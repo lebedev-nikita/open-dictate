@@ -1,13 +1,14 @@
-OpenDictate for macOS **0.4.5** expands Russian transcription punctuation guidance. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.4.6** keeps errors from interrupting your current app. Requires macOS 14+ on Apple Silicon or Intel.
 
-- Selecting Russian includes a punctuation prompt with examples of sentence boundaries, introductory expressions, clauses, enumerations, colons, dashes, quotations and parentheses.
-- The guidance applies to Live, Accurate and retranscription in the existing recognition request, without an extra processing step.
+- Errors appear as native macOS notifications instead of opening OpenDictate's settings window. Allow notifications when macOS asks; their appearance follows your system notification settings.
+- Starting dictation or voice editing without an editable text field no longer shows an error or opens a window.
+- Notification messages follow the selected interface language and never include raw provider or system error details.
 
 ### Install
 
 Quit OpenDictate, then run `brew update` and `brew upgrade --cask lebedev-nikita/tap/open-dictate`.
 
-Alternatively, download `OpenDictate-macOS-0.4.5-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
+Alternatively, download `OpenDictate-macOS-0.4.6-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
 
 This release is **locally signed and not notarized**. If Gatekeeper blocks launching it, use **System Settings → Privacy & Security → Open Anyway** for OpenDictate, then launch it again. The disk image includes bilingual instructions.
 
