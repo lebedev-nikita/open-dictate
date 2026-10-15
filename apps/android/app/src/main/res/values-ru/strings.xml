@@ -189,8 +189,6 @@
     <string name="error_no_internet">Нет подключения к интернету</string>
     <string name="error_openai_timeout">OpenAI не ответил вовремя</string>
     <string name="error_network">Ошибка сети</string>
-    <string name="settings_title">Настройки</string>
-    <string name="settings_subtitle">Диктовка, удобная вам.</string>
     <string name="settings_ready">Всё готово к диктовке</string>
     <string name="settings_ready_hint">Нажмите кнопку над клавиатурой</string>
     <string name="settings_setup">Настройте диктовку</string>
@@ -232,13 +230,8 @@
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>
     <string name="drive_sync_title">Синхронизация</string>
     <string name="drive_sync_authorizing">Ожидание входа в Google…</string>
-    <string name="drive_sync_busy">Синхронизация…</string>
     <string name="drive_sync_sign_in_again">Войдите снова, чтобы возобновить синхронизацию.</string>
-    <string name="drive_sync_failed">Не удалось синхронизировать. Локальные настройки сохранены. Проверьте соединение и повторите.</string>
     <string name="drive_sync_off">Не подключено</string>
-    <string name="drive_sync_done">Настройки синхронизированы. Изменения синхронизируются автоматически, пока приложение работает.</string>
-    <string name="drive_sync_waiting">Ожидание синхронизации</string>
-    <string name="drive_sync_now">Синхронизировать</string>
     <string name="drive_sync_connect">Подключить Google Drive</string>
     <string name="drive_sync_disconnect">Отключить</string>
     <string name="drive_sync_privacy">В Google отправляются только эти настройки. API-ключи, звук и история не синхронизируются. Отключение сохраняет локальные и облачные настройки.</string>

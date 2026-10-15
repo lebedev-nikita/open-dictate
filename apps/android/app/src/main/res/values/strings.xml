@@ -192,8 +192,6 @@
     <string name="error_no_internet">No internet connection</string>
     <string name="error_openai_timeout">OpenAI did not respond in time</string>
     <string name="error_network">Network error</string>
-    <string name="settings_title">Settings</string>
-    <string name="settings_subtitle">Dictation that works your way.</string>
     <string name="settings_ready">Ready to dictate</string>
     <string name="settings_ready_hint">Tap the button above your keyboard</string>
     <string name="settings_setup">Set up dictation</string>
@@ -236,13 +234,8 @@
     <string name="drive_sync_title">Synchronization</string>
     <string name="drive_sync_provider" translatable="false">Google Drive</string>
     <string name="drive_sync_authorizing">Waiting for Google sign-in…</string>
-    <string name="drive_sync_busy">Synchronizing…</string>
     <string name="drive_sync_sign_in_again">Sign in again to resume synchronization.</string>
-    <string name="drive_sync_failed">Could not sync. Your local settings are saved. Check your connection and try again.</string>
     <string name="drive_sync_off">Not connected</string>
-    <string name="drive_sync_done">Settings synchronized. Changes sync automatically while the app is running.</string>
-    <string name="drive_sync_waiting">Waiting to synchronize</string>
-    <string name="drive_sync_now">Sync now</string>
     <string name="drive_sync_connect">Connect Google Drive</string>
     <string name="drive_sync_disconnect">Disconnect</string>
     <string name="drive_sync_privacy">Only these settings are sent to Google. API keys, audio and history stay out of sync. Disconnecting keeps local and cloud settings.</string>
