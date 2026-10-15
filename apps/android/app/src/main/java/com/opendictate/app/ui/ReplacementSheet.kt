@@ -76,7 +76,7 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
             if (state.document.rules.isEmpty()) item {
                 Text(stringResource(R.string.replacements_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            items(state.document.rules.sortedBy { it.source.lowercase() }, key = { it.id }) { rule ->
+            items(state.document.rules.sortedBy { it.replacement.lowercase() }, key = { it.id }) { rule ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     val toggleLabel = stringResource(R.string.replacements_toggle_rule, rule.source)
                     Checkbox(rule.enabled, { store.toggle(rule, it) }, Modifier.semantics { contentDescription = toggleLabel })

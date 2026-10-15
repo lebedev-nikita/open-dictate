@@ -2,6 +2,23 @@ import XCTest
 @testable import OpenDictate
 
 final class ReplacementStoreTests: XCTestCase {
+    func testListSortsByReplacementIgnoringCaseAndReordersAfterEditing() async {
+        await MainActor.run {
+            let suite = "com.opendictate.tests.replacements.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let store = ReplacementStore(defaults: defaults)
+            XCTAssertTrue(store.save(source: "alpha", replacement: "Zebra"))
+            XCTAssertTrue(store.save(source: "beta", replacement: "Apple pie"))
+            XCTAssertTrue(store.save(source: "gamma", replacement: "banana"))
+            XCTAssertEqual(store.rules.map(\.replacement), ["Apple pie", "banana", "Zebra"])
+            let rule = store.rules.first { $0.source == "alpha" }!
+            XCTAssertTrue(store.save(id: rule.id, source: rule.source, replacement: "apricot"))
+            XCTAssertEqual(store.rules.map(\.replacement), ["Apple pie", "apricot", "banana"])
+            XCTAssertEqual(ReplacementStore(defaults: defaults).rules.map(\.replacement), ["Apple pie", "apricot", "banana"])
+        }
+    }
+
     func testEditsPersistAndSessionRulesAreImmutable() async {
         await MainActor.run {
             let suite = "com.opendictate.tests.replacements.\(UUID().uuidString)"
