@@ -15,9 +15,10 @@ public struct SettingsSyncSchedule {
     public init() {}
 
     public mutating func changed(now: Int64) { changeDueAt = now + Self.editDelay }
-    /// Explicit user requests may bypass retry backoff, but still batch unfinished edits.
-    public mutating func refresh() {
+    /// Explicit requests bypass retry backoff; immediate requests also flush the current edits.
+    public mutating func refresh(immediately: Bool = false) {
         refreshRequested = true; retryDueAt = nil; authorizationRequired = false
+        if immediately { changeDueAt = nil }
     }
     public mutating func refreshIfStale(now: Int64, maxAge: Int64 = freshnessInterval) {
         guard !busy, !authorizationRequired else { return }

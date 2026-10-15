@@ -24,9 +24,11 @@ On Android, background failures produce no toast or notification, including when
 Settings opens after a failure. Only failed user-initiated Google sign-in shows a
 message. Local edits and automatic lifecycle checks respect retry backoff. Authorization
 errors pause automatic attempts until sign-in; an explicit retry may attempt again.
-**Sync now**, connecting and choosing a source request an immediate check, but
-unfinished local edits still wait for the 15-second quiet period. Edits made
-during a request remain queued. Errors preserve local settings for retry.
+**Sync now**, connecting and choosing a source request an immediate check.
+On macOS, **Sync now** (Command-R) and source confirmation also bypass the
+15-second quiet period for existing edits. Other requests still respect this
+period. Edits made during a request remain queued. Errors preserve local settings
+for retry.
 
 Each check lists replica metadata. Validated replicas are cached **only in memory**
 by file ID and Drive `version`; unchanged files are not downloaded again. Missing

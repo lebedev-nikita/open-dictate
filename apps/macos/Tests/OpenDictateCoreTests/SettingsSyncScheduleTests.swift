@@ -94,12 +94,34 @@ final class SettingsSyncScheduleTests: XCTestCase {
         queue.networkRestored(now: 316_000)
         XCTAssertTrue(queue.begin(now: 316_000))
     }
-    func testManualRetryBypassesBackoffButPreservesUnfinishedEdits() {
+    func testRefreshWithoutFlushingBypassesBackoffButPreservesUnfinishedEdits() {
         var queue = SettingsSyncSchedule()
         queue.refresh(); XCTAssertTrue(queue.begin(now: 0))
         queue.finish(now: 0, completion: .retry)
         queue.changed(now: 100); queue.refresh()
         XCTAssertFalse(queue.begin(now: 15_099))
         XCTAssertTrue(queue.begin(now: 15_100))
+    }
+    func testImmediateRefreshBypassesEditDelayAndRetryBackoff() {
+        var queue = SettingsSyncSchedule()
+        queue.refresh(); XCTAssertTrue(queue.begin(now: 0))
+        queue.finish(now: 0, completion: .retry)
+        queue.changed(now: 100); queue.refresh(immediately: true)
+        XCTAssertEqual(queue.delayUntilReady(now: 100), 0)
+        XCTAssertTrue(queue.begin(now: 100))
+        queue.finish(now: 200, completion: .success)
+        XCTAssertFalse(queue.begin(now: 15_100))
+    }
+    func testEditsDuringImmediateRefreshKeepTheirAutomaticDelayAfterSuccess() {
+        var queue = SettingsSyncSchedule()
+        queue.changed(now: 0); queue.refresh(immediately: true)
+        XCTAssertTrue(queue.begin(now: 100))
+        queue.changed(now: 200)
+        XCTAssertFalse(queue.begin(now: 300))
+        queue.finish(now: 400, completion: .success)
+        XCTAssertTrue(queue.hasPendingChange)
+        XCTAssertEqual(queue.delayUntilReady(now: 400), 14_800)
+        XCTAssertFalse(queue.begin(now: 15_199))
+        XCTAssertTrue(queue.begin(now: 15_200))
     }
 }
