@@ -6,11 +6,14 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.text.font.FontWeight
 import com.opendictate.app.MainActivity
 import com.opendictate.app.R
 import org.junit.Rule
 import org.junit.Test
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 class GesturesScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
@@ -24,8 +27,14 @@ class GesturesScreenTest {
             R.string.gestures_left_title,
             R.string.gestures_right_title,
         ).map { title ->
-            compose.onNodeWithText(context.getString(title)).performScrollTo().assertIsDisplayed()
-                .fetchSemanticsNode().boundsInRoot.left
+            val node = compose.onNodeWithText(context.getString(title)).performScrollTo().assertIsDisplayed()
+                .fetchSemanticsNode()
+            val text = node.config[SemanticsProperties.Text].single()
+            val emphasis = text.spanStyles.single()
+            assertEquals(FontWeight.Bold, emphasis.item.fontWeight)
+            assertEquals(0, emphasis.start)
+            assertTrue("Only the gesture name should be bold", emphasis.end in 1 until text.length)
+            node.boundsInRoot.left
         }
         titleStarts.drop(1).forEach { assertEquals(titleStarts.first(), it, 0.5f) }
         listOf(
