@@ -56,7 +56,6 @@
     <string name="models_new">%1$d new models available</string>
 
     <string name="transformation_model_title">Text transformation</string>
-    <string name="transformation_model_subtitle">Select text or leave the cursor in the field, long-press the floating button, choose Edit text, and speak the instruction</string>
     <string name="transformation_button_toggle">Show Edit text in the floating button menu</string>
     <string name="transformation_model_luna_description">Fastest and most economical · default</string>
     <string name="transformation_model_sol_description">Highest quality for complex edits</string>
@@ -81,8 +80,6 @@
     <string name="app_filter_excluded_summary">Hidden in %1$d apps</string>
     <string name="app_filter_allowed_summary">Only in %1$d apps</string>
     <string name="app_filter_back">Back to settings</string>
-    <string name="app_filter_exclude_description">Select apps where the dictation button should be hidden.</string>
-    <string name="app_filter_allow_description">Select apps where the dictation button should appear. It stays hidden everywhere else, including system screens.</string>
     <string name="app_filter_allow_empty">No apps selected. The dictation button is hidden everywhere until you select an app.</string>
     <string name="app_filter_search">Filter by app name</string>
     <string name="app_filter_clear_search">Clear filter</string>
@@ -272,4 +269,20 @@
     <string name="gestures_paste_body">Insert your last transcript at the cursor.</string>
     <string name="gestures_edit_body">Use a voice command to edit selected text, or all text if nothing is selected. Enable Text transformation in Settings.</string>
     <string name="gestures_dictionary_body">Add the selected text to your dictionary. Not available in password fields.</string>
+
+    <string name="dictation_button_title">Dictation button</string>
+    <string name="dictation_button_size">Size</string>
+    <string name="dictation_button_pixels">%1$d px</string>
+    <string name="dictation_button_preview">Dictation button preview</string>
+    <string name="dictation_button_position">Position</string>
+    <string name="dictation_button_left">Left</string>
+    <string name="dictation_button_center">Center</string>
+    <string name="dictation_button_right">Right</string>
+    <string name="overlay_active_transformation_description_left">Stop recording the instruction. Swipe right to cancel the transformation.</string>
+    <string name="overlay_active_dictation_description_left">Stop dictation. Swipe right to cancel and undo changes.</string>
+    <string name="overlay_start_dictation_with_actions_left">Start dictation. Long-press for more actions. Swipe left to hide until the keyboard closes.</string>
+    <string name="gestures_cancel_right_title"><annotation gesture="right">Swipe right</annotation> to cancel dictation</string>
+    <string name="gestures_cancel_right_description">While recording or processing dictation, swipe the button right and release to cancel.</string>
+    <string name="gestures_dismiss_left_title"><annotation gesture="left">Swipe left</annotation> to hide the button</string>
+    <string name="gestures_dismiss_left_description">Swipe the idle button left to hide it. Close and reopen the keyboard to bring it back.</string>
 </resources>

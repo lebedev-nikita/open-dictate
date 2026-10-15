@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 
 @Composable
-internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier, mirrorGestures: Boolean = false) {
     Box(modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 680.dp).fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 20.dp, top = 8.dp),
@@ -71,9 +71,13 @@ internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     Column {
                         GestureRow(ButtonGesture.HOLD, R.string.gestures_hold_title, R.string.gestures_hold_description)
                         GuideDivider()
-                        GestureRow(ButtonGesture.SWIPE_LEFT, R.string.gestures_left_title, R.string.gestures_left_description)
+                        GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_RIGHT else ButtonGesture.SWIPE_LEFT,
+                            if (mirrorGestures) R.string.gestures_cancel_right_title else R.string.gestures_left_title,
+                            if (mirrorGestures) R.string.gestures_cancel_right_description else R.string.gestures_left_description, active = true)
                         GuideDivider()
-                        GestureRow(ButtonGesture.SWIPE_RIGHT, R.string.gestures_right_title, R.string.gestures_right_description)
+                        GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_LEFT else ButtonGesture.SWIPE_RIGHT,
+                            if (mirrorGestures) R.string.gestures_dismiss_left_title else R.string.gestures_right_title,
+                            if (mirrorGestures) R.string.gestures_dismiss_left_description else R.string.gestures_right_description)
                     }
                 }
 
@@ -94,11 +98,11 @@ internal fun GesturesScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun GestureRow(gesture: ButtonGesture, title: Int, description: Int) {
+private fun GestureRow(gesture: ButtonGesture, title: Int, description: Int, active: Boolean = false) {
     Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        ButtonIllustration(gesture, stringResource(description))
+        ButtonIllustration(gesture, stringResource(description), active)
         Text(gestureTitleResource(title), Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.bodyLarge)
     }
@@ -124,7 +128,7 @@ private const val ILLUSTRATION_SCALE = 0.75f
 
 /** Static pictures reuse the overlay's drawables at a reduced tutorial scale. */
 @Composable
-private fun ButtonIllustration(gesture: ButtonGesture, description: String) {
+private fun ButtonIllustration(gesture: ButtonGesture, description: String, active: Boolean) {
     val outline = MaterialTheme.colorScheme.outline
     Box(Modifier.size(width = 116.dp * ILLUSTRATION_SCALE, height = 72.dp * ILLUSTRATION_SCALE)
         .semantics { contentDescription = description },
@@ -144,7 +148,7 @@ private fun ButtonIllustration(gesture: ButtonGesture, description: String) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp * ILLUSTRATION_SCALE),
                 verticalAlignment = Alignment.CenterVertically) {
                 if (pointsLeft) SwipeChevrons(pointsLeft = true)
-                FloatingButtonPicture(if (pointsLeft) R.drawable.ic_stop_rounded_24 else R.drawable.ic_mic_chatgpt_24)
+                FloatingButtonPicture(if (active) R.drawable.ic_stop_rounded_24 else R.drawable.ic_mic_chatgpt_24)
                 if (!pointsLeft) SwipeChevrons(pointsLeft = false)
             }
         }

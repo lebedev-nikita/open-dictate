@@ -1,5 +1,7 @@
 package com.opendictate.app.overlay
 
+import com.opendictate.app.model.DictationButtonAppearance
+import com.opendictate.app.model.DictationButtonPosition
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.min
@@ -18,6 +20,20 @@ internal object OverlayMotion {
     private const val KEYBOARD_CLEARANCE_DP = 72f
     private const val TOP_MARGIN_DP = 32f
 
+    fun primaryWindowWidthPx(density: Float, appearance: DictationButtonAppearance): Int =
+        appearance.touchDiameterPx(density) + 2 * horizontalShadowInsetPx(density)
+
+    fun primaryWindowHeightPx(density: Float, appearance: DictationButtonAppearance): Int =
+        appearance.touchDiameterPx(density) + 2 * verticalShadowInsetPx(density)
+
+    /** Physical left/right, independent of the language's layout direction. */
+    fun windowLeftPx(displayWidthPx: Int, windowWidthPx: Int, position: DictationButtonPosition): Int =
+        when (position) {
+            DictationButtonPosition.LEFT -> 0
+            DictationButtonPosition.CENTER -> (displayWidthPx - windowWidthPx) / 2
+            DictationButtonPosition.RIGHT -> displayWidthPx - windowWidthPx
+        }.coerceAtLeast(0)
+
     fun windowOffsetY(
         displayHeightPx: Int,
         keyboardTopPx: Int,
@@ -25,6 +41,7 @@ internal object OverlayMotion {
         density: Float,
         showMenu: Boolean = true,
         showTransformation: Boolean = false,
+        appearance: DictationButtonAppearance = DictationButtonAppearance(),
     ): Int {
         val fieldTop = focusedFieldTopPx?.takeIf { it in 0..keyboardTopPx }
         val anchorTop = fieldTop ?: keyboardTopPx
@@ -32,7 +49,8 @@ internal object OverlayMotion {
         val preferredOffset = (displayHeightPx - anchorTop).coerceAtLeast(0) +
             dpToPx(clearance, density) - verticalShadowInsetPx(density)
         val maximumOffset = (
-            displayHeightPx - windowHeightPx(density, showMenu, showTransformation) -
+            displayHeightPx - (if (showMenu) windowHeightPx(density, showMenu, showTransformation)
+                else primaryWindowHeightPx(density, appearance)) -
                 dpToPx(TOP_MARGIN_DP, density)
         ).coerceAtLeast(0)
         return min(preferredOffset, maximumOffset)
@@ -99,10 +117,11 @@ internal object OverlayMotion {
         density: Float,
         showTransformation: Boolean,
         showDictionary: Boolean = false,
+        appearance: DictationButtonAppearance = DictationButtonAppearance(),
     ): Int {
         val menuHeight = menuHeightPx(density, showTransformation, showDictionary)
         val gap = gapPx(density)
-        val aboveOffset = primaryOffsetY + actionHeightPx(density) + gap
+        val aboveOffset = primaryOffsetY + appearance.touchDiameterPx(density) + gap
         val aboveTop = displayHeightPx - aboveOffset -
             menuWindowHeightPx(density, showTransformation, showDictionary)
         return if (aboveTop >= dpToPx(TOP_MARGIN_DP, density)) {

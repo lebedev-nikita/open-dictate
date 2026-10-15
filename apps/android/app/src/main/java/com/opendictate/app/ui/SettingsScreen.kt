@@ -237,6 +237,8 @@ internal fun SettingsScreen(
 
                 SectionTitle(stringResource(R.string.settings_keyboard))
                 SettingsGroup {
+                    DictationButtonSettings(state.dictationButtonAppearance, viewModel::setDictationButtonAppearance)
+                    SettingsDivider()
                     ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
                         stringResource(R.string.gestures_summary), onGestures)
                     SettingsDivider()
@@ -244,14 +246,9 @@ internal fun SettingsScreen(
                         stringResource(R.string.settings_transformation_hint), state.transformationButtonEnabled,
                         viewModel::setTransformationButtonEnabled, enabled = !dictation.isActive)
                     AnimatedVisibility(state.transformationButtonEnabled) {
-                        Column {
-                            ModelPicker(stringResource(R.string.settings_editing_model), state.transformationModelId,
-                                modelOptions(state.modelCatalog.text, ModelCatalog.DEFAULT.text),
-                                viewModel::selectTransformationModel, enabled = !dictation.isActive)
-                            Text(stringResource(R.string.transformation_model_subtitle),
-                                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                                style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
-                        }
+                        ModelPicker(stringResource(R.string.settings_editing_model), state.transformationModelId,
+                            modelOptions(state.modelCatalog.text, ModelCatalog.DEFAULT.text),
+                            viewModel::selectTransformationModel, enabled = !dictation.isActive)
                     }
                     SettingsDivider()
                     ToggleRow(Icons.Outlined.BookmarkAdd, stringResource(R.string.settings_selection_dictionary),

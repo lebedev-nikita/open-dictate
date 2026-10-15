@@ -54,7 +54,6 @@
     <string name="models_new">Новых моделей: %1$d</string>
 
     <string name="transformation_model_title">Преобразование текста</string>
-    <string name="transformation_model_subtitle">Выделите текст или оставьте курсор в поле, удерживайте плавающую кнопку, выберите «Изменить текст» и надиктуйте инструкцию</string>
     <string name="transformation_button_toggle">Показывать «Изменить текст» в меню плавающей кнопки</string>
     <string name="transformation_model_luna_description">Самая быстрая и экономичная · по умолчанию</string>
     <string name="transformation_model_sol_description">Лучшее качество для сложных правок</string>
@@ -78,8 +77,6 @@
     <string name="app_filter_excluded_summary">Скрыто в приложениях: %1$d</string>
     <string name="app_filter_allowed_summary">Только в приложениях: %1$d</string>
     <string name="app_filter_back">Вернуться к настройкам</string>
-    <string name="app_filter_exclude_description">Выберите приложения, в которых нужно скрывать кнопку диктовки.</string>
-    <string name="app_filter_allow_description">Выберите приложения, в которых нужна кнопка диктовки. В остальных приложениях и системных интерфейсах она будет скрыта.</string>
     <string name="app_filter_allow_empty">Приложения не выбраны. Кнопка диктовки скрыта везде, пока вы не выберете приложение.</string>
     <string name="app_filter_search">Фильтр по названию приложения</string>
     <string name="app_filter_clear_search">Очистить фильтр</string>
@@ -268,4 +265,20 @@
     <string name="gestures_paste_body">Вставить последнюю расшифровку у курсора.</string>
     <string name="gestures_edit_body">Изменить выделение или весь текст голосовой командой. Включите «Преобразование текста».</string>
     <string name="gestures_dictionary_body">Добавить выделенный текст в словарь. Недоступно в полях паролей.</string>
+
+    <string name="dictation_button_title">Кнопка диктовки</string>
+    <string name="dictation_button_size">Размер</string>
+    <string name="dictation_button_pixels">%1$d пикс.</string>
+    <string name="dictation_button_preview">Превью кнопки диктовки</string>
+    <string name="dictation_button_position">Расположение</string>
+    <string name="dictation_button_left">Слева</string>
+    <string name="dictation_button_center">По центру</string>
+    <string name="dictation_button_right">Справа</string>
+    <string name="overlay_active_transformation_description_left">Остановить запись инструкции. Потяните вправо, чтобы отменить преобразование.</string>
+    <string name="overlay_active_dictation_description_left">Остановить диктовку. Потяните вправо, чтобы отменить изменения.</string>
+    <string name="overlay_start_dictation_with_actions_left">Начать диктовку. Удерживайте для дополнительных действий. Свайп влево скроет кнопку до закрытия клавиатуры.</string>
+    <string name="gestures_cancel_right_title"><annotation gesture="right">Вправо</annotation>: отменить диктовку</string>
+    <string name="gestures_cancel_right_description">Во время записи или обработки потяните вправо и отпустите.</string>
+    <string name="gestures_dismiss_left_title"><annotation gesture="left">Влево</annotation>: скрыть кнопку</string>
+    <string name="gestures_dismiss_left_description">Скройте неактивную кнопку свайпом влево. Для возврата закройте и откройте клавиатуру.</string>
 </resources>

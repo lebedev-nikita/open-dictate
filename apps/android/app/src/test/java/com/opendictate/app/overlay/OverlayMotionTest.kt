@@ -1,11 +1,39 @@
 package com.opendictate.app.overlay
 
+import com.opendictate.app.model.DictationButtonAppearance
+import com.opendictate.app.model.DictationButtonPosition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayMotionTest {
+    @Test fun `custom sizes stay on screen and menus clear the entire button`() {
+        for (size in listOf(24, 48, 52, 96)) for (density in listOf(1f, 2.625f, 3f)) {
+            val appearance = DictationButtonAppearance(size)
+            val height = 2_400
+            val offset = OverlayMotion.windowOffsetY(height, 80, null, density,
+                showMenu = false, appearance = appearance)
+            assertEquals((32 * density).toInt(), height - offset -
+                OverlayMotion.primaryWindowHeightPx(density, appearance))
+            val primaryOffset = 500
+            val menuOffset = OverlayMotion.menuWindowOffsetY(primaryOffset, height, density,
+                showTransformation = true, showDictionary = true, appearance = appearance)
+            assertEquals(appearance.touchDiameterPx(density) + OverlayMotion.gapPx(density),
+                menuOffset - primaryOffset)
+            for (position in DictationButtonPosition.entries) {
+                val width = OverlayMotion.primaryWindowWidthPx(density, appearance)
+                val left = OverlayMotion.windowLeftPx(1_080, width, position)
+                assertTrue(left >= 0 && left + width <= 1_080)
+                when (position) {
+                    DictationButtonPosition.LEFT -> assertEquals(0, left)
+                    DictationButtonPosition.RIGHT -> assertEquals(1_080 - width, left)
+                    DictationButtonPosition.CENTER -> assertTrue(kotlin.math.abs(1_080 - 2 * left - width) <= 1)
+                }
+            }
+        }
+    }
+
     @Test
     fun `window leaves room for shadows while keeping actions at original right edge`() {
         val density = 2f

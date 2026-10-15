@@ -53,6 +53,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private lateinit var settings: SettingsStore
     private var appFilter = AppFilter()
     private var appFilterObserver: Closeable? = null
+    private var buttonAppearanceObserver: Closeable? = null
     private var overlay: DictationOverlayView? = null
     private var overlayMenu: DictationOverlayMenuView? = null
     private var overlayAttached = false
@@ -82,6 +83,10 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         appFilter = settings.appFilter
         appFilterObserver = settings.observeAppFilter { filter ->
             appFilter = filter
+            scheduleOverlayUpdate()
+        }
+        buttonAppearanceObserver = settings.observeDictationButtonAppearance {
+            overlay?.setAppearance(it)
             scheduleOverlayUpdate()
         }
         overlay = DictationOverlayView(
@@ -119,6 +124,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         appFilterObserver?.close()
+        buttonAppearanceObserver?.close()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
         scope.coroutineContext[Job]?.cancel()
@@ -158,6 +164,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         focused: AccessibilityNodeInfo,
     ) {
         val view = overlay ?: return
+        view.setAppearance(settings.dictationButtonAppearance)
         val captured = focused.captureEditableText()
         transformationAvailable = settings.transformationButtonEnabled && captured.hasText
         dictionaryAvailable = !focused.isPassword && captured.selectedText() != null
@@ -167,15 +174,20 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         val params = overlayParams(ime, focused)
         if (overlayAttached) {
             val currentParams = overlayLayoutParams ?: return
-            if (currentParams.width != params.width || currentParams.height != params.height) {
+            if (currentParams.width != params.width || currentParams.height != params.height ||
+                currentParams.x != params.x
+            ) {
                 val previousWidth = currentParams.width
                 val previousHeight = currentParams.height
+                val previousX = currentParams.x
                 currentParams.width = params.width
                 currentParams.height = params.height
+                currentParams.x = params.x
                 runCatching { windowManager.updateViewLayout(view, currentParams) }
                     .onFailure {
                         currentParams.width = previousWidth
                         currentParams.height = previousHeight
+                        currentParams.x = previousX
                         Log.w(TAG, "Could not resize accessibility overlay", it)
                     }
             }
@@ -221,15 +233,19 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             density = density,
             showTransformation = showTransformation,
             showDictionary = showDictionary,
+            appearance = settings.dictationButtonAppearance,
         )
+        val x = OverlayMotion.windowLeftPx(resources.displayMetrics.widthPixels, width,
+            settings.dictationButtonAppearance.position)
         val currentParams = overlayMenuLayoutParams
         if (overlayMenuAttached && currentParams != null) {
             if (currentParams.width == width && currentParams.height == height &&
-                currentParams.y == y
+                currentParams.y == y && currentParams.x == x
             ) return
             currentParams.width = width
             currentParams.height = height
             currentParams.y = y
+            currentParams.x = x
             runCatching { windowManager.updateViewLayout(view, currentParams) }
                 .onFailure { Log.w(TAG, "Could not update accessibility menu", it) }
         } else {
@@ -242,8 +258,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT,
             ).apply {
-                gravity = Gravity.END or Gravity.BOTTOM
-                x = OverlayMotion.windowOffsetX(density)
+                gravity = Gravity.LEFT or Gravity.BOTTOM
+                this.x = x
                 this.y = y
             }
             runCatching {
@@ -335,22 +351,24 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             displayHeight - (DEFAULT_KEYBOARD_HEIGHT_DP * density).toInt()
         }
         return WindowManager.LayoutParams(
-            OverlayMotion.windowWidthPx(density),
-            OverlayMotion.windowHeightPx(density, showMenu = false),
+            OverlayMotion.primaryWindowWidthPx(density, settings.dictationButtonAppearance),
+            OverlayMotion.primaryWindowHeightPx(density, settings.dictationButtonAppearance),
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.END or Gravity.BOTTOM
-            x = OverlayMotion.windowOffsetX(density)
+            gravity = Gravity.LEFT or Gravity.BOTTOM
+            x = OverlayMotion.windowLeftPx(resources.displayMetrics.widthPixels, width,
+                settings.dictationButtonAppearance.position)
             y = OverlayMotion.windowOffsetY(
                 displayHeightPx = displayHeight,
                 keyboardTopPx = keyboardTop,
                 focusedFieldTopPx = focusedBounds.takeUnless(Rect::isEmpty)?.top,
                 density = density,
                 showMenu = false,
+                appearance = settings.dictationButtonAppearance,
             )
         }
     }

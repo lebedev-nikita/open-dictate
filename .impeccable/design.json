@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-04T06:46:04.564787Z",
+  "generatedAt": "2026-10-15T06:46:16.408Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -45,9 +45,13 @@
       "scope": "Android settings; website tokens remain separate",
       "source": [
         "apps/android/app/src/main/java/com/opendictate/app/ui/SettingsTheme.kt",
-        "apps/android/app/src/main/java/com/opendictate/app/ui/SettingsScreen.kt"
+        "apps/android/app/src/main/java/com/opendictate/app/ui/SettingsScreen.kt",
+        "apps/android/app/src/main/java/com/opendictate/app/ui/DictationButtonSettings.kt",
+        "apps/android/app/src/main/java/com/opendictate/app/model/DictationButtonAppearance.kt",
+        "apps/android/app/src/main/java/com/opendictate/app/overlay/DictationOverlayView.kt",
+        "apps/android/app/src/main/java/com/opendictate/app/overlay/OverlayMotion.kt"
       ],
-      "appearance": "Android system light/dark; static neutral Material 3 schemes",
+      "appearance": "Saved System/Light/Dark choice, System by default; static neutral Material 3 schemes follow the effective appearance across settings and dialogs",
       "themes": {
         "light": {
           "primary": "#22252B",
@@ -152,14 +156,72 @@
           "limits": "Emulator and tablet-emulation evidence does not establish real-device Google sign-in coverage."
         }
       },
+      "dictationButton": {
+        "implementation": [
+          "ui/DictationButtonSettings.kt",
+          "model/DictationButtonAppearance.kt",
+          "overlay/DictationOverlayView.kt",
+          "overlay/OverlayMotion.kt",
+          "service/OpenDictateAccessibilityService.kt"
+        ],
+        "presentation": "Inline control in the Keyboard settings group; existing neutral Material 3 themes and system typography. Title uses bodyLarge; size, pixel diameter and position labels use bodyMedium.",
+        "diameter": {
+          "units": "dp",
+          "minimum": 24,
+          "maximum": 96,
+          "default": 52,
+          "increment": 1,
+          "minimumTouchTarget": 48,
+          "pixelReadout": "round(diameterDp × current display density); reports the visible circle, independently of its touch bounds"
+        },
+        "position": {
+          "choices": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "right",
+          "alignment": "Physical left/right, independent of language layout direction; centered placement follows the display center"
+        },
+        "preview": {
+          "height": "112dp",
+          "radius": "12dp",
+          "horizontalInset": "14dp",
+          "background": "surfaceContainerHigh",
+          "buttonFill": "#FFFFFF",
+          "iconTint": "#080808",
+          "buttonElevation": "5dp",
+          "iconSize": "visible diameter × 24 / 52",
+          "behavior": "Visible circle, proportionally scaled microphone and alignment update immediately; preview does not start dictation"
+        },
+        "layout": {
+          "padding": "16dp",
+          "spacing": "12dp",
+          "slider": "Native continuous Material 3 Slider, rounded to whole dp; no discrete tick scale",
+          "positionControl": "Native single-choice segmented row with equal intrinsic button heights; labels wrap at larger font scales"
+        },
+        "interaction": "Autosave locally with no confirmation. Apply appearance to the active overlay without restarting Accessibility. Keep menu geometry clear of the full touch target; preserve focus and insertion guards.",
+        "gestures": "At right/center, cancel left and hide right. At left, cancel right toward the screen interior and hide left toward the edge. Native accessibility hints and the guide mirror the directions; the guide uses the stop glyph for cancellation regardless of direction.",
+        "accessibility": "Named slider with pixel state description, named preview with pixel diameter, native selected-state semantics and at least 48dp runtime touch bounds",
+        "scope": "Android-only local appearance settings; excluded from Google Drive sync. Runtime circle remains white in either settings theme; tutorial pictures keep their separate 75 percent scale.",
+        "evidence": {
+          "screenshots": [
+            ".impeccable/review/button-phone-light-ru.png",
+            ".impeccable/review/button-phone-dark-large-ru.png",
+            ".impeccable/review/button-tablet-light-ru.png"
+          ],
+          "captureScope": "Native emulator: 24dp left in light appearance, 96dp centered with Russian font scale 1.3 in dark appearance, and right placement with tablet-size emulation. Review evidence, not shipping assets.",
+          "limits": "Emulator and tablet emulation do not establish physical-device behavior."
+        }
+      },
       "gesturesGuide": {
         "implementation": "GesturesScreen.kt; OpenDictateApp.kt saveable route; SettingsScreen.kt Keyboard entry; English/Russian strings.xml",
         "presentation": "Full-screen Read guide within Operate settings; existing neutral Material 3 palette and heading semantics. Standard settings typography: default-weight titleLarge header; bodyLarge gesture labels with bold localized gesture names and regular outcomes; default-weight bodyLarge menu labels; titleSmall/Medium/SettingsMuted menu heading matches SectionTitle; bodySmall/SettingsMuted explanations match RowCopy.",
-        "illustrations": "Private tutorial scale 0.75 gives centered 87x54dp zones. Hold uses a 54dp box, ripple radii 25.5/22.5dp, 0.75dp theme-outline strokes and opacity 0.25/0.5. Swipe blocks are 81dp: 33x33dp chevrons, 9dp gap, 39dp white tutorial button with 18dp actual microphone/stop drawable and 3.75dp elevation. Chevrons lead left swipe and trail right swipe; buttons shift directionally while complete blocks stay centered. Echoes use 9dp arms, 10.5dp offsets, 1.3125dp rounded strokes and SettingsMuted at outward opacity 1/0.55/0.25. Runtime overlay remains 52dp. Canvas/existing drawables add no shipping raster assets.",
+        "illustrations": "Private tutorial scale 0.75 gives centered 87x54dp zones. Hold uses a 54dp box, ripple radii 25.5/22.5dp, 0.75dp theme-outline strokes and opacity 0.25/0.5. Swipe blocks are 81dp: 33x33dp chevrons, 9dp gap, 39dp white tutorial button with 18dp actual microphone/stop drawable and 3.75dp elevation. Chevrons lead left swipe and trail right swipe; buttons shift directionally while complete blocks stay centered. Echoes use 9dp arms, 10.5dp offsets, 1.3125dp rounded strokes and SettingsMuted at outward opacity 1/0.55/0.25. Runtime overlay defaults to 52dp and supports a 24–96dp visible diameter with a minimum 48dp touch area. Canvas/existing drawables add no shipping raster assets.",
         "layout": "Centered 680dp maximum and 24dp gutters; native 16dp group corners; minimum 72dp rows with 12dp horizontal/6dp vertical padding, 87x54dp illustration zones and 16dp text gap align labels. Group border/inset dividers remain 0.5dp outlineVariant at 0.65 opacity. Menu ledger retains 16dp vertical padding. Scrollable growing text and status/navigation insets remain; measurements are guide-specific, not global tokens.",
         "direction": "Fine Echo provenance: .impeccable/review/modern-gesture-concepts/01-fine-echo.png. Latest user instruction for standard settings type and 75 percent tutorial size overrides full-size concept geometry. Original native identity preserved; exact pixel matching not required.",
         "interaction": "Toolbar/system Back preserve settings scroll; saveable guide route survives recreation.",
-        "content": "Contextual English/Russian copy unchanged. English: Hold to open the menu; Swipe left to cancel dictation; Swipe right to hide the button. No visible gesture captions/introduction; screen-reader descriptions retain idle/active applicability, cancellation and keyboard recovery. Menu actions explain Accurate retranscription, paste, voice editing selected/all text with Text transformation enabled, and Dictionary insertion.",
+        "content": "Contextual English/Russian copy follows the saved button position. Hold opens the menu. Right/center placement uses swipe left to cancel and swipe right to hide; left placement mirrors both directions. Stop/microphone illustrations follow the action independently of direction. No visible gesture captions/introduction; screen-reader descriptions retain idle/active applicability, cancellation and keyboard recovery. Menu actions explain Accurate retranscription, paste, voice editing selected/all text with Text transformation enabled, and Dictionary insertion.",
         "dictionaryAvailability": "Selected text in a non-password field, independent of selected-text context-menu toggle; OpenDictateAccessibilityService.kt establishes availability.",
         "review": {
           "verdict": "ship",
@@ -197,7 +259,7 @@
           { "nativeValue": "Color.primary.opacity(0.09)", "purpose": "Selected sidebar row; independent of keyboard focus." },
           { "nativeValue": "System accent color", "purpose": "Selected segments, enabled switches and native keyboard focus; captured as blue, not a brand token." },
           { "nativeValue": "Color.red", "purpose": "Recording indicator finish circle." },
-          { "nativeValue": "NSColor.systemRed / NSColor.labelColor", "purpose": "Menu-bar recording microphone head / cradle and stem." },
+          { "nativeValue": "NSColor.systemRed / NSColor.white", "purpose": "Recording-only menu-bar circle and filled microphone silhouette." },
           { "nativeValue": "Color.white", "purpose": "Recording indicator stop glyph." }
         ],
         "typographyRendering": "Frontmatter's macos-* tokens describe native points and system type. SwiftUI semantic body/callout/caption styles and monospaced shortcut variants remain native; no web display font is loaded.",

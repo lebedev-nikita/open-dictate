@@ -26,6 +26,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import com.opendictate.app.R
+import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.service.DictationOperation
 import com.opendictate.app.service.DictationPhase
 import com.opendictate.app.service.DictationState
@@ -65,6 +66,15 @@ class DictationOverlayView(
             LayoutParams(OverlayMotion.widthPx(density), OverlayMotion.actionHeightPx(density)),
         )
         setMenuState(expanded = false)
+    }
+
+    fun setAppearance(appearance: DictationButtonAppearance) {
+        val diameter = appearance.touchDiameterPx(density)
+        if (dictationButton.layoutParams.width != diameter) {
+            dictationButton.layoutParams = LayoutParams(diameter, diameter)
+        }
+        dictationButton.visibleDiameterPx = appearance.diameterPx(density)
+        dictationButton.gestureDirection = appearance.gestureDirection
     }
 
     fun render(state: DictationState) = dictationButton.render(state)
@@ -204,6 +214,19 @@ private class OverlayPrimaryActionView(
     private val onDismiss: () -> Unit,
     private val onMenuToggle: () -> Unit,
 ) : View(context) {
+    var visibleDiameterPx: Int = (52 * resources.displayMetrics.density).roundToInt()
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidateOutline()
+            invalidate()
+        }
+    var gestureDirection: Int = 1
+        set(value) {
+            if (field == value) return
+            field = value
+            updateContentDescription()
+        }
     private val density = resources.displayMetrics.density
     private val idleIcon = icon(R.drawable.ic_mic_chatgpt_24)
     private val stopIcon = icon(R.drawable.ic_stop_rounded_24)
@@ -246,7 +269,8 @@ private class OverlayPrimaryActionView(
         elevation = 5f * density
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
-                outline.setOval(0, 0, view.width, view.height)
+                val inset = (view.width - visibleDiameterPx) / 2
+                outline.setOval(inset, inset, inset + visibleDiameterPx, inset + visibleDiameterPx)
             }
         }
         isClickable = true
@@ -283,10 +307,13 @@ private class OverlayPrimaryActionView(
                     R.string.overlay_transforming_description
                 phase.isProcessing -> R.string.overlay_processing_description
                 isActionActive() && operation == DictationOperation.TRANSFORMATION ->
-                    R.string.overlay_active_transformation_description
-                isActionActive() -> R.string.overlay_active_dictation_description
+                    if (gestureDirection == -1) R.string.overlay_active_transformation_description_left
+                    else R.string.overlay_active_transformation_description
+                isActionActive() -> if (gestureDirection == -1) R.string.overlay_active_dictation_description_left
+                    else R.string.overlay_active_dictation_description
                 menuExpanded -> R.string.overlay_close_menu
-                menuAvailable -> R.string.overlay_start_dictation_with_actions
+                menuAvailable -> if (gestureDirection == -1) R.string.overlay_start_dictation_with_actions_left
+                    else R.string.overlay_start_dictation_with_actions
                 else -> R.string.overlay_start_dictation_with_dismiss
             },
         )
@@ -304,8 +331,9 @@ private class OverlayPrimaryActionView(
         super.onDraw(canvas)
         val cancelProgress = OverlaySwipeToCancel.progress(cancelDragOffsetPx, density)
         background.color = blendColor(idleBackgroundColor, cancelBackgroundColor, cancelProgress)
-        bounds.set(0f, 0f, width.toFloat(), height.toFloat())
-        canvas.drawRoundRect(bounds, height / 2f, height / 2f, background)
+        val inset = (width - visibleDiameterPx) / 2f
+        bounds.set(inset, inset, inset + visibleDiameterPx, inset + visibleDiameterPx)
+        canvas.drawRoundRect(bounds, visibleDiameterPx / 2f, visibleDiameterPx / 2f, background)
         val active = isActionActive()
         val isDraggingToCancel = active && cancelDragOffsetPx > touchSlop
         when {
@@ -322,7 +350,7 @@ private class OverlayPrimaryActionView(
     }
 
     private fun drawIcon(canvas: Canvas, icon: Drawable, color: Int) {
-        val size = (24f * density).roundToInt()
+        val size = (visibleDiameterPx * 24f / DictationButtonAppearance.DEFAULT_DIAMETER_DP).roundToInt()
         val centerX = width / 2
         val centerY = height / 2
         val left = centerX - size / 2
@@ -335,7 +363,7 @@ private class OverlayPrimaryActionView(
     private fun drawSpinner(canvas: Canvas) {
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = 10f * density
+        val radius = visibleDiameterPx * 10f / DictationButtonAppearance.DEFAULT_DIAMETER_DP
         val rotation = SystemClock.uptimeMillis() % SPINNER_PERIOD_MS *
             360f / SPINNER_PERIOD_MS
         spinner.color = activeColor()
@@ -422,15 +450,15 @@ private class OverlayPrimaryActionView(
 
     private fun updateCancelDrag(event: MotionEvent) {
         val nextOffset = OverlaySwipeToCancel.dragOffsetPx(
-            downRawX = downX,
-            currentRawX = event.rawX,
+            downRawX = downX * gestureDirection,
+            currentRawX = event.rawX * gestureDirection,
             density = density,
         )
         val wasArmed = cancelArmed
         cancelArmed = OverlaySwipeToCancel.isArmed(
-            downRawX = downX,
+            downRawX = downX * gestureDirection,
             downRawY = downY,
-            currentRawX = event.rawX,
+            currentRawX = event.rawX * gestureDirection,
             currentRawY = event.rawY,
             density = density,
         )
@@ -442,15 +470,15 @@ private class OverlayPrimaryActionView(
 
     private fun updateDismissDrag(event: MotionEvent) {
         val nextOffset = OverlaySwipeToDismiss.dragOffsetPx(
-            downRawX = downX,
-            currentRawX = event.rawX,
+            downRawX = downX * gestureDirection,
+            currentRawX = event.rawX * gestureDirection,
             density = density,
         )
         val wasArmed = dismissArmed
         dismissArmed = OverlaySwipeToDismiss.isArmed(
-            downRawX = downX,
+            downRawX = downX * gestureDirection,
             downRawY = downY,
-            currentRawX = event.rawX,
+            currentRawX = event.rawX * gestureDirection,
             currentRawY = event.rawY,
             density = density,
         )
@@ -560,7 +588,7 @@ private class OverlayPrimaryActionView(
     private fun setDismissDragOffset(value: Float) {
         if (dismissDragOffsetPx == value) return
         dismissDragOffsetPx = value
-        translationX = value
+        translationX = value * gestureDirection
     }
 
     private fun settleDrags() {
@@ -575,7 +603,7 @@ private class OverlayPrimaryActionView(
                 val fraction = it.animatedValue as Float
                 cancelDragOffsetPx = initialCancelOffset * fraction
                 dismissDragOffsetPx = initialDismissOffset * fraction
-                translationX = dismissDragOffsetPx
+                translationX = dismissDragOffsetPx * gestureDirection
                 invalidate()
             }
             start()

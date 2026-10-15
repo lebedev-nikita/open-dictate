@@ -18,6 +18,7 @@ import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.data.fuzzySearch
 import com.opendictate.app.model.DictationLanguage
+import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
@@ -37,6 +38,7 @@ import kotlinx.coroutines.withContext
 
 data class MainUiState(
     val theme: AppTheme = AppTheme.SYSTEM,
+    val dictationButtonAppearance: DictationButtonAppearance = DictationButtonAppearance(),
     val hasApiKey: Boolean = false,
     val accessibilityEnabled: Boolean = false,
     val microphoneGranted: Boolean = false,
@@ -165,6 +167,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectModel(model: TranscriptionModel) {
         settings.model = model
         mutableState.update { it.copy(model = model) }
+    }
+
+    fun setDictationButtonAppearance(appearance: DictationButtonAppearance) {
+        settings.dictationButtonAppearance = appearance
+        mutableState.update { it.copy(dictationButtonAppearance = appearance) }
     }
 
     fun selectTheme(theme: AppTheme) {
@@ -412,6 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadState() = MainUiState(
         theme = settings.theme,
+        dictationButtonAppearance = settings.dictationButtonAppearance,
         hasApiKey = apiKeyStore.hasKey(),
         accessibilityEnabled = isAccessibilityEnabled(getApplication()),
         microphoneGranted = hasMicrophonePermission(getApplication()),

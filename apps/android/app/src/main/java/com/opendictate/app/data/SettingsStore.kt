@@ -6,6 +6,7 @@ import android.content.res.Resources
 import androidx.core.content.edit
 import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
+import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
@@ -23,6 +24,26 @@ class SettingsStore(context: Context) {
     var theme: AppTheme
         get() = AppTheme.fromStored(prefs.getString(KEY_THEME, null))
         set(value) = prefs.edit { putString(KEY_THEME, value.name) }
+
+    var dictationButtonAppearance: DictationButtonAppearance
+        get() = DictationButtonAppearance.fromStored(
+            prefs.getInt(KEY_BUTTON_DIAMETER, DictationButtonAppearance.DEFAULT_DIAMETER_DP),
+            prefs.getString(KEY_BUTTON_POSITION, null),
+        )
+        set(value) = prefs.edit {
+            putInt(KEY_BUTTON_DIAMETER, value.diameterDp)
+            putString(KEY_BUTTON_POSITION, value.position.name)
+        }
+
+    fun observeDictationButtonAppearance(onChange: (DictationButtonAppearance) -> Unit): Closeable {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == KEY_BUTTON_DIAMETER || key == KEY_BUTTON_POSITION) {
+                onChange(dictationButtonAppearance)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     var model: TranscriptionModel
         get() = TranscriptionModel.fromStored(prefs.getString(KEY_MODEL, null))
@@ -223,6 +244,8 @@ class SettingsStore(context: Context) {
     companion object {
         private val SYNC_LOCK = Any()
         private const val FILE_NAME = "opendictate_settings"
+        private const val KEY_BUTTON_DIAMETER = "dictation_button_diameter_dp"
+        private const val KEY_BUTTON_POSITION = "dictation_button_position"
         private const val KEY_THEME = "theme"
         private const val KEY_MODEL = "model"
         private const val KEY_TRANSFORMATION_MODEL = "transformation_model"
