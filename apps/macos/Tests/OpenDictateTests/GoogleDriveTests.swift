@@ -279,15 +279,18 @@ final class GoogleDriveTests: XCTestCase {
             for language in ["en", "ru"] {
                 preferences.interfaceLanguage = language
                 for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-                    let host = NSHostingView(rootView: HStack(alignment: .top, spacing: 16) {
-                        Spacer()
-                        SettingsSyncControl(sync: sync, preferences: preferences)
-                        Image(systemName: "circle.lefthalf.filled").frame(width: 24, height: 24)
-                    }.padding(16).frame(width: 460).background(Color(nsColor: .windowBackgroundColor)))
+                    let host = NSHostingView(rootView: VStack(alignment: .leading, spacing: 20) {
+                        HStack(alignment: .top, spacing: 16) {
+                            Spacer()
+                            SettingsSyncControl(sync: sync, preferences: preferences)
+                            Image(systemName: "circle.lefthalf.filled").frame(width: 24, height: 24)
+                        }
+                        GoogleDriveSettingsView(sync: sync, preferences: preferences)
+                    }.padding(28).frame(width: 464).background(Color(nsColor: .windowBackgroundColor)))
                     host.appearance = NSAppearance(named: appearance)
                     host.setFrameSize(host.fittingSize); host.layoutSubtreeIfNeeded()
-                    XCTAssertEqual(host.frame.width, 460, accuracy: 1)
-                    XCTAssertLessThan(host.frame.height, 160)
+                    XCTAssertEqual(host.frame.width, 464, accuracy: 1)
+                    XCTAssertLessThan(host.frame.height, 650)
                     if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
                         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                         host.cacheDisplay(in: host.bounds, to: bitmap)
@@ -304,7 +307,54 @@ final class GoogleDriveTests: XCTestCase {
         try await awaitStatus(sync, .synced); try render("synced")
         fail = true; sync.syncNow()
         try await awaitStatus(sync, .failed); try render("failed")
+        DriveHTTP.handler = { _ in (401, Data()) }
+        sync.syncNow(); try await awaitStatus(sync, .authorization); try render("authorization")
         sync.disconnect()
+        try render("disconnected")
+    }
+
+    @MainActor func testDriveSwitchBindingCancelsSyncAndSignsOutLocally() async throws {
+        let suite = "drive-native-switch-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults)
+        preferences.driveSyncEnabled = true
+        preferences.dictionary = "Keep this dictionary"
+        var deletedCredentials = false
+        let started = expectation(description: "Token refresh started")
+        let cancelled = expectation(description: "Token refresh cancelled")
+        let sync = GoogleDriveSync(preferences: preferences, refreshToken: {
+            started.fulfill()
+            do {
+                try await Task.sleep(nanoseconds: 60_000_000_000)
+                XCTFail("The switch should cancel token refresh")
+                return "synthetic"
+            } catch {
+                cancelled.fulfill()
+                throw error
+            }
+        }, automaticallySync: false, deleteCredentials: { deletedCredentials = true })
+        defer { sync.disconnect() }
+        sync.syncNow()
+        await fulfillment(of: [started], timeout: 5)
+        let view = GoogleDriveSettingsView(sync: sync, preferences: preferences)
+        XCTAssertTrue(view.connection.wrappedValue)
+        view.connection.wrappedValue = false
+        await fulfillment(of: [cancelled], timeout: 5)
+        XCTAssertTrue(deletedCredentials)
+        XCTAssertFalse(preferences.driveSyncEnabled)
+        XCTAssertEqual(sync.status, .disconnected)
+        XCTAssertEqual(preferences.dictionary, "Keep this dictionary")
+        XCTAssertFalse(view.connection.wrappedValue)
+        // A new browser connection is represented as on immediately, so off can cancel it.
+        view.connection.wrappedValue = true
+        XCTAssertEqual(sync.status, .busy)
+        XCTAssertTrue(view.connection.wrappedValue)
+        XCTAssertFalse(preferences.driveSyncEnabled)
+        view.connection.wrappedValue = false
+        await Task.yield()
+        XCTAssertEqual(sync.status, .disconnected)
+        XCTAssertFalse(view.connection.wrappedValue)
     }
 
     func testInitialUploadUsesAppDataAndMultipart() async throws {

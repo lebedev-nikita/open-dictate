@@ -88,15 +88,15 @@ Before sign-in can work, configure one Google Cloud project:
    when the client ID matches; entering a secret overrides the saved one after
    successful authorization. Do not commit credentials. Google's Desktop client secret
    is not a confidential server secret; PKCE protects the code exchange too.
-4. Connect Google Drive on both platforms and accept the app-data permission.
+4. Turn on the Google Drive switch on both platforms and accept the app-data permission.
    macOS opens the system browser and validates PKCE S256 and OAuth state through
    a temporary callback listener bound only to `127.0.0.1`. Android uses native
    Google Identity Services AuthorizationClient consent resolution.
 
-The macOS browser sign-in waits up to ten minutes. If it expires, use **Connect
-Google Drive** to start a new attempt; reloading an expired local callback cannot
-complete sign-in. Cancellation and expiry close the temporary listener without
-saving credentials.
+The macOS browser sign-in waits up to ten minutes. If it expires, turn the Google
+Drive switch on again, or use **Sign in again** if it is already on; reloading an
+expired local callback cannot complete sign-in. Turn the switch off to cancel.
+Cancellation and expiry close the temporary listener without saving credentials.
 
 The OAuth clients must belong to the same Cloud project to share the application
 data space. No permission to ordinary Drive files is requested. There is no backend.
