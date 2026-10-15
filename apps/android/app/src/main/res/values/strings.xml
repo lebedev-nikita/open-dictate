@@ -250,11 +250,8 @@
     <string name="gestures_title">Gestures</string>
     <string name="gestures_summary">Hold and swipe gestures</string>
     <string name="gestures_close">Close gestures</string>
-    <string name="gestures_hold_title"><annotation gesture="hold">Hold</annotation> to open the menu</string>
     <string name="gestures_hold_description">Press and hold the idle button to open or close its menu.</string>
-    <string name="gestures_left_title"><annotation gesture="left">Swipe left</annotation> to cancel dictation</string>
     <string name="gestures_left_description">While recording or processing dictation, swipe the button left and release to cancel.</string>
-    <string name="gestures_right_title"><annotation gesture="right">Swipe right</annotation> to hide the button</string>
     <string name="gestures_right_description">Swipe the idle button right to hide it. Close and reopen the keyboard to bring it back.</string>
 
     <string name="dictation_button_title">Dictation button</string>
@@ -272,9 +269,16 @@
     <string name="overlay_active_transformation_description_left">Stop recording the instruction. Swipe right to cancel the transformation.</string>
     <string name="overlay_active_dictation_description_left">Stop dictation. Swipe right to cancel and undo changes.</string>
     <string name="overlay_start_dictation_with_actions_left">Start dictation. Long-press for more actions. Swipe left to hide until the keyboard closes.</string>
-    <string name="gestures_cancel_right_title"><annotation gesture="right">Swipe right</annotation> to cancel dictation</string>
     <string name="gestures_cancel_right_description">While recording or processing dictation, swipe the button right and release to cancel.</string>
-    <string name="gestures_dismiss_left_title"><annotation gesture="left">Swipe left</annotation> to hide the button</string>
     <string name="gestures_dismiss_left_description">Swipe the idle button left to hide it. Close and reopen the keyboard to bring it back.</string>
     <string name="dictation_button_reset_size">Reset size</string>
+    <string name="gestures_menu_action">Open menu</string>
+    <string name="gestures_cancel_action">Cancel dictation</string>
+    <string name="gestures_hide_action">Hide button</string>
+    <string name="gestures_hold_hint">Press and hold the button</string>
+    <string name="gestures_cancel_left_hint">Swipe left while recording</string>
+    <string name="gestures_cancel_right_hint">Swipe right while recording</string>
+    <string name="gestures_hide_right_hint">Swipe right when not recording</string>
+    <string name="gestures_hide_left_hint">Swipe left when not recording</string>
+    <string name="gestures_keyboard_recovery">To bring the button back, close and reopen the keyboard.</string>
 </resources>

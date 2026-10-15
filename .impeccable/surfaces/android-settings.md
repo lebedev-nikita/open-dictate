@@ -79,8 +79,10 @@ Finish reviewer disposition: **ship** for this narrow addition; all five finish-
 
 ## Floating-button Gestures guide
 
-Gestures opens from the Dictation button group as a native scrollable `ModalBottomSheet`, matching Appearance. SettingsSurface, a headlineSmall title, muted close action, 24 dp content padding, 20 dp spacing and a trailing Done button below a divider follow that existing component. Three picture-and-heading rows sit on a 12 dp SettingsInset surface. The Menu actions ledger is removed.
+Gestures opens from the Dictation button group as a native scrollable `ModalBottomSheet`. The approved clean-list layout retains SettingsSurface, a headlineSmall title, muted close action and 24 dp horizontal/bottom padding. Three unfilled rows are separated by full-width 0.5 dp outlineVariant dividers. There is no inset surface, Done action or Menu actions ledger.
 
-Gesture labels retain bodyLarge with bold localized gesture names and regular outcomes. The existing 75 percent tutorial scale, fixed 87 × 54 dp illustration zones, 16 dp text gap, growing rows and localized screen-reader descriptions remain. Saved button position determines swipe direction. The runtime overlay and its menu actions retain their behavior.
+Each row has an 88 dp minimum, 12 dp vertical padding and a 20 dp gap beside the existing 87 × 54 dp illustration zone. Actions use titleMedium with heading semantics; short gesture hints use bodyMedium in SettingsMuted, separated by 4 dp. A bodySmall note explains closing and reopening the keyboard to restore the button, 20 dp below the rows. English and Russian copy follows this action-first hierarchy without inline bold annotations.
 
-Visibility is owned by a saveable flag in SettingsScreen. Close, Done, system Back and native dismissal return to the existing settings scroll; Activity recreation restores the sheet. Implementation authority is GesturesScreen.kt, SettingsScreen.kt and the English/Russian strings. No new tokens or shipping raster assets are introduced.
+The existing 75 percent tutorial scale, growing rows and localized screen-reader descriptions remain. Saved button position determines both swipe illustrations and directional hints. The runtime overlay and its menu actions retain their behavior.
+
+Visibility is owned by a saveable flag in SettingsScreen. Close, system Back and native dismissal return to the existing settings scroll; Activity recreation restores the sheet. Implementation authority is GesturesScreen.kt, SettingsScreen.kt and the English/Russian strings. No new tokens or shipping raster assets are introduced.

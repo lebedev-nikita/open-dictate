@@ -2,14 +2,14 @@
 
 package com.opendictate.app.ui
 
-import android.text.Annotation
-import android.text.Spanned
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,14 +38,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 
@@ -61,7 +55,6 @@ internal fun GesturesSheet(onDismiss: () -> Unit, mirrorGestures: Boolean = fals
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.gestures_title),
@@ -71,51 +64,38 @@ internal fun GesturesSheet(onDismiss: () -> Unit, mirrorGestures: Boolean = fals
                     Icon(Icons.Outlined.Close, stringResource(R.string.gestures_close), tint = SettingsMuted)
                 }
             }
-            Surface(shape = RoundedCornerShape(12.dp), color = SettingsInset, contentColor = SettingsText) {
-                Column {
-                    GestureRow(ButtonGesture.HOLD, R.string.gestures_hold_title, R.string.gestures_hold_description)
-                    GuideDivider()
-                    GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_RIGHT else ButtonGesture.SWIPE_LEFT,
-                        if (mirrorGestures) R.string.gestures_cancel_right_title else R.string.gestures_left_title,
-                        if (mirrorGestures) R.string.gestures_cancel_right_description else R.string.gestures_left_description, active = true)
-                    GuideDivider()
-                    GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_LEFT else ButtonGesture.SWIPE_RIGHT,
-                        if (mirrorGestures) R.string.gestures_dismiss_left_title else R.string.gestures_right_title,
-                        if (mirrorGestures) R.string.gestures_dismiss_left_description else R.string.gestures_right_description)
-                }
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Button(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.settings_done))
-                }
-            }
+            Spacer(Modifier.height(12.dp))
+            GestureRow(ButtonGesture.HOLD, R.string.gestures_menu_action,
+                R.string.gestures_hold_hint, R.string.gestures_hold_description)
+            GuideDivider()
+            GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_RIGHT else ButtonGesture.SWIPE_LEFT,
+                R.string.gestures_cancel_action,
+                if (mirrorGestures) R.string.gestures_cancel_right_hint else R.string.gestures_cancel_left_hint,
+                if (mirrorGestures) R.string.gestures_cancel_right_description else R.string.gestures_left_description,
+                active = true)
+            GuideDivider()
+            GestureRow(if (mirrorGestures) ButtonGesture.SWIPE_LEFT else ButtonGesture.SWIPE_RIGHT,
+                R.string.gestures_hide_action,
+                if (mirrorGestures) R.string.gestures_hide_left_hint else R.string.gestures_hide_right_hint,
+                if (mirrorGestures) R.string.gestures_dismiss_left_description else R.string.gestures_right_description)
+            Spacer(Modifier.height(20.dp))
+            Text(stringResource(R.string.gestures_keyboard_recovery),
+                style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
         }
     }
 }
 
 @Composable
-private fun GestureRow(gesture: ButtonGesture, title: Int, description: Int, active: Boolean = false) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+private fun GestureRow(gesture: ButtonGesture, title: Int, hint: Int, description: Int, active: Boolean = false) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically) {
         ButtonIllustration(gesture, stringResource(description), active)
-        Text(gestureTitleResource(title), Modifier.weight(1f).semantics { heading() },
-            style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun gestureTitleResource(title: Int) = buildAnnotatedString {
-    val text = LocalResources.current.getText(title)
-    append(text.toString())
-    if (text is Spanned) {
-        text.getSpans(0, text.length, Annotation::class.java)
-            .filter { it.key == "gesture" }
-            .forEach { annotation ->
-                addStyle(SpanStyle(fontWeight = FontWeight.Bold),
-                    text.getSpanStart(annotation), text.getSpanEnd(annotation))
-            }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(title), Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleMedium, color = SettingsText)
+            Text(stringResource(hint), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
+        }
     }
 }
 
@@ -190,6 +170,5 @@ private fun FloatingButtonPicture(drawable: Int) {
 
 @Composable
 private fun GuideDivider() {
-    HorizontalDivider(Modifier.padding(horizontal = 12.dp),
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f), thickness = 0.5.dp)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 }
