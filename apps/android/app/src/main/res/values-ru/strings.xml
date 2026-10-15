@@ -199,7 +199,6 @@
     <string name="settings_listening">Слушаю</string>
     <string name="settings_processing">Подготовка текста…</string>
     <string name="settings_dictation">Диктовка</string>
-    <string name="settings_keyboard">Кнопка над клавиатурой</string>
     <string name="settings_recognition_model">Модель распознавания</string>
     <string name="settings_editing_model">Модель для правок</string>
     <string name="settings_dictionary">Личный словарь</string>

@@ -49,6 +49,6 @@ class GesturesScreenTest {
         compose.onNodeWithText(context.getString(R.string.gestures_title)).assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription(context.getString(R.string.gestures_back)).assertIsDisplayed()
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.onNodeWithText(context.getString(R.string.settings_keyboard)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.dictation_button_title)).assertIsDisplayed()
     }
 }

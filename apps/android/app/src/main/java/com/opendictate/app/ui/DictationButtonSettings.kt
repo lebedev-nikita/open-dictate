@@ -47,7 +47,17 @@ internal fun DictationButtonSettings(
     val sizeLabel = stringResource(R.string.dictation_button_size)
     val previewLabel = stringResource(R.string.dictation_button_preview)
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.dictation_button_title), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(R.string.dictation_button_position), style = MaterialTheme.typography.bodyMedium)
+        SettingsChoiceRow(
+            options = DictationButtonPosition.entries.map { position ->
+                stringResource(when (position) {
+                    DictationButtonPosition.LEFT -> R.string.dictation_button_left
+                    DictationButtonPosition.RIGHT -> R.string.dictation_button_right
+                })
+            },
+            selectedIndex = DictationButtonPosition.entries.indexOf(appearance.position),
+            onSelect = { onChange(appearance.copy(position = DictationButtonPosition.entries[it])) },
+        )
         Surface(shape = RoundedCornerShape(12.dp), color = SettingsInset) {
             Box(Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 14.dp)
                 .semantics { contentDescription = previewLabel; stateDescription = diameter },
@@ -88,16 +98,6 @@ internal fun DictationButtonSettings(
                 },
             )
         }
-        Text(stringResource(R.string.dictation_button_position), style = MaterialTheme.typography.bodyMedium)
-        SettingsChoiceRow(
-            options = DictationButtonPosition.entries.map { position ->
-                stringResource(when (position) {
-                    DictationButtonPosition.LEFT -> R.string.dictation_button_left
-                    DictationButtonPosition.RIGHT -> R.string.dictation_button_right
-                })
-            },
-            selectedIndex = DictationButtonPosition.entries.indexOf(appearance.position),
-            onSelect = { onChange(appearance.copy(position = DictationButtonPosition.entries[it])) },
-        )
+
     }
 }

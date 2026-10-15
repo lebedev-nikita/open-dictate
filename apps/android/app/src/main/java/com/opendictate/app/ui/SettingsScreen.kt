@@ -232,7 +232,7 @@ internal fun SettingsScreen(
                         { dictionaryOpen = true })
                 }
 
-                SectionTitle(stringResource(R.string.settings_keyboard))
+                SectionTitle(stringResource(R.string.dictation_button_title))
                 SettingsGroup {
                     DictationButtonSettings(state.dictationButtonAppearance, viewModel::setDictationButtonAppearance)
                     SettingsDivider()
