@@ -553,6 +553,10 @@ final class AppModel: ObservableObject {
         if case DictationError.noField = error { return }
         guard !(error is CancellationError) else { return }
         message = (error as? DictationError)?.message(russian: preferences.isRussian) ?? error.localizedDescription
+        if case DictationError.tooShort = error {
+            onStateChange?()
+            return
+        }
         // Only curated messages may leave the app for Notification Center.
         // System/provider descriptions can include private request or file details.
         let notification = (error as? DictationError)?.message(russian: preferences.isRussian) ??
