@@ -20,7 +20,7 @@
     <string name="history_open">Open transcript history</string>
     <string name="history_back">Back to settings</string>
     <string name="history_title">Transcript history</string>
-    <string name="history_count">%1$d SAVED</string>
+    <string name="history_count">Saved: %1$d</string>
     <string name="history_search_label">Search history</string>
     <string name="history_search_placeholder">Words, typos, or a description</string>
     <string name="history_clear_search">Clear search</string>

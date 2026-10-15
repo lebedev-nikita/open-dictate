@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,9 +17,6 @@ import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -94,20 +89,15 @@ internal fun DictationButtonSettings(
             )
         }
         Text(stringResource(R.string.dictation_button_position), style = MaterialTheme.typography.bodyMedium)
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            DictationButtonPosition.entries.forEachIndexed { index, position ->
-                SegmentedButton(
-                    modifier = Modifier.fillMaxHeight(),
-                    selected = appearance.position == position,
-                    onClick = { onChange(appearance.copy(position = position)) },
-                    shape = SegmentedButtonDefaults.itemShape(index, DictationButtonPosition.entries.size),
-                ) {
-                    Text(stringResource(when (position) {
-                        DictationButtonPosition.LEFT -> R.string.dictation_button_left
-                        DictationButtonPosition.RIGHT -> R.string.dictation_button_right
-                    }))
-                }
-            }
-        }
+        SettingsChoiceRow(
+            options = DictationButtonPosition.entries.map { position ->
+                stringResource(when (position) {
+                    DictationButtonPosition.LEFT -> R.string.dictation_button_left
+                    DictationButtonPosition.RIGHT -> R.string.dictation_button_right
+                })
+            },
+            selectedIndex = DictationButtonPosition.entries.indexOf(appearance.position),
+            onSelect = { onChange(appearance.copy(position = DictationButtonPosition.entries[it])) },
+        )
     }
 }

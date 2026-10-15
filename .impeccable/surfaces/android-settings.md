@@ -35,6 +35,12 @@ Languages, word replacements, and dictionary use native modal bottom sheets. Lan
 
 Groups use 16 dp corners and tonal separation. Action rows are at least 76 dp, toggle rows 80 dp, and touch controls at least 48 dp. Full-row toggles expose one switch target. Native typography, growing rows, scrollable content, heading semantics, and status/navigation/IME padding support font scaling and keyboard use. The test field and dictionary editor bring their full bounds into view.
 
+## Shared controls and auxiliary screens
+
+Keep the floating-button editor expanded in Keyboard. Mode and button position use `SettingsChoiceRow` with the existing filled selection treatment, checkmark, equal-height wrapping labels and a 48 dp minimum target. The preview, slider and size reset retain their existing behavior.
+
+History and app exclusions share the centered 680 dp maximum column and default-weight titleLarge headers with the gesture guide. History metadata uses bodySmall sans-serif; record text uses bodyLarge. Empty history omits search controls; saved-history search, privacy copy, errors and entries scroll together with IME insets. Error panels and deletion confirmation use semantic Material error roles, and AI-search failures use localized copy. The header language action is unfilled and muted like adjacent actions.
+
 ## Settled outcome
 
 Light canvas is `#F3F4F6`; dark canvas is `#101114`. A top-right theme button opens System/Light/Dark choices with the selected option checked. The local preference survives restarts and applies across settings, history, exclusions and dialogs. System is the default and follows Android automatically; system bars follow the effective appearance. No wallpaper-derived colors are present. `SettingsTheme.kt` and `SettingsScreen.kt` are the implementation sources, with native roles recorded under `extensions.androidSettings` in the sidecar. The final reviewer disposition is **ship**, with no material findings. No new raster assets were introduced and no design decisions remain unresolved.

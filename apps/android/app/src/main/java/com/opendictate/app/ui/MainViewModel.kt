@@ -385,8 +385,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 mutableHistoryState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = error.message
-                            ?: getApplication<Application>().getString(R.string.history_ai_search_error),
+                        errorMessage = getApplication<Application>().getString(R.string.history_ai_search_error),
                     )
                 }
             }

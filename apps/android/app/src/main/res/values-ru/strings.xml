@@ -18,7 +18,7 @@
     <string name="history_open">Открыть историю транскриптов</string>
     <string name="history_back">Вернуться к настройкам</string>
     <string name="history_title">История транскриптов</string>
-    <string name="history_count">СОХРАНЕНО: %1$d</string>
+    <string name="history_count">Сохранено: %1$d</string>
     <string name="history_search_label">Поиск по истории</string>
     <string name="history_search_placeholder">Слова, опечатки или описание</string>
     <string name="history_clear_search">Очистить поиск</string>
