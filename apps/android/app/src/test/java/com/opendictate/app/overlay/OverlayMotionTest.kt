@@ -28,7 +28,6 @@ class OverlayMotionTest {
                 when (position) {
                     DictationButtonPosition.LEFT -> assertEquals(0, left)
                     DictationButtonPosition.RIGHT -> assertEquals(1_080 - width, left)
-                    DictationButtonPosition.CENTER -> assertTrue(kotlin.math.abs(1_080 - 2 * left - width) <= 1)
                 }
             }
         }

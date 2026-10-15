@@ -30,7 +30,6 @@ internal object OverlayMotion {
     fun windowLeftPx(displayWidthPx: Int, windowWidthPx: Int, position: DictationButtonPosition): Int =
         when (position) {
             DictationButtonPosition.LEFT -> 0
-            DictationButtonPosition.CENTER -> (displayWidthPx - windowWidthPx) / 2
             DictationButtonPosition.RIGHT -> displayWidthPx - windowWidthPx
         }.coerceAtLeast(0)
 

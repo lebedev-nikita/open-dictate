@@ -55,7 +55,6 @@ internal fun DictationButtonSettings(
                 .semantics { contentDescription = previewLabel; stateDescription = diameter },
                 contentAlignment = when (appearance.position) {
                     DictationButtonPosition.LEFT -> AbsoluteAlignment.CenterLeft
-                    DictationButtonPosition.CENTER -> Alignment.Center
                     DictationButtonPosition.RIGHT -> AbsoluteAlignment.CenterRight
                 }) {
                 Surface(Modifier.size(appearance.diameterDp.dp), shape = CircleShape,
@@ -93,7 +92,6 @@ internal fun DictationButtonSettings(
                 ) {
                     Text(stringResource(when (position) {
                         DictationButtonPosition.LEFT -> R.string.dictation_button_left
-                        DictationButtonPosition.CENTER -> R.string.dictation_button_center
                         DictationButtonPosition.RIGHT -> R.string.dictation_button_right
                     }))
                 }

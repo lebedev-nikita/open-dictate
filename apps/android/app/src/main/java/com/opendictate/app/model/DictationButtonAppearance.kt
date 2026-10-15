@@ -3,7 +3,7 @@ package com.opendictate.app.model
 import kotlin.math.roundToInt
 
 enum class DictationButtonPosition {
-    LEFT, CENTER, RIGHT;
+    LEFT, RIGHT;
 
     companion object {
         fun fromStored(value: String?): DictationButtonPosition =
