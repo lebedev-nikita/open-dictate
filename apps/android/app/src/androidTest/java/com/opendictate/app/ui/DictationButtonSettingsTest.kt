@@ -80,8 +80,10 @@ class DictationButtonSettingsTest {
             compose.waitForIdle()
             assertSummary(DictationButtonAppearance(24, DictationButtonPosition.LEFT))
             compose.onNodeWithText(context.getString(R.string.gestures_title)).performScrollTo().performClick()
-            compose.onNodeWithText(context.getString(R.string.gestures_cancel_right_title)).assertIsDisplayed()
-            compose.onNodeWithText(context.getString(R.string.gestures_dismiss_left_title)).assertIsDisplayed()
+            compose.onNodeWithText(context.getString(R.string.gestures_cancel_right_hint)).assertIsDisplayed()
+            compose.onNodeWithText(context.getString(R.string.gestures_hide_left_hint)).assertIsDisplayed()
+            compose.onNodeWithText(context.getString(R.string.gestures_cancel_left_hint)).assertDoesNotExist()
+            compose.onNodeWithText(context.getString(R.string.gestures_hide_right_hint)).assertDoesNotExist()
         } finally {
             settings.dictationButtonAppearance = original
         }
