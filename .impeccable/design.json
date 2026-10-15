@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T07:52:41.756Z",
+  "generatedAt": "2026-10-15T12:11:33.455Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -117,10 +117,10 @@
       },
       "interaction": [
         "Readiness disclosure for API key, microphone, and Accessibility setup",
-        "Filled dictation-mode selector and quiet single position button that toggles Left/Right; floating-button editor remains expanded",
+        "Filled dictation-mode selector; Appearance summary opens a native autosaving bottom sheet with preview, size and two-side selection; Gestures remains a separate action",
         "History and app exclusions share the 680dp column; populated history controls and entries scroll together",
         "Full-row switches with one semantic target",
-        "Native language, word-replacement and dictionary sheets, model menus, and timeout dialog",
+        "Native Appearance, language, word-replacement and dictionary sheets, model menus, and timeout dialog",
         "Status/navigation/IME insets and scrollable content"
       ],
       "wordReplacements": {
@@ -161,13 +161,14 @@
       },
       "dictationButton": {
         "implementation": [
+          "ui/SettingsScreen.kt",
           "ui/DictationButtonSettings.kt",
           "model/DictationButtonAppearance.kt",
           "overlay/DictationOverlayView.kt",
           "overlay/OverlayMotion.kt",
           "service/OpenDictateAccessibilityService.kt"
         ],
-        "presentation": "Expanded inline control under the single Dictation button section heading; no repeated title inside the group. Preview and size controls precede the compact position row with one outlined button that immediately toggles Left/Right. Existing neutral Material 3 themes and system typography; size, pixel diameter and position labels use bodyMedium.",
+        "presentation": "One Appearance action row under Dictation button summarizes visible pixel diameter and localized physical side; Gestures remains separate. The user-selected first bottom-sheet concept uses DictationButtonAppearanceSheet: native scrollable ModalBottomSheet in SettingsSurface, headlineSmall title and close action, preview, size slider, two-side selection, autosave copy, Reset and Done. Existing neutral Material 3 themes and system typography; size, pixel diameter and position labels use bodyMedium.",
         "diameter": {
           "units": "dp",
           "minimum": 24,
@@ -180,11 +181,10 @@
         "position": {
           "choices": [
             "left",
-            "center",
             "right"
           ],
           "default": "right",
-          "alignment": "Physical left/right, independent of language layout direction; centered placement follows the display center"
+          "alignment": "Physical left/right, independent of language layout direction"
         },
         "preview": {
           "height": "112dp",
@@ -198,23 +198,35 @@
           "behavior": "Visible circle, proportionally scaled microphone and alignment update immediately; preview does not start dictation"
         },
         "layout": {
-          "padding": "16dp",
-          "spacing": "12dp",
-          "slider": "Native continuous Material 3 Slider, rounded to whole dp; no discrete tick scale; a 48dp Restore icon target on its left resets only the diameter to 52dp, preserves position and disables at the default size",
-          "positionControl": "Below preview and size: muted label and one compact outlined button with current side and horizontal-swap icon; immediately toggles Left/Right and updates the preview, with a 48dp minimum target and accessible current value; no menu or filled track"
+          "padding": "24dp horizontal and bottom",
+          "spacing": "20dp",
+          "slider": "Native continuous Material 3 Slider from 24 to 96dp, rounded to whole dp; no discrete tick scale; pixel-diameter readout",
+          "positionControl": "Outlined 12dp-corner two-option selectable group with radio semantics, selected checkmark and primaryContainer tone; 48dp minimum targets. Label above full-width choices when available width is below 300dp × fontScale; otherwise label inline beside a 192dp group.",
+          "footer": "Autosave copy, 0.5dp divider, Reset and Done. Reset restores 52dp and Right together and disables only when both are default; Done dismisses.",
+          "insets": "Native ModalBottomSheet insets and dismissal; vertically scrollable content"
         },
-        "interaction": "Autosave locally with no confirmation. Apply appearance to the active overlay without restarting Accessibility. Keep menu geometry clear of the full touch target; preserve focus and insertion guards. Button and menu placement share the visible display frame’s top boundary, including system decorations, so a menu opening below a large button retains its 8dp content gap.",
-        "gestures": "At right/center, cancel left and hide right. At left, cancel right toward the screen interior and hide left toward the edge. Native accessibility hints and the guide mirror the directions; the guide uses the stop glyph for cancellation regardless of direction.",
-        "accessibility": "Named slider with pixel state description, named preview with pixel diameter, native selected-state semantics and at least 48dp runtime touch bounds",
+        "interaction": "Changes save locally immediately; explicit autosave copy. Done, close and native dismissal preserve saved changes. Saveable sheet visibility survives Activity recreation. Apply appearance to the active overlay without restarting Accessibility. Keep menu geometry clear of the full touch target; preserve focus and insertion guards. Button and menu placement share the visible display frame’s top boundary, including system decorations, so a menu opening below a large button retains its 8dp content gap.",
+        "gestures": "At right, cancel left and hide right. At left, cancel right toward the screen interior and hide left toward the edge. Native accessibility hints and the guide mirror the directions; the guide uses the stop glyph for cancellation regardless of direction.",
+        "accessibility": "Localized named slider with pixel state description, named preview with pixel diameter, position selectable-group and radio selected-state semantics; close action and at least 48dp targets including runtime touch bounds",
         "scope": "Android-only local appearance settings; excluded from Google Drive sync. Runtime circle remains white in either settings theme; tutorial pictures keep their separate 75 percent scale.",
         "evidence": {
           "screenshots": [
-            ".impeccable/review/button-phone-light-ru.png",
-            ".impeccable/review/button-phone-dark-large-ru.png",
-            ".impeccable/review/button-tablet-light-ru.png"
+            ".impeccable/review/button-appearance-settings-phone-en.png",
+            ".impeccable/review/button-appearance-sheet-phone-en.png",
+            ".impeccable/review/button-appearance-settings-phone-dark-large-ru.png",
+            ".impeccable/review/button-appearance-sheet-phone-dark-large-ru.png",
+            ".impeccable/review/button-appearance-settings-tablet-dark-ru.png",
+            ".impeccable/review/button-appearance-sheet-tablet-dark-ru.png"
           ],
-          "captureScope": "Native emulator: 24dp left in light appearance, 96dp centered with Russian font scale 1.3 in dark appearance, and right placement with tablet-size emulation. Review evidence, not shipping assets.",
-          "limits": "Emulator and tablet emulation do not establish physical-device behavior."
+          "captureScope": "Native settings and sheet captures: English phone; Russian dark phone at font scale 1.3; Russian dark 1600x2560 tablet emulation at density 240 and font scale 1.0. Ignored review evidence, not shipping assets.",
+          "validation": "162 JVM tests; Debug/Release lint and assembly passed. Three new panel instrumentation tests and eleven existing settings/native-delivery tests passed; panel lifecycle test also passed on the Russian dark large-text phone and tablet configurations.",
+          "limits": "No real OpenAI calls. Emulator and tablet emulation do not establish physical-device behavior. No HTML detector applies to native UI."
+        },
+        "review": {
+          "verdict": "ship",
+          "scope": "User-selected first bottom-sheet concept for Android button Appearance",
+          "findings": "Fresh finish reviewer found implementation and all six native captures coherent, with no material UI/source issue. The documentation-only verdict scored its sole persistence fix resolved, with disposition ship at that scope.",
+          "basis": "Current native implementation and six actual captures; existing neutral Material 3 identity retained, with no new tokens or shipping raster assets."
         }
       },
       "gesturesGuide": {

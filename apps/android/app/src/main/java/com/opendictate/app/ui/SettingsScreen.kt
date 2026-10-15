@@ -77,6 +77,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.preferredFrameRate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -122,6 +123,7 @@ internal fun SettingsScreen(
     var dictionaryOpen by rememberSaveable { mutableStateOf(false) }
     var languagesOpen by rememberSaveable { mutableStateOf(false) }
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
+    var buttonAppearanceOpen by rememberSaveable { mutableStateOf(false) }
     val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
     val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
@@ -238,7 +240,12 @@ internal fun SettingsScreen(
 
                     SectionTitle(stringResource(R.string.dictation_button_title))
                     SettingsGroup {
-                        DictationButtonSettings(state.dictationButtonAppearance, viewModel::setDictationButtonAppearance)
+                        ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),
+                            stringResource(R.string.dictation_button_appearance_summary,
+                                stringResource(R.string.dictation_button_pixels,
+                                    state.dictationButtonAppearance.diameterPx(LocalDensity.current.density)),
+                                stringResource(state.dictationButtonAppearance.position.labelResource())),
+                            { buttonAppearanceOpen = true })
                         SettingsDivider()
                         ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.gestures_title),
                             stringResource(R.string.gestures_summary), onGestures)
@@ -319,6 +326,9 @@ internal fun SettingsScreen(
             }
         }
     }
+    if (buttonAppearanceOpen) DictationButtonAppearanceSheet(
+        state.dictationButtonAppearance, viewModel::setDictationButtonAppearance,
+    ) { buttonAppearanceOpen = false }
     if (replacementsOpen) ReplacementSheet(viewModel.replacements) { replacementsOpen = false }
     if (languagesOpen) LanguagesSheet(state.languages, viewModel::toggleLanguage, viewModel::useAutomaticLanguageDetection) { languagesOpen = false }
     if (dictionaryOpen) DictionarySheet(state.prompt, viewModel::savePrompt) { dictionaryOpen = false }

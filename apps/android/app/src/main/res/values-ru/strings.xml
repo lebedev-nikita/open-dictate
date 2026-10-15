@@ -266,6 +266,11 @@
     <string name="gestures_dictionary_body">Добавить выделенный текст в словарь. Недоступно в полях паролей.</string>
 
     <string name="dictation_button_title">Кнопка диктовки</string>
+    <string name="dictation_button_appearance">Внешний вид</string>
+    <string name="dictation_button_appearance_title">Внешний вид кнопки</string>
+    <string name="dictation_button_appearance_summary">%1$s · %2$s</string>
+    <string name="dictation_button_appearance_close">Закрыть внешний вид кнопки</string>
+    <string name="dictation_button_reset">Сбросить</string>
     <string name="dictation_button_size">Размер</string>
     <string name="dictation_button_pixels">%1$d пикс.</string>
     <string name="dictation_button_preview">Превью кнопки диктовки</string>
