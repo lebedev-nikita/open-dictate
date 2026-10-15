@@ -175,10 +175,15 @@ list, so stale replicas cannot restore deleted rules. The master replacement
 switch merges independently from the list. Offline changes use device clocks,
 so keep system clocks reasonably accurate.
 
-Disconnect stops future sync and removes macOS OAuth credentials. Local settings
-and cloud files remain. Android leaves token caching to Google Play services.
+Disconnect signs this installation out of synchronization and cancels its current
+sync task. On macOS it also removes the local OAuth credentials from Keychain.
+Every manual connection on both platforms asks you to select a Google account,
+even when Google has cached authorization. On macOS, re-enter the Desktop client
+secret after disconnecting; it was removed with the local credentials.
+Local settings and cloud files remain. Android leaves token caching to Google Play services.
 An upload already accepted by Google may finish during disconnection. Disconnect
-does not revoke Google's grant: use Google Account → third-party connections.
+does not revoke Google's grant or sign out other devices. To revoke the grant,
+use Google Account → third-party connections.
 Delete replicas through Google Drive → Settings → Manage apps → OpenDictate →
 Delete hidden app data.
 

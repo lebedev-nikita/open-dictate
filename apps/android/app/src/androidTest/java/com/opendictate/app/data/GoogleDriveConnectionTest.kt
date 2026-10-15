@@ -4,8 +4,11 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.opendictate.app.network.GoogleDriveSettingsClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -21,6 +24,70 @@ import org.junit.Test
 import java.util.UUID
 
 class GoogleDriveConnectionTest {
+    @Test fun manualConnectionSelectsAnAccountWhileBackgroundAuthorizationStaysSilent() {
+        val manual = GoogleDriveSync.request(selectAccount = true)
+        val background = GoogleDriveSync.request()
+        assertEquals(AuthorizationRequest.Prompt.SELECT_ACCOUNT, manual.prompt)
+        assertEquals(AuthorizationRequest.Prompt.NOT_SET, background.prompt)
+        for (request in listOf(manual, background)) {
+            assertEquals(listOf(GoogleDriveSync.SCOPE), request.requestedScopes.map { it.scopeUri })
+            assertNull(request.account)
+            assertFalse(request.isOfflineAccessRequested)
+        }
+    }
+
+    @Test fun disconnectCancelsPendingAuthorizationWithoutContactingDrive() = runBlocking {
+        withContext(Dispatchers.Main) {
+            val base = InstrumentationRegistry.getInstrumentation().targetContext
+            val prefix = "sign-out-test-${UUID.randomUUID()}"
+            val names = mutableSetOf<String>()
+            val context = object : ContextWrapper(base) {
+                override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+                    names += "$prefix-$name"
+                    return base.getSharedPreferences("$prefix-$name", mode)
+                }
+            }
+            val settings = SettingsStore(context)
+            settings.prompt = "Keep local settings"
+            settings.driveSyncEnabled = true
+            val started = CompletableDeferred<Unit>()
+            val cancelled = CompletableDeferred<Unit>()
+            var requests = 0
+            val http = OkHttpClient.Builder().addInterceptor { chain ->
+                requests++
+                assertEquals("Bearer synthetic-new-account", chain.request().header("Authorization"))
+                Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                    .body("{\"files\":[]}".toResponseBody("application/json".toMediaType())).build()
+            }.build()
+            val sync = GoogleDriveSync(context, ReplacementStore(context), GoogleDriveSettingsClient(http), {
+                started.complete(Unit)
+                try { awaitCancellation() }
+                finally { cancelled.complete(Unit) }
+            }, false)
+            try {
+                sync.requestSync()
+                withTimeout(5000) { started.await() }
+                sync.disconnect()
+                withTimeout(2000) { cancelled.await() }
+                sync.refreshIfStale()
+                sync.requestSync()
+                assertEquals(0, requests)
+                assertEquals(DriveSyncState(), sync.state.value)
+                assertFalse(settings.driveSyncEnabled)
+                assertFalse(settings.driveConnectionPending)
+                assertEquals("Keep local settings", settings.prompt)
+                sync.connect("synthetic-new-account")
+                withTimeout(5000) { sync.state.first { it.lastSyncedAt > 0 } }
+                assertTrue(sync.state.value.enabled)
+                assertEquals(2, requests)
+                assertEquals("Keep local settings", settings.prompt)
+            } finally {
+                sync.disconnect()
+                names.forEach { base.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
+            }
+        }
+    }
+
     @Test fun freshResumeSkipsNetworkButManualSyncReadsAgain() = runBlocking {
         withContext(Dispatchers.Main) {
             val base = InstrumentationRegistry.getInstrumentation().targetContext

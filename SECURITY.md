@@ -41,8 +41,11 @@ refresh tokens use a separate device-only, non-synchronizing Keychain item.
 Reconnection reuses a saved client secret only for the same client ID; failed
 authorization does not replace credentials. OAuth errors are mapped to known
 categories without displaying provider descriptions or payloads.
-Access tokens stay in memory. Disconnect stops local delivery and removes
+Access tokens stay in memory. Disconnect cancels the local sync task and removes
 macOS credentials, without deleting cloud data or revoking Google's grant.
+Android requests `SELECT_ACCOUNT` for manual connections; background token
+requests remain silent. macOS browser connections use `select_account`. Signing
+out on one installation does not sign out other devices.
 
 Connection source selection blocks application and upload until differences are
 resolved explicitly. Pending connections persist across restart and network

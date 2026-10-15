@@ -149,6 +149,43 @@ final class GoogleDriveTests: XCTestCase {
         XCTAssertFalse(sync.canSyncNow)
     }
 
+    @MainActor func testDisconnectRemovesOnlyLocalAuthorizationAndPreservesSettings() async throws {
+        let suite = "drive-local-sign-out-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults)
+        preferences.driveSyncEnabled = true
+        preferences.dictionary = "Keep local settings"
+        var credentials: DriveCredentials? = DriveCredentials(clientID: "synthetic.apps.googleusercontent.com",
+            clientSecret: "synthetic-secret", refreshToken: "synthetic-refresh")
+        var deletions = 0, requests = 0
+        DriveHTTP.handler = { request in
+            requests += 1
+            // Local sign-out must not send a Google grant-revocation request.
+            XCTAssertEqual(request.url?.host, "www.googleapis.com")
+            return (200, Data("{\"files\":[]}".utf8))
+        }
+        let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: {
+            guard credentials != nil else { throw DriveError.authorization }
+            return "synthetic-access"
+        }, automaticallySync: false, deleteCredentials: { credentials = nil; deletions += 1 })
+        sync.syncNow()
+        try await awaitStatus(sync, .synced)
+        let document = try preferences.syncDocument(), completedRequests = requests
+        sync.disconnect()
+        XCTAssertNil(credentials)
+        XCTAssertEqual(deletions, 1)
+        XCTAssertEqual(sync.status, .disconnected)
+        XCTAssertNil(sync.lastSyncedAt)
+        XCTAssertFalse(preferences.driveSyncEnabled)
+        XCTAssertFalse(preferences.driveConnectionPending)
+        XCTAssertFalse(sync.canSyncNow)
+        XCTAssertEqual(try preferences.syncDocument(), document)
+        sync.refreshIfStale()
+        sync.syncNow()
+        XCTAssertEqual(requests, completedRequests)
+    }
+
     @MainActor func testManualSyncUploadsPendingEditsImmediately() async throws {
         let suite = "drive-immediate-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -321,6 +358,7 @@ final class GoogleDriveTests: XCTestCase {
             challenge = value("code_challenge")
             XCTAssertEqual(value("code_challenge_method"), "S256")
             XCTAssertEqual(value("scope"), GoogleDriveAuthorization.scope)
+            XCTAssertEqual(Set(value("prompt").split(separator: " ")), ["consent", "select_account"])
             let redirect = value("redirect_uri"), state = value("state")
             XCTAssertTrue(redirect.hasPrefix("http://127.0.0.1:"))
             Task { @MainActor in
@@ -371,6 +409,7 @@ final class GoogleDriveTests: XCTestCase {
         var saved: DriveCredentials?
         let authorization = GoogleDriveAuthorization(openBrowser: { url in
             let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+            XCTAssertTrue(query.first { $0.name == "prompt" }!.value!.split(separator: " ").contains("select_account"))
             let redirect = query.first { $0.name == "redirect_uri" }!.value!
             let state = query.first { $0.name == "state" }!.value!
             Task { _ = try? await URLSession.shared.data(from: URL(string: redirect + "?code=synthetic-code&state=" + state)!) }

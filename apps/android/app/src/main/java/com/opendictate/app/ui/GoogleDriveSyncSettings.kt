@@ -66,7 +66,7 @@ internal fun GoogleDriveSyncSettings() {
                     if (activity == null) showAuthorizationFailure()
                     else {
                         authorizing = true
-                        Identity.getAuthorizationClient(activity).authorize(GoogleDriveSync.request())
+                        Identity.getAuthorizationClient(activity).authorize(GoogleDriveSync.request(selectAccount = true))
                             .addOnSuccessListener { result ->
                                 if (result.hasResolution()) {
                                     val intent = result.pendingIntent
