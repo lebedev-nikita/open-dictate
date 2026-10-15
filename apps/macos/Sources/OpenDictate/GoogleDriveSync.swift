@@ -41,7 +41,7 @@ final class GoogleDriveSync: ObservableObject {
 
     init(preferences: Preferences, localOnly: Bool = false, client: GoogleDriveClient = GoogleDriveClient(),
          refreshToken: (() async throws -> String)? = nil, automaticallySync: Bool = true,
-         deleteCredentials: @escaping () throws -> Void = DriveCredentialStore.delete) {
+         deleteCredentials: @escaping () throws -> Void = { try DriveCredentialStore.signOut() }) {
         self.preferences = preferences; self.localOnly = localOnly
         self.automaticallySync = automaticallySync
         self.client = client; self.refreshToken = refreshToken; self.deleteCredentials = deleteCredentials
@@ -112,17 +112,16 @@ final class GoogleDriveSync: ObservableObject {
         task = nil; schedule.finish(now: now, completion: completion); pump()
     }
 
-    func connect(clientSecret: String) {
+    func connect() {
         guard !localOnly, task == nil else { return }
         status = .busy
         let run = generation
-        let clientID = preferences.driveClientID.trimmingCharacters(in: .whitespacesAndNewlines)
         task = Task { [weak self] in
             guard let self else { return }
             var completion = SettingsSyncSchedule.Completion.deferred
             defer { finish(run: run, completion: completion) }
             do {
-                let token = try await authorization.connect(clientID: clientID, clientSecret: clientSecret, client: client)
+                let token = try await authorization.connect(client: client)
                 try Task.checkCancellation()
                 guard generation == run else { return }
                 schedule.refresh()

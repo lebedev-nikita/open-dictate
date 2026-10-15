@@ -44,14 +44,16 @@ When connecting, the app reads cloud settings first. If synced values differ,
 you choose cloud or local settings before either source changes. Cancel leaves
 settings unchanged. A pending choice blocks automatic sync even after a restart.
 
-Android uses Google Play services authorization and token caching. macOS stores
-its OAuth client secret and refresh token in device-only, non-synchronizing
-Keychain storage. The client ID stays in preferences. macOS sign-in opens your
+Android uses Google Play services authorization and token caching. macOS builds
+include the application's Desktop OAuth client configuration; this is separate
+from your account authorization. User refresh tokens and legacy client settings
+use device-only, non-synchronizing Keychain storage. macOS sign-in opens your
 browser and briefly listens on loopback for the OAuth response. That listener
 closes on success, failure, cancellation or timeout. No tokens, dictionary contents or replacement rules are logged.
 
 Disconnect signs out synchronization on the current device and removes macOS
-OAuth credentials. Manual reconnection asks you to select a Google account on
+user refresh tokens, retaining application client configuration. Manual
+reconnection asks you to select a Google account on
 both platforms. Other devices stay connected, and local and cloud settings remain.
 Android leaves token caching to Google Play services. Disconnect does not revoke
 Google's grant. An upload already accepted by Google may finish. Delete hidden

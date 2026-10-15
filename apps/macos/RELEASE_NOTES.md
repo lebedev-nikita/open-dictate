@@ -1,15 +1,14 @@
-OpenDictate for macOS **0.4.10** simplifies Google Drive connection and account switching. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.4.11** fixes Google Drive sign-in and reconnection. Requires macOS 14+ on Apple Silicon or Intel.
 
-- Google Drive uses a native switch with its provider icon and a compact connection row. Setup hints appear on hover; sign-in guidance and errors appear when needed.
-- Turning the switch off cancels sign-in or synchronization and signs out only this Mac. Local and cloud settings are kept, and other devices stay connected. The next connection asks you to choose a Google account; re-enter the Desktop OAuth client secret after signing out.
-- Settings header controls align consistently, with a simpler native appearance menu.
-- Word replacement lists are sorted by replacement text.
+- Official builds include the Google Drive application configuration. Turning on the native switch opens Google's account chooser without asking for a client ID or secret.
+- Turning the switch off signs out only this Mac and preserves application configuration for the next connection. Local and cloud settings are kept, and other devices stay connected.
+- Release builds validate the OAuth configuration before packaging and publication.
 
 ### Install
 
 Quit OpenDictate, then run `brew update` and `brew upgrade --cask lebedev-nikita/tap/open-dictate`.
 
-Alternatively, download `OpenDictate-macOS-0.4.10-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
+Alternatively, download `OpenDictate-macOS-0.4.11-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
 
 This release is **locally signed and not notarized**. If Gatekeeper blocks launching it, use **System Settings → Privacy & Security → Open Anyway** for OpenDictate, then launch it again. The disk image includes bilingual instructions.
 
