@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -80,7 +80,7 @@ internal fun DictationButtonSettings(
                 enabled = appearance.diameterDp != DictationButtonAppearance.DEFAULT_DIAMETER_DP,
                 modifier = Modifier.size(48.dp),
             ) {
-                Icon(Icons.Outlined.Restore, stringResource(R.string.dictation_button_reset_size))
+                Icon(Icons.Outlined.Replay, stringResource(R.string.dictation_button_reset_size))
             }
             Slider(
                 value = appearance.diameterDp.toFloat(),
