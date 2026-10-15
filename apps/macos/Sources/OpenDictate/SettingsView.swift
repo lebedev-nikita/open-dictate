@@ -44,10 +44,12 @@ struct SettingsView: View {
             }.padding(20).frame(width: 220).background(Color(nsColor: .controlBackgroundColor))
             Divider()
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Spacer()
-                    SettingsSyncControl(sync: model.driveSync, preferences: preferences)
-                }.padding(.horizontal, 28).padding(.top, 16)
+                if preferences.driveSyncEnabled {
+                    HStack {
+                        Spacer()
+                        SettingsSyncControl(sync: model.driveSync, preferences: preferences)
+                    }.padding(.horizontal, 28).padding(.top, 16)
+                }
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         switch selection {
