@@ -54,7 +54,6 @@
     <string name="models_new">Новых моделей: %1$d</string>
 
     <string name="transformation_model_title">Преобразование текста</string>
-    <string name="transformation_model_subtitle">Редактируйте текст голосом.</string>
     <string name="transformation_button_toggle">Показывать «Изменить текст» в меню плавающей кнопки</string>
     <string name="transformation_model_luna_description">Самая быстрая и экономичная · по умолчанию</string>
     <string name="transformation_model_sol_description">Лучшее качество для сложных правок</string>

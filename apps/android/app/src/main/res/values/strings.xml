@@ -56,7 +56,6 @@
     <string name="models_new">%1$d new models available</string>
 
     <string name="transformation_model_title">Text transformation</string>
-    <string name="transformation_model_subtitle">Edit text with your voice.</string>
     <string name="transformation_button_toggle">Show Edit text in the floating button menu</string>
     <string name="transformation_model_luna_description">Fastest and most economical · default</string>
     <string name="transformation_model_sol_description">Highest quality for complex edits</string>
