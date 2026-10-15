@@ -318,7 +318,7 @@ The Dictation button group's Gestures action opens a native scrollable `ModalBot
 
 Android's Synchronization section lists providers in one rounded group. Google Drive is the only provider: a 24 dp color vector logo, its name, and a trailing native switch in an 80 dp minimum full-row target. Keep descriptions and action buttons out of this group; enabling opens Google authorization when needed, disabling disconnects, and errors use a transient toast. Automatic synchronization remains unchanged.
 
-macOS settings offer the same three choices from a native menu button at the top right. The saved choice applies across all five pages; Dark preserves the previous default. Light appearance uses semantic AppKit surfaces and foreground colors, including the selected navigation row. The recording HUD retains its dark nonactivating appearance.
+macOS settings offer the same three choices from a native menu button beside the version at the bottom of the sidebar. The saved choice applies across all five pages; Dark preserves the previous default. Light appearance uses semantic AppKit surfaces and foreground colors, including the selected navigation row. The recording HUD retains its dark nonactivating appearance.
 
 ### Native Synchronization Source Choice
 

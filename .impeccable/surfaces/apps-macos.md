@@ -106,7 +106,7 @@ review screenshots are evidence rather than shipping artwork.
 
 ## Theme choice
 
-A native menu button at the top right offers System, Light and Dark appearance.
+A native menu button beside the version at the bottom of the sidebar offers System, Light and Dark appearance.
 The choice is saved in local preferences and applies to all five settings pages.
 Dark preserves the prior default; System follows macOS. Semantic AppKit surfaces
 and foreground colors keep the navigation selection readable in either theme.
