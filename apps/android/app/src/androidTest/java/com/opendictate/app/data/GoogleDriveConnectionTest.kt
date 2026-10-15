@@ -62,6 +62,8 @@ class GoogleDriveConnectionTest {
                 assertEquals(1, reads)
                 val revision = sync.state.value.settingsRevision
                 sync.requestSync()
+                assertFalse(sync.state.value.canSyncNow)
+                sync.requestSync() // A repeated pull during the exchange must not queue a second read.
                 withTimeout(5000) { sync.state.first { !it.busy && it.settingsRevision > revision } }
                 assertEquals(2, reads)
             } finally {

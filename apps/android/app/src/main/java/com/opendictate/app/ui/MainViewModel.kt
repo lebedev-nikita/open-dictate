@@ -95,6 +95,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     private val apiKeyStore = SecureApiKeyStore(application)
     val replacements = (application as OpenDictateApplication).replacementStore
+    val driveSync = (application as OpenDictateApplication).driveSync
     private val historyStore = (application as OpenDictateApplication).transcriptHistoryStore
     private val apiClient = OpenAiTranscriptionClient(application.resources)
     private val mutableState = MutableStateFlow(loadState())

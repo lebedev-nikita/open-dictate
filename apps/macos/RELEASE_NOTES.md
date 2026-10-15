@@ -1,14 +1,14 @@
-OpenDictate for macOS **0.4.6** keeps errors from interrupting your current app. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.4.7** makes manual Google Drive settings synchronization available from every settings page. Requires macOS 14+ on Apple Silicon or Intel.
 
-- Errors appear as native macOS notifications instead of opening OpenDictate's settings window. Allow notifications when macOS asks; their appearance follows your system notification settings.
-- Starting dictation or voice editing without an editable text field no longer shows an error or opens a window.
-- Notification messages follow the selected interface language and never include raw provider or system error details.
+- Use **Sync now** at the top of the settings window or press **Command-R** to synchronize connected Google Drive settings.
+- A native progress indicator shows when synchronization is running. The status reports waiting, the last successful sync, or a connection/sign-in problem.
+- Repeated clicks and shortcuts during synchronization do not queue duplicate requests. Automatic synchronization continues as before.
 
 ### Install
 
 Quit OpenDictate, then run `brew update` and `brew upgrade --cask lebedev-nikita/tap/open-dictate`.
 
-Alternatively, download `OpenDictate-macOS-0.4.6-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
+Alternatively, download `OpenDictate-macOS-0.4.7-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
 
 This release is **locally signed and not notarized**. If Gatekeeper blocks launching it, use **System Settings → Privacy & Security → Open Anyway** for OpenDictate, then launch it again. The disk image includes bilingual instructions.
 

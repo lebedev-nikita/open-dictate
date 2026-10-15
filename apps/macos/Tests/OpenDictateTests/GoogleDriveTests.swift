@@ -1,6 +1,8 @@
 import XCTest
 import OpenDictateCore
 import CryptoKit
+import AppKit
+import SwiftUI
 @testable import OpenDictate
 
 private final class DriveHTTP: URLProtocol, @unchecked Sendable {
@@ -132,13 +134,82 @@ final class GoogleDriveTests: XCTestCase {
         }
         let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: { "synthetic" },
             automaticallySync: false, deleteCredentials: {})
-        sync.syncNow(); try await awaitStatus(sync, .synced)
+        sync.syncNow()
+        XCTAssertFalse(sync.canSyncNow)
+        sync.syncNow() // A repeated click/shortcut during the same exchange must not enqueue another run.
+        try await awaitStatus(sync, .synced)
+        XCTAssertTrue(sync.canSyncNow)
         XCTAssertEqual(reads, 1)
         for _ in 0..<5 { sync.refreshIfStale() }
         try await Task.sleep(nanoseconds: 50_000_000)
         XCTAssertEqual(reads, 1)
         sync.syncNow(); try await awaitStatus(sync, .synced)
         XCTAssertEqual(reads, 2)
+        sync.disconnect()
+        XCTAssertFalse(sync.canSyncNow)
+    }
+
+    @MainActor func testManualRetryBypassesFailureBackoffAndRecovers() async throws {
+        let suite = "drive-manual-retry-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults); preferences.driveSyncEnabled = true
+        var reads = 0
+        DriveHTTP.handler = { request in
+            if request.httpMethod == "GET" {
+                reads += 1
+                if reads == 1 { return (503, Data()) }
+            }
+            return (200, Data("{\"files\":[]}".utf8))
+        }
+        let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: { "synthetic" },
+            automaticallySync: false, deleteCredentials: {})
+        sync.syncNow(); try await awaitStatus(sync, .failed)
+        XCTAssertTrue(sync.canSyncNow)
+        sync.syncNow(); try await awaitStatus(sync, .synced)
+        XCTAssertEqual(reads, 2)
+        XCTAssertNotNil(sync.lastSyncedAt)
+        sync.disconnect()
+    }
+
+    @MainActor func testSyncControlRendersWaitingBusySuccessAndFailureInBothLanguagesAndThemes() async throws {
+        let suite = "drive-control-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = Preferences(defaults: defaults); preferences.driveSyncEnabled = true
+        var fail = false
+        DriveHTTP.handler = { _ in (fail ? 503 : 200, Data("{\"files\":[]}".utf8)) }
+        let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: { "synthetic" },
+            automaticallySync: false, deleteCredentials: {})
+        func render(_ state: String) throws {
+            for language in ["en", "ru"] {
+                preferences.interfaceLanguage = language
+                for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                    let host = NSHostingView(rootView: HStack(alignment: .top, spacing: 16) {
+                        Spacer()
+                        SettingsSyncControl(sync: sync, preferences: preferences)
+                        Image(systemName: "circle.lefthalf.filled").frame(width: 24, height: 24)
+                    }.padding(16).frame(width: 460).background(Color(nsColor: .windowBackgroundColor)))
+                    host.appearance = NSAppearance(named: appearance)
+                    host.setFrameSize(host.fittingSize); host.layoutSubtreeIfNeeded()
+                    XCTAssertEqual(host.frame.width, 460, accuracy: 1)
+                    XCTAssertLessThan(host.frame.height, 160)
+                    if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
+                        let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                        host.cacheDisplay(in: host.bounds, to: bitmap)
+                        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                        let directory = URL(fileURLWithPath: output)
+                        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                        try data.write(to: directory.appendingPathComponent("sync-\(state)-\(language)-\(appearance.rawValue).png"))
+                    }
+                }
+            }
+        }
+        try render("waiting")
+        sync.syncNow(); try render("busy")
+        try await awaitStatus(sync, .synced); try render("synced")
+        fail = true; sync.syncNow()
+        try await awaitStatus(sync, .failed); try render("failed")
         sync.disconnect()
     }
 

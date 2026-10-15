@@ -10,6 +10,7 @@ final class GoogleDriveSync: ObservableObject {
     @Published private(set) var status: Status = .disconnected
     @Published private(set) var lastSyncedAt: Date?
     var needsSignIn: Bool { status == .authorization || status == .signInTimedOut || status == .configuration || status == .clientConfiguration }
+    var canSyncNow: Bool { !localOnly && preferences.driveSyncEnabled && !needsSignIn && !needsSourceSelection && status != .busy }
     private let preferences: Preferences
     private let client: GoogleDriveClient
     private let deleteCredentials: () throws -> Void
@@ -145,7 +146,8 @@ final class GoogleDriveSync: ObservableObject {
     }
 
     func syncNow() {
-        guard !localOnly, preferences.driveSyncEnabled else { return }
+        guard canSyncNow else { return }
+        status = .waiting
         schedule.refresh()
         pump()
     }
