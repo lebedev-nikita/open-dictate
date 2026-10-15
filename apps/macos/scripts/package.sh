@@ -21,6 +21,9 @@ lipo -create \
     "$macos_root/.build/arm64/arm64-apple-macosx/release/OpenDictate" \
     "$macos_root/.build/x86_64/x86_64-apple-macosx/release/OpenDictate" \
     -output "$app/Contents/MacOS/OpenDictate"
+# Keep SwiftPM's unstripped binaries and dSYMs in .build for symbolication.
+# Strip only the packaged copy, before signing; retain external symbols.
+xcrun strip -S -x "$app/Contents/MacOS/OpenDictate"
 cp "$macos_root/Resources/Info.plist" "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $bundle_version" "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :OpenDictateReleaseVersion $version" "$app/Contents/Info.plist"
@@ -57,7 +60,8 @@ fi
 "$layout_venv/bin/python" "$macos_root/scripts/write-dmg-layout.py" "$staging"
 dmg="$output/OpenDictate-macOS-$version-universal.dmg"
 rm -f "$dmg"
-hdiutil create -volname "OpenDictate $version" -srcfolder "$staging" -fs HFS+ -format UDZO "$dmg"
+# LZMA images require macOS 10.15+, below the app's macOS 14 minimum.
+hdiutil create -volname "OpenDictate $version" -srcfolder "$staging" -fs HFS+ -format ULMO "$dmg"
 hdiutil verify "$dmg"
 
 if [[ -n "${MACOS_NOTARY_PROFILE:-}" ]]; then

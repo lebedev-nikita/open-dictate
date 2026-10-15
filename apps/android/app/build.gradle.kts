@@ -33,6 +33,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+        // Match locales_config.xml; omit unused dependency translations from the APK.
+        resourceConfigurations += listOf("en", "ru")
     }
 
     signingConfigs {
