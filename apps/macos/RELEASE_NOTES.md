@@ -1,13 +1,12 @@
-OpenDictate for macOS **0.4.8** fixes the delay when manually synchronizing Google Drive settings. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.4.9** simplifies the Google Drive synchronization indicator. Requires macOS 14+ on Apple Silicon or Intel.
 
-- **Sync now** and **Command-R** start synchronization immediately, bypassing the 15-second edit delay and retry backoff.
-- Automatic synchronization still waits for a pause in editing. Changes made during a request remain queued for the next sync.
+- While synchronizing, the **Sync now** button shows a spinner without a duplicate status caption beneath it. The progress indicator remains accessible to VoiceOver.
 
 ### Install
 
 Quit OpenDictate, then run `brew update` and `brew upgrade --cask lebedev-nikita/tap/open-dictate`.
 
-Alternatively, download `OpenDictate-macOS-0.4.8-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
+Alternatively, download `OpenDictate-macOS-0.4.9-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
 
 This release is **locally signed and not notarized**. If Gatekeeper blocks launching it, use **System Settings → Privacy & Security → Open Anyway** for OpenDictate, then launch it again. The disk image includes bilingual instructions.
 
