@@ -202,7 +202,6 @@
     <string name="settings_listening">Listening</string>
     <string name="settings_processing">Preparing your text…</string>
     <string name="settings_dictation">Dictation</string>
-    <string name="settings_keyboard">Keyboard button</string>
     <string name="settings_recognition_model">Recognition model</string>
     <string name="settings_editing_model">Editing model</string>
     <string name="settings_dictionary">Personal dictionary</string>

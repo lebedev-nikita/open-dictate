@@ -37,7 +37,7 @@ Groups use 16 dp corners and tonal separation. Action rows are at least 76 dp, t
 
 ## Shared controls and auxiliary screens
 
-Keep the floating-button editor expanded in Keyboard. Mode and button position use `SettingsChoiceRow` with the existing filled selection treatment, checkmark, equal-height wrapping labels and a 48 dp minimum target. The preview, slider and size reset retain their existing behavior.
+Keep the floating-button editor expanded under the single “Dictation button” section heading, with no duplicate title inside the group. Place the position label and choices above the preview, followed by size and its slider/reset. Mode and button position use `SettingsChoiceRow` with the existing filled selection treatment, checkmark, equal-height wrapping labels and a 48 dp minimum target. The preview, slider and size reset retain their existing behavior.
 
 History and app exclusions share the centered 680 dp maximum column and default-weight titleLarge headers with the gesture guide. History metadata uses bodySmall sans-serif; record text uses bodyLarge. Empty history omits search controls; saved-history search, privacy copy, errors and entries scroll together with IME insets. Error panels and deletion confirmation use semantic Material error roles, and AI-search failures use localized copy. The header language action is unfilled and muted like adjacent actions.
 
