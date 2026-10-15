@@ -13,7 +13,7 @@ final class ReplacementStore: ObservableObject {
     private let defaults: UserDefaults
     private var storageAvailable = true
     var onChange: (() -> Void)?
-    var rules: [WordReplacement] { document.rules.sorted { $0.source.localizedCaseInsensitiveCompare($1.source) == .orderedAscending } }
+    var rules: [WordReplacement] { document.rules.sorted { $0.replacement.localizedCaseInsensitiveCompare($1.replacement) == .orderedAscending } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
