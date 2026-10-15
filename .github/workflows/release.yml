@@ -6,6 +6,15 @@ on:
       - "v*"
       - "!v*-preview.*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to prepare
+        required: true
+        type: string
+      draft:
+        description: Keep the release unpublished as a draft
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -15,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -28,6 +38,9 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v6
+      - name: Validate release tag
+        shell: bash
+        run: '[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]'
       - name: Check signing configuration
         run: |
           test -n "$SIGNING_KEY"
@@ -37,19 +50,22 @@ jobs:
       - name: Verify and assemble release
         run: ./gradlew testDebugUnitTest lintRelease assembleRelease --stacktrace
       - name: Name artifact
-        run: cp apps/android/app/build/outputs/apk/release/app-release.apk "OpenDictate-${GITHUB_REF_NAME}.apk"
+        run: cp apps/android/app/build/outputs/apk/release/app-release.apk "OpenDictate-${RELEASE_TAG}.apk"
       - name: Generate changelog
         shell: bash
         run: |
-          previous_tag="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          previous_tag="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
           printf '## Changelog\n\n' > RELEASE_NOTES.md
           if [[ -n "$previous_tag" ]]; then
-            git log --reverse --no-merges --pretty='- %s (%h)' "$previous_tag..$GITHUB_REF_NAME" >> RELEASE_NOTES.md
+            git log --reverse --no-merges --pretty='- %s (%h)' "$previous_tag..HEAD" >> RELEASE_NOTES.md
           else
-            git log --reverse --no-merges --pretty='- %s (%h)' "$GITHUB_REF_NAME" >> RELEASE_NOTES.md
+            git log --reverse --no-merges --pretty='- %s (%h)' HEAD >> RELEASE_NOTES.md
           fi
       - uses: softprops/action-gh-release@v3
         with:
           body_path: RELEASE_NOTES.md
-          files: OpenDictate-${{ github.ref_name }}.apk
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          files: OpenDictate-${{ env.RELEASE_TAG }}.apk
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
+          draft: ${{ inputs.draft || false }}
