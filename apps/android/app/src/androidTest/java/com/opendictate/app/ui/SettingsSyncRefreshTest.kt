@@ -45,8 +45,7 @@ class SettingsSyncRefreshTest {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     SettingsSyncRefresh(state, refresh, Modifier.fillMaxSize().testTag("refresh")) {
                         Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(20.dp)) {
-                            Text(context.getString(R.string.settings_title), style = MaterialTheme.typography.headlineLarge)
-                            SettingsSyncStatus(state, refresh)
+                            Text(context.getString(R.string.settings_dictation))
                             Spacer(Modifier.height(3000.dp))
                         }
                     }
@@ -55,26 +54,22 @@ class SettingsSyncRefreshTest {
         }
     }
 
-    @Test fun pullStartsSyncAndBusyBlocksRepeatedPullAndButtonUntilRetry() {
+    @Test fun pullStartsSyncAndBusyBlocksRepeatedPullUntilRetry() {
         showSettings()
         compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
         compose.runOnIdle { assertEquals(1, requests) }
-        compose.onNodeWithText(context.getString(R.string.drive_sync_busy)).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.drive_sync_now)).assertIsNotEnabled()
         capture("busy")
         compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
         compose.runOnIdle {
             assertEquals(1, requests)
             state = state.copy(busy = false, failed = true)
         }
-        compose.onNodeWithText(context.getString(R.string.drive_sync_failed)).assertIsDisplayed()
         capture("failed")
-        compose.onNodeWithText(context.getString(R.string.drive_sync_now)).assertIsEnabled().performClick()
+        compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
         compose.runOnIdle {
             assertEquals(2, requests)
             state = state.copy(busy = false, failed = false, lastSyncedAt = 42)
         }
-        compose.onNodeWithText(context.getString(R.string.drive_sync_done)).assertIsDisplayed()
         capture("synced")
     }
 

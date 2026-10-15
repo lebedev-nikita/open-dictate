@@ -153,15 +153,7 @@ internal fun SettingsScreen(
                         .preferredFrameRate(if (scrollState.isScrollInProgress) maximumDisplayRefreshRate else 0f)
                         .padding(horizontal = 20.dp),
                 ) {
-                    Text(
-                        stringResource(R.string.settings_title),
-                        modifier = Modifier.padding(top = 16.dp, bottom = 6.dp).semantics { heading() },
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(stringResource(R.string.settings_subtitle), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
-                    SettingsSyncStatus(syncState, viewModel.driveSync::requestSync)
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(16.dp))
                     Surface(
                         onClick = { setupExpanded = !setupExpanded },
                         shape = RoundedCornerShape(16.dp),

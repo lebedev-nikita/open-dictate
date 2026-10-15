@@ -17,7 +17,7 @@ OWN-WORLD: Static neutral Material 3 light/dark themes following Android, system
 
 STORY: Check readiness, finish missing permissions, choose recognition behavior, adjust keyboard tools, then test dictation.
 
-FIRST VIEWPORT: Compact brand/history/theme/language header, large Settings heading and supporting line, full-width readiness disclosure, then Dictation and its two-option mode control. Single column, 680 dp maximum, 20 dp gutters; disclosure opens setup actions in place.
+FIRST VIEWPORT: Compact brand/history/theme/language header, 16 dp top spacing, full-width readiness disclosure, then Dictation and its two-option mode control. Single column, 680 dp maximum, 20 dp gutters; disclosure opens setup actions in place. Omit the redundant Settings heading, supporting line and persistent synchronization status/actions. Pulling down at the top still requests synchronization when available; automatic synchronization remains active.
 
 FORM: User-constrained modern, minimalist, functional settings. The current Appearance sheet follows the user-selected first bottom-sheet concept within the established native identity.
 
