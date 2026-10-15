@@ -3,6 +3,7 @@ package com.opendictate.app.ui
 import android.app.UiAutomation
 import android.content.Context
 import android.graphics.Bitmap
+import android.view.KeyEvent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -74,7 +75,8 @@ class DictationButtonSettingsTest {
             // System Back dismisses without undoing autosaved changes.
             openAppearance()
             choosePosition(R.string.dictation_button_left)
-            androidx.test.espresso.Espresso.pressBack()
+            // Target the focused modal window rather than Espresso's base Activity root.
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
             compose.waitForIdle()
             assertSummary(DictationButtonAppearance(24, DictationButtonPosition.LEFT))
             compose.onNodeWithText(context.getString(R.string.gestures_title)).performScrollTo().performClick()
