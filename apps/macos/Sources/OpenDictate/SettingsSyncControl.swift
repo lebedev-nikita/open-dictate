@@ -1,5 +1,13 @@
 import SwiftUI
 
+extension VerticalAlignment {
+    private enum SettingsControlCenter: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat { context[VerticalAlignment.center] }
+    }
+
+    static let settingsControlCenter = VerticalAlignment(SettingsControlCenter.self)
+}
+
 struct SettingsSyncControl: View {
     @ObservedObject var sync: GoogleDriveSync
     @ObservedObject var preferences: Preferences
@@ -21,6 +29,8 @@ struct SettingsSyncControl: View {
                 .keyboardShortcut("r", modifiers: .command)
                 .disabled(!sync.canSyncNow)
                 .help(preferences.t("Sync settings now (⌘R)", "Синхронизировать настройки сейчас (⌘R)"))
+                // Align the button with the theme control, independently of the status below it.
+                .alignmentGuide(.settingsControlCenter) { $0[VerticalAlignment.center] }
                 Text(sync.statusText(preferences: preferences, compact: true))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
