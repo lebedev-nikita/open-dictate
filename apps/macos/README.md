@@ -249,21 +249,31 @@ least five minutes old. Network recovery resumes queued work; errors back off an
 authorization failures pause automatic attempts. Unchanged Drive replicas are
 cached only in memory.
 
-Turn on the native Google Drive switch in Settings to sync the dictionary, word
-replacements, dictation mode and selected models with Android. It uses a Desktop OAuth client from the same
-Google Cloud project as the Android client, browser sign-in with PKCE and a
-temporary loopback callback listener. OAuth secrets/refresh tokens stay in a
-separate device-only Keychain item. Sync runs while the app is running and never
-includes API keys, audio or history. When reconnecting, leave the secret blank to
-reuse the saved secret for the same client ID. A different client needs its own
-secret. Google projects in Testing issue refresh tokens that expire after seven
-days; reconnect when requested. See [setup and troubleshooting](../../docs/google-drive-sync.md).
+Turn on the native Google Drive switch in Settings, then choose a Google account
+in your browser. Official builds supply the Desktop OAuth client configuration;
+users do not enter client IDs or secrets. Sync includes the dictionary, word
+replacements, dictation mode and selected models, excluding API keys, audio and
+history. Browser sign-in uses PKCE and a temporary loopback callback listener.
+User refresh tokens stay in device-only Keychain storage.
 
 Turning the switch off cancels a pending sign-in or sync, signs out only this Mac
-and removes its OAuth credentials from Keychain. Local and cloud settings remain,
-and other devices stay connected.
-The next connection asks you to select a Google account; re-enter the matching
-Desktop client secret because disconnect removed the saved copy.
+and removes the user refresh token from Keychain. Application client configuration
+is retained. Local and cloud settings remain, and other devices stay connected.
+The next connection asks you to select a Google account.
+See [setup and troubleshooting](../../docs/google-drive-sync.md).
+
+For a custom build, download the Desktop client's JSON from the same Google Cloud
+project as the Android client, then package with:
+
+```bash
+GOOGLE_DRIVE_OAUTH_CLIENT_FILE=/absolute/path/to/client.json apps/macos/scripts/package.sh
+```
+
+GitHub builds use the `MACOS_GOOGLE_DRIVE_OAUTH_CLIENT_JSON` repository secret.
+The release workflow requires a valid installed-app client export. Keep the source
+JSON outside Git; packaging includes only the application client ID and client
+secret, never user tokens. Local builds without configuration can reuse a legacy
+client already saved in Keychain; otherwise Google Drive remains unavailable.
 
 ## Packaging and releases
 

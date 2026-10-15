@@ -166,14 +166,20 @@ final class GoogleDriveTests: XCTestCase {
             return (200, Data("{\"files\":[]}".utf8))
         }
         let sync = GoogleDriveSync(preferences: preferences, client: client(), refreshToken: {
-            guard credentials != nil else { throw DriveError.authorization }
+            guard let credentials, !credentials.refreshToken.isEmpty else { throw DriveError.authorization }
             return "synthetic-access"
-        }, automaticallySync: false, deleteCredentials: { credentials = nil; deletions += 1 })
+        }, automaticallySync: false, deleteCredentials: {
+            try DriveCredentialStore.signOut(loadCredentials: { credentials }, saveCredentials: { credentials = $0 },
+                                             deleteCredentials: { credentials = nil })
+            deletions += 1
+        })
         sync.syncNow()
         try await awaitStatus(sync, .synced)
         let document = try preferences.syncDocument(), completedRequests = requests
         sync.disconnect()
-        XCTAssertNil(credentials)
+        XCTAssertEqual(credentials?.clientID, "synthetic.apps.googleusercontent.com")
+        XCTAssertEqual(credentials?.clientSecret, "synthetic-secret")
+        XCTAssertEqual(credentials?.refreshToken, "")
         XCTAssertEqual(deletions, 1)
         XCTAssertEqual(sync.status, .disconnected)
         XCTAssertNil(sync.lastSyncedAt)
@@ -473,6 +479,98 @@ final class GoogleDriveTests: XCTestCase {
         _ = try await authorization.connect(clientID: clientID, clientSecret: "", client: client())
         XCTAssertEqual(saved?.clientSecret, stored.clientSecret)
         XCTAssertEqual(saved?.refreshToken, "synthetic-new-refresh")
+    }
+
+    @MainActor func testDisconnectThenReconnectKeepsClientConfigurationButNeverReusesUserToken() async throws {
+        let clientID = "synthetic.apps.googleusercontent.com"
+        var stored: DriveCredentials? = DriveCredentials(clientID: clientID, clientSecret: "synthetic-client-secret",
+                                                        refreshToken: "synthetic-old-user-token")
+        try DriveCredentialStore.signOut(loadCredentials: { stored }, saveCredentials: { stored = $0 },
+                                         deleteCredentials: { stored = nil })
+        XCTAssertEqual(stored?.clientID, clientID)
+        XCTAssertEqual(stored?.clientSecret, "synthetic-client-secret")
+        XCTAssertTrue(stored?.refreshToken.isEmpty ?? true)
+        var browserOpened = false, requests = 0
+        let authorization = GoogleDriveAuthorization(openBrowser: { url in
+            browserOpened = true
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+            XCTAssertTrue(query.first { $0.name == "prompt" }!.value!.split(separator: " ").contains("select_account"))
+            let redirect = query.first { $0.name == "redirect_uri" }!.value!
+            let state = query.first { $0.name == "state" }!.value!
+            Task { _ = try? await URLSession.shared.data(from: URL(string: redirect + "?code=synthetic-code&state=" + state)!) }
+            return true
+        }, loadCredentials: { stored }, saveCredentials: { stored = $0 })
+        DriveHTTP.handler = { request in
+            requests += 1
+            let fields = try Self.formFields(request)
+            XCTAssertEqual(fields["grant_type"], "authorization_code")
+            XCTAssertNil(fields["refresh_token"])
+            XCTAssertEqual(fields["client_secret"], "synthetic-client-secret")
+            return (200, Data(#"{"access_token":"synthetic-access","refresh_token":"synthetic-new-user-token","scope":"https://www.googleapis.com/auth/drive.appdata"}"#.utf8))
+        }
+        do {
+            _ = try await authorization.refresh(client: client())
+            XCTFail("Signing out must prevent background authorization")
+        } catch { XCTAssertEqual(error as? DriveError, .authorization) }
+        XCTAssertEqual(requests, 0)
+        _ = try await authorization.connect(client: client())
+        XCTAssertTrue(browserOpened)
+        XCTAssertEqual(requests, 1)
+        XCTAssertEqual(stored?.refreshToken, "synthetic-new-user-token")
+    }
+
+    @MainActor func testConfiguredBuildConnectsWithoutSavedCredentialsOrUserEnteredClientSettings() async throws {
+        let configuration = try XCTUnwrap(GoogleDriveOAuthClient(infoDictionary: ["OpenDictateGoogleDriveClient": [
+            "client_id": "synthetic.apps.googleusercontent.com", "client_secret": "synthetic-build-client-secret"]]))
+        var saved: DriveCredentials?
+        let authorization = GoogleDriveAuthorization(openBrowser: { url in
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+            XCTAssertEqual(query.first { $0.name == "client_id" }?.value, configuration.clientID)
+            XCTAssertTrue(query.first { $0.name == "prompt" }!.value!.split(separator: " ").contains("select_account"))
+            let redirect = query.first { $0.name == "redirect_uri" }!.value!
+            let state = query.first { $0.name == "state" }!.value!
+            Task { _ = try? await URLSession.shared.data(from: URL(string: redirect + "?code=synthetic-code&state=" + state)!) }
+            return true
+        }, loadCredentials: { XCTFail("A configured build must not need a previous account"); return nil },
+           saveCredentials: { saved = $0 }, configuredClient: configuration)
+        DriveHTTP.handler = { request in
+            let fields = try Self.formFields(request)
+            XCTAssertEqual(fields["client_id"], configuration.clientID)
+            XCTAssertEqual(fields["client_secret"], configuration.clientSecret)
+            XCTAssertEqual(fields["grant_type"], "authorization_code")
+            XCTAssertNil(fields["refresh_token"])
+            return (200, Data(#"{"access_token":"synthetic-access","refresh_token":"synthetic-new-user-token","scope":"https://www.googleapis.com/auth/drive.appdata"}"#.utf8))
+        }
+        let token = try await authorization.connect(client: client())
+        XCTAssertEqual(token, "synthetic-access")
+        XCTAssertEqual(saved?.clientID, configuration.clientID)
+        XCTAssertEqual(saved?.refreshToken, "synthetic-new-user-token")
+    }
+
+    @MainActor func testUnconfiguredBuildFailsBeforeBrowserOrNetworkWithoutAskingForClientSettings() async throws {
+        let authorization = GoogleDriveAuthorization(openBrowser: { _ in XCTFail("No configured client"); return false },
+            loadCredentials: { nil }, configuredClient: nil)
+        DriveHTTP.handler = { _ in XCTFail("No configured client"); return (500, Data()) }
+        do {
+            _ = try await authorization.connect(client: client())
+            XCTFail("A missing build configuration must fail explicitly")
+        } catch { XCTAssertEqual(error as? DriveError, .clientConfiguration) }
+        for info: [String: Any] in [[:], ["OpenDictateGoogleDriveClient": ["client_id": "invalid", "client_secret": "synthetic"]],
+                                  ["OpenDictateGoogleDriveClient": ["client_id": "synthetic.apps.googleusercontent.com", "client_secret": " "]]] {
+            XCTAssertNil(GoogleDriveOAuthClient(infoDictionary: info))
+        }
+    }
+
+    func testSignOutRemovesAccountEvenWhenLegacyConfigurationCannotBeReadOrPreserved() throws {
+        for unreadable in [false, true] {
+            var deleted = false
+            try DriveCredentialStore.signOut(loadCredentials: {
+                if unreadable { throw DriveError.authorization }
+                return DriveCredentials(clientID: "synthetic.apps.googleusercontent.com", clientSecret: "synthetic",
+                                        refreshToken: "synthetic-user-token")
+            }, saveCredentials: { _ in throw DriveError.authorization }, deleteCredentials: { deleted = true })
+            XCTAssertTrue(deleted)
+        }
     }
 
     @MainActor func testExplicitSecretOverridesSavedCredentialsWithoutLoadingKeychain() async throws {

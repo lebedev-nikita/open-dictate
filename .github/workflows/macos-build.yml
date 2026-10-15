@@ -16,11 +16,14 @@ jobs:
   verify:
     runs-on: macos-15
     timeout-minutes: 20
+    env:
+      GOOGLE_DRIVE_OAUTH_CLIENT_JSON: ${{ secrets.MACOS_GOOGLE_DRIVE_OAUTH_CLIENT_JSON }}
     steps:
       - uses: actions/checkout@v7
       - name: Test
         run: |
           bash apps/macos/scripts/test-release-version.sh
+          python3 -m unittest discover -s apps/macos/scripts -p test_configure_google_drive.py
           swift test --package-path apps/macos
       - name: Build universal application and DMG
         run: apps/macos/scripts/package.sh

@@ -9,6 +9,7 @@ staging="$macos_root/.build/dmg-staging"
 app="$output/OpenDictate.app"
 signing_identity="${MACOS_SIGNING_IDENTITY:--}"
 
+python3 "$macos_root/scripts/configure-google-drive.py"
 bundle_version="$(bash "$macos_root/scripts/release-version.sh" "$version")"
 mkdir -p "$output"
 for architecture in arm64 x86_64; do
@@ -25,6 +26,7 @@ lipo -create \
 # Strip only the packaged copy, before signing; retain external symbols.
 xcrun strip -S -x "$app/Contents/MacOS/OpenDictate"
 cp "$macos_root/Resources/Info.plist" "$app/Contents/Info.plist"
+python3 "$macos_root/scripts/configure-google-drive.py" "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $bundle_version" "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :OpenDictateReleaseVersion $version" "$app/Contents/Info.plist"
 if [[ -n "${APP_BUILD:-}" ]]; then

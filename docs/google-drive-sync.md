@@ -81,17 +81,26 @@ Before sign-in can work, configure one Google Cloud project:
    certificates separately. Google Identity Services identifies the app from its
    package and signature, so no Android client ID is embedded. Google Play
    services must be available on the device.
-3. Create a **Desktop app** OAuth client in the **same project**. On macOS enter
-   its client ID and secret in Settings → Google Drive. The ID stays in local
-   preferences; the secret and refresh token use device-only, non-synchronizing
-   Keychain storage. On reconnection, a blank secret reuses the saved secret only
-   when the client ID matches; entering a secret overrides the saved one after
-   successful authorization. Do not commit credentials. Google's Desktop client secret
-   is not a confidential server secret; PKCE protects the code exchange too.
+3. Create a **Desktop app** OAuth client in the **same project** and download its
+   installed-app JSON. The macOS maintainer supplies that JSON through the
+   `MACOS_GOOGLE_DRIVE_OAUTH_CLIENT_JSON` repository secret. Local packaging can
+   instead use `GOOGLE_DRIVE_OAUTH_CLIENT_FILE=/absolute/path/to/client.json`.
+   The build embeds only the application client ID and client secret; users
+   choose their Google account without entering technical configuration. Release
+   publication fails if the client configuration is missing or invalid. Keep the
+   source JSON outside Git. Google's Desktop client secret is not a confidential
+   server secret; PKCE protects the code exchange too.
 4. Turn on the Google Drive switch on both platforms and accept the app-data permission.
    macOS opens the system browser and validates PKCE S256 and OAuth state through
    a temporary callback listener bound only to `127.0.0.1`. Android uses native
    Google Identity Services AuthorizationClient consent resolution.
+
+To provision the macOS build configuration without putting its contents in shell
+arguments or Git history, run:
+
+```bash
+gh secret set MACOS_GOOGLE_DRIVE_OAUTH_CLIENT_JSON --repo lebedev-nikita/open-dictate < /absolute/path/to/client.json
+```
 
 The macOS browser sign-in waits up to ten minutes. If it expires, turn the Google
 Drive switch on again, or use **Sign in again** if it is already on; reloading an
@@ -106,13 +115,14 @@ data space. No permission to ordinary Drive files is requested. There is no back
 Google Cloud projects with External / Testing status issue refresh tokens that
 expire after **seven days** for `drive.appdata`.
 [Google documents this limit](https://developers.google.com/identity/protocols/oauth2#expiration).
-An expired or revoked grant pauses automatic sync and offers **Connect Google
-Drive**. Complete a new browser sign-in; the saved Desktop client secret is reused
-for the same client ID. Local settings stay intact.
+An expired or revoked grant pauses automatic sync. Use **Sign in again**, or turn
+the Google Drive switch on if it is off. Complete browser sign-in; application
+client configuration is supplied by the build. Local settings stay intact.
 
-If the app reports a client configuration error, check that the OAuth client is
-**Desktop app** and enter its matching secret. Missing secrets fail before opening
-the browser. Google error descriptions and token responses are never displayed.
+If the app reports that Google Drive is not configured in this build, install an
+official configured build or contact the maintainer. Maintainers should check the
+installed-app JSON supplied at packaging. Google error descriptions and token
+responses are never displayed.
 
 For a separate Cloud project, complete Google Auth Platform → Branding, then
 change Audience → Publishing status to **In production** to allow users outside
@@ -176,10 +186,11 @@ switch merges independently from the list. Offline changes use device clocks,
 so keep system clocks reasonably accurate.
 
 Disconnect signs this installation out of synchronization and cancels its current
-sync task. On macOS it also removes the local OAuth credentials from Keychain.
+sync task. On macOS it removes the user refresh token from Keychain while retaining
+the application client configuration.
 Every manual connection on both platforms asks you to select a Google account,
-even when Google has cached authorization. On macOS, re-enter the Desktop client
-secret after disconnecting; it was removed with the local credentials.
+even when Google has cached authorization. No client settings need to be entered
+again after disconnecting.
 Local settings and cloud files remain. Android leaves token caching to Google Play services.
 An upload already accepted by Google may finish during disconnection. Disconnect
 does not revoke Google's grant or sign out other devices. To revoke the grant,

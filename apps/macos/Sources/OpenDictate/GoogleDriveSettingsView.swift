@@ -4,18 +4,12 @@ import OpenDictateCore
 struct GoogleDriveSettingsView: View {
     @ObservedObject var sync: GoogleDriveSync
     @ObservedObject var preferences: Preferences
-    @State private var clientSecret = ""
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
     private var connectionRequested: Bool { preferences.driveSyncEnabled || sync.status == .busy }
     var connection: Binding<Bool> {
         Binding(get: { connectionRequested }, set: { enabled in
-            if enabled { connect() } else { sync.disconnect() }
+            if enabled { sync.connect() } else { sync.disconnect() }
         })
-    }
-
-    private func connect() {
-        sync.connect(clientSecret: clientSecret)
-        clientSecret = ""
     }
 
     var body: some View {
@@ -28,20 +22,9 @@ struct GoogleDriveSettingsView: View {
                 }
             }
             .toggleStyle(.switch).controlSize(.regular)
-            .disabled(!connectionRequested && preferences.driveClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityIdentifier("googleDriveConnection")
             .help(t("Turn off to sign out on this Mac. The next connection lets you choose a Google account.",
                     "Выключите, чтобы выйти на этом Mac. При следующем подключении можно выбрать аккаунт Google."))
-            if !preferences.driveSyncEnabled || sync.needsSignIn {
-                TextField(t("Desktop OAuth client ID", "ID OAuth-клиента для ПК"), text: $preferences.driveClientID)
-                    .textFieldStyle(.roundedBorder).disabled(sync.status == .busy)
-                    .help(t("Use a Desktop client from the same Google Cloud project as the Android app.",
-                            "Используйте клиент типа Desktop из того же проекта Google Cloud, что и Android-приложение."))
-                SecureField(t("Desktop OAuth client secret", "Секрет OAuth-клиента для ПК"), text: $clientSecret)
-                    .textFieldStyle(.roundedBorder).disabled(sync.status == .busy)
-                    .help(t("Leave blank to reuse the saved secret for this client.",
-                            "Оставьте пустым, чтобы использовать сохранённый секрет этого клиента."))
-            }
             if sync.needsSignIn || sync.status == .failed || (sync.status == .busy && !preferences.driveSyncEnabled) {
                 HStack(alignment: .top, spacing: 8) {
                     if sync.status == .busy { ProgressView().controlSize(.small) }
@@ -52,8 +35,7 @@ struct GoogleDriveSettingsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                     if preferences.driveSyncEnabled && sync.needsSignIn {
-                        Button(t("Sign in again", "Войти снова"), action: connect)
-                            .disabled(preferences.driveClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button(t("Sign in again", "Войти снова"), action: sync.connect)
                     }
                 }.controlSize(.small)
             }
@@ -109,9 +91,9 @@ extension GoogleDriveSync {
                                      "Авторизация Google истекла или была отозвана. Подключитесь снова, чтобы возобновить синхронизацию.")
         case .signInTimedOut: return t("Google sign-in timed out. Connect again and finish sign-in within 10 minutes.",
                                       "Время ожидания входа в Google истекло. Подключитесь снова и завершите вход в течение 10 минут.")
-        case .configuration: return t("Enter a valid Desktop OAuth client ID.", "Введите корректный ID OAuth-клиента типа Desktop.")
-        case .clientConfiguration: return t("Check the Desktop OAuth client ID and secret. Enter the secret if it has not been saved for this client.",
-                                           "Проверьте ID и секрет OAuth-клиента типа Desktop. Введите секрет, если он ещё не сохранён для этого клиента.")
+        case .configuration, .clientConfiguration:
+            return t("Google Drive is not configured in this build. Install an official build or contact support.",
+                     "Google Drive не настроен в этой сборке. Установите официальную сборку или обратитесь в поддержку.")
         }
     }
 }

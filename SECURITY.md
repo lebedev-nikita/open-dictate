@@ -36,13 +36,16 @@ unknown keys survive, while unsupported versions stop sync.
 
 Android uses Google Identity Services and Play services' token cache; Google
 tokens are not stored in preferences. macOS uses the system browser, PKCE S256,
-random OAuth state and a temporary IPv4 loopback listener. OAuth secrets and
-refresh tokens use a separate device-only, non-synchronizing Keychain item.
-Reconnection reuses a saved client secret only for the same client ID; failed
-authorization does not replace credentials. OAuth errors are mapped to known
+random OAuth state and a temporary IPv4 loopback listener. Builds include the
+Desktop application's client configuration, supplied through the macOS build
+secret; it is not a user credential or a confidential server secret. User refresh
+tokens and legacy client configuration use device-only, non-synchronizing Keychain
+storage. Failed authorization does not replace credentials. OAuth errors are mapped to known
 categories without displaying provider descriptions or payloads.
 Access tokens stay in memory. Disconnect cancels the local sync task and removes
-macOS credentials, without deleting cloud data or revoking Google's grant.
+macOS user refresh tokens while retaining application client configuration, without
+deleting cloud data or revoking Google's grant. Empty signed-out tokens are rejected
+before any refresh request. Release publication requires valid build configuration.
 Android requests `SELECT_ACCOUNT` for manual connections; background token
 requests remain silent. macOS browser connections use `select_account`. Signing
 out on one installation does not sign out other devices.

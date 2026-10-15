@@ -35,6 +35,26 @@ enum DriveCredentialStore {
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw DriveError.authorization }
     }
+
+    static func signOut(loadCredentials: () throws -> DriveCredentials? = load,
+                        saveCredentials: (DriveCredentials) throws -> Void = save,
+                        deleteCredentials: () throws -> Void = delete) throws {
+        let credentials: DriveCredentials?
+        do { credentials = try loadCredentials() }
+        catch { try deleteCredentials(); return }
+        guard let credentials,
+              GoogleDriveOAuthClient(clientID: credentials.clientID, clientSecret: credentials.clientSecret) != nil else {
+            try deleteCredentials(); return
+        }
+        // The client identifies the application; only the refresh token authorizes a user.
+        do {
+            try saveCredentials(DriveCredentials(clientID: credentials.clientID, clientSecret: credentials.clientSecret,
+                                                 refreshToken: ""))
+        } catch {
+            // If preserving configuration fails, removing account access still takes priority.
+            try deleteCredentials()
+        }
+    }
 }
 
 /// Desktop OAuth with PKCE, state validation and a temporary IPv4 loopback listener.
@@ -50,13 +70,27 @@ final class GoogleDriveAuthorization {
     private let loadCredentials: () throws -> DriveCredentials?
     private let saveCredentials: (DriveCredentials) throws -> Void
     private let signInTimeoutNanoseconds: UInt64
+    private let configuredClient: GoogleDriveOAuthClient?
 
     init(openBrowser: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
          loadCredentials: @escaping () throws -> DriveCredentials? = DriveCredentialStore.load,
          saveCredentials: @escaping (DriveCredentials) throws -> Void = DriveCredentialStore.save,
-         signInTimeoutNanoseconds: UInt64 = 600_000_000_000) {
+         signInTimeoutNanoseconds: UInt64 = 600_000_000_000,
+         configuredClient: GoogleDriveOAuthClient? = .bundled) {
         self.openBrowser = openBrowser; self.loadCredentials = loadCredentials; self.saveCredentials = saveCredentials
         self.signInTimeoutNanoseconds = signInTimeoutNanoseconds
+        self.configuredClient = configuredClient
+    }
+
+    func connect(client: GoogleDriveClient) async throws -> String {
+        try Task.checkCancellation()
+        let configuration: GoogleDriveOAuthClient
+        if let configuredClient { configuration = configuredClient }
+        else if let saved = try loadCredentials(),
+                let savedClient = GoogleDriveOAuthClient(clientID: saved.clientID, clientSecret: saved.clientSecret) {
+            configuration = savedClient
+        } else { throw DriveError.clientConfiguration }
+        return try await connect(clientID: configuration.clientID, clientSecret: configuration.clientSecret, client: client)
     }
 
     func connect(clientID: String, clientSecret: String, client: GoogleDriveClient) async throws -> String {
@@ -116,7 +150,7 @@ final class GoogleDriveAuthorization {
     }
 
     func refresh(client: GoogleDriveClient) async throws -> String {
-        guard let credentials = try loadCredentials() else { throw DriveError.authorization }
+        guard let credentials = try loadCredentials(), !credentials.refreshToken.isEmpty else { throw DriveError.authorization }
         let result = try await tokenRequest(["client_id": credentials.clientID, "client_secret": credentials.clientSecret,
             "refresh_token": credentials.refreshToken, "grant_type": "refresh_token"], client: client)
         guard let token = result["access_token"] as? String, !token.isEmpty else { throw DriveError.authorization }
