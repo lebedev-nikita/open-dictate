@@ -28,7 +28,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
@@ -364,7 +364,7 @@ private fun HistoryEmptyState(title: String, message: String, modifier: Modifier
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                Icons.Outlined.History,
+                Icons.Outlined.Article,
                 contentDescription = null,
                 tint = SettingsText,
                 modifier = Modifier.size(28.dp),

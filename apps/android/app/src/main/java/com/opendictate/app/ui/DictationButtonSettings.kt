@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -55,7 +58,6 @@ internal fun DictationButtonSettings(
                 .semantics { contentDescription = previewLabel; stateDescription = diameter },
                 contentAlignment = when (appearance.position) {
                     DictationButtonPosition.LEFT -> AbsoluteAlignment.CenterLeft
-                    DictationButtonPosition.CENTER -> Alignment.Center
                     DictationButtonPosition.RIGHT -> AbsoluteAlignment.CenterRight
                 }) {
                 Surface(Modifier.size(appearance.diameterDp.dp), shape = CircleShape,
@@ -72,16 +74,25 @@ internal fun DictationButtonSettings(
             Text(sizeLabel, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             Text(diameter, style = MaterialTheme.typography.bodyMedium)
         }
-        Slider(
-            value = appearance.diameterDp.toFloat(),
-            onValueChange = { onChange(appearance.copy(diameterDp = it.roundToInt())) },
-            valueRange = DictationButtonAppearance.MIN_DIAMETER_DP.toFloat()..
-                DictationButtonAppearance.MAX_DIAMETER_DP.toFloat(),
-            modifier = Modifier.fillMaxWidth().semantics {
-                contentDescription = sizeLabel
-                stateDescription = diameter
-            },
-        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = { onChange(appearance.copy(diameterDp = DictationButtonAppearance.DEFAULT_DIAMETER_DP)) },
+                enabled = appearance.diameterDp != DictationButtonAppearance.DEFAULT_DIAMETER_DP,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Icon(Icons.Outlined.Replay, stringResource(R.string.dictation_button_reset_size))
+            }
+            Slider(
+                value = appearance.diameterDp.toFloat(),
+                onValueChange = { onChange(appearance.copy(diameterDp = it.roundToInt())) },
+                valueRange = DictationButtonAppearance.MIN_DIAMETER_DP.toFloat()..
+                    DictationButtonAppearance.MAX_DIAMETER_DP.toFloat(),
+                modifier = Modifier.weight(1f).semantics {
+                    contentDescription = sizeLabel
+                    stateDescription = diameter
+                },
+            )
+        }
         Text(stringResource(R.string.dictation_button_position), style = MaterialTheme.typography.bodyMedium)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             DictationButtonPosition.entries.forEachIndexed { index, position ->
@@ -93,7 +104,6 @@ internal fun DictationButtonSettings(
                 ) {
                     Text(stringResource(when (position) {
                         DictationButtonPosition.LEFT -> R.string.dictation_button_left
-                        DictationButtonPosition.CENTER -> R.string.dictation_button_center
                         DictationButtonPosition.RIGHT -> R.string.dictation_button_right
                     }))
                 }

@@ -60,6 +60,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private var overlayMenuAttached = false
     private var overlayMenuLayoutParams: WindowManager.LayoutParams? = null
     private var overlayWindowOffsetY: Int? = null
+    private val overlayVisibleDisplayFrame = Rect()
+    private var overlayTopInsetPx = 0
     private var overlayLayoutParams: WindowManager.LayoutParams? = null
     private var overlayPositionMotion: OverlayPositionMotion? = null
     private var overlayPositionAnimationScheduled = false
@@ -165,6 +167,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     ) {
         val view = overlay ?: return
         view.setAppearance(settings.dictationButtonAppearance)
+        if (view.isAttachedToWindow) {
+            // WindowManager clamps floating windows below system decorations. Keep our requested
+            // button position inside the same frame so menu offsets use the rendered anchor.
+            view.getWindowVisibleDisplayFrame(overlayVisibleDisplayFrame)
+            overlayTopInsetPx = overlayVisibleDisplayFrame.top.coerceAtLeast(0)
+        }
         val captured = focused.captureEditableText()
         transformationAvailable = settings.transformationButtonEnabled && captured.hasText
         dictionaryAvailable = !focused.isPassword && captured.selectedText() != null
@@ -203,6 +211,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 overlayWindowOffsetY = params.y
                 overlayLayoutParams = params
                 overlayPositionMotion = OverlayPositionMotion(params.y)
+                // The visible frame becomes available only after the overlay is attached.
+                view.post { if (overlayAttached) scheduleOverlayUpdate() }
             }.onFailure { Log.w(TAG, "Could not add accessibility overlay", it) }
         }
         if (showMenu && overlayAttached) {
@@ -234,6 +244,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             showTransformation = showTransformation,
             showDictionary = showDictionary,
             appearance = settings.dictationButtonAppearance,
+            topInsetPx = overlayTopInsetPx,
         )
         val x = OverlayMotion.windowLeftPx(resources.displayMetrics.widthPixels, width,
             settings.dictationButtonAppearance.position)
@@ -369,6 +380,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 density = density,
                 showMenu = false,
                 appearance = settings.dictationButtonAppearance,
+                topInsetPx = overlayTopInsetPx,
             )
         }
     }
@@ -384,6 +396,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             runCatching { windowManager.removeView(view) }
             overlayAttached = false
             overlayWindowOffsetY = null
+            overlayTopInsetPx = 0
             overlayLayoutParams = null
             overlayPositionMotion = null
         }

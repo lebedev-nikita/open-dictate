@@ -34,14 +34,14 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.BrightnessAuto
+import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
@@ -141,7 +141,7 @@ internal fun SettingsScreen(
                 Text("OpenDictate", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 IconButton(onClick = onHistory) {
-                    Icon(Icons.Outlined.History, stringResource(R.string.history_open), tint = SettingsMuted)
+                    Icon(Icons.Outlined.Article, stringResource(R.string.history_open), tint = SettingsMuted)
                 }
                 AppThemeSwitcher(state.theme, viewModel::selectTheme)
                 AppLanguageSwitcher()
@@ -353,7 +353,7 @@ private fun AppTheme.titleResource(): Int = when (this) {
 }
 
 private fun AppTheme.icon(): ImageVector = when (this) {
-    AppTheme.SYSTEM -> Icons.Outlined.BrightnessAuto
+    AppTheme.SYSTEM -> Icons.Outlined.Contrast
     AppTheme.LIGHT -> Icons.Outlined.LightMode
     AppTheme.DARK -> Icons.Outlined.DarkMode
 }

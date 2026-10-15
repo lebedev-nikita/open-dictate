@@ -13,9 +13,21 @@ class DictationButtonAppearanceTest {
         assertEquals(137, DictationButtonAppearance().diameterPx(2.625f))
     }
 
+    @Test fun `legacy center position moves right while preserving size and gestures`() {
+        val appearance = DictationButtonAppearance.fromStored(72, "CENTER")
+
+        assertEquals(DictationButtonAppearance(72, DictationButtonPosition.RIGHT), appearance)
+        assertEquals(1, appearance.gestureDirection)
+    }
+
+    @Test fun `stored edge positions are preserved`() {
+        for (position in DictationButtonPosition.entries) {
+            assertEquals(position, DictationButtonAppearance.fromStored(52, position.name).position)
+        }
+    }
+
     @Test fun `left position mirrors gestures so cancellation remains reachable`() {
         assertEquals(-1, DictationButtonAppearance(position = DictationButtonPosition.LEFT).gestureDirection)
-        assertEquals(1, DictationButtonAppearance(position = DictationButtonPosition.CENTER).gestureDirection)
         assertEquals(1, DictationButtonAppearance().gestureDirection)
     }
 }

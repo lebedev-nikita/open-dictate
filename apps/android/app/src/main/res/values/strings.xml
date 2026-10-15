@@ -276,7 +276,6 @@
     <string name="dictation_button_preview">Dictation button preview</string>
     <string name="dictation_button_position">Position</string>
     <string name="dictation_button_left">Left</string>
-    <string name="dictation_button_center">Center</string>
     <string name="dictation_button_right">Right</string>
     <string name="overlay_active_transformation_description_left">Stop recording the instruction. Swipe right to cancel the transformation.</string>
     <string name="overlay_active_dictation_description_left">Stop dictation. Swipe right to cancel and undo changes.</string>
@@ -285,4 +284,5 @@
     <string name="gestures_cancel_right_description">While recording or processing dictation, swipe the button right and release to cancel.</string>
     <string name="gestures_dismiss_left_title"><annotation gesture="left">Swipe left</annotation> to hide the button</string>
     <string name="gestures_dismiss_left_description">Swipe the idle button left to hide it. Close and reopen the keyboard to bring it back.</string>
+    <string name="dictation_button_reset_size">Reset size</string>
 </resources>
