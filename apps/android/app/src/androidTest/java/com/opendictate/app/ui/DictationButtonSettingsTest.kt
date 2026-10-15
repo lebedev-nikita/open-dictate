@@ -1,5 +1,6 @@
 package com.opendictate.app.ui
 
+import android.content.Context
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -14,6 +15,27 @@ import org.junit.Test
 
 class DictationButtonSettingsTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+
+    @Test fun legacyCenterPositionSelectsRightAfterRecreation() {
+        val context = compose.activity
+        val settings = SettingsStore(context)
+        val original = settings.dictationButtonAppearance
+        val prefs = context.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE)
+        try {
+            prefs.edit().putString("dictation_button_position", "CENTER")
+                .putInt("dictation_button_diameter_dp", 72).commit()
+            compose.activityRule.scenario.recreate()
+
+            assertEquals(DictationButtonAppearance(72, DictationButtonPosition.RIGHT), settings.dictationButtonAppearance)
+            compose.onNodeWithText(context.getString(R.string.dictation_button_right))
+                .performScrollTo().assertIsSelected()
+            listOf("Center", "По центру").forEach { label ->
+                compose.onNodeWithText(label).assertDoesNotExist()
+            }
+        } finally {
+            settings.dictationButtonAppearance = original
+        }
+    }
 
     @Test fun sliderAndResetUpdatePreviewPixelsAndPersistPositionAcrossRecreation() {
         val context = compose.activity
