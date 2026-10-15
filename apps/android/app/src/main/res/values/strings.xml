@@ -285,4 +285,5 @@
     <string name="gestures_cancel_right_description">While recording or processing dictation, swipe the button right and release to cancel.</string>
     <string name="gestures_dismiss_left_title"><annotation gesture="left">Swipe left</annotation> to hide the button</string>
     <string name="gestures_dismiss_left_description">Swipe the idle button left to hide it. Close and reopen the keyboard to bring it back.</string>
+    <string name="dictation_button_reset_size">Reset size</string>
 </resources>

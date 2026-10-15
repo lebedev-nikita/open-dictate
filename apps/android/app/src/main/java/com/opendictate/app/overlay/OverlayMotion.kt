@@ -42,6 +42,7 @@ internal object OverlayMotion {
         showMenu: Boolean = true,
         showTransformation: Boolean = false,
         appearance: DictationButtonAppearance = DictationButtonAppearance(),
+        topInsetPx: Int = 0,
     ): Int {
         val fieldTop = focusedFieldTopPx?.takeIf { it in 0..keyboardTopPx }
         val anchorTop = fieldTop ?: keyboardTopPx
@@ -51,7 +52,7 @@ internal object OverlayMotion {
         val maximumOffset = (
             displayHeightPx - (if (showMenu) windowHeightPx(density, showMenu, showTransformation)
                 else primaryWindowHeightPx(density, appearance)) -
-                dpToPx(TOP_MARGIN_DP, density)
+                maxOf(dpToPx(TOP_MARGIN_DP, density), topInsetPx)
         ).coerceAtLeast(0)
         return min(preferredOffset, maximumOffset)
     }
@@ -118,16 +119,23 @@ internal object OverlayMotion {
         showTransformation: Boolean,
         showDictionary: Boolean = false,
         appearance: DictationButtonAppearance = DictationButtonAppearance(),
+        topInsetPx: Int = 0,
     ): Int {
         val menuHeight = menuHeightPx(density, showTransformation, showDictionary)
         val gap = gapPx(density)
-        val aboveOffset = primaryOffsetY + appearance.touchDiameterPx(density) + gap
+        val minimumTop = maxOf(dpToPx(TOP_MARGIN_DP, density), topInsetPx)
+        // WindowManager may already have clamped the visible button while its position follower
+        // is still settling toward the newly reported display frame.
+        val maximumPrimaryOffset = (displayHeightPx - primaryWindowHeightPx(density, appearance) -
+            minimumTop).coerceAtLeast(0)
+        val renderedPrimaryOffset = primaryOffsetY.coerceIn(0, maximumPrimaryOffset)
+        val aboveOffset = renderedPrimaryOffset + appearance.touchDiameterPx(density) + gap
         val aboveTop = displayHeightPx - aboveOffset -
             menuWindowHeightPx(density, showTransformation, showDictionary)
-        return if (aboveTop >= dpToPx(TOP_MARGIN_DP, density)) {
+        return if (aboveTop >= minimumTop) {
             aboveOffset
         } else {
-            primaryOffsetY - menuHeight - gap
+            renderedPrimaryOffset - menuHeight - gap
         }
     }
 
