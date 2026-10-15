@@ -41,7 +41,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
@@ -141,7 +141,7 @@ internal fun SettingsScreen(
                 Text("OpenDictate", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 IconButton(onClick = onHistory) {
-                    Icon(Icons.Outlined.History, stringResource(R.string.history_open), tint = SettingsMuted)
+                    Icon(Icons.Outlined.Article, stringResource(R.string.history_open), tint = SettingsMuted)
                 }
                 AppThemeSwitcher(state.theme, viewModel::selectTheme)
                 AppLanguageSwitcher()
