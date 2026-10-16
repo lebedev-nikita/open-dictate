@@ -31,36 +31,30 @@ class DictationDeliveryTest {
     private val automation: UiAutomation
         get() = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
 
-    @Test fun finishedDictationCanRestartImmediatelyAfterKeyboardReopens() = withAccessibility { settings ->
-        val previousTimeout = settings.transcriptionResponseTimeoutSeconds
-        settings.transcriptionResponseTimeoutSeconds = 1
-        try {
-            ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
-                await { startButton() != null }
-                assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
-                val previousSessionId = DictationStateBus.state.value.sessionId
-                activity.onActivity {
-                    it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
-                        .hideSoftInputFromWindow(it.editor.windowToken, 0)
-                }
-                await { !hasOverlay() }
-                // The placeholder credential deterministically fails after stopping the real recorder.
-                await { !DictationStateBus.state.value.isActive }
-                activity.onActivity {
-                    it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
-                        .showSoftInput(it.editor, 0)
-                }
-                await { startButton() != null }
-                assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
-                assertNotEquals(previousSessionId, DictationStateBus.state.value.sessionId)
-                SystemClock.sleep(1_500)
-                assertEquals("Previous cleanup must not stop the new recording",
-                    DictationPhase.LISTENING, DictationStateBus.state.value.phase)
+    @Test fun recordingIsCancelledAndCanRestartAfterKeyboardReopens() = withAccessibility { _ ->
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            await { startButton() != null }
+            assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+            val previousSessionId = DictationStateBus.state.value.sessionId
+            activity.onActivity {
+                it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .hideSoftInputFromWindow(it.editor.windowToken, 0)
             }
-        } finally {
-            settings.transcriptionResponseTimeoutSeconds = previousTimeout
+            await { !hasOverlay() }
+            await { !DictationStateBus.state.value.isActive }
+            assertEquals(DictationPhase.IDLE, DictationStateBus.state.value.phase)
+            activity.onActivity {
+                it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                    .showSoftInput(it.editor, 0)
+            }
+            await { startButton() != null }
+            assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+            assertNotEquals(previousSessionId, DictationStateBus.state.value.sessionId)
+            SystemClock.sleep(1_500)
+            assertEquals("Previous cleanup must not stop the new recording",
+                DictationPhase.LISTENING, DictationStateBus.state.value.phase)
         }
     }
 
@@ -69,9 +63,9 @@ class DictationDeliveryTest {
             await { startButton() != null }
             assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
             await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
-            for (phase in listOf(DictationPhase.COMPLETED, DictationPhase.IDLE, DictationPhase.IDLE)) {
+            for (phase in listOf(DictationPhase.COMPLETED, DictationPhase.ERROR, DictationPhase.IDLE, DictationPhase.IDLE)) {
                 val session = DictationStateBus.state.value
-                if (phase == DictationPhase.COMPLETED) {
+                if (phase == DictationPhase.COMPLETED || phase == DictationPhase.ERROR) {
                     instrumentation.runOnMainSync {
                         DictationStateBus.set(session.copy(phase = phase, transcript = "finished "))
                     }
@@ -93,37 +87,58 @@ class DictationDeliveryTest {
         }
     }
 
-    @Test fun pendingDictationRemainsVisibleAndCancellableAfterKeyboardReopens() = withAccessibility { _ ->
-        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
-            val session = captureTargetWithoutNetwork()
-            instrumentation.runOnMainSync {
-                DictationStateBus.set(session.copy(phase = DictationPhase.LISTENING))
+    @Test fun keyboardCloseCancelsInsteadOfStartingTranscription() = withAccessibility { _ ->
+        for (model in TranscriptionModel.entries) {
+            for (phase in listOf(DictationPhase.CONNECTING, DictationPhase.LISTENING, DictationPhase.PROCESSING)) {
+                ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+                    val session = captureTargetWithoutNetwork().copy(model = model)
+                    instrumentation.runOnMainSync {
+                        DictationStateBus.set(session.copy(phase = phase,
+                            transcript = if (model == TranscriptionModel.LIVE) "partial " else ""))
+                    }
+                    if (model == TranscriptionModel.LIVE && phase != DictationPhase.CONNECTING) {
+                        awaitEditor(activity, "before partial after")
+                    }
+                    activity.onActivity {
+                        it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                            .hideSoftInputFromWindow(it.editor.windowToken, 0)
+                    }
+                    await { !hasOverlay() }
+                    await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+                    activity.onActivity {
+                        it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                            .showSoftInput(it.editor, 0)
+                    }
+                    await { startButton() != null }
+                    awaitEditor(activity, "before after")
+                    instrumentation.runOnMainSync {
+                        DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late result "))
+                    }
+                    instrumentation.waitForIdleSync()
+                    activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
+                }
             }
-            await { overlay(context.getString(R.string.overlay_active_dictation_description)) != null }
+        }
+    }
+
+    @Test fun keyboardCloseCancelsVoiceEditingAndRejectsLateChanges() = withAccessibility { _ ->
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            val session = captureTargetWithoutNetwork().copy(operation = DictationOperation.TRANSFORMATION)
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING))
+            }
+            await { overlay(context.getString(R.string.overlay_transforming_description)) != null }
             activity.onActivity {
                 it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
                     .hideSoftInputFromWindow(it.editor.windowToken, 0)
             }
             await { !hasOverlay() }
-            await { DictationStateBus.state.value.phase == DictationPhase.PROCESSING }
-            activity.onActivity {
-                it.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
-                    .showSoftInput(it.editor, 0)
+            await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late edit"))
             }
-            await { overlay(context.getString(R.string.overlay_processing_description)) != null }
-            SystemClock.sleep(600)
-            val bounds = Rect()
-            overlay(context.getString(R.string.overlay_processing_description))!!.getBoundsInScreen(bounds)
-            val first = spinnerFrame(bounds)
-            SystemClock.sleep(150)
-            val second = spinnerFrame(bounds)
-            assertFalse("Pending transcription must visibly animate after reattachment", first.sameAs(second))
-            first.recycle(); second.recycle()
-            assertTrue(overlay(context.getString(R.string.overlay_processing_description))!!
-                .performAction(R.id.accessibility_action_cancel_dictation))
-            await { startButton() != null }
-            assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+            instrumentation.waitForIdleSync()
+            activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
         }
     }
 
@@ -218,16 +233,15 @@ class DictationDeliveryTest {
         }
     }
 
-    @Test fun accurateDeliverySpinnerAndCancellationWorkOnAndroid() = withAccessibility { _ ->
+    @Test fun explicitFinishShowsProcessingAndSupportsDeliveryOrCancellation() = withAccessibility { _ ->
         for (cancel in listOf(false, true)) {
             instrumentation.runOnMainSync { DictationStateBus.set(DictationState()) }
             ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
-                await { overlay(context.getString(R.string.overlay_start_dictation_with_actions)) != null }
-                assertTrue(overlay(context.getString(R.string.overlay_start_dictation_with_actions))!!
+                val session = captureTargetWithoutNetwork()
+                instrumentation.runOnMainSync { DictationStateBus.set(session.copy(phase = DictationPhase.LISTENING)) }
+                await { overlay(context.getString(R.string.overlay_active_dictation_description)) != null }
+                assertTrue(overlay(context.getString(R.string.overlay_active_dictation_description))!!
                     .performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
-                val session = DictationStateBus.state.value
-                instrumentation.runOnMainSync { DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING)) }
                 await { overlay(context.getString(R.string.overlay_processing_description)) != null }
                 // Two actual overlay frames must differ while the transcription result is pending.
                 val bounds = Rect()
@@ -413,8 +427,7 @@ class DictationDeliveryTest {
         val previousFilter = settings.appFilter
         settings.appFilter = AppFilter()
         settings.model = TranscriptionModel.ACCURATE
-        // Tests use no real credential. Only the keyboard-stop regression reaches the API;
-        // it sends fixture audio with a placeholder and bounds the request to one second.
+        // Recording is cancelled before injecting provider states; no OpenAI requests are made.
         SecureApiKeyStore(context).save("instrumentation-placeholder")
         try {
             block(settings)
@@ -462,7 +475,7 @@ class DictationDeliveryTest {
     private fun await(condition: () -> Boolean) {
         val deadline = SystemClock.uptimeMillis() + 10_000
         while (!condition()) {
-            check(SystemClock.uptimeMillis() < deadline) { "Timed out waiting for dictation delivery; windows=${automation.windows.map { it.type }}" }
+            check(SystemClock.uptimeMillis() < deadline) { "Timed out waiting for dictation delivery; phase=${DictationStateBus.state.value.phase}; windows=${automation.windows.map { it.type }}" }
             SystemClock.sleep(50)
         }
     }

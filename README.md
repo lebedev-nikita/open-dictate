@@ -97,6 +97,8 @@ to your OpenAI API project. See [macOS documentation](apps/macos/README.md).
    the dictionary, last recording retry and paste-last actions.
 
 The overlay appears while the keyboard and an editable field are present.
+Tap again to finish and transcribe. Closing the keyboard cancels the active
+session, including any pending transcription, and undoes Live partial text.
 In Settings → Keyboard → Apps, choose all apps except selected ones or only
 selected apps. Each mode remembers its own selection; an empty selection in
 Only selected apps hides the button everywhere.

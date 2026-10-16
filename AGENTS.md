@@ -42,7 +42,8 @@ Partial live text is cumulative. `EditableTextSnapshot.compose()` always
 replaces the selection captured at session start, so every delta replaces the
 previous partial result instead of appending it. Keep the target-package check
 before `ACTION_SET_TEXT`; text must not be inserted after focus moves to another
-app. Hiding the keyboard stops an active session and removes the overlay.
+app. Hiding the keyboard cancels an active session and removes the overlay
+without committing audio for transcription.
 
 ## Latency invariants
 
