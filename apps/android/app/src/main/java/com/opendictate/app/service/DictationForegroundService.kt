@@ -26,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -35,9 +36,9 @@ class DictationForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val apiClient by lazy { OpenAiTranscriptionClient(resources) }
     private var activeJob: Job? = null
+    private var activeSessionId = 0L
     private var stopSignal = CompletableDeferred<Unit>()
     private var activeOperation = DictationOperation.DICTATION
-    private var retryPending = false
 
     override fun onCreate() {
         super.onCreate()
@@ -48,27 +49,17 @@ class DictationForegroundService : Service() {
         when (intent?.action) {
             ACTION_STOP -> requestStop()
             ACTION_CANCEL -> requestCancel(intent.getLongExtra(EXTRA_SESSION_ID, 0L))
-            ACTION_START -> if (activeJob?.isActive != true) {
+            ACTION_START -> if (!DictationStateBus.state.value.isActive) {
                 startDictation(DictationOperation.DICTATION)
             }
-            ACTION_START_TRANSFORMATION -> if (activeJob?.isActive != true) {
+            ACTION_START_TRANSFORMATION -> if (!DictationStateBus.state.value.isActive) {
                 startDictation(
                     operation = DictationOperation.TRANSFORMATION,
                     sourceText = intent.getStringExtra(EXTRA_SOURCE_TEXT),
                 )
             }
-            ACTION_RETRY_LAST -> if (!retryPending && !DictationStateBus.state.value.isActive) {
-                retryPending = true
-                val previousJob = activeJob
-                previousJob?.cancel()
-                scope.launch {
-                    try {
-                        previousJob?.join()
-                        retryLastDictation()
-                    } finally {
-                        retryPending = false
-                    }
-                }
+            ACTION_RETRY_LAST -> if (!DictationStateBus.state.value.isActive) {
+                retryLastDictation()
             }
         }
         return START_NOT_STICKY
@@ -77,8 +68,10 @@ class DictationForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        requestStop()
+        stopSignal.complete(Unit)
         scope.coroutineContext[Job]?.cancel()
+        val state = DictationStateBus.state.value
+        if (state.isActive) clearSessionIfCurrent(activeSessionId)
         super.onDestroy()
     }
 
@@ -110,6 +103,8 @@ class DictationForegroundService : Service() {
         val dictionary = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
         val sessionId = nextSession.incrementAndGet()
+        val previousJob = activeJob
+        activeSessionId = sessionId
         activeOperation = operation
         stopSignal = CompletableDeferred()
         startForeground(NOTIFICATION_ID, notification(false, operation))
@@ -121,6 +116,7 @@ class DictationForegroundService : Service() {
                 model = model,
             ),
         )
+        previousJob?.cancel()
 
         activeJob = scope.launch {
             val recorder = PcmAudioRecorder(this@DictationForegroundService)
@@ -129,6 +125,10 @@ class DictationForegroundService : Service() {
             var savedRecording: LastDictationAudioStore.Recording? = null
             var modelMessage: String? = null
             try {
+                // The idle button can be tapped while the previous session is still cleaning up.
+                // Publish ownership first, then wait before opening another microphone or file.
+                withContext(NonCancellable) { previousJob?.join() }
+                ensureActive()
                 val transcript = when (model) {
                     TranscriptionModel.LIVE -> {
                         if (operation == DictationOperation.DICTATION) {
@@ -302,11 +302,7 @@ class DictationForegroundService : Service() {
                 }
             } finally {
                 tempFile?.delete()
-                ServiceCompat.stopForeground(
-                    this@DictationForegroundService,
-                    ServiceCompat.STOP_FOREGROUND_REMOVE,
-                )
-                if (!retryPending) stopSelf()
+                finishSessionIfCurrent(sessionId)
             }
         }
     }
@@ -321,6 +317,8 @@ class DictationForegroundService : Service() {
         val settings = SettingsStore(this)
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val sessionId = nextSession.incrementAndGet()
+        val previousJob = activeJob
+        activeSessionId = sessionId
         val model = TranscriptionModel.ACCURATE
         val accurateModelId = settings.accurateModelId
         val languages = settings.languages
@@ -331,8 +329,11 @@ class DictationForegroundService : Service() {
         DictationStateBus.set(
             DictationState(sessionId = sessionId, phase = DictationPhase.PROCESSING, model = model),
         )
+        previousJob?.cancel()
         activeJob = scope.launch {
             try {
+                withContext(NonCancellable) { previousJob?.join() }
+                ensureActive()
                 val file = withContext(Dispatchers.IO) {
                     (application as OpenDictateApplication).lastDictationAudioStore.latestFile()
                 } ?: throw IllegalStateException(getString(R.string.error_no_last_dictation))
@@ -379,11 +380,7 @@ class DictationForegroundService : Service() {
                     clearSessionIfCurrent(sessionId)
                 }
             } finally {
-                ServiceCompat.stopForeground(
-                    this@DictationForegroundService,
-                    ServiceCompat.STOP_FOREGROUND_REMOVE,
-                )
-                stopSelf()
+                finishSessionIfCurrent(sessionId)
             }
         }
     }
@@ -395,6 +392,12 @@ class DictationForegroundService : Service() {
             DictationStateBus.set(state.copy(phase = DictationPhase.PROCESSING))
             updateNotification(true, activeOperation)
         }
+    }
+
+    private fun finishSessionIfCurrent(sessionId: Long) {
+        if (activeSessionId != sessionId) return
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun requestCancel(sessionId: Long) {
