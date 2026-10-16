@@ -157,7 +157,9 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 overlay?.setMenuState(expanded = false)
             }
             removeOverlay()
-            if (!hasEligibleTarget && DictationStateBus.state.value.isActive) stopDictation()
+            if (!hasEligibleTarget && DictationStateBus.state.value.isActive) {
+                if (ime == null) onOverlayCancelled() else stopDictation()
+            }
         }
     }
 
