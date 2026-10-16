@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T12:11:33.455Z",
+  "generatedAt": "2026-10-16T08:42:45.128Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -128,7 +128,7 @@
         "presentation": "Native keyboard-aware modal bottom sheet with lazy scrolling, 24dp horizontal padding and 12dp spacing.",
         "controls": "Localized source/replacement outlined fields, global switch, Add/Save/Cancel, per-rule checkbox and accessible edit/delete actions, Done.",
         "states": "Blank-input disabled saving, localized validation, empty example, storage-error guidance preserving saved data, and edit scroll to fields.",
-        "scope": "Local rules apply to the next Live or Accurate dictation; recognition hints remain separate. Synchronization deferred until Google Drive support exists.",
+        "scope": "Rules apply to the next Live or Accurate dictation; recognition hints remain separate. Google Drive synchronizes the replacement list and its global enabled state when connected.",
         "review": {
           "verdict": "ship",
           "basis": "Scoped Operate extension of existing native settings; implementation inspection and native captures, with no new visual identity or HTML detector.",
@@ -230,33 +230,19 @@
         }
       },
       "gesturesGuide": {
-        "implementation": "GesturesScreen.kt; OpenDictateApp.kt saveable route; SettingsScreen.kt Keyboard entry; English/Russian strings.xml",
-        "presentation": "Full-screen Read guide within Operate settings; existing neutral Material 3 palette and heading semantics. Standard settings typography: default-weight titleLarge header; bodyLarge gesture labels with bold localized gesture names and regular outcomes; default-weight bodyLarge menu labels; titleSmall/Medium/SettingsMuted menu heading matches SectionTitle; bodySmall/SettingsMuted explanations match RowCopy.",
-        "illustrations": "Private tutorial scale 0.75 gives centered 87x54dp zones. Hold uses a 54dp box, ripple radii 25.5/22.5dp, 0.75dp theme-outline strokes and opacity 0.25/0.5. Swipe blocks are 81dp: 33x33dp chevrons, 9dp gap, 39dp white tutorial button with 18dp actual microphone/stop drawable and 3.75dp elevation. Chevrons lead left swipe and trail right swipe; buttons shift directionally while complete blocks stay centered. Echoes use 9dp arms, 10.5dp offsets, 1.3125dp rounded strokes and SettingsMuted at outward opacity 1/0.55/0.25. Runtime overlay defaults to 52dp and supports a 24–96dp visible diameter with a minimum 48dp touch area. Canvas/existing drawables add no shipping raster assets.",
-        "layout": "Centered 680dp maximum and 24dp gutters; native 16dp group corners; minimum 72dp rows with 12dp horizontal/6dp vertical padding, 87x54dp illustration zones and 16dp text gap align labels. Group border/inset dividers remain 0.5dp outlineVariant at 0.65 opacity. Menu ledger retains 16dp vertical padding. Scrollable growing text and status/navigation insets remain; measurements are guide-specific, not global tokens.",
-        "direction": "Fine Echo provenance: .impeccable/review/modern-gesture-concepts/01-fine-echo.png. Latest user instruction for standard settings type and 75 percent tutorial size overrides full-size concept geometry. Original native identity preserved; exact pixel matching not required.",
-        "interaction": "Toolbar/system Back preserve settings scroll; saveable guide route survives recreation.",
-        "content": "Contextual English/Russian copy follows the saved button position. Hold opens the menu. Right/center placement uses swipe left to cancel and swipe right to hide; left placement mirrors both directions. Stop/microphone illustrations follow the action independently of direction. No visible gesture captions/introduction; screen-reader descriptions retain idle/active applicability, cancellation and keyboard recovery. Menu actions explain Accurate retranscription, paste, voice editing selected/all text with Text transformation enabled, and Dictionary insertion.",
-        "dictionaryAvailability": "Selected text in a non-password field, independent of selected-text context-menu toggle; OpenDictateAccessibilityService.kt establishes availability.",
-        "review": {
-          "verdict": "ship",
-          "scope": "Standard settings typography and 75 percent tutorial illustration scale",
-          "findings": "Final compact-guide finish review: all five sections passed, no material fixes, disposition ship. Current source, all seven native captures and reconciled records checked for standard settings typography and 75 percent tutorial scale.",
-          "basis": "Current native source and seven current compact capture paths. All seven captures validated after the Russian dark-large recapture settled. No HTML detector.",
-          "primaryScreenshot": ".impeccable/review/gestures-compact-phone-ru.png",
-          "englishPrimaryScreenshot": ".impeccable/review/gestures-compact-phone-en.png",
-          "screenshots": [
-            ".impeccable/review/gestures-compact-phone-ru.png",
-            ".impeccable/review/gestures-compact-phone-en.png",
-            ".impeccable/review/gestures-compact-dark-large-ru.png",
-            ".impeccable/review/gestures-compact-dark-large-en.png",
-            ".impeccable/review/gestures-compact-menu-dark-large-ru.png",
-            ".impeccable/review/gestures-compact-menu-dark-large-en.png",
-            ".impeccable/review/gestures-compact-tablet-dark-ru.png"
-          ],
-          "captureScope": "English/Russian phones, dark large text and Russian tablet emulation. Primary phone captures are actual paths, without extra aliases. Native review evidence, not shipping assets.",
-          "validation": "Required local Gradle checks passed: 151 unit tests, Debug/Release lint and assembly. One navigation/recreation/content/alignment instrumentation test passed; zero failures."
-        }
+        "implementation": "GesturesScreen.kt GesturesSheet; SettingsScreen.kt saveable sheet visibility; English/Russian strings.xml",
+        "presentation": "Native scrollable ModalBottomSheet on SettingsSurface, headlineSmall title and muted close action. Three unfilled action-first rows use titleMedium headings and bodyMedium hints in SettingsMuted. Existing neutral Material 3 identity and system typography.",
+        "illustrations": "Private tutorial scale 0.75 gives centered 87x54dp zones. Hold uses a 54dp box, ripple radii 25.5/22.5dp, 0.75dp theme-outline strokes and opacity 0.25/0.5. Swipe blocks are 81dp: 33x33dp chevrons, 9dp gap, 39dp white tutorial button with 18dp actual microphone/stop drawable and 3.75dp elevation. Chevrons lead left swipe and trail right swipe; complete blocks stay centered. Echoes use 9dp arms, 10.5dp offsets, 1.3125dp rounded strokes and SettingsMuted at outward opacity 1/0.55/0.25. Runtime overlay defaults to 52dp and supports a 24–96dp visible diameter with a minimum 48dp touch area. Canvas/existing drawables add no shipping raster assets.",
+        "layout": "24dp horizontal/bottom padding; 88dp minimum rows with 12dp vertical padding, 20dp illustration-to-text gap and 4dp title-to-hint spacing. Full-width 0.5dp outlineVariant dividers; fixed 87x54dp illustration zones. A bodySmall keyboard-recovery note follows after 20dp. No inset group, Done button or menu-action ledger.",
+        "interaction": "Close, system Back and native dismissal return to the existing settings scroll. Saveable sheet visibility survives Activity recreation.",
+        "content": "Localized action and gesture hint pairs explain opening the menu, cancelling dictation and hiding the button. Directions and screen-reader descriptions follow the saved physical button side. Hold opens the menu; cancellation points toward the screen interior and hiding toward the edge. The cancellation picture uses the stop glyph. A final note explains restoring the button by closing and reopening the keyboard.",
+        "surfaceBrief": ".impeccable/surfaces/android-settings.md"
+      },
+      "synchronization": {
+        "implementation": "GoogleDriveSyncSettings.kt; SettingsSyncRefresh.kt; GoogleDriveSync.kt",
+        "providerRow": "One rounded provider group: 24dp color Google Drive vector logo, name and trailing native switch in an 80dp minimum full-row target. Enabling requests Google authorization when needed; disabling disconnects. No descriptions or action buttons in the group.",
+        "refreshIndicator": "Native Material 3 pull-to-refresh feedback belongs to a manual pull. Startup, lifecycle and other automatic sync checks stay silent. An active background request still blocks another pull. A queued manual request retains indicator ownership until completion or failure; later automatic requests do not inherit it.",
+        "errors": "Background failures produce no toast or notification. Only failed user-initiated Google sign-in displays transient feedback."
       },
       "surfaceBrief": ".impeccable/surfaces/android-settings.md"
     },
@@ -265,7 +251,7 @@
         "platform": "macOS 14+",
         "technology": "SwiftUI/AppKit; no third-party UI dependency",
         "surfaceBrief": ".impeccable/surfaces/apps-macos.md",
-        "colorScheme": "Saved System/Light/Dark choice; Dark by default. Recording HUD stays dark.",
+        "colorScheme": "Saved System/Light/Dark choice from the native menu button beside the version at the bottom of the sidebar; Dark by default. The saved choice applies across all five pages. Recording HUD stays dark.",
         "colorRoles": [
           { "nativeValue": "Color(nsColor: .windowBackgroundColor)", "purpose": "Settings body and recording indicator." },
           { "nativeValue": "Color(nsColor: .controlBackgroundColor)", "purpose": "Sidebar and message footer." },
@@ -313,7 +299,7 @@
             "implementation": "ReplacementSettingsView; SettingsView replacements navigation",
             "description": "Separate fifth sidebar page with inherited scrolling and native system controls: global switch, localized source/replacement fields, Add/Save/Cancel, per-rule checkbox and accessible edit/delete actions.",
             "states": "Blank-input disabled saving, localized validation, empty example and storage-error guidance preserving saved data.",
-            "scope": "Local rules apply to the next Live or Accurate dictation; recognition hints remain separate. Synchronization deferred until Google Drive support exists."
+            "scope": "Rules apply to the next Live or Accurate dictation; recognition hints remain separate. Google Drive synchronizes the replacement list and its global enabled state when connected."
           },
           { "name": "History", "implementation": "SettingsView.historyPage", "description": "Native empty-state view or ruled transcript rows with copy/delete actions, local search and explicit AI search." },
           {

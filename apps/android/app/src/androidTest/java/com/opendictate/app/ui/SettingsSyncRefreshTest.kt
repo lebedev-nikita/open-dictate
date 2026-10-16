@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -36,12 +37,13 @@ class SettingsSyncRefreshTest {
     private var requests = 0
     private lateinit var scroll: ScrollState
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    private val progress = SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)
 
-    private fun showSettings() {
+    private fun showSettings(deferRefresh: Boolean = false) {
         compose.setContent {
             OpenDictateTheme {
                 scroll = rememberScrollState()
-                val refresh = { requests++; state = state.copy(busy = true) }
+                val refresh = { requests++; state = state.copy(busy = !deferRefresh, waiting = deferRefresh) }
                 Surface(color = MaterialTheme.colorScheme.background) {
                     SettingsSyncRefresh(state, refresh, Modifier.fillMaxSize().testTag("refresh")) {
                         Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(20.dp)) {
@@ -58,6 +60,7 @@ class SettingsSyncRefreshTest {
         showSettings()
         compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
         compose.runOnIdle { assertEquals(1, requests) }
+        compose.onNode(progress).assertIsDisplayed()
         capture("busy")
         compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
         compose.runOnIdle {
@@ -71,6 +74,38 @@ class SettingsSyncRefreshTest {
             state = state.copy(busy = false, failed = false, lastSyncedAt = 42)
         }
         capture("synced")
+        compose.onNode(progress).assertDoesNotExist()
+        compose.runOnIdle { state = state.copy(busy = true) }
+        compose.onNode(progress).assertDoesNotExist()
+    }
+
+    @Test fun startupAndAutomaticSyncDoNotShowRefreshProgress() {
+        state = DriveSyncState(enabled = true, busy = true)
+        showSettings()
+        compose.onNode(progress).assertDoesNotExist()
+        capture("startup")
+        compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
+        compose.runOnIdle {
+            assertEquals(0, requests)
+            state = state.copy(busy = false)
+        }
+        compose.runOnIdle { state = state.copy(busy = true) }
+        compose.onNode(progress).assertDoesNotExist()
+    }
+
+    @Test fun queuedManualRefreshKeepsItsIndicatorUntilSyncCompletes() {
+        showSettings(deferRefresh = true)
+        compose.onNodeWithTag("refresh").performTouchInput { swipeDown() }
+        compose.runOnIdle {
+            assertEquals(1, requests)
+            assertTrue(state.waiting)
+        }
+        compose.runOnIdle { state = state.copy(busy = true, waiting = false) }
+        compose.onNode(progress).assertIsDisplayed()
+        compose.runOnIdle { state = state.copy(busy = false) }
+        compose.onNode(progress).assertDoesNotExist()
+        compose.runOnIdle { state = state.copy(busy = true) }
+        compose.onNode(progress).assertDoesNotExist()
     }
 
     @Test fun disconnectedAuthorizationAndSourceSelectionDoNotConsumeRefresh() {
