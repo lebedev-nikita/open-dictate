@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var selection = "dictation"
     @State private var apiKey = ""
     @State private var query = ""
+    @State private var promptOpen = false
     @State private var confirmClear = false
     @State private var confirmDeleteKey = false
 
@@ -69,6 +70,7 @@ struct SettingsView: View {
         .frame(minWidth: 740, minHeight: 590)
         .preferredColorScheme(preferences.theme.colorScheme)
         .onAppear { model.refreshPermissions() }
+        .sheet(isPresented: $promptOpen) { TranscriptionPromptEditor(preferences: preferences) }
         .alert(t("Delete all history?", "Удалить всю историю?"), isPresented: $confirmClear) {
             Button(t("Delete", "Удалить"), role: .destructive) { model.cancelSearch(); history.clear() }
             Button(t("Cancel", "Отмена"), role: .cancel) {}
@@ -173,6 +175,17 @@ struct SettingsView: View {
                 Text(t("Speech languages", "Языки речи"))
                 Spacer()
                 SpeechLanguagePicker(preferences: preferences).disabled(model.isActive)
+            }
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(t("Transcription prompt", "Промпт транскрипции"))
+                    Text(preferences.customTranscriptionPrompt == nil
+                         ? t("Default prompt", "Промпт по умолчанию") : t("Custom prompt", "Пользовательский промпт"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button(t("Edit…", "Изменить…")) { promptOpen = true }
+                    .accessibilityLabel(t("Edit transcription prompt", "Изменить промпт транскрипции"))
             }
             Divider()
             VStack(alignment: .leading, spacing: 10) {

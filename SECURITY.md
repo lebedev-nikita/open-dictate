@@ -28,8 +28,8 @@ sync offline and resume queued work when connectivity returns.
 
 Sync uses Google's HTTPS endpoints without a backend, requests only
 `drive.appdata` and exports an allowlist of dictionary, replacement, mode and
-model settings. Legacy Accurate punctuation sync entries are discarded.
-API keys, audio and history are excluded. Tokens, dictionary/replacement contents and raw
+model settings, custom transcription prompts and explicit resets. Legacy Accurate punctuation sync entries are discarded.
+API keys, audio and history are excluded. Tokens, custom prompts, dictionary/replacement contents and raw
 provider payloads are never logged. Drive clients disable redirects, cookies and
 persistent caches. Remote data is bounded and validated before application;
 unknown keys survive, while unsupported versions stop sync.

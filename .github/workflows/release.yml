@@ -71,4 +71,4 @@ jobs:
           target_commitish: ${{ github.sha }}
           files: OpenDictate-${{ env.RELEASE_TAG }}.apk
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          draft: ${{ inputs.draft || false }}
+          draft: ${{ inputs.draft || contains(env.RELEASE_TAG, '-rc.') }}

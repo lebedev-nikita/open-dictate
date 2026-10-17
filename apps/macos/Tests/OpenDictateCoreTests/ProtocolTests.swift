@@ -2,6 +2,26 @@ import XCTest
 @testable import OpenDictateCore
 
 final class ProtocolTests: XCTestCase {
+    func testCustomAndEmptyPromptsReplaceAllDefaultInstructionsInBothRequests() throws {
+        for text in ["Точные слова 📝\n\"Quoted\".", ""] {
+            var context = TranscriptionContext(languages: ["ru", "en"], dictionary: ["OpenDictate"])
+            context.customPrompt = text
+            XCTAssertEqual(context.prompt, text)
+            let session = try XCTUnwrap(OpenAIRequest.sessionUpdate(context: context)["session"] as? [String: Any])
+            let audio = session["audio"] as! [String: Any]
+            let transcription = (audio["input"] as! [String: Any])["transcription"] as! [String: Any]
+            XCTAssertEqual(transcription["prompt"] as? String, text.isEmpty ? nil : text)
+            XCTAssertEqual(transcription["keywords"] as? [String], ["OpenDictate"])
+            XCTAssertEqual(transcription["languages"] as? [String], ["ru", "en"])
+            let body = String(decoding: OpenAIRequest.multipart(wav: Data(), context: context, boundary: "test"), as: UTF8.self)
+            XCTAssertEqual(body.contains("name=\"prompt\""), !text.isEmpty)
+            if !text.isEmpty { XCTAssertTrue(body.contains("\r\n\r\n\(text)\r\n")) }
+            XCTAssertFalse(body.contains("Multilingual dictation"))
+        }
+        XCTAssertTrue(TranscriptionPrompt.isValid(String(repeating: "я", count: 8192)))
+        XCTAssertFalse(TranscriptionPrompt.isValid(String(repeating: "я", count: 8193)))
+    }
+
     func testPunctuationPromptMatchesConfiguredAndroidBenchmark() throws {
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<5 { root.deleteLastPathComponent() }

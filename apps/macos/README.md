@@ -110,6 +110,14 @@ are preserved; the prompt does not add a processing step.
 Selecting Russian also includes a Russian punctuation prompt with examples of
 sentence boundaries, commas, colons, dashes, quotations and parenthetical text.
 
+### Transcription prompt
+
+Settings → Dictation → **Transcription prompt** shows the current built-in text or your saved override. Edit it and choose Save, or Cancel to discard the draft. **Reset to default** stages a reset; Save applies it. An empty custom text sends no prompt. The editor enforces a 16,384-byte UTF-8 storage limit; the selected model can impose a smaller API limit.
+
+A custom prompt completely replaces the built-in text, including language-specific additions. Languages and dictionary terms remain separate request parameters. The same prompt applies to Live, Accurate, retranscription and recognition of voice-edit commands; it does not change the text transformation instructions or the optional punctuation correction step. Changes affect the next session. Retranscription captures the current setting when invoked.
+
+Both platforms bundle the defaults from [`default-prompts.json`](Sources/OpenDictateCore/Resources/default-prompts.json). Untouched defaults follow app updates without being uploaded. Custom text stays unchanged until edited or reset. Optional Drive sync shares custom text and explicit resets. Older apps cannot read a reset; update both platforms to restore synchronization. See [sync details](../../docs/google-drive-sync.md).
+
 ### Optional punctuation correction
 
 Settings → Dictation → **Correct punctuation** appears only in Accurate mode
@@ -252,7 +260,7 @@ cached only in memory.
 Turn on the native Google Drive switch in Settings, then choose a Google account
 in your browser. Official builds supply the Desktop OAuth client configuration;
 users do not enter client IDs or secrets. Sync includes the dictionary, word
-replacements, dictation mode and selected models, excluding API keys, audio and
+replacements, custom transcription prompt and explicit resets, dictation mode and selected models, excluding API keys, audio and
 history. Browser sign-in uses PKCE and a temporary loopback callback listener.
 User refresh tokens stay in device-only Keychain storage.
 

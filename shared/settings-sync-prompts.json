@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "entries": {
+    "transcriptionPrompt": {
+      "value": null,
+      "modifiedAt": 50,
+      "deviceId": "mac"
+    },
+    "future.preference": {
+      "value": "preserved",
+      "modifiedAt": 1,
+      "deviceId": "future"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # Google Drive settings synchronization
 
 Connect Google Drive in Settings on Android and macOS, using the same Google
-account. Sync transfers the dictionary, word replacement rules and enabled
+account. Sync transfers the dictionary, custom transcription prompts and resets, word replacement rules and enabled
 states, Live/Accurate mode and selected Live, Accurate and text model IDs.
 The Accurate punctuation switch is saved only on each device and never synced.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
@@ -37,6 +37,14 @@ invalidates the own-file cache. Connecting or choosing a connection source force
 a fresh download. Restarting the process clears the cache. Uploads remain conditional
 on actual merged changes or a missing own replica. API keys, audio and history
 never enter the cache or synchronization payload.
+
+## Transcription prompt
+
+The prompt editor on each platform saves a custom override or an explicit reset. Untouched defaults create no sync entry. Custom prompts replace the complete built-in text; selected languages and dictionary terms remain separate. Save commits a draft locally even while offline. Incoming sync does not replace an open draft; saving that draft is a new local edit. Disconnect preserves local and cloud values.
+
+A reset is a timestamped `transcriptionPrompt` entry with `value: null`; its text is resolved from the installed app's defaults. Keep this entry so a stale replica cannot restore an older custom prompt. An empty string is a custom prompt that sends no prompt to OpenAI. Both platforms use the same UTF-8 byte limit and shared defaults resource.
+
+Documents containing a null reset use schema version 2; string-only documents retain version 1. New clients read both versions. Older clients reject version 2 and pause synchronization without overwriting it; update both platforms after a reset. Different app versions may contain different built-in defaults. The reset propagates the choice of defaults, not a copy of their text.
 
 ## Google Cloud setup
 
@@ -200,9 +208,9 @@ Delete hidden app data.
 
 ## Extending the format
 
-Version 1 has an `entries` map whose keys currently are `dictionary`, `mode`,
+Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
 `liveModel`, `accurateModel`, `textModel`, `wordReplacements` and
-`wordReplacementsEnabled`:
+`wordReplacementsEnabled` and `transcriptionPrompt`:
 
 ```json
 {
@@ -220,7 +228,7 @@ Version 1 has an `entries` map whose keys currently are `dictionary`, `mode`,
 Add namespaced keys to the explicit export allowlists and storage adapters on both
 platforms for new settings. Unknown entries survive merges and round trips.
 Unsupported schema versions fail closed rather than being overwritten. Values
-are strings; structured future sections can encode JSON inside their value.
+are strings, except an explicit prompt reset, which uses JSON null and schema version 2. Structured future sections can encode JSON inside their value.
 The `wordReplacements` value contains the shared version-1 replacement JSON
 (`schemaVersion` and `rules` with `id`, `source`, `replacement`, `enabled`).
 `wordReplacementsEnabled` is the string `true` or `false`. Invalid boolean
@@ -236,7 +244,7 @@ Clearing needs an explicit value, because removing a key leaves older replicas i
 
 Limits: 1 MiB per file, 100 replicas, 1,024 entries and 256 KiB per value.
 Malformed or oversized data stops synchronization without uploading a partial
-merge. Credentials, provider payloads, dictionary contents and replacement rules are
+merge. Credentials, provider payloads, custom prompts, dictionary contents and replacement rules are
 never logged.
 Network work runs separately from audio and away from the main thread/actor.
 

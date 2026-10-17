@@ -18,6 +18,29 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class OpenAiTranscriptionClientTest {
+    @Test fun `custom and empty prompts replace defaults in both requests without changing languages or dictionary`() {
+        val file = java.io.File.createTempFile("prompt-test", ".wav")
+        try {
+            for (prompt in listOf("Точные слова 📝\n\"Quoted\".", "")) {
+                val languages = setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH)
+                val session = realtimeTranscriptionSessionUpdate("gpt-live-transcribe", languages, "OpenDictate", prompt)
+                val transcription = session.getJSONObject("session").getJSONObject("audio").getJSONObject("input").getJSONObject("transcription")
+                assertEquals(prompt.isNotEmpty(), transcription.has("prompt"))
+                if (prompt.isNotEmpty()) assertEquals(prompt, transcription.getString("prompt"))
+                assertEquals("OpenDictate", transcription.getJSONArray("keywords").getString(0))
+                assertEquals(2, transcription.getJSONArray("languages").length())
+                val body = transcriptionMultipartBody("gpt-transcribe", file, languages, "OpenDictate", prompt)
+                val buffer = okio.Buffer(); body.writeTo(buffer)
+                val text = buffer.readUtf8()
+                assertEquals(prompt.isNotEmpty(), text.contains("name=\"prompt\""))
+                if (prompt.isNotEmpty()) assertTrue(text.contains("\r\n\r\n$prompt\r\n"))
+                assertFalse(text.contains("Multilingual dictation"))
+            }
+            assertTrue(com.opendictate.app.model.TranscriptionPrompt.isValid("я".repeat(8192)))
+            assertFalse(com.opendictate.app.model.TranscriptionPrompt.isValid("я".repeat(8193)))
+        } finally { file.delete() }
+    }
+
     @Test
     fun `transcription prompt matches the configured benchmark`() {
         val root = listOf(".", "..", "../..", "../../..")

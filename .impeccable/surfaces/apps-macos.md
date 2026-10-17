@@ -112,6 +112,14 @@ Dark preserves the prior default; System follows macOS. Semantic AppKit surfaces
 and foreground colors keep the navigation selection readable in either theme.
 The nonactivating recording indicator retains its dark appearance.
 
+## Transcription prompt editor
+
+Mode remains Operate. The Dictation page shows Default prompt or Custom prompt beside a native Edit action. `TranscriptionPromptEditor.swift` opens a SwiftUI sheet with 24pt padding, 16pt stack spacing, a 570 × 500pt minimum and 620 × 600pt ideal size. System title2 semibold, body editor text and primary-foreground guidance retain the native hierarchy in both appearances. The editor uses `textBackgroundColor`, 10pt inset and the existing 8pt editor corner. Reset sits opposite Cancel and Save; Escape cancels and Enter invokes enabled Save.
+
+The draft snapshots the saved override and language-dependent default when opened, so incoming cloud settings do not replace in-progress edits. Cancel or dismissal discards it. Reset stages the default; Save commits the reset as an absent override. Blank custom text omits the transcription prompt. Save disables for unchanged or invalid drafts, with localized guidance above the 16 KiB UTF-8 bound. Saved overrides and explicit resets synchronize through connected Google Drive; untouched defaults do not. Changes apply from the next session, including Accurate retranscription. Language and dictionary hints remain separate from this editable text.
+
+The default source is `apps/macos/Sources/OpenDictateCore/Resources/default-prompts.json`; Android packages that same resource directory. `OpenDictateCore/TranscriptionPrompt.swift` owns macOS default composition and validation. Native captures `.impeccable/review/prompt-macos-en.png` (dark) and `.impeccable/review/prompt-macos-ru.png` (light) show the production editor and readable wrapping guidance. They are review evidence, not shipping assets or proof of live sheet presentation and network behavior.
+
 ## Waveform indicator choice
 
 Settings saves a choice between Microphone (the existing compact indicator,

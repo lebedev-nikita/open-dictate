@@ -13,6 +13,10 @@ synchronizes rules and their enabled states with your other devices.
 Completed text saved to history or copied to the clipboard includes replacements.
 An explicit AI history search may send that saved text to OpenAI.
 
+## Transcription prompt
+
+Custom transcription prompts are saved locally and sent directly to OpenAI with transcription requests. Connecting Google Drive synchronizes saved custom text and explicit resets. Untouched built-in prompt text is not uploaded to Drive. An empty custom prompt sends no prompt to OpenAI. Prompts are never logged.
+
 ## Punctuation
 
 Both apps request punctuation as part of the original Live or Accurate
@@ -35,7 +39,7 @@ connectivity returns; macOS monitors network availability for the same purpose.
 
 
 If you connect Google Drive in Settings, the dictionary, word replacement rules and
-enabled states, dictation mode and selected model IDs are sent directly to
+enabled states, custom transcription prompt and explicit resets, dictation mode and selected model IDs are sent directly to
 Google and stored in your account's hidden app-data folder. Sync requests only `drive.appdata`, without access to
 ordinary Drive files. API keys, audio, transcripts/history, exclusions and
 permissions are excluded; other preferences remain local.
@@ -49,7 +53,7 @@ include the application's Desktop OAuth client configuration; this is separate
 from your account authorization. User refresh tokens and legacy client settings
 use device-only, non-synchronizing Keychain storage. macOS sign-in opens your
 browser and briefly listens on loopback for the OAuth response. That listener
-closes on success, failure, cancellation or timeout. No tokens, dictionary contents or replacement rules are logged.
+closes on success, failure, cancellation or timeout. No tokens, dictionary contents, replacement rules or custom prompts are logged.
 
 Disconnect signs out synchronization on the current device and removes macOS
 user refresh tokens, retaining application client configuration. Manual
