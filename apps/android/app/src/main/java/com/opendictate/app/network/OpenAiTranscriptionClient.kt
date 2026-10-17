@@ -62,8 +62,9 @@ class OpenAiTranscriptionClient(
         languages: Set<DictationLanguage>,
         dictionary: String,
         responseTimeoutSeconds: Int?,
+        prompt: String = transcriptionPrompt(languages),
     ): String = withContext(Dispatchers.IO) {
-        val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary)
+        val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary, prompt)
         val request = authorizedRequest(apiKey, TRANSCRIPTIONS_URL)
             .post(multipart)
             .build()
@@ -93,8 +94,9 @@ class OpenAiTranscriptionClient(
         onReady: () -> Unit,
         onPartial: (String) -> Unit,
         onAudio: (ByteArray) -> Unit = {},
+        prompt: String = transcriptionPrompt(languages),
     ): String {
-        val session = LiveSession(apiKey, modelId, languages, dictionary, onPartial)
+        val session = LiveSession(apiKey, modelId, languages, dictionary, prompt, onPartial)
         try {
             session.connect()
             recorder.start(scope) { chunk ->
@@ -234,6 +236,7 @@ class OpenAiTranscriptionClient(
         private val modelId: String,
         private val languages: Set<DictationLanguage>,
         private val dictionary: String,
+        private val prompt: String,
         private val onPartial: (String) -> Unit,
     ) : WebSocketListener() {
         val ready = CompletableDeferred<Unit>()
@@ -253,7 +256,7 @@ class OpenAiTranscriptionClient(
         }
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary).toString())
+            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary, prompt).toString())
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -661,11 +664,12 @@ internal fun transcriptionMultipartBody(
     audioFile: File,
     languages: Set<DictationLanguage>,
     dictionary: String,
+    prompt: String = transcriptionPrompt(languages),
 ): MultipartBody = MultipartBody.Builder()
     .setType(MultipartBody.FORM)
     .addFormDataPart("model", modelId)
     .addFormDataPart("file", "dictation.wav", audioFile.asRequestBody("audio/wav".toMediaType()))
-    .addFormDataPart("prompt", transcriptionPrompt(languages))
+    .apply { if (prompt.isNotEmpty()) addFormDataPart("prompt", prompt) }
     .apply {
         languages.forEach { addFormDataPart("languages[]", it.code) }
         transcriptionKeywords(dictionary).forEach { addFormDataPart("keywords[]", it) }
@@ -676,11 +680,11 @@ internal fun realtimeTranscriptionSessionUpdate(
     modelId: String,
     languages: Set<DictationLanguage>,
     dictionary: String,
+    prompt: String = transcriptionPrompt(languages),
 ): JSONObject {
     val transcription = JSONObject()
         .put("model", modelId)
-    val context = transcriptionPrompt(languages)
-    if (context.isNotBlank()) transcription.put("prompt", context)
+    if (prompt.isNotEmpty()) transcription.put("prompt", prompt)
     val keywords = transcriptionKeywords(dictionary)
     if (keywords.isNotEmpty()) transcription.put("keywords", JSONArray(keywords))
     if (languages.isNotEmpty()) {
@@ -700,84 +704,7 @@ internal fun realtimeTranscriptionSessionUpdate(
         )
 }
 
-private const val RUSSIAN_ORTHOGRAPHY_CONTEXT = "Cyrillic text uses Russian orthography."
-private const val PUNCTUATION_CONTEXT =
-    "Multilingual dictation for written text. STRICTLY follow the punctuation rules of each spoken " +
-        "language, including all grammatically required commas. Use correct capitalization. " +
-        "Preserve the original words, their order, and language switches."
-private val RUSSIAN_PUNCTUATION_PROMPT = """
-    Транскрипция русской речи с нормативной пунктуацией и заглавными буквами. Сохраняй произнесённые слова, их порядок и смысл. Расставляй знаки по синтаксису и смыслу, учитывая интонацию; не превращай каждую паузу в запятую или точку. Не пересказывай, не дописывай незавершённые мысли и не отвечай на вопросы из записи. Выводи только транскрипцию.
-
-    Ниже — образцы пунктуационного оформления, а не содержание записи. Не добавляй их в транскрипцию.
-
-    Сегодня мы обсудим проект. Завтра начнём работу.
-    Ты уже закончил? Когда сможешь прислать результат?
-    Отлично! Как же я рад тебя видеть!
-    Я хотел сказать… Ладно, вернёмся к этому позже.
-
-    Анна, пришли, пожалуйста, документ.
-    Спасибо, коллеги, за помощь.
-    Да, я согласен. Нет, пока не нужно.
-    Конечно, мы всё проверим.
-    Кажется, он уже ушёл.
-    К сожалению, встречу придётся перенести.
-    Это, на мой взгляд, хорошее решение.
-    Однако времени осталось мало.
-    Времени, однако, осталось мало.
-
-    Мы купили хлеб, молоко и сыр.
-    Он открыл документ и начал читать.
-    Я хотел позвонить, но забыл.
-    Нам нужны и время, и деньги, и помощь.
-    Это не только удобно, но и полезно.
-    На столе лежал большой деревянный ящик.
-
-    Я знаю, что ты занят.
-    Когда закончишь, напиши мне.
-    Если будет время, мы обсудим детали.
-    Мы остались дома, потому что начался дождь.
-    Человек, который звонил утром, оставил сообщение.
-    Я думаю, что, если мы начнём сейчас, всё успеем.
-    Он сказал, что приедет и что привезёт документы.
-    Стало темно, и мы включили свет.
-    Вечером похолодало и пошёл снег.
-
-    Документ, отправленный вчера, уже подписан.
-    Отправленный вчера документ уже подписан.
-    Закончив работу, я выключил компьютер.
-    Она сидела, глядя в окно.
-    Мы встретились вечером, около семи часов.
-    Мой брат, инженер, помог с расчётами.
-    Он работает как переводчик.
-    Он, как и я, предпочитает работать утром.
-
-    Наша цель — закончить проект.
-    Я проверю текст, а ты — расчёты.
-    Нужно подготовить три вещи: паспорт, заявление и фотографию.
-    Паспорт, заявление, фотография — всё лежало в папке.
-    Я не пришёл: заболел.
-    Я понял одно: откладывать больше нельзя.
-    Будет время — позвони.
-    Я посмотрел на часы — пора выходить.
-    Одни обсуждали сроки и бюджет; другие проверяли документы и готовили отчёт.
-
-    Он сказал: «Я скоро вернусь».
-    «Я скоро вернусь», — сказал он.
-    «Ты уже дома?» — спросила она.
-    Мы обсуждали статью «Как устроена память».
-    Встреча состоится завтра (если никто не возражает).
-    """.trimIndent()
-
-internal fun transcriptionPrompt(
-    languages: Set<DictationLanguage>,
-): String = buildList {
-    add(PUNCTUATION_CONTEXT)
-    if (DictationLanguage.RUSSIAN in languages && DictationLanguage.UKRAINIAN !in languages) {
-        add(RUSSIAN_ORTHOGRAPHY_CONTEXT)
-    }
-    if (DictationLanguage.RUSSIAN in languages) {
-        add(RUSSIAN_PUNCTUATION_PROMPT)
-    }
-}.joinToString("\n")
+internal fun transcriptionPrompt(languages: Set<DictationLanguage>): String =
+    com.opendictate.app.model.TranscriptionPrompt.defaultText(languages)
 
 class OpenAiException(message: String, cause: Throwable? = null) : IOException(message, cause)

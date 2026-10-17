@@ -116,6 +116,16 @@ class SettingsStore(context: Context) {
         get() = normalizeDictionaryTerms(prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty())
         set(value) = saveSynced { putString(KEY_PROMPT, normalizeDictionaryTerms(value).trim()) }
 
+    var customTranscriptionPrompt: String?
+        get() = prefs.getString(KEY_TRANSCRIPTION_PROMPT, null)
+        set(value) {
+            require(value == null || com.opendictate.app.model.TranscriptionPrompt.isValid(value))
+            saveSynced {
+                putString(KEY_TRANSCRIPTION_PROMPT, value)
+                putBoolean("transcription_prompt_configured", true)
+            }
+        }
+
     var transformationButtonEnabled: Boolean
         get() = prefs.getBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, true)
         set(value) = prefs.edit { putBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, value) }
@@ -164,17 +174,20 @@ class SettingsStore(context: Context) {
             }
         }
 
-    private fun syncValues(): Map<String, String> {
+    private fun syncValues(): Map<String, String?> {
         val replacements = replacementPrefs.getString("document", null) ?: "{\"schemaVersion\":1,\"rules\":[]}"
         ReplacementDocument.fromJson(replacements)
-        return mapOf(
+        return mutableMapOf<String, String?>(
         "dictionary" to prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty(), "mode" to model.name.lowercase(),
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
         "textModel" to prefs.getString(KEY_TRANSFORMATION_MODEL_ID, transformationModel.apiName).orEmpty(),
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
-        ).also { values -> require(values.values.all { it.toByteArray().size <= 262_144 }) }
+        ).also { values ->
+            if (prefs.getBoolean("transcription_prompt_configured", false)) values["transcriptionPrompt"] = customTranscriptionPrompt
+            require(values.values.all { it == null || it.toByteArray().size <= 262_144 })
+        }
     }
 
     fun syncDocument(): SettingsSyncDocument = synchronized(SYNC_LOCK) {
@@ -219,7 +232,11 @@ class SettingsStore(context: Context) {
         if (replacementJSON != null || enabled != null) replacements.applySync(replacementJSON, enabled?.toBooleanStrict())
         prefs.edit {
             values["dictionary"]?.let { putString(KEY_PROMPT, it.value) }
-            values["mode"]?.let { putString(KEY_MODEL, it.value.uppercase()) }
+            values["transcriptionPrompt"]?.let {
+                putString(KEY_TRANSCRIPTION_PROMPT, it.value)
+                putBoolean("transcription_prompt_configured", true)
+            }
+            values["mode"]?.let { putString(KEY_MODEL, requireNotNull(it.value).uppercase()) }
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
             values["textModel"]?.let { putString(KEY_TRANSFORMATION_MODEL_ID, it.value) }
@@ -235,6 +252,7 @@ class SettingsStore(context: Context) {
         listOf("liveModel", "accurateModel", "textModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }
         }
+        values["transcriptionPrompt"]?.value?.let { require(com.opendictate.app.model.TranscriptionPrompt.isValid(it)) }
         val replacementJSON = values["wordReplacements"]?.value
         replacementJSON?.let(ReplacementDocument::fromJson)
         val enabled = values["wordReplacementsEnabled"]?.value
@@ -258,6 +276,7 @@ class SettingsStore(context: Context) {
         private const val KEY_LANGUAGES = "languages"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_PROMPT = "prompt"
+        private const val KEY_TRANSCRIPTION_PROMPT = "custom_transcription_prompt"
         private const val KEY_TRANSFORMATION_BUTTON_ENABLED = "transformation_button_enabled"
         private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
         private const val KEY_ALLOWED_PACKAGES = "allowed_packages"

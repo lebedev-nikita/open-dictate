@@ -4,6 +4,47 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSyncDocumentTest {
+    @Test fun `nullable prompt reset round trips and defeats stale replicas without seeding defaults`() {
+        val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
+            .first { java.io.File(it, "shared/settings-sync-prompts.json").isFile }
+        val reset = SettingsSyncDocument.fromJson(java.io.File(root, "shared/settings-sync-prompts.json").readText())
+        assertEquals(reset, SettingsSyncDocument.fromJson(reset.toJson()))
+        assertTrue(reset.entries.containsKey("transcriptionPrompt"))
+        assertNull(reset.entries.getValue("transcriptionPrompt").value)
+        assertTrue(reset.toJson().contains("\"value\":null"))
+        val old = document("transcriptionPrompt", "Сохраняй слова 📝\nExactly.", 49, "android")
+        assertEquals(reset.merge(old), old.merge(reset))
+        assertNull(reset.merge(old).entries.getValue("transcriptionPrompt").value)
+        assertFalse(SettingsSyncDocument().record(mapOf("transcriptionPrompt" to null), "a", 0, seed = true)
+            .entries.containsKey("transcriptionPrompt"))
+        val explicitReset = old.record(mapOf("transcriptionPrompt" to null), "a", 1)
+        assertEquals(50L, explicitReset.entries.getValue("transcriptionPrompt").modifiedAt)
+        val empty = explicitReset.record(mapOf("transcriptionPrompt" to ""), "a", 51)
+        assertEquals("", empty.merge(reset).entries.getValue("transcriptionPrompt").value)
+        assertEquals("preserved", reset.entries["future.preference"]?.value)
+    }
+
+    @Test fun `prompt defaults can be explicitly chosen over a cloud override`() {
+        val local = SettingsSyncDocument()
+        val cloud = document("transcriptionPrompt", "Cloud", 500, "mac")
+        val selected = local.resolvingConnection(cloud, SettingsSyncDocument.ConnectionSource.LOCAL, "a", 1)
+        assertNull(selected.entries.getValue("transcriptionPrompt").value)
+        assertEquals(selected, selected.merge(cloud))
+        assertEquals("Cloud", local.resolvingConnection(cloud, SettingsSyncDocument.ConnectionSource.CLOUD, "a", 1)
+            .entries.getValue("transcriptionPrompt").value)
+        val tied = SettingsSyncDocument(mapOf("transcriptionPrompt" to SettingsSyncEntry(null, 500, "mac")))
+        assertEquals(tied.merge(cloud), cloud.merge(tied))
+        assertEquals("Cloud", tied.merge(cloud).entries.getValue("transcriptionPrompt").value)
+    }
+
+    @Test fun `null is accepted only for the prompt in version two and never a missing value`() {
+        listOf(
+            """{"schemaVersion":1,"entries":{"transcriptionPrompt":{"value":null,"modifiedAt":1,"deviceId":"a"}}}""",
+            """{"schemaVersion":2,"entries":{"mode":{"value":null,"modifiedAt":1,"deviceId":"a"}}}""",
+            """{"schemaVersion":2,"entries":{"transcriptionPrompt":{"modifiedAt":1,"deviceId":"a"}}}"""
+        ).forEach { assertThrows(Exception::class.java) { SettingsSyncDocument.fromJson(it) } }
+    }
+
     @Test fun `punctuation is excluded from seeds legacy journals merges and exports`() {
         val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
             .first { java.io.File(it, "shared/settings-sync-punctuation.json").isFile }
@@ -29,13 +70,13 @@ class SettingsSyncDocumentTest {
         val seed = SettingsSyncDocument().record(mapOf("wordReplacements" to ReplacementDocument().toJson(),
             "wordReplacementsEnabled" to "true"), "mac", 0, seed = true)
         val merged = seed.merge(remote)
-        val rules = ReplacementDocument.fromJson(merged.entries.getValue("wordReplacements").value).rules
+        val rules = ReplacementDocument.fromJson(requireNotNull(merged.entries.getValue("wordReplacements").value)).rules
         assertEquals("00000000-0000-0000-0000-000000000001", rules.first().id)
         assertFalse(rules.last().enabled)
         assertEquals("OpenDictate 📝 cat", WordReplacementEngine(rules).apply("опен диктейт cat"))
         val cleared = merged.record(mapOf("wordReplacements" to ReplacementDocument().toJson(),
             "wordReplacementsEnabled" to "false"), "mac", 50).merge(remote)
-        assertTrue(ReplacementDocument.fromJson(cleared.entries.getValue("wordReplacements").value).rules.isEmpty())
+        assertTrue(ReplacementDocument.fromJson(requireNotNull(cleared.entries.getValue("wordReplacements").value)).rules.isEmpty())
         assertEquals("false", cleared.entries["wordReplacementsEnabled"]?.value)
         assertEquals("preserved", cleared.entries["future.preference"]?.value)
     }
@@ -89,7 +130,7 @@ class SettingsSyncDocumentTest {
     }
 
     @Test fun `future versions malformed entries and oversized data fail closed`() {
-        listOf("{\"schemaVersion\":2,\"entries\":{}}", "{\"schemaVersion\":1.5,\"entries\":{}}", "{\"schemaVersion\":\"1\",\"entries\":{}}", "{\"schemaVersion\":1,\"entries\":{\"mode\":{\"value\":false,\"modifiedAt\":1,\"deviceId\":\"a\"}}}",
+        listOf("{\"schemaVersion\":3,\"entries\":{}}", "{\"schemaVersion\":1.5,\"entries\":{}}", "{\"schemaVersion\":\"1\",\"entries\":{}}", "{\"schemaVersion\":1,\"entries\":{\"mode\":{\"value\":false,\"modifiedAt\":1,\"deviceId\":\"a\"}}}",
             "{\"schemaVersion\":1,\"entries\":{\"mode\":{\"value\":\"live\",\"modifiedAt\":-1,\"deviceId\":\"a\"}}}", "x".repeat(1_048_577)).forEach { value ->
             assertThrows(Exception::class.java) { SettingsSyncDocument.fromJson(value) }
         }

@@ -37,7 +37,7 @@ jobs:
           version="$(cat apps/macos/VERSION)"
           dmg="dist/macos/OpenDictate-macOS-${version}-universal.dmg"
           flags=()
-          if [[ "$version" == *-rc.* ]]; then flags+=(--prerelease); fi
+          if [[ "$version" == *-rc.* ]]; then flags+=(--prerelease --draft); fi
           gh release create "$GITHUB_REF_NAME" "$dmg" "$dmg.sha256" \
             --verify-tag --title "macos $version" \
             --notes-file apps/macos/RELEASE_NOTES.md --latest=false "${flags[@]}"

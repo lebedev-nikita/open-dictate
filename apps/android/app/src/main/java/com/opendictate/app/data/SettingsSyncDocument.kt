@@ -3,7 +3,7 @@ package com.opendictate.app.data
 import org.json.JSONObject
 
 /** Shared with macOS. Unknown keys survive except preferences explicitly made device-local. */
-data class SettingsSyncEntry(val value: String, val modifiedAt: Long, val deviceId: String)
+data class SettingsSyncEntry(val value: String?, val modifiedAt: Long, val deviceId: String)
 
 data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = emptyMap()) {
     private fun syncEntries() = entries.filterKeys { it !in DEVICE_LOCAL_KEYS }
@@ -20,12 +20,13 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
         return SettingsSyncDocument(result)
     }
 
-    fun record(values: Map<String, String>, deviceId: String, now: Long, seed: Boolean = false): SettingsSyncDocument {
+    fun record(values: Map<String, String?>, deviceId: String, now: Long, seed: Boolean = false): SettingsSyncDocument {
         val result = syncEntries().toMutableMap()
         val clock = maxOf(now, (result.values.maxOfOrNull { it.modifiedAt } ?: 0L) + 1)
         KEYS.forEach { key ->
-            val value = values[key] ?: return@forEach
-            if (result[key]?.value != value) result[key] = SettingsSyncEntry(value, if (seed) 0 else clock, if (seed) "" else deviceId)
+            if (key !in values || (seed && key == "transcriptionPrompt" && values[key] == null)) return@forEach
+            val value = values[key]
+            if (key !in result || result[key]?.value != value) result[key] = SettingsSyncEntry(value, if (seed) 0 else clock, if (seed) "" else deviceId)
         }
         return SettingsSyncDocument(result)
     }
@@ -46,7 +47,11 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
         val preferred = if (source == ConnectionSource.CLOUD) remote else this
         val latest = maxOf(syncEntries().values.maxOfOrNull { it.modifiedAt } ?: 0L,
             remote.syncEntries().values.maxOfOrNull { it.modifiedAt } ?: 0L)
-        return merge(remote).record(preferred.entries.mapValues { it.value.value }, deviceId, maxOf(now, latest + 1))
+        val values = preferred.entries.mapValues { it.value.value }.toMutableMap()
+        if ("transcriptionPrompt" !in values && ("transcriptionPrompt" in entries || "transcriptionPrompt" in remote.entries)) {
+            values["transcriptionPrompt"] = null
+        }
+        return merge(remote).record(values, deviceId, maxOf(now, latest + 1))
             .promoteSeeds(deviceId, now)
     }
 
@@ -58,13 +63,13 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
         })
     }
 
-    fun toJson(): String = JSONObject().put("schemaVersion", 1).put("entries", JSONObject().also { objectEntries ->
+    fun toJson(): String = JSONObject().put("schemaVersion", if (syncEntries().values.any { it.value == null }) 2 else 1).put("entries", JSONObject().also { objectEntries ->
         syncEntries().forEach { (key, entry) -> objectEntries.put(key, JSONObject()
-            .put("value", entry.value).put("modifiedAt", entry.modifiedAt).put("deviceId", entry.deviceId)) }
+            .put("value", entry.value ?: JSONObject.NULL).put("modifiedAt", entry.modifiedAt).put("deviceId", entry.deviceId)) }
     }).toString()
 
     companion object {
-        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled")
+        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt")
         // Discard legacy punctuation correction entries from old journals and replicas.
         private val DEVICE_LOCAL_KEYS = setOf("accuratePunctuationEnabled")
         const val MAXIMUM_BYTES = 1_048_576L
@@ -72,19 +77,21 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
             require(json.toByteArray().size <= MAXIMUM_BYTES)
             val root = JSONObject(json)
             val version = root.get("schemaVersion")
-            require(version is Number && version.toDouble() == 1.0)
+            require(version is Number && version.toDouble() in listOf(1.0, 2.0))
             val entries = root.getJSONObject("entries")
             require(entries.length() <= 1024)
             return SettingsSyncDocument(entries.keys().asSequence().associateWith { key ->
                 val entry = entries.getJSONObject(key)
-                val value = entry.get("value")
+                val rawValue = entry.get("value")
+                val value = if (rawValue == JSONObject.NULL) null else rawValue
                 val timestamp = entry.get("modifiedAt")
                 val device = entry.get("deviceId")
-                require(value is String && value.toByteArray().size <= 262_144 && device is String &&
+                require((value is String && value.toByteArray().size <= 262_144 ||
+                    value == null && key == "transcriptionPrompt" && version.toDouble() == 2.0) && device is String &&
                     device.toByteArray().size <= 128 && key.toByteArray().size <= 128 && timestamp is Number)
                 val time = timestamp.toLong()
                 require(timestamp.toDouble() == time.toDouble() && time >= 0 && time < Long.MAX_VALUE - 1)
-                SettingsSyncEntry(value, time, device)
+                SettingsSyncEntry(value as String?, time, device)
             }.filterKeys { it !in DEVICE_LOCAL_KEYS })
         }
     }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T08:42:45.128Z",
+  "generatedAt": "2026-10-17T07:36:23Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -123,6 +123,21 @@
         "Native Appearance, language, word-replacement and dictionary sheets, model menus, and timeout dialog",
         "Status/navigation/IME insets and scrollable content"
       ],
+      "transcriptionPrompt": {
+        "implementation": "TranscriptionPromptSheet.kt; SettingsScreen.kt Dictation entry; model/TranscriptionPrompt.kt",
+        "presentation": "Operate: existing neutral Material 3 ModalBottomSheet, headlineSmall title, outlined multiline field, wrapping body guidance, 24dp horizontal/bottom padding, 16dp spacing and IME-aware vertical scrolling. Field height is 220–360dp; footer remains reachable with large text.",
+        "interaction": "Independent saveable draft; incoming cloud updates do not replace edits. Reset stages the bundled default; Save commits; Cancel, Back and dismissal discard. Unchanged or invalid drafts disable Save; localized field error above 16KiB UTF-8. Empty custom text omits the prompt.",
+        "source": "apps/macos/Sources/OpenDictateCore/Resources/default-prompts.json; Android main resources packages the same directory",
+        "scope": "Next-session application for Live, Accurate and retranscription; languages and dictionary hints remain separate. Connected Drive synchronizes saved overrides and explicit resets; untouched defaults never sync. Existing tokens and assets retained.",
+        "evidence": {
+          "screenshots": [
+            ".impeccable/review/prompt-android-phone-en.png",
+            ".impeccable/review/prompt-android-phone-dark-large-ru.png",
+            ".impeccable/review/prompt-android-tablet-dark-ru.png"
+          ],
+          "captureScope": "Native emulator review evidence: English light phone, Russian dark large-text phone scrolled to its footer, Russian dark tablet. Not shipping assets or physical-device/network coverage."
+        }
+      },
       "wordReplacements": {
         "implementation": "ReplacementSheet.kt; SettingsScreen.kt Dictation entry",
         "presentation": "Native keyboard-aware modal bottom sheet with lazy scrolling, 24dp horizontal padding and 12dp spacing.",
@@ -283,6 +298,18 @@
           },
           { "name": "Sidebar Navigation", "implementation": "SettingsView.navigation(_:_:_:)", "description": "SF Symbol plus sentence-case label; tonal selection, selected medium weight and separate native keyboard focus." },
           { "name": "Setup and Preferences Controls", "implementation": "SettingsView", "description": "Native secure/search fields, buttons, segmented mode picker, pop-up pickers, switches and confirmation alerts." },
+          {
+            "name": "Transcription Prompt Editor",
+            "implementation": "TranscriptionPromptEditor.swift; SettingsView Dictation entry; OpenDictateCore/TranscriptionPrompt.swift",
+            "description": "Operate: native SwiftUI sheet, system title2 semibold, body text editor on textBackgroundColor with existing 8pt corner, semantic primary guidance, native Reset to default and trailing Cancel/Save.",
+            "geometry": { "units": "points", "minimumWidth": 570, "minimumHeight": 500, "idealWidth": 620, "idealHeight": 600, "padding": 24, "stackSpacing": 16, "editorInset": 10 },
+            "interaction": "Independent draft snapshots override/default at opening; incoming cloud updates do not replace edits. Reset stages default until Save commits an absent override; Cancel, Escape and dismissal discard. Enter invokes enabled Save. Unchanged or invalid drafts disable Save; localized error above 16KiB UTF-8. Blank custom omits prompt.",
+            "scope": "Next-session Live, Accurate and retranscription; language/dictionary hints remain separate. Shared default source is OpenDictateCore/Resources/default-prompts.json, also packaged by Android. Connected Drive syncs saved overrides and explicit resets; untouched defaults never sync. No new tokens or assets.",
+            "evidence": {
+              "screenshots": [".impeccable/review/prompt-macos-en.png", ".impeccable/review/prompt-macos-ru.png"],
+              "captureScope": "Production native editor renders: English dark and Russian light. Review evidence, not shipping assets or proof of live sheet presentation/network behavior."
+            }
+          },
           {
             "name": "Speech Language Picker",
             "implementation": "SpeechLanguagePicker.swift; SettingsView dictation page; OpenDictateCore/SpeechLanguage.swift; Storage.swift",

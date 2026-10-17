@@ -7,6 +7,51 @@ final class SettingsSyncTests: XCTestCase {
         result.entries[key] = .init(value: value, modifiedAt: time, deviceId: device)
         return result
     }
+    func testNullablePromptResetRoundTripsAndDefeatsStaleReplicasWithoutSeedingDefaults() throws {
+        var root = URL(fileURLWithPath: #filePath)
+        for _ in 0..<5 { root.deleteLastPathComponent() }
+        let reset = try SettingsSyncDocument.decode(Data(contentsOf: root.appendingPathComponent("shared/settings-sync-prompts.json")))
+        XCTAssertEqual(reset, try SettingsSyncDocument.decode(JSONEncoder().encode(reset)))
+        XCTAssertNotNil(reset.entries["transcriptionPrompt"])
+        XCTAssertNil(reset.entries["transcriptionPrompt"]?.value)
+        let encoded = String(decoding: try JSONEncoder().encode(reset), as: UTF8.self)
+        XCTAssertTrue(encoded.contains("\"value\":null"))
+        let old = document("transcriptionPrompt", "Сохраняй слова 📝\nExactly.", 49, "android")
+        var left = reset; left.merge(old)
+        var right = old; right.merge(reset)
+        XCTAssertEqual(left, right)
+        XCTAssertNil(left.entries["transcriptionPrompt"]?.value)
+        var seed = SettingsSyncDocument()
+        seed.record(["transcriptionPrompt": nil], deviceId: "a", now: 0, seed: true)
+        XCTAssertNil(seed.entries["transcriptionPrompt"])
+        var cleared = old; cleared.record(["transcriptionPrompt": nil], deviceId: "a", now: 1)
+        XCTAssertEqual(cleared.entries["transcriptionPrompt"]?.modifiedAt, 50)
+        cleared.record(["transcriptionPrompt": ""], deviceId: "a", now: 51)
+        cleared.merge(reset)
+        XCTAssertEqual(cleared.entries["transcriptionPrompt"]?.value, "")
+    }
+    func testPromptDefaultsCanBeExplicitlyChosenOverCloudOverride() {
+        let local = SettingsSyncDocument()
+        let cloud = document("transcriptionPrompt", "Cloud", 500, "mac")
+        var selected = local.resolvingConnection(with: cloud, source: .local, deviceId: "a", now: 1)
+        XCTAssertNotNil(selected.entries["transcriptionPrompt"])
+        XCTAssertNil(selected.entries["transcriptionPrompt"]?.value)
+        let before = selected; selected.merge(cloud); XCTAssertEqual(selected, before)
+        XCTAssertEqual(local.resolvingConnection(with: cloud, source: .cloud, deviceId: "a", now: 1).entries["transcriptionPrompt"]?.value, "Cloud")
+        var tied = SettingsSyncDocument(); tied.entries["transcriptionPrompt"] = .init(value: nil, modifiedAt: 500, deviceId: "mac")
+        var left = tied; left.merge(cloud)
+        var right = cloud; right.merge(tied)
+        XCTAssertEqual(left, right)
+        XCTAssertEqual(left.entries["transcriptionPrompt"]?.value, "Cloud")
+    }
+    func testNullOnlyAllowedForPromptInVersionTwoAndNotAMissingValue() {
+        for json in [
+            #"{"schemaVersion":1,"entries":{"transcriptionPrompt":{"value":null,"modifiedAt":1,"deviceId":"a"}}}"#,
+            #"{"schemaVersion":2,"entries":{"mode":{"value":null,"modifiedAt":1,"deviceId":"a"}}}"#,
+            #"{"schemaVersion":2,"entries":{"transcriptionPrompt":{"modifiedAt":1,"deviceId":"a"}}}"#
+        ] { XCTAssertThrowsError(try SettingsSyncDocument.decode(Data(json.utf8))) }
+    }
+
     func testPunctuationIsExcludedFromSeedsLegacyJournalsMergesAndExports() throws {
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<5 { root.deleteLastPathComponent() }
@@ -68,7 +113,7 @@ final class SettingsSyncTests: XCTestCase {
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(parsed), as: UTF8.self).contains("private-test"))
     }
     func testUnsupportedAndMalformedDocumentsFailClosed() {
-        for json in [#"{"schemaVersion":2,"entries":{}}"#,
+        for json in [#"{"schemaVersion":3,"entries":{}}"#,
                      #"{"schemaVersion":1,"entries":{"mode":{"value":false,"modifiedAt":1,"deviceId":"a"}}}"#,
                      #"{"schemaVersion":1,"entries":{"mode":{"value":"live","modifiedAt":-1,"deviceId":"a"}}}"#,
                      String(repeating: "x", count: 1_048_577)] {

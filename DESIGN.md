@@ -272,6 +272,12 @@ The Dictation page uses a compact summary button and a SwiftUI/AppKit popover (3
 
 Search matches English, Russian, native names and language codes. Rows stay alphabetical in the interface language while multiple selections remain open and save immediately. Automatic detection clears selections; the footer shows the selection count and Done. Enter and Escape close the popover. The control is disabled during recording and follows the saved appearance choice. No new visual tokens or raster assets are introduced. Review evidence and the recognition-testing limit are recorded in `.impeccable/surfaces/apps-macos.md`.
 
+### Native Transcription Prompt Editors
+
+Dictation settings opens a dedicated draft editor on both platforms, retaining the Operate direction. macOS uses a SwiftUI sheet with a system title, semantic primary guidance, a body-style text editor on `textBackgroundColor`, and native Reset to default, Cancel and Save buttons. Android uses the existing neutral Material 3 `ModalBottomSheet`, an outlined multiline field, wrapping guidance and a scrollable, keyboard-aware action area. English/Russian labels follow the saved appearance and native type hierarchy; no new tokens or assets are introduced.
+
+Save commits the draft; Cancel or dismissal discards it. Reset stages the bundled default until Save, and invalid or unchanged drafts disable Save. Keep these explicit draft actions distinct from autosaving dictionary and appearance controls. Platform geometry, shared-default authority and capture evidence are recorded in the corresponding surface briefs.
+
 ### Cards / Containers
 
 - **Dictation Field:** An Instrument Panel surface with a 1px Hairline Slate border, 16px corners, metadata at the top, and a large cumulative transcript below.

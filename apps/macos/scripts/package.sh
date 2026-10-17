@@ -32,6 +32,7 @@ python3 "$macos_root/scripts/configure-google-drive.py" "$app/Contents/Info.plis
 if [[ -n "${APP_BUILD:-}" ]]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_BUILD" "$app/Contents/Info.plist"
 fi
+cp -R "$macos_root/.build/arm64/arm64-apple-macosx/release/OpenDictate_OpenDictateCore.bundle" "$app/Contents/Resources/"
 cp -R "$macos_root/Resources/en.lproj" "$macos_root/Resources/ru.lproj" "$app/Contents/Resources/"
 cp "$repo_root/LICENSE" "$app/Contents/Resources/LICENSE.txt"
 cp "$macos_root/Resources/THIRD_PARTY_NOTICES.md" "$app/Contents/Resources/THIRD_PARTY_NOTICES.md"

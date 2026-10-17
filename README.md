@@ -25,11 +25,11 @@ no backend, analytics or account to create.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
 - Voice-directed editing of the selection, or the whole field without a selection,
   using GPT-6 Luna or GPT-6 Sol.
-- A transcription dictionary, local history, on-device search, and explicit AI search.
+- An editable transcription prompt with a built-in default and reset, a transcription dictionary, local history, on-device search, and explicit AI search.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
 - Encrypted credentials: Android Keystore on Android, Keychain on macOS.
-- Optional Google Drive sync for the dictionary, word replacements, dictation
+- Optional Google Drive sync for the dictionary, custom transcription prompt and resets, word replacements, dictation
   mode and selected models. [Setup and conflict behavior](docs/google-drive-sync.md).
 
 ## Install on macOS
