@@ -58,10 +58,16 @@ public enum OpenAIRequest {
             properties: ["transformed_text": ["type": "string"], "message": ["type": ["string", "null"]]])
     }
 
-    public static func punctuation(source: String) -> [String: Any] {
-        var request = transform(model: PunctuationCorrection.model, source: source, instruction: "Correct punctuation only.")
-        request["instructions"] = PunctuationCorrection.instructions
-        request["reasoning"] = ["effort": "none"]
+    public static func postProcessing(source: String, settings: PostProcessingSettings) -> [String: Any] {
+        var request = structured(model: settings.model, name: "post_processing",
+            instructions: PostProcessing.instructions,
+            input: ["source_text": source, "instruction": settings.effectivePrompt],
+            properties: ["transformed_text": ["type": "string"]])
+        if ["gpt-6-luna", "gpt-6-sol"].contains(settings.model) {
+            request["reasoning"] = ["effort": "none"]
+        } else if settings.model.range(of: "^gpt-[5-9]", options: .regularExpression) == nil {
+            request.removeValue(forKey: "reasoning")
+        }
         return request
     }
 

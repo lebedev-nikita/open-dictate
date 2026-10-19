@@ -235,6 +235,9 @@ internal fun SettingsScreen(
                             { dictionaryOpen = true })
                     }
 
+                    Spacer(Modifier.height(28.dp))
+                    SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, viewModel::savePostProcessing) }
+
                     SectionTitle(stringResource(R.string.dictation_button_title))
                     SettingsGroup {
                         ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),

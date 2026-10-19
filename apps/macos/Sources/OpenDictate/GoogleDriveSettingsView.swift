@@ -113,8 +113,8 @@ struct DriveSourceSelectionView: View {
         VStack(alignment: .leading, spacing: 20) {
             Text(t("Choose settings to sync", "Какие настройки синхронизировать?"))
                 .font(.headline)
-            Text(t("Google Drive and this Mac have different settings. Choose which dictionary, transcription prompt, word replacements, dictation mode and models to use. Sync waits for your choice.",
-                   "Настройки на Google Диске и этом Mac различаются. Выберите источник словаря, промпта транскрипции, автозамен, режима диктовки и моделей. Синхронизация ждёт вашего выбора."))
+            Text(t("Google Drive and this Mac have different settings. Choose which dictionary, transcription prompt, post-processing, word replacements, dictation mode and models to use. Sync waits for your choice.",
+                   "Настройки на Google Диске и этом Mac различаются. Выберите источник словаря, промпта транскрипции, постобработки, автозамен, режима диктовки и моделей. Синхронизация ждёт вашего выбора."))
                 .fixedSize(horizontal: false, vertical: true)
             Picker(t("Settings source", "Источник настроек"), selection: $source) {
                 VStack(alignment: .leading, spacing: 4) {

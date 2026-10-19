@@ -8,6 +8,9 @@ import com.opendictate.app.audio.PcmAudioRecorder
 import com.opendictate.app.data.transcriptionKeywords
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
+import com.opendictate.app.model.PostProcessing
+import com.opendictate.app.model.PostProcessingSettings
+import com.opendictate.app.model.PostProcessingResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -169,6 +172,20 @@ class OpenAiTranscriptionClient(
     } catch (error: IOException) {
         throw OpenAiException(error.userMessage(), error)
     }
+
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings): PostProcessingResult =
+        PostProcessing.apply(source, settings) {
+            withContext(Dispatchers.IO) {
+                val request = authorizedRequest(apiKey, RESPONSES_URL)
+                    .header("Content-Type", "application/json")
+                    .post(postProcessingRequest(source, settings).toString().toRequestBody(JSON)).build()
+                client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
+                    val body = response.body.string()
+                    if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body))
+                    extractPostProcessingResult(JSONObject(body))
+                }
+            }
+        }
 
     suspend fun searchTranscriptHistory(
         apiKey: String,
@@ -638,6 +655,27 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 }
 
 private const val MAX_USER_MESSAGE_CHARS = 1_000
+
+internal fun postProcessingRequest(source: String, settings: PostProcessingSettings): JSONObject {
+    val request = textTransformationRequest(settings.model, source, settings.effectivePrompt)
+        .put("instructions", PostProcessing.INSTRUCTIONS)
+    val format = request.getJSONObject("text").getJSONObject("format")
+    format.put("name", "post_processing")
+    val schema = format.getJSONObject("schema")
+    schema.getJSONObject("properties").remove("message")
+    schema.getJSONObject("properties").getJSONObject("transformed_text").remove("description")
+    schema.put("required", JSONArray().put("transformed_text"))
+    when {
+        settings.model in setOf("gpt-6-luna", "gpt-6-sol") -> request.put("reasoning", JSONObject().put("effort", "none"))
+        !settings.model.matches(Regex("gpt-[5-9].*")) -> request.remove("reasoning")
+    }
+    return request
+}
+
+internal fun extractPostProcessingResult(response: JSONObject): String {
+    require(response.optString("status") == "completed")
+    return JSONObject(extractResponseText(response)).getString("transformed_text")
+}
 
 internal fun extractResponseText(response: JSONObject): String {
     val output = response.optJSONArray("output") ?: return ""

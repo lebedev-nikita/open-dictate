@@ -101,40 +101,40 @@ save immediately and apply to the next Live or Accurate session; selection is
 disabled during dictation. Existing single-language and Russian + English
 preferences migrate automatically. Language hints remain local preferences.
 
-### Transcription punctuation
-
-Live and Accurate include strict punctuation guidance for each spoken language
-in their original transcription request. The same guidance applies when
-retranscribing the last recording. Selected language hints and dictionary terms
-are preserved; the prompt does not add a processing step.
-Selecting Russian also includes a Russian punctuation prompt with examples of
-sentence boundaries, commas, colons, dashes, quotations and parenthetical text.
-
 ### Transcription prompt
 
-Settings → Dictation → **Transcription prompt** shows the current built-in text or your saved override. Edit it and choose Save, or Cancel to discard the draft. **Reset to default** stages a reset; Save applies it. An empty custom text sends no prompt. The editor enforces a 16,384-byte UTF-8 storage limit; the selected model can impose a smaller API limit.
+Settings → Dictation → **Transcription prompt** shows optional recording context or your saved override. The default is empty. Edit it and choose Save, or Cancel to discard the draft. **Reset to default** stages a reset; Save applies it. An empty custom text sends no prompt. The editor enforces a 16,384-byte UTF-8 storage limit; the selected model can impose a smaller API limit.
 
-A custom prompt completely replaces the built-in text, including language-specific additions. Languages and dictionary terms remain separate request parameters. The same prompt applies to Live, Accurate, retranscription and recognition of voice-edit commands; it does not change the text transformation instructions or the optional punctuation correction step. Changes affect the next session. Retranscription captures the current setting when invoked.
+Use this field for recording topics, names and terminology, rather than text-formatting commands. A custom prompt completely replaces the built-in context. Languages and dictionary terms remain separate request parameters. The same prompt applies to Live, Accurate, retranscription and recognition of voice-edit commands; it does not change the text transformation instructions or post-processing. Changes affect the next session. Retranscription captures the current setting when invoked.
 
 Both platforms bundle the defaults from [`default-prompts.json`](Sources/OpenDictateCore/Resources/default-prompts.json). Untouched defaults follow app updates without being uploaded. Custom text stays unchanged until edited or reset. Optional Drive sync shares custom text and explicit resets. Older apps cannot read a reset; update both platforms to restore synchronization. See [sync details](../../docs/google-drive-sync.md).
 
-### Optional punctuation correction
+### Post-processing
 
-Settings → Dictation → **Correct punctuation** appears only in Accurate mode
-and is off by default.
-When enabled, only ordinary Accurate dictation sends its recognized text to
-`gpt-6-luna` for punctuation/capitalization through Responses (`store: false`,
-`reasoning.effort: none`). Live and voice editing skip this step. Local word
-replacements apply afterward. No separate final-period override is applied. Invalid edits or
-request failures retain the original transcription; cancellation prevents delivery.
-The switch is saved only on this Mac and does not sync through Google Drive.
+Settings → Dictation → **Post-processing** expands when enabled and retains its
+settings when disabled. It is off by default, with `gpt-6-luna` and a punctuation
+instruction prefilled. Edit the model ID or prompt, then choose **Save**.
+**Correct punctuation** and **Format numbers** append editable instruction blocks
+without duplicates. **Reset prompt** stages the punctuation default; Save applies
+it. Clearing the prompt skips the additional request.
+
+It runs once after ordinary Live, Accurate or retranscription, before local word
+replacements. Voice-edit commands skip it. The transcript goes directly to OpenAI
+Responses with `store: false`. Failure keeps the original transcript and shows a
+warning; cancellation and focus guards still apply. The punctuation-only default
+rejects changes to words and numbers; custom instructions can rewrite text.
+Number formatting through a model is not a deterministic numeric validator.
+
+Both apps share [preset text](Sources/OpenDictateCore/Resources/postprocessing-presets.json)
+and synchronize enabled state, model and optional prompt override through Drive.
+The former local Accurate punctuation switch migrates to this section.
 
 ### Retranscribe the last recording
 
 Choose **Retranscribe last recording** in the menu bar to recognize the latest
 ordinary Live or Accurate recording again through Accurate, without recording
 new audio. The command uses the current Accurate model, speech languages,
-dictionary, timeout, punctuation option and word replacements. The selected
+dictionary, timeout, post-processing and word replacements. The selected
 dictation mode stays unchanged. Results are inserted into the eligible field
 focused when you invoke the command; switching fields during processing prevents
 insertion. With no eligible field (including secure or excluded fields), the
@@ -260,7 +260,7 @@ cached only in memory.
 Turn on the native Google Drive switch in Settings, then choose a Google account
 in your browser. Official builds supply the Desktop OAuth client configuration;
 users do not enter client IDs or secrets. Sync includes the dictionary, word
-replacements, custom transcription prompt and explicit resets, dictation mode and selected models, excluding API keys, audio and
+replacements, custom transcription prompt and explicit resets, post-processing, dictation mode and selected models, excluding API keys, audio and
 history. Browser sign-in uses PKCE and a temporary loopback callback listener.
 User refresh tokens stay in device-only Keychain storage.
 

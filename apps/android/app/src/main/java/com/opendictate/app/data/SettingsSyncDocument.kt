@@ -69,7 +69,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
     }).toString()
 
     companion object {
-        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt")
+        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt", "postprocessing")
         // Discard legacy punctuation correction entries from old journals and replicas.
         private val DEVICE_LOCAL_KEYS = setOf("accuratePunctuationEnabled")
         const val MAXIMUM_BYTES = 1_048_576L

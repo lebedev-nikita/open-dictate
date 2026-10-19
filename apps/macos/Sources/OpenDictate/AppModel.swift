@@ -7,6 +7,7 @@ import OpenDictateCore
 @MainActor
 final class AppModel: ObservableObject {
     typealias AudioTranscriber = @Sendable (Data, String, TranscriptionContext, Int) async throws -> String
+    typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings) async throws -> PostProcessingResult
     enum Phase {
         case idle, preparing, recording, processing
         var showsFinishControl: Bool { self == .preparing || self == .recording }
@@ -34,6 +35,7 @@ final class AppModel: ObservableObject {
     private let makeRecorder: () -> any AudioRecording
     private let accessibilityTrust: () -> Bool
     private let transcribeAudio: AudioTranscriber?
+    private let processTranscript: TextPostProcessor?
     private let notifyError: (String) -> Void
     let hotKeys = HotKeys()
     private let client = OpenAIClient()
@@ -59,7 +61,7 @@ final class AppModel: ObservableObject {
         let key: String
         let context: TranscriptionContext
         let textModel: String
-        let accuratePunctuationEnabled: Bool
+        let postProcessing: PostProcessingSettings
         let timeout: Int
         let replacements: WordReplacementEngine
         let started = Date()
@@ -80,7 +82,7 @@ final class AppModel: ObservableObject {
             self.target = target; self.transform = transform; self.key = key
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
             context = preferences.context; textModel = preferences.textModel
-            accuratePunctuationEnabled = preferences.accuratePunctuationEnabled
+            postProcessing = preferences.postProcessing
             timeout = preferences.timeout
         }
     }
@@ -91,11 +93,13 @@ final class AppModel: ObservableObject {
          makeRecorder: @escaping () -> any AudioRecording = { AudioRecorder() },
          accessibilityTrust: @escaping () -> Bool = { AXIsProcessTrusted() },
          transcribeAudio: AudioTranscriber? = nil,
+         processTranscript: TextPostProcessor? = nil,
          notifyError: @escaping (String) -> Void = { _ in }) {
         self.captureTarget = captureTarget
         self.makeRecorder = makeRecorder
         self.accessibilityTrust = accessibilityTrust
         self.transcribeAudio = transcribeAudio
+        self.processTranscript = processTranscript
         self.notifyError = notifyError
         self.localOnly = localOnly
         let defaults = defaults ?? (localOnly ? UserDefaults(suiteName: "com.opendictate.mac.local-tests")! : .standard)
@@ -348,14 +352,14 @@ final class AppModel: ObservableObject {
             }
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
-            let corrected: String
-            if !session.transform && session.mode == .accurate && session.accuratePunctuationEnabled && !localOnly {
-                corrected = try await client.correctPunctuation(source: transcript, key: session.key,
-                    enabled: session.accuratePunctuationEnabled, mode: session.mode)
+            let processed: PostProcessingResult
+            if !session.transform && (!localOnly || processTranscript != nil) {
+                if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing) }
+                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
-            } else { corrected = transcript }
-            var result = TranscriptFormatter.format(corrected)
+            } else { processed = PostProcessingResult(text: transcript) }
+            var result = TranscriptFormatter.format(processed.text)
             if session.transform && !localOnly {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
@@ -383,6 +387,10 @@ final class AppModel: ObservableObject {
             if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue) }
             message = delivered ? preferences.t("Text inserted.", "Текст вставлен.") :
                 preferences.t("Your text is ready to copy from the menu.", "Текст готов. Скопируйте его из меню.")
+            if processed.failed {
+                message += " " + preferences.t("Post-processing failed; the original transcript was kept.",
+                    "Постобработка не удалась; сохранена исходная расшифровка.")
+            }
             finish(session)
         } catch { if current?.id == session.id { fail(error, session: session) } }
     }

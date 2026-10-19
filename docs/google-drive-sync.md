@@ -2,8 +2,8 @@
 
 Connect Google Drive in Settings on Android and macOS, using the same Google
 account. Sync transfers the dictionary, custom transcription prompts and resets, word replacement rules and enabled
-states, Live/Accurate mode and selected Live, Accurate and text model IDs.
-The Accurate punctuation switch is saved only on each device and never synced.
+states, post-processing configuration, Live/Accurate mode and selected Live, Accurate
+and text model IDs.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
 OpenAI API key and local model catalogue.
 
@@ -45,6 +45,22 @@ The prompt editor on each platform saves a custom override or an explicit reset.
 A reset is a timestamped `transcriptionPrompt` entry with `value: null`; its text is resolved from the installed app's defaults. Keep this entry so a stale replica cannot restore an older custom prompt. An empty string is a custom prompt that sends no prompt to OpenAI. Both platforms use the same UTF-8 byte limit and shared defaults resource.
 
 Documents containing a null reset use schema version 2; string-only documents retain version 1. New clients read both versions. Older clients reject version 2 and pause synchronization without overwriting it; update both platforms after a reset. Different app versions may contain different built-in defaults. The reset propagates the choice of defaults, not a copy of their text.
+
+## Post-processing
+
+The `postprocessing` entry stores an atomic JSON configuration with `enabled`,
+`model` and `prompt`. A null inner `prompt` resolves the shared bundled punctuation
+instruction; an empty string skips the extra request. Only the override, not the
+default instruction text, is uploaded. Reset is a new timestamped configuration,
+so older replicas cannot restore a removed custom prompt. The outer value remains
+a string and needs no new document version. Older clients preserve this unknown
+entry; update both apps to use it.
+
+The section saves model/prompt drafts explicitly. Incoming sync does not replace
+an unsaved draft. Toggling off preserves the model and prompt. Active sessions use
+an immutable snapshot; retry captures current settings. The former macOS local
+punctuation switch migrates into this configuration, while old synced punctuation
+entries remain ignored.
 
 ## Google Cloud setup
 
@@ -210,7 +226,7 @@ Delete hidden app data.
 
 Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
 `liveModel`, `accurateModel`, `textModel`, `wordReplacements` and
-`wordReplacementsEnabled` and `transcriptionPrompt`:
+`wordReplacementsEnabled`, `transcriptionPrompt` and `postprocessing`:
 
 ```json
 {
@@ -236,7 +252,7 @@ values reject the import before any setting is applied. Existing five-field
 journals seed replacement settings at timestamp zero so new defaults yield to
 cloud values. The former `accuratePunctuationEnabled` sync field is discarded
 from local journals and incoming replicas, and excluded from uploads. Its
-existing local value is preserved. Older app versions may still sync that field
+existing macOS local value migrates to post-processing. Older app versions may still sync that field
 among themselves until updated. Imported replacement JSON is preserved verbatim
 to avoid platform-specific encoding creating a new edit. Remote rules are validated before any settings are applied.
 

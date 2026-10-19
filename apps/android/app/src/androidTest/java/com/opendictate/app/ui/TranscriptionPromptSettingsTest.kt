@@ -63,7 +63,7 @@ class TranscriptionPromptSettingsTest {
             openEditor()
             compose.onNodeWithText(label(R.string.transcription_prompt_save)).performScrollTo().assertIsNotEnabled()
             compose.onNodeWithText(label(R.string.transcription_prompt_reset)).assertIsNotEnabled()
-            compose.onNodeWithText("Multilingual dictation for written text.", substring = true).assertExists()
+            assertEquals("", com.opendictate.app.model.TranscriptionPrompt.defaultText(settings.languages))
             capture()
             action(R.string.transcription_prompt_cancel)
             assertEquals(before, settings.syncDocument())

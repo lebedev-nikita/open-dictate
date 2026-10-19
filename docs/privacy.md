@@ -17,17 +17,18 @@ An explicit AI history search may send that saved text to OpenAI.
 
 Custom transcription prompts are saved locally and sent directly to OpenAI with transcription requests. Connecting Google Drive synchronizes saved custom text and explicit resets. Untouched built-in prompt text is not uploaded to Drive. An empty custom prompt sends no prompt to OpenAI. Prompts are never logged.
 
-## Punctuation
+## Optional post-processing
 
-Both apps request punctuation as part of the original Live or Accurate
-transcription. Android does not send recognized text for a separate punctuation pass.
+On either platform, **Post-processing** is off by default. When enabled, it sends
+only the recognized transcript and your instruction directly to OpenAI through
+the Responses API with `store: false`. It runs after ordinary Live, Accurate or
+retranscription, before local word replacements. Voice-edit commands skip it.
+A blank prompt makes no additional request. Errors retain the original transcript.
 
-On macOS, **Correct punctuation** appears only in Accurate mode and is off by
-default. When enabled, Accurate sends only the recognized transcript directly
-to OpenAI's `gpt-6-luna` through the Responses API with `store: false`, before local word
-replacements. It adds a separate processing step; failures keep the original
-transcript. Live and voice editing do not use this step. The switch is saved
-only on the current device and is excluded from Google Drive sync; the transcript is never included in sync.
+The model defaults to `gpt-6-luna`; the default instruction corrects punctuation.
+Buttons add editable punctuation or number-formatting instructions. Custom
+instructions may rewrite text. Post-processing settings synchronize through
+Google Drive when connected; transcripts are never included in synchronization.
 
 ## Optional Google Drive synchronization
 
@@ -39,7 +40,8 @@ connectivity returns; macOS monitors network availability for the same purpose.
 
 
 If you connect Google Drive in Settings, the dictionary, word replacement rules and
-enabled states, custom transcription prompt and explicit resets, dictation mode and selected model IDs are sent directly to
+enabled states, custom transcription prompt and explicit resets, post-processing
+configuration, dictation mode and selected model IDs are sent directly to
 Google and stored in your account's hidden app-data folder. Sync requests only `drive.appdata`, without access to
 ordinary Drive files. API keys, audio, transcripts/history, exclusions and
 permissions are excluded; other preferences remain local.

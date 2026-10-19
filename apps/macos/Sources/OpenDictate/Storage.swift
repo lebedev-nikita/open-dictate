@@ -21,7 +21,12 @@ final class Preferences: ObservableObject {
             recordSyncChange()
         }
     }
-    @Published var accuratePunctuationEnabled: Bool { didSet { defaults.set(accuratePunctuationEnabled, forKey: "accuratePunctuationEnabled") } }
+    @Published var postProcessing: PostProcessingSettings {
+        didSet {
+            if let encoded = try? postProcessing.encoded() { defaults.set(encoded, forKey: "postprocessing") }
+            recordSyncChange()
+        }
+    }
     @Published var saveHistory: Bool { didSet { defaults.set(saveHistory, forKey: "saveHistory") } }
     @Published var shortcuts: ShortcutBindings {
         didSet { if let data = try? JSONEncoder().encode(shortcuts) { defaults.set(data, forKey: "shortcuts") } }
@@ -66,7 +71,8 @@ final class Preferences: ObservableObject {
         interfaceLanguage = defaults.string(forKey: "interfaceLanguage") ?? "auto"
         dictionary = defaults.string(forKey: "dictionary") ?? "OpenDictate"
         customTranscriptionPrompt = defaults.string(forKey: "customTranscriptionPrompt")
-        accuratePunctuationEnabled = defaults.bool(forKey: "accuratePunctuationEnabled")
+        postProcessing = defaults.string(forKey: "postprocessing").flatMap { try? PostProcessingSettings.decode($0) }
+            ?? PostProcessingSettings(enabled: defaults.bool(forKey: "accuratePunctuationEnabled"))
         saveHistory = defaults.object(forKey: "saveHistory") as? Bool ?? true
         if let data = defaults.data(forKey: "shortcuts"),
            let saved = try? JSONDecoder().decode(ShortcutBindings.self, from: data), saved.isValid {
@@ -80,6 +86,8 @@ final class Preferences: ObservableObject {
         excludedApps = defaults.stringArray(forKey: "excludedApps") ?? []
         showStatus = defaults.object(forKey: "showStatus") as? Bool ?? true
         indicatorStyle = RecordingIndicatorStyle(rawValue: defaults.string(forKey: "indicatorStyle") ?? "") ?? .compact
+        defaults.set(try? postProcessing.encoded(), forKey: "postprocessing")
+        defaults.removeObject(forKey: "accuratePunctuationEnabled")
         do {
             var seed = try defaults.data(forKey: "syncDocument").map(SettingsSyncDocument.decode) ?? SettingsSyncDocument()
             seed.record(try syncValues.filter { seed.entries[$0.key] == nil }, deviceId: syncDeviceID, now: 0, seed: true)
@@ -94,7 +102,7 @@ final class Preferences: ObservableObject {
     private var syncValues: [String: String?] {
         get throws {
             var values: [String: String?] = ["dictionary": dictionary, "mode": mode.rawValue, "liveModel": liveModel,
-                          "accurateModel": accurateModel, "textModel": textModel]
+                          "accurateModel": accurateModel, "textModel": textModel, "postprocessing": try postProcessing.encoded()]
             values.merge(try replacements.syncValues) { _, new in new }
             if defaults.bool(forKey: "transcriptionPromptConfigured") {
                 values.updateValue(customTranscriptionPrompt, forKey: "transcriptionPrompt")
@@ -146,11 +154,16 @@ final class Preferences: ObservableObject {
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
         if let value = merged.entries["textModel"]?.value, textModel != value { textModel = value }
+        if let value = merged.entries["postprocessing"]?.value {
+            let next = try PostProcessingSettings.decode(value)
+            if postProcessing != next { postProcessing = next }
+        }
         defaults.set(encoded, forKey: "syncDocument")
         return merged
     }
 
     func validateSync(_ merged: SettingsSyncDocument) throws {
+        if let value = merged.entries["postprocessing"]?.value { _ = try PostProcessingSettings.decode(value) }
         if let value = merged.entries["transcriptionPrompt"]?.value, !TranscriptionPrompt.isValid(value) {
             throw SyncFormatError.invalid
         }

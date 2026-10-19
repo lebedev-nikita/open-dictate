@@ -46,7 +46,7 @@ final class HTTPTests: XCTestCase {
         }
     }
 
-    func testPunctuationUsesDirectLunaRequestAndRejectsRewriteOrFailedResponse() async throws {
+    func testPostProcessingUsesDirectRequestAndRejectsDefaultRewriteOrFailedResponse() async throws {
         let client = client()
         for (status, body, expected) in [
             (200, #"{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"{\"transformed_text\":\"Привет, мир!\",\"message\":null}"}]}]}"#, "Привет, мир!"),
@@ -56,16 +56,17 @@ final class HTTPTests: XCTestCase {
         ] {
             MockHTTP.handler = { request in
                 XCTAssertEqual(request.url, OpenAIRequest.responsesURL)
-                XCTAssertEqual(request.timeoutInterval, 10)
+                XCTAssertEqual(request.timeoutInterval, 30)
                 return (status, Data(body.utf8))
             }
-            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: true, mode: .accurate)
-            XCTAssertEqual(result, expected)
+            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: .init(enabled: true))
+            XCTAssertEqual(result.text, expected)
+            XCTAssertEqual(result.failed, expected == "привет мир")
         }
-        MockHTTP.handler = { _ in XCTFail("Disabled/Live must not request punctuation"); return (500, Data()) }
-        for (enabled, mode) in [(false, DictationMode.accurate), (true, .live)] {
-            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: enabled, mode: mode)
-            XCTAssertEqual(result, "привет мир")
+        MockHTTP.handler = { _ in XCTFail("Disabled/empty prompt must not make a request"); return (500, Data()) }
+        for settings in [PostProcessingSettings(), PostProcessingSettings(enabled: true, prompt: "")] {
+            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: settings)
+            XCTAssertEqual(result, .init(text: "привет мир"))
         }
     }
 

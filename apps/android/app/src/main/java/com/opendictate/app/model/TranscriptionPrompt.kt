@@ -8,12 +8,6 @@ object TranscriptionPrompt {
         val stream = requireNotNull(TranscriptionPrompt::class.java.getResourceAsStream("/default-prompts.json"))
         stream.bufferedReader(Charsets.UTF_8).use { JSONObject(it.readText()) }
     }
-    fun defaultText(languages: Set<DictationLanguage>): String = buildList {
-        add(defaults.getString("base"))
-        if (DictationLanguage.RUSSIAN in languages && DictationLanguage.UKRAINIAN !in languages) {
-            add(defaults.getString("russianOrthography"))
-        }
-        if (DictationLanguage.RUSSIAN in languages) add(defaults.getString("russianPunctuation"))
-    }.joinToString("\n")
+    fun defaultText(@Suppress("UNUSED_PARAMETER") languages: Set<DictationLanguage>): String = defaults.getString("prompt")
     fun isValid(text: String): Boolean = text.toByteArray(Charsets.UTF_8).size <= MAXIMUM_BYTES
 }

@@ -164,13 +164,6 @@ struct SettingsView: View {
             }
             modelField(t("Live model", "Модель Live"), $preferences.liveModel)
             modelField(t("Accurate model", "Модель Accurate"), $preferences.accurateModel)
-            if preferences.mode == .accurate {
-                VStack(alignment: .leading, spacing: 6) {
-                    settingToggle(t("Correct punctuation", "Исправлять пунктуацию"), $preferences.accuratePunctuationEnabled)
-                    Text(t("Via OpenAI. Only on this device.", "Через OpenAI. Только на этом устройстве."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }.disabled(model.isActive)
-            }
             HStack {
                 Text(t("Speech languages", "Языки речи"))
                 Spacer()
@@ -187,6 +180,8 @@ struct SettingsView: View {
                 Button(t("Edit…", "Изменить…")) { promptOpen = true }
                     .accessibilityLabel(t("Edit transcription prompt", "Изменить промпт транскрипции"))
             }
+            Divider()
+            PostProcessingSettingsView(preferences: preferences)
             Divider()
             VStack(alignment: .leading, spacing: 10) {
                 shortcutRow(t("Start / finish dictation", "Начать / завершить диктовку"), preferences.shortcutLabel)

@@ -24,8 +24,8 @@ struct TranscriptionPromptEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(t("Transcription prompt", "Промпт транскрипции")).font(.title2).fontWeight(.semibold)
-            Text(t("Used by Live and Accurate, including retranscription. Languages and dictionary terms are sent separately.",
-                   "Используется в Live и Accurate, включая повторную транскрипцию. Языки и словарь передаются отдельно."))
+            Text(t("Optional recording context for Live and Accurate: topics, names and terminology. Empty by default. Use Post-processing for text formatting. Languages and dictionary terms are sent separately.",
+                   "Необязательный контекст для Live и Accurate: тема, имена и термины. По умолчанию пустой. Форматирование текста настраивается в постобработке. Языки и словарь передаются отдельно."))
                 .foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
             TextEditor(text: $text)
                 .font(.body).scrollContentBackground(.hidden).padding(10)

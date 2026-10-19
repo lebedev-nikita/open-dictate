@@ -10,6 +10,7 @@ import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
+import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.TextTransformationModel
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
@@ -126,6 +127,11 @@ class SettingsStore(context: Context) {
             }
         }
 
+    var postProcessing: PostProcessingSettings
+        get() = prefs.getString("postprocessing", null)?.let { runCatching { PostProcessingSettings.fromJson(it) }.getOrNull() }
+            ?: PostProcessingSettings()
+        set(value) = saveSynced { putString("postprocessing", value.toJson()) }
+
     var transformationButtonEnabled: Boolean
         get() = prefs.getBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, true)
         set(value) = prefs.edit { putBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, value) }
@@ -182,6 +188,7 @@ class SettingsStore(context: Context) {
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
         "textModel" to prefs.getString(KEY_TRANSFORMATION_MODEL_ID, transformationModel.apiName).orEmpty(),
+        "postprocessing" to postProcessing.toJson(),
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
         ).also { values ->
@@ -240,6 +247,7 @@ class SettingsStore(context: Context) {
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
             values["textModel"]?.let { putString(KEY_TRANSFORMATION_MODEL_ID, it.value) }
+            values["postprocessing"]?.let { putString("postprocessing", it.value) }
             putString("sync_document", merged.toJson())
         }
         merged
@@ -248,6 +256,7 @@ class SettingsStore(context: Context) {
     fun validateSyncDocument(merged: SettingsSyncDocument) {
         SettingsSyncDocument.fromJson(merged.toJson())
         val values = merged.entries
+        values["postprocessing"]?.value?.let(PostProcessingSettings::fromJson)
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
         listOf("liveModel", "accurateModel", "textModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }

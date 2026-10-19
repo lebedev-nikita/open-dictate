@@ -54,6 +54,7 @@ data class MainUiState(
     val languages: Set<DictationLanguage> = emptySet(),
     val prompt: String = "",
     val customTranscriptionPrompt: String? = null,
+    val postProcessing: com.opendictate.app.model.PostProcessingSettings = com.opendictate.app.model.PostProcessingSettings(),
     val selectionDictionaryActionEnabled: Boolean = true,
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
     val appFilter: AppFilter = AppFilter(),
@@ -114,6 +115,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
                     customTranscriptionPrompt = settings.customTranscriptionPrompt,
+                    postProcessing = settings.postProcessing,
                     liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId,
                     transformationModelId = settings.transformationModelId) }
             }
@@ -198,6 +200,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (id !in modelOptions(mutableState.value.modelCatalog.text, ModelCatalog.DEFAULT.text)) return
         settings.transformationModelId = id
         mutableState.update { it.copy(transformationModelId = id) }
+    }
+
+    fun savePostProcessing(value: com.opendictate.app.model.PostProcessingSettings) {
+        if (!value.isValid) return
+        settings.postProcessing = value
+        mutableState.update { it.copy(postProcessing = value) }
     }
 
     fun refreshModelCatalog(force: Boolean = false) {
@@ -439,6 +447,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         languages = settings.languages,
         prompt = settings.prompt,
         customTranscriptionPrompt = settings.customTranscriptionPrompt,
+        postProcessing = settings.postProcessing,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
         appFilter = settings.appFilter,

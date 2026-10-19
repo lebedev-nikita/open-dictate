@@ -98,6 +98,7 @@ class DictationForegroundService : Service() {
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
         val transformationModelId = settings.transformationModelId
+        val postProcessing = settings.postProcessing
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
         val dictionary = settings.prompt
@@ -125,6 +126,7 @@ class DictationForegroundService : Service() {
             var wavFile: WavFile? = null
             var savedRecording: LastDictationAudioStore.Recording? = null
             var modelMessage: String? = null
+            var postProcessingFailed = false
             try {
                 // The idle button can be tapped while the previous session is still cleaning up.
                 // Publish ownership first, then wait before opening another microphone or file.
@@ -258,7 +260,10 @@ class DictationForegroundService : Service() {
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    replacements.apply(transcript)
+                    val processed = apiClient.postProcess(apiKey, transcript, postProcessing)
+                    ensureActive()
+                    postProcessingFailed = processed.failed
+                    replacements.apply(processed.text)
                 }
                 if (result.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_transformation_empty))
@@ -281,6 +286,7 @@ class DictationForegroundService : Service() {
                     }
                 }
                 modelMessage?.let(::showModelMessage)
+                if (completed && postProcessingFailed) showModelMessage(getString(R.string.postprocessing_failed))
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {
@@ -328,6 +334,7 @@ class DictationForegroundService : Service() {
         val dictionary = settings.prompt
         val transcriptionPrompt = settings.customTranscriptionPrompt ?: com.opendictate.app.model.TranscriptionPrompt.defaultText(languages)
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
+        val postProcessing = settings.postProcessing
         activeOperation = DictationOperation.DICTATION
         startForeground(NOTIFICATION_ID, notification(true, DictationOperation.DICTATION))
         DictationStateBus.set(
@@ -353,7 +360,9 @@ class DictationForegroundService : Service() {
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val result = replacements.apply(transcript)
+                val processed = apiClient.postProcess(apiKey, transcript, postProcessing)
+                ensureActive()
+                val result = replacements.apply(processed.text)
                 val completed = publishWhileActive(
                     sessionId,
                     DictationState(
@@ -368,6 +377,7 @@ class DictationForegroundService : Service() {
                         (application as OpenDictateApplication).transcriptHistoryStore.add(result)
                     }
                 }
+                if (completed && processed.failed) showModelMessage(getString(R.string.postprocessing_failed))
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {

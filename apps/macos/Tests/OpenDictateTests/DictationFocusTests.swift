@@ -46,6 +46,16 @@ private actor ReplayTranscriber {
     }
 }
 
+private actor HeldPostProcessor {
+    private(set) var settings: [PostProcessingSettings] = []
+    private var pending: CheckedContinuation<PostProcessingResult, Never>?
+    func process(_ value: PostProcessingSettings) async -> PostProcessingResult {
+        settings.append(value)
+        return await withCheckedContinuation { pending = $0 }
+    }
+    func release() { pending?.resume(returning: .init(text: "processed transcript")); pending = nil }
+}
+
 @MainActor private final class FocusEditor: TextAccessibility, TextPasting {
     var text: String
     var range: NSRange
@@ -86,6 +96,47 @@ final class DictationFocusTests: XCTestCase {
         let deadline = ContinuousClock.now + .seconds(2)
         while model.phase != phase && ContinuousClock.now < deadline { await Task.yield() }
         XCTAssertEqual(model.phase, phase)
+    }
+
+    @MainActor func testPostProcessingUsesCapturedSettingsAndLateResultCannotDeliverAfterCancelOrFocusChange() async {
+        for cancel in [true, false] {
+            let first = FocusEditor("first "), second = FocusEditor("second "), processor = HeldPostProcessor()
+            var active = first
+            let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+                captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
+                processTranscript: { _, _, settings in await processor.process(settings) })
+            model.preferences.postProcessing = .init(enabled: true, model: "gpt-6-luna", prompt: "Original instruction")
+            model.toggleLocalRecording(mode: .live)
+            await waitFor(.recording, in: model)
+            model.preferences.postProcessing.prompt = "Changed after start"
+            model.stop()
+            let deadline = ContinuousClock.now + .seconds(2)
+            while await processor.settings.isEmpty && ContinuousClock.now < deadline { await Task.yield() }
+            let captured = await processor.settings.first
+            XCTAssertEqual(captured?.prompt, "Original instruction")
+            if cancel { model.cancel() }
+            else { first.focused = false; active = second; model.tick() }
+            await processor.release()
+            await waitFor(.idle, in: model)
+            XCTAssertEqual(first.sends, 0)
+            XCTAssertEqual(second.sends, 0)
+            XCTAssertEqual(model.lastTranscript, cancel ? "" : "processed transcript")
+            model.shutdown()
+        }
+    }
+
+    @MainActor func testVoiceEditSkipsPostProcessing() async {
+        let editor = FocusEditor("original "), processor = HeldPostProcessor()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(), captureTarget: { _, _ in editor.target() },
+            makeRecorder: { FocusRecorder() }, processTranscript: { _, _, settings in await processor.process(settings) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        model.toggleLocalRecording(transform: true)
+        await waitFor(.recording, in: model)
+        model.stop()
+        await waitFor(.idle, in: model)
+        let calls = await processor.settings.count
+        XCTAssertEqual(calls, 0)
     }
 
     @MainActor func testSwitchingWindowsKeepsRecordingAndPastesIntoFieldAtStop() async {

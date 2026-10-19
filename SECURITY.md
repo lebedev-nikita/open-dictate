@@ -9,15 +9,15 @@ text, and never alter the captured original field or voice-edit instructions.
 Rules are applied on-device. Optional Drive sync uses the same app-data scope
 for the rule list and enabled states.
 
-Android punctuation is requested in the original transcription; there is no
-separate punctuation correction request.
-
-On macOS, optional Accurate punctuation correction sends only recognized text
-directly to OpenAI with Responses storage disabled. It is off by default, never runs on Live
-or voice-edit instructions, and rejects output that changes word boundaries,
-spelling, order, numbers or address contents beyond allowed capitalization.
-Failures retain the original transcript; cancellation still prevents delivery.
-The enabled switch stays on the current device and is excluded from Drive sync.
+Optional post-processing sends recognized dictation text and the configured
+instruction directly to OpenAI through Responses with storage disabled. It is
+available after ordinary Live, Accurate and retranscription on both platforms;
+voice-edit commands skip it. Settings are captured at session start. Disabled
+post-processing or an empty prompt makes no additional request. Failures retain
+the original transcript and display a curated warning; cancellation still prevents
+delivery. The built-in punctuation-only preset rejects changes to words, numbers
+and address contents. Custom instructions, including number formatting, can
+rewrite text and are not constrained by that punctuation-only validator.
 
 ## Optional Google Drive synchronization
 
@@ -28,7 +28,8 @@ sync offline and resume queued work when connectivity returns.
 
 Sync uses Google's HTTPS endpoints without a backend, requests only
 `drive.appdata` and exports an allowlist of dictionary, replacement, mode and
-model settings, custom transcription prompts and explicit resets. Legacy Accurate punctuation sync entries are discarded.
+model settings, custom transcription prompts and explicit resets, and post-processing
+configuration (enabled, model and optional prompt override). Legacy Accurate punctuation sync entries are discarded.
 API keys, audio and history are excluded. Tokens, custom prompts, dictionary/replacement contents and raw
 provider payloads are never logged. Drive clients disable redirects, cookies and
 persistent caches. Remote data is bounded and validated before application;

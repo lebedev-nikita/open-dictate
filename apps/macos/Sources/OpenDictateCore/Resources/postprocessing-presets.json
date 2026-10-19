@@ -1,0 +1,4 @@
+{
+  "punctuation": "Correct punctuation and capitalization. Preserve the words, their spelling, order and language, except for changes explicitly requested by other instructions.",
+  "numbers": "Write spoken numbers as digits. Preserve their exact values, signs and precision. Use spaces to group thousands and a comma as the decimal separator. Do not round numbers or add decimal places. Leave dates, times, phone numbers, identifiers and ambiguous expressions unchanged unless their format is explicitly specified."
+}

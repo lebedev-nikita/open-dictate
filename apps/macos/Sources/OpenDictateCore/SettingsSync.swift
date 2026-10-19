@@ -36,7 +36,7 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
     }
     public var entries: [String: Entry] = [:]
     public init() {}
-    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt"]
+    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt", "postprocessing"]
     // Remove the former synced field from old journals and replicas without touching its local value.
     private static let deviceLocalKeys: Set<String> = ["accuratePunctuationEnabled"]
     private var syncEntries: [String: Entry] { entries.filter { !Self.deviceLocalKeys.contains($0.key) } }

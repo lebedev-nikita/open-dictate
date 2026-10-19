@@ -87,12 +87,11 @@ actor OpenAIClient {
         return (text, (result["message"] as? String).map { String($0.prefix(1000)) })
     }
 
-    func correctPunctuation(source: String, key: String, enabled: Bool, mode: DictationMode) async throws -> String {
-        try await PunctuationCorrection.apply(source: source, enabled: enabled, mode: mode) {
-            let response = try await self.response(OpenAIRequest.punctuation(source: source), key: key, timeout: 10)
+    func postProcess(source: String, key: String, settings: PostProcessingSettings) async throws -> PostProcessingResult {
+        try await PostProcessing.apply(source: source, settings: settings) {
+            let response = try await self.response(OpenAIRequest.postProcessing(source: source, settings: settings), key: key)
             guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
                   let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  result["message"] is NSNull,
                   let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }
             return text
         }
