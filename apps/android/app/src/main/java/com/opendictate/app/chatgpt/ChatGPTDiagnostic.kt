@@ -8,10 +8,14 @@ internal fun chatGPTDiagnostic(error: JSONObject?): String {
         "bad_request", "rate_limit_exceeded", "insufficient_quota", "subscription_sharing_usage_limit_exceeded",
         "subscription_sharing_usage_unavailable", "permission_denied", "invalid_api_key", "model_not_found", "server_error")
     val parameters = setOf("service_tier", "reasoning", "reasoning.effort", "text", "text.format", "model", "input", "store", "stream")
-    fun label(key: String, allowed: Set<String>) = error?.optString(key)?.takeIf { it in allowed } ?: "other"
-    val message = error?.optString("message").orEmpty().lowercase(java.util.Locale.ROOT)
+    val details = error?.optJSONObject("error") ?: error
+    fun label(key: String, allowed: Set<String>) = details?.optString(key)?.takeIf { it in allowed } ?: "other"
+    val message = error?.toString().orEmpty().lowercase(java.util.Locale.ROOT)
     val unsupported = listOf("not supported", "unsupported", "not allowed", "not available", "unrecognized", "unknown").any(message::contains)
     return "type=${label("type", codes)} code=${label("code", codes)} param=${label("param", parameters)} " +
         "mentionsTier=${message.contains("service_tier") || message.contains("service") && message.contains("tier")} " +
-        "mentionsFast=${message.contains("fast")} mentionsPriority=${message.contains("priority")} unsupported=$unsupported"
+        "mentionsFast=${message.contains("fast")} mentionsPriority=${message.contains("priority")} unsupported=$unsupported " +
+        "invalid=${message.contains("invalid")} literalError=${message.contains("literal_error")} " +
+        "mentionsDefault=${message.contains("default")} mentionsUsage=${message.contains("usage") || message.contains("quota") || message.contains("credits")} " +
+        "detailEnvelope=${error?.has("detail") == true} errorEnvelope=${error?.has("error") == true}"
 }

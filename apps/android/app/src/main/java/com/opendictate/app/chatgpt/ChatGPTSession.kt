@@ -172,7 +172,16 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
     suspend fun response(id: String, body: JSONObject): JSONObject {
         try {
             require(body.optString("model") == "gpt-6-luna")
-            val response = request("${ChatGPTProtocol.RESOURCE}/responses", bearer = token(id), body = ChatGPTProtocol.planRequest(body))
+            val planBody = ChatGPTProtocol.planRequest(body)
+            val response = try {
+                request("${ChatGPTProtocol.RESOURCE}/responses", bearer = token(id), body = planBody)
+            } catch (error: CancellationException) { throw error }
+            catch (error: Exception) {
+                if (planBody.optString("service_tier") != "fast") throw error
+                android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] priority-only-variable-probe")
+                request("${ChatGPTProtocol.RESOURCE}/responses", bearer = token(id),
+                    body = JSONObject(planBody.toString()).put("service_tier", "priority"))
+            }
             mutableState.value = mutableState.value.copy(failed = false)
             return response
         } catch (error: CancellationException) { throw error }
@@ -202,7 +211,8 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                             if (body != null) {
                                 val source = it.body.source(); source.request(65537)
                                 val error = if (source.buffer.size <= 65536)
-                                    runCatching { JSONObject(source.buffer.clone().readUtf8()).optJSONObject("error") }.getOrNull() else null
+                                    source.buffer.clone().readUtf8().let { text -> runCatching { JSONObject(text) }
+                                        .getOrElse { JSONObject().put("detail", text) } } else null
                                 android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] " + chatGPTDiagnostic(error))
                             }
                             if (url == ChatGPTProtocol.TOKEN) {
