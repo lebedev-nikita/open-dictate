@@ -28,12 +28,18 @@ class PostProcessingSettingsTest {
 
     @Test fun menuDraftSaveCancelResetAndRestartWithoutPromptEditor() {
         val store = SettingsStore(compose.activity)
-        val original = store.postProcessing; val originalMode = store.model
+        val original = store.postProcessing; val originalMode = store.model; val originalLanguages = store.languages
         val prefs = compose.activity.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE)
         val journal = prefs.getString("sync_document", null)
         prefs.edit().remove("sync_document").commit()
         try {
-            compose.runOnIdle { androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java].savePostProcessing(PostProcessingSettings()) }
+            compose.runOnIdle {
+                val viewModel = androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java]
+                viewModel.savePostProcessing(PostProcessingSettings())
+                for (language in DictationLanguage.entries) {
+                    if ((language in store.languages) != (language == DictationLanguage.ENGLISH || language == DictationLanguage.RUSSIAN)) viewModel.toggleLanguage(language)
+                }
+            }
             action(R.string.settings_mode_live)
             compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).assertDoesNotExist()
             action(R.string.settings_mode_accurate)
@@ -78,7 +84,7 @@ class PostProcessingSettingsTest {
             assertFalse(store.postProcessing.enabled)
             compose.onNodeWithText(label(R.string.postprocessing_values)).assertDoesNotExist()
         } finally {
-            store.postProcessing = original; store.model = originalMode
+            store.postProcessing = original; store.model = originalMode; store.languages = originalLanguages
             prefs.edit().putString("sync_document", journal).commit()
         }
     }

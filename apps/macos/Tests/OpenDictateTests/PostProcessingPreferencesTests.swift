@@ -92,7 +92,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
             for kind in ValueKind.allCases { for code: String? in [nil, "ru", "en"] {
                 formats.setRule(.init(kind: kind, language: code, example: formats[kind].example))
             } }
-            let host = NSHostingView(rootView: ValueFormattingMenu(initial: formats, russian: language == "ru", defaults: formats,
+            let host = NSHostingView(rootView: ValueFormattingMenu(initial: formats, russian: language == "ru", selectedLanguages: ["en", "ru"], defaults: formats,
                 onCancel: {}, onSave: { _ in }).background(Color(nsColor: .windowBackgroundColor)))
             host.frame = NSRect(x: 0, y: 0, width: 460, height: 580)
             host.appearance = NSAppearance(named: appearance)
@@ -125,7 +125,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
         for (language, appearance) in [("en", NSAppearance.Name.darkAqua), ("ru", .aqua)] {
             let formats = ValueFormatting.systemDefaults(locale: Locale(identifier: language == "ru" ? "ru_RU" : "en_US"))
             let host = NSHostingView(rootView: ValueFormatRuleEditor(initial: .init(kind: .date, language: "en", example: "03/05/2026"),
-                existingRules: [], replacing: "new", russian: language == "ru", defaults: formats, onCancel: {}, onSave: { _ in })
+                existingRules: [], replacing: "new", russian: language == "ru", selectedLanguages: ["en", "ru"], defaults: formats, onCancel: {}, onSave: { _ in })
                 .padding(20).frame(width: 440, alignment: .topLeading).background(Color(nsColor: .windowBackgroundColor)))
             host.frame = NSRect(x: 0, y: 0, width: 440, height: 330); host.appearance = NSAppearance(named: appearance)
             let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
@@ -137,6 +137,20 @@ final class PostProcessingPreferencesTests: XCTestCase {
                 try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: URL(fileURLWithPath: output).appendingPathComponent("value-rule-macos-\(language).png"))
             }
             window.close()
+        }
+    }
+
+    @MainActor func testRuleLanguagePickerUsesOnlySelectedDictationLanguages() {
+        let formats = ValueFormatting.systemDefaults(locale: Locale(identifier: "en_US"))
+        for (selected, initial, expected, available) in [
+            (Set(["ru", "en"]), Optional<String>.none, ["All languages", "English", "Russian"], true),
+            (Set<String>(), Optional<String>.none, ["All languages"], true),
+            (Set(["ru", "en"]), Optional("fr"), ["All languages", "English", "Russian"], false)
+        ] {
+            let editor = ValueFormatRuleEditor(initial: .init(kind: .integer, language: initial, example: "1 234 567"),
+                existingRules: [], replacing: "new", russian: false, selectedLanguages: selected, defaults: formats, onCancel: {}, onSave: { _ in })
+            XCTAssertEqual(["All languages"] + editor.languageOptions.map { $0.title(russian: false) }, expected)
+            XCTAssertEqual(editor.hasAvailableLanguage, available)
         }
     }
 

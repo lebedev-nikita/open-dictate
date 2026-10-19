@@ -314,6 +314,7 @@
     <string name="value_rules_automatic">Formats follow the dictation language and regional preferences. Add a rule to change a format.</string>
     <string name="value_rule_type">Value type</string>
     <string name="value_rule_language">Language</string>
+    <string name="value_rule_choose_language">Choose language</string>
     <string name="value_rule_all_languages">All languages</string>
     <string name="value_rule_source">Source value</string>
     <string name="value_rule_result">Result in your format</string>

@@ -36,7 +36,7 @@ import com.opendictate.app.model.ValueFormatting
 import com.opendictate.app.model.ValueKind
 
 @Composable
-internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onChange: (PostProcessingSettings) -> Unit) {
+internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, selectedLanguages: Set<String>, onChange: (PostProcessingSettings) -> Unit) {
     var formatsOpen by rememberSaveable { mutableStateOf(false) }
     val title = stringResource(R.string.postprocessing_title)
     val context = LocalContext.current
@@ -68,7 +68,7 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                 contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.postprocessing_reset_settings))
             }
-            if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(),
+            if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(), selectedLanguages,
                 onDismiss = { formatsOpen = false }, onSave = { chosen ->
                     onChange(settings.copy(formatValues = true, formats = chosen)); formatsOpen = false
                 })
@@ -90,7 +90,7 @@ private val FormatsSaver = Saver<ValueFormatting, String>(save = { it.json() }, 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueFormatting, onDismiss: () -> Unit, onSave: (ValueFormatting) -> Unit) {
+internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueFormatting, selectedLanguages: Set<String>, onDismiss: () -> Unit, onSave: (ValueFormatting) -> Unit) {
     var draft by rememberSaveable(stateSaver = FormatsSaver) { mutableStateOf(initial) }
     val russian = LocalConfiguration.current.locales[0].language == "ru"
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
@@ -102,7 +102,8 @@ internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueForma
         kindId = (rule?.kind ?: ValueKind.INTEGER).id; language = rule?.language ?: "*"
         example = rule?.example ?: draft.entries.getValue(ValueKind.INTEGER).example
     }
-    val languages = remember(russian) { ValueFormatting.supportedLanguages.sortedWith(compareBy(java.text.Collator.getInstance(if (russian) Locale.forLanguageTag("ru") else Locale.ENGLISH)) { Locale.forLanguageTag(it).getDisplayLanguage(if (russian) Locale.forLanguageTag("ru") else Locale.ENGLISH) }) }
+    val languages = remember(russian, selectedLanguages) { ValueFormatting.supportedLanguages.filter { it in selectedLanguages }.sortedWith(compareBy(java.text.Collator.getInstance(if (russian) Locale.forLanguageTag("ru") else Locale.ENGLISH)) { Locale.forLanguageTag(it).getDisplayLanguage(if (russian) Locale.forLanguageTag("ru") else Locale.ENGLISH) }) }
+    val languageAvailable = language == "*" || language in languages
     ModalBottomSheet(onDismissRequest = onDismiss, sheetGesturesEnabled = false, dragHandle = null, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         CompositionLocalProvider(LocalOverscrollFactory provides null) {
             Column(Modifier.fillMaxSize().testTag("valueFormattingViewport").padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -147,7 +148,7 @@ internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueForma
                                 if (kindId != chosen.id) { kindId = chosen.id; example = draft.entries.getValue(chosen).example }; close()
                             }) }
                         }
-                        RuleChoice(stringResource(R.string.value_rule_language), ValueFormatRule(kind, language.takeUnless { it == "*" }, example).languageTitle(russian)) { close ->
+                        RuleChoice(stringResource(R.string.value_rule_language), if (languageAvailable) ValueFormatRule(kind, language.takeUnless { it == "*" }, example).languageTitle(russian) else stringResource(R.string.value_rule_choose_language), modifier = Modifier.testTag("valueRuleLanguage")) { close ->
                             DropdownMenuItem(text = { Text(stringResource(R.string.value_rule_all_languages)) }, onClick = { language = "*"; close() })
                             languages.forEach { code -> DropdownMenuItem(text = { Text(ValueFormatRule(kind, code, example).languageTitle(russian)) }, onClick = { language = code; close() }) }
                         }
@@ -177,7 +178,7 @@ internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueForma
                         val rule = ValueFormatRule(ValueKind.entries.first { it.id == kindId }, language.takeUnless { it == "*" }, example)
                         val next = draft.settingRule(rule, editing)
                         TextButton(onClick = { editing = null }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.postprocessing_cancel)) }
-                        Button(onClick = { draft = next; editing = null }, enabled = rule.isValid && next.isValid && draft.rules.none { it.id == rule.id && it.id != editing },
+                        Button(onClick = { draft = next; editing = null }, enabled = languageAvailable && rule.isValid && next.isValid && draft.rules.none { it.id == rule.id && it.id != editing },
                             modifier = Modifier.heightIn(min = 48.dp).testTag("valueRuleSave")) { Text(stringResource(R.string.value_rule_save)) }
                     }
                 }
@@ -187,12 +188,12 @@ internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueForma
 }
 
 @Composable
-private fun RuleChoice(label: String, value: String, content: @Composable (close: () -> Unit) -> Unit) {
+private fun RuleChoice(label: String, value: String, modifier: Modifier = Modifier, content: @Composable (close: () -> Unit) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge)
         Box {
-            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            OutlinedButton(onClick = { expanded = true }, modifier = modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 Text(value, Modifier.weight(1f)); Icon(Icons.Outlined.ArrowDropDown, null)
             }
             DropdownMenu(expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 360.dp)) { content { expanded = false } }

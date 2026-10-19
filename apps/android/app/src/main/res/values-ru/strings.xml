@@ -310,6 +310,7 @@
     <string name="value_rules_automatic">Форматы выбираются по языку диктовки и региональным настройкам. Чтобы изменить формат, добавьте правило.</string>
     <string name="value_rule_type">Тип значения</string>
     <string name="value_rule_language">Язык</string>
+    <string name="value_rule_choose_language">Выберите язык</string>
     <string name="value_rule_all_languages">Все языки</string>
     <string name="value_rule_source">Исходное значение</string>
     <string name="value_rule_result">Результат в нужном формате</string>

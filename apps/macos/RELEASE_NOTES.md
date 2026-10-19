@@ -1,5 +1,6 @@
-# OpenDictate for macOS 0.5.0-rc.19
+# OpenDictate for macOS 0.5.0-rc.20
 
+- Limit the custom-rule language picker to selected dictation languages plus All languages. Automatic detection offers only All languages. Keep saved rules when a language is deselected and require an available language before saving edits to them.
 - Configure custom value-format rules by type, language or All languages, and desired result for an unambiguous fixed source value. Group rules by type, with All languages first and other languages alphabetically; retain native automatic regional defaults and synchronize custom rules across platforms.
 - Use one explicit source/result style table in generated prompts. A specific-language rule overrides an All languages rule. Keep legacy fixed examples as general rules and preserve cancel, reset and Accurate-only behavior.
 - Offer GPT-6 Luna and GPT-6 Luna Fast, defaulting to Fast. Capture the service tier at session start for post-processing and transformation, and synchronize it separately from the model ID.

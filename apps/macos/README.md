@@ -129,6 +129,9 @@ Enable **Format values** for automatic language/regional styles. The native
 popover lists only custom rules, grouped by value type; **All languages** comes
 first, followed by languages alphabetically. **Add rule** asks for a type,
 language or All languages, and the desired result for a fixed source value.
+The language picker offers only selected dictation languages; automatic detection
+offers only All languages. Existing rules survive language deselection. Editing
+such a rule requires choosing an available language before saving.
 Dates show a named month so the source is unambiguous. Source values are bundled
 with the app; configuring a rule never calls a model. Ten value types can be
 individually enabled under **Value types**.

@@ -28,7 +28,7 @@ class PostProcessingLayoutTest {
         val settings = mutableStateOf(PostProcessingSettings(enabled = true))
         compose.setContent {
             OpenDictateTheme { Surface(Modifier.fillMaxSize()) {
-                Column(Modifier.safeDrawingPadding().padding(20.dp)) { PostProcessingSettingsPanel(settings.value, { settings.value = it }) }
+                Column(Modifier.safeDrawingPadding().padding(20.dp)) { PostProcessingSettingsPanel(settings.value, setOf("en", "ru"), { settings.value = it }) }
             } }
         }
         val punctuation = compose.onNodeWithText(label(R.string.postprocessing_punctuation), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
@@ -47,7 +47,7 @@ class PostProcessingLayoutTest {
 
     @Test fun keyboardAndFieldChangesKeepThePanelAnchored() {
         val formats = ValueFormatting.systemDefaults(Locale.US)
-        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, {}, {}) } }
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, setOf("en", "ru"), {}, {}) } }
         val viewport = compose.onNodeWithTag("valueFormattingViewport")
         val initialBounds = viewport.fetchSemanticsNode().boundsInWindow
         val initialTop = initialBounds.top
@@ -68,6 +68,42 @@ class PostProcessingLayoutTest {
         androidx.test.espresso.Espresso.closeSoftKeyboard()
     }
 
+    @Test fun ruleLanguageMenuContainsOnlySelectedDictationLanguagesAndAllLanguages() {
+        val formats = ValueFormatting.systemDefaults(Locale.US)
+        val selected = mutableStateOf(setOf("ru", "en"))
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, selected.value, {}, {}) } }
+        val russian = context.resources.configuration.locales[0].language == "ru"
+        fun popup(code: String?) = compose.onNode(hasText(ValueFormatRule(ValueKind.INTEGER, code, "1").languageTitle(russian)) and hasAnyAncestor(isPopup()))
+        compose.onNodeWithTag("addValueRule").performClick()
+        compose.onNodeWithTag("valueRuleLanguage").performClick()
+        popup(null).assertIsDisplayed(); popup("en").assertIsDisplayed(); popup("ru").assertIsDisplayed()
+        popup("fr").assertDoesNotExist(); popup("de").assertDoesNotExist()
+        compose.onAllNodes(hasClickAction() and hasAnyAncestor(isPopup())).assertCountEquals(3)
+        capture("selected-language-menu")
+        popup("en").performClick()
+        compose.runOnIdle { selected.value = emptySet() }
+        compose.onNodeWithTag("valueRuleSave").assertIsNotEnabled()
+        compose.onNodeWithText(label(R.string.value_rule_choose_language)).assertIsDisplayed()
+        compose.onNodeWithTag("valueRuleLanguage").performClick()
+        popup(null).assertIsDisplayed(); popup("en").assertDoesNotExist(); popup("ru").assertDoesNotExist()
+        compose.onAllNodes(hasClickAction() and hasAnyAncestor(isPopup())).assertCountEquals(1)
+        popup(null).performClick()
+        compose.onNodeWithTag("valueRuleSave").assertIsEnabled()
+    }
+
+    @Test fun removingADictationLanguageDoesNotDeleteItsSavedRuleOrPromoteItToAllLanguages() {
+        val rule = ValueFormatRule(ValueKind.INTEGER, "fr", "1 234 567")
+        val formats = ValueFormatting.systemDefaults(Locale.US).settingRule(rule)
+        var saved: ValueFormatting? = null
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, setOf("en", "ru"), {}, { saved = it }) } }
+        compose.onNodeWithText(rule.example).performClick()
+        compose.onNodeWithText(label(R.string.value_rule_choose_language)).assertIsDisplayed()
+        compose.onNodeWithTag("valueRuleSave").assertIsNotEnabled()
+        compose.onNodeWithText(label(R.string.postprocessing_cancel)).performClick()
+        compose.onNodeWithTag("valueFormatsSave").performClick()
+        assertEquals(listOf(rule), saved!!.rules)
+    }
+
     private fun manyRules(): ValueFormatting {
         var formats = ValueFormatting.systemDefaults(Locale.US)
         for (kind in ValueKind.entries) for (language in listOf(null, "en", "ru"))
@@ -77,7 +113,7 @@ class PostProcessingLayoutTest {
 
     @Test fun allLanguagesPrecedesAlphabeticalLanguageRules() {
         val formats = manyRules()
-        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, {}, {}) } }
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, setOf("en", "ru"), {}, {}) } }
         val russian = context.resources.configuration.locales[0].language == "ru"
         val all = compose.onAllNodesWithText(ValueFormatRule(ValueKind.INTEGER, null, "1").languageTitle(russian))[0].fetchSemanticsNode().boundsInRoot
         val english = compose.onAllNodesWithText(ValueFormatRule(ValueKind.INTEGER, "en", "1").languageTitle(russian))[0].fetchSemanticsNode().boundsInRoot
@@ -89,7 +125,7 @@ class PostProcessingLayoutTest {
     @Test fun fastFlingsToBothEndsKeepTheFormattingPanelStill() {
         val formats = manyRules()
         var dismissed = false
-        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, { dismissed = true }, {}) } }
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, setOf("en", "ru"), { dismissed = true }, {}) } }
         val title = compose.onNodeWithText(label(R.string.postprocessing_values))
         val initialTop = title.fetchSemanticsNode().boundsInWindow.top
         val list = compose.onNode(hasScrollAction())
@@ -116,7 +152,7 @@ class PostProcessingLayoutTest {
     @Test fun scrollingAtTheStartDoesNotDragTheFormattingPanel() {
         val formats = manyRules()
         var dismissed = false
-        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, { dismissed = true }, {}) } }
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, setOf("en", "ru"), { dismissed = true }, {}) } }
         val title = compose.onNodeWithText(label(R.string.postprocessing_values))
         val initialTop = title.fetchSemanticsNode().boundsInWindow.top
         val list = compose.onNode(hasScrollAction())

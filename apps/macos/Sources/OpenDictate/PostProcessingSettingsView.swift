@@ -24,7 +24,7 @@ struct PostProcessingSettingsView: View {
                             }
                         }.buttonStyle(.plain)
                         .popover(isPresented: $formatsOpen, arrowEdge: .bottom) {
-                            ValueFormattingMenu(initial: settings.formats ?? .systemDefaults(), russian: preferences.isRussian,
+                            ValueFormattingMenu(initial: settings.formats ?? .systemDefaults(), russian: preferences.isRussian, selectedLanguages: preferences.speechLanguages,
                                 onCancel: { formatsOpen = false }, onSave: { formats in
                                     var next = settings
                                     next.formats = formats; next.formatValues = true
@@ -54,11 +54,12 @@ struct ValueFormattingMenu: View {
     @State private var typesOpen = false
     private let defaults: ValueFormatting
     let russian: Bool
+    let selectedLanguages: Set<String>
     let onCancel: () -> Void
     let onSave: (ValueFormatting) -> Void
-    init(initial: ValueFormatting, russian: Bool, defaults: ValueFormatting = .systemDefaults(),
+    init(initial: ValueFormatting, russian: Bool, selectedLanguages: Set<String>, defaults: ValueFormatting = .systemDefaults(),
          onCancel: @escaping () -> Void, onSave: @escaping (ValueFormatting) -> Void) {
-        self._draft = State(initialValue: initial); self.defaults = defaults; self.russian = russian
+        self._draft = State(initialValue: initial); self.defaults = defaults; self.russian = russian; self.selectedLanguages = selectedLanguages
         self.onCancel = onCancel; self.onSave = onSave
     }
     private func t(_ en: String, _ ru: String) -> String { russian ? ru : en }
@@ -66,7 +67,7 @@ struct ValueFormattingMenu: View {
         VStack(alignment: .leading, spacing: 14) {
             if let editing {
                 ValueFormatRuleEditor(initial: draft.rules.first { $0.id == editing } ?? .init(kind: .integer, example: draft[.integer].example),
-                    existingRules: draft.rules, replacing: editing, russian: russian, defaults: draft,
+                    existingRules: draft.rules, replacing: editing, russian: russian, selectedLanguages: selectedLanguages, defaults: draft,
                     canSave: { rule in var next = draft; next.setRule(rule, replacing: editing); return next.isValid },
                     onCancel: { self.editing = nil }, onSave: { rule in
                         draft.setRule(rule, replacing: editing); self.editing = nil
@@ -131,16 +132,23 @@ struct ValueFormatRuleEditor: View {
     let existingRules: [ValueFormatRule]
     let replacing: String
     let russian: Bool
+    let selectedLanguages: Set<String>
     let defaults: ValueFormatting
     let canSave: (ValueFormatRule) -> Bool
     let onCancel: () -> Void
     let onSave: (ValueFormatRule) -> Void
-    init(initial: ValueFormatRule, existingRules: [ValueFormatRule], replacing: String, russian: Bool, defaults: ValueFormatting, canSave: @escaping (ValueFormatRule) -> Bool = { _ in true },
+    init(initial: ValueFormatRule, existingRules: [ValueFormatRule], replacing: String, russian: Bool, selectedLanguages: Set<String>, defaults: ValueFormatting, canSave: @escaping (ValueFormatRule) -> Bool = { _ in true },
          onCancel: @escaping () -> Void, onSave: @escaping (ValueFormatRule) -> Void) {
-        _rule = State(initialValue: initial); self.existingRules = existingRules; self.replacing = replacing; self.russian = russian
+        _rule = State(initialValue: initial); self.existingRules = existingRules; self.replacing = replacing; self.russian = russian; self.selectedLanguages = selectedLanguages
         self.defaults = defaults; self.canSave = canSave; self.onCancel = onCancel; self.onSave = onSave
     }
     private func t(_ en: String, _ ru: String) -> String { russian ? ru : en }
+    var languageOptions: [SpeechLanguage] {
+        SpeechLanguage.all.filter { selectedLanguages.contains($0.id) }.sorted {
+            $0.title(russian: russian).compare($1.title(russian: russian), locale: Locale(identifier: russian ? "ru" : "en")) == .orderedAscending
+        }
+    }
+    var hasAvailableLanguage: Bool { rule.language.map { selectedLanguages.contains($0) } ?? true }
     private var duplicate: Bool { existingRules.contains { $0.id == rule.id && $0.id != replacing } }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -149,12 +157,13 @@ struct ValueFormatRuleEditor: View {
                 Picker(t("Value type", "Тип значения"), selection: $rule.kind) {
                     ForEach(ValueKind.allCases, id: \.self) { kind in Text(kind.title(russian: russian)).tag(kind) }
                 }.onChange(of: rule.kind) { _, kind in rule.example = defaults[kind].example }
-                Picker(t("Language", "Язык"), selection: Binding(get: { rule.language ?? "*" }, set: { rule.language = $0 == "*" ? nil : $0 })) {
+                Picker(t("Language", "Язык"), selection: Binding(get: { hasAvailableLanguage ? rule.language ?? "*" : "" }, set: { rule.language = $0 == "*" ? nil : $0 })) {
+                    if !hasAvailableLanguage { Text(t("Choose language", "Выберите язык")).tag("").disabled(true) }
                     Text(t("All languages", "Все языки")).tag("*")
-                    ForEach(SpeechLanguage.all.sorted { $0.title(russian: russian).compare($1.title(russian: russian), locale: Locale(identifier: russian ? "ru" : "en")) == .orderedAscending }) { language in
+                    ForEach(languageOptions) { language in
                         Text(language.title(russian: russian)).tag(language.id)
                     }
-                }
+                }.accessibilityIdentifier("valueRuleLanguage")
             }
             VStack(alignment: .leading, spacing: 6) {
                 Text(t("Source value", "Исходное значение")).font(.subheadline.weight(.medium))
@@ -177,7 +186,7 @@ struct ValueFormatRuleEditor: View {
             HStack {
                 Spacer()
                 Button(t("Cancel", "Отмена"), action: onCancel).keyboardShortcut(.cancelAction)
-                Button(t("Save rule", "Сохранить правило")) { onSave(rule) }.keyboardShortcut(.defaultAction).disabled(!rule.isValid || duplicate || !canSave(rule))
+                Button(t("Save rule", "Сохранить правило")) { onSave(rule) }.keyboardShortcut(.defaultAction).disabled(!hasAvailableLanguage || !rule.isValid || duplicate || !canSave(rule))
             }.padding(.top, 6)
         }
     }

@@ -243,7 +243,7 @@ internal fun SettingsScreen(
                     if (state.model == TranscriptionModel.ACCURATE) {
                         Spacer(Modifier.height(28.dp))
                         postProcessingState.SaveableStateProvider("postprocessing") {
-                            SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, viewModel::savePostProcessing) }
+                            SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, state.languages.map { it.code }.toSet(), viewModel::savePostProcessing) }
                         }
                     }
 
