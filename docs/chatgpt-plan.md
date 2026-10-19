@@ -17,6 +17,10 @@ ChatGPT switch off explicitly returns text processing to the API key and attempt
 remote revocation;
 if revocation cannot be confirmed, also disconnect the app in ChatGPT settings.
 
+Finished text items are collected in request memory, including when the final
+`response.completed` event has an empty output snapshot. Terminal completion is
+still required; interrupted or failed streams preserve the original text.
+
 ## Protocol references
 
 The integration uses the official public-client flow, without a client secret,

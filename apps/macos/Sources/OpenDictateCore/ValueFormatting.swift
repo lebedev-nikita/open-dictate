@@ -70,7 +70,7 @@ public struct ValueFormatting: Equatable, Sendable {
 
 enum PostProcessingRules {
     struct Definition: Decodable { let id: String; let en: String; let ru: String; let reference: String; let examples: [String]; let rule: String }
-    struct Root: Decodable { let punctuation: String; let valuesInstructions: String; let types: [Definition] }
+    struct Root: Decodable { let punctuation: String; let punctuationWithValues: String; let valuesInstructions: String; let types: [Definition] }
     static let root: Root = {
         guard let url = Bundle.module.url(forResource: "postprocessing-rules", withExtension: "json"),
               let data = try? Data(contentsOf: url), let result = try? JSONDecoder().decode(Root.self, from: data) else {

@@ -156,7 +156,7 @@ actor ChatGPTSession {
             throw ChatGPTError.unavailable
         }
         if body != nil {
-            var data = "", line = Data(), count = 0; var completed: [String: Any]?
+            var data = "", line = Data(), count = 0; var stream = ChatGPTResponseAccumulator()
             // AsyncBytes.lines omits empty lines on some Foundation versions; SSE uses them as event boundaries.
             for try await byte in bytes {
                 try Task.checkCancellation(); count += 1
@@ -165,12 +165,12 @@ actor ChatGPTSession {
                 if line.last == 13 { line.removeLast() }
                 let text = String(decoding: line, as: UTF8.self); line.removeAll(keepingCapacity: true)
                 if text.isEmpty {
-                    if !data.isEmpty { if let event = try ChatGPTProtocol.completedEvent(data) { completed = event }; data = "" }
+                    if !data.isEmpty { try stream.consume(data); data = "" }
                 } else if text.hasPrefix("data:") {
                     if !data.isEmpty { data += "\n" }; data += text.dropFirst(5).trimmingCharacters(in: .whitespaces)
                 }
             }
-            guard let completed else { throw ChatGPTError.unavailable }; return completed
+            return try stream.result()
         }
         var data = Data()
         for try await byte in bytes { guard data.count < 2_097_152 else { throw ChatGPTError.unavailable }; data.append(byte) }

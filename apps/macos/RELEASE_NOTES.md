@@ -1,5 +1,7 @@
-# OpenDictate for macOS 0.5.0-rc.14
+# OpenDictate for macOS 0.5.0-rc.15
 
+- Fix ChatGPT post-processing and transformation when the final completed event omits its output snapshot. Retain finished stream items in memory and require terminal success before returning them.
+- Give enabled value formatting explicit priority when combined with punctuation, so number words can become digits.
 - Replace the editable post-processing prompt with punctuation and value-format settings. Edit system-region examples for ten value types in a native popover; sync saved examples across platforms. Retire earlier custom prompts while preserving enabled state.
 - Fix ChatGPT sign-in for valid ID tokens whose single audience is encoded as an array without azp. Keep signature, issuer, nonce, expiry and authorized-party checks.
 - Group Google Drive and ChatGPT in Integrations with short synchronization and text helper labels. Remove the ChatGPT account details, account menu and usage link from Settings; keep the transcription API-key prerequisite and recovery controls.

@@ -72,6 +72,7 @@ internal object PostProcessingRules {
         requireNotNull(javaClass.classLoader!!.getResourceAsStream("postprocessing-rules.json")).bufferedReader().use { JSONObject(it.readText()) }
     }
     val punctuation: String get() = root.getString("punctuation")
+    val punctuationWithValues: String get() = root.getString("punctuationWithValues")
     val valuesInstructions: String get() = root.getString("valuesInstructions")
     val types: Map<String, JSONObject> by lazy {
         root.getJSONArray("types").let { a -> (0 until a.length()).associate { a.getJSONObject(it).let { type -> type.getString("id") to type } } }

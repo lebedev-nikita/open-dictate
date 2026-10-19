@@ -91,3 +91,45 @@ public enum ChatGPTProtocol {
         }
     }
 }
+
+/// Plan streams may omit the final output snapshot. Completed items remain gated by terminal success.
+public struct ChatGPTResponseAccumulator {
+    private var items: [Int: [String: Any]] = [:]
+    private var completed: [String: Any]?
+    private var failed = false
+    public init() {}
+
+    public mutating func consume(_ data: String) throws {
+        do {
+            guard !failed else { throw ChatGPTError.unavailable }
+            if data == "[DONE]" { return }
+            guard let event = try JSONSerialization.jsonObject(with: Data(data.utf8)) as? [String: Any] else { throw ChatGPTError.unavailable }
+            switch event["type"] as? String {
+            case "response.output_item.done":
+                guard let number = event["output_index"] as? NSNumber,
+                      CFGetTypeID(number) != CFBooleanGetTypeID(),
+                      (0...1023).contains(number.intValue), number.doubleValue == Double(number.intValue),
+                      let item = event["item"] as? [String: Any] else { throw ChatGPTError.unavailable }
+                items[number.intValue] = item
+            case "response.completed":
+                guard var response = try ChatGPTProtocol.completedEvent(data) else { throw ChatGPTError.unavailable }
+                let value = response["output"]
+                guard value == nil || value is NSNull || value is [[String: Any]] else { throw ChatGPTError.unavailable }
+                if (value as? [[String: Any]])?.isEmpty != false, !items.isEmpty {
+                    response["output"] = items.keys.sorted().compactMap { items[$0] }
+                }
+                completed = response
+            case "response.failed", "response.incomplete", "error": throw ChatGPTError.unavailable
+            default: break
+            }
+        } catch {
+            failed = true; completed = nil
+            throw error
+        }
+    }
+
+    public func result() throws -> [String: Any] {
+        guard !failed, let completed else { throw ChatGPTError.unavailable }
+        return completed
+    }
+}

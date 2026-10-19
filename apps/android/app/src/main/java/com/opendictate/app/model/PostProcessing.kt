@@ -14,7 +14,7 @@ data class PostProcessingSettings(
     fun forMode(mode: TranscriptionModel): PostProcessingSettings = if (mode == TranscriptionModel.ACCURATE) this else copy(enabled = false)
     val hasValueFormatting: Boolean get() = formatValues && formats?.hasEnabledTypes == true
     val effectivePrompt: String get() = buildList {
-        if (punctuation) add(PostProcessingRules.punctuation)
+        if (punctuation) add(if (hasValueFormatting) PostProcessingRules.punctuationWithValues else PostProcessingRules.punctuation)
         if (hasValueFormatting) add(requireNotNull(formats).instruction)
     }.joinToString("\n\n")
     val shouldProcess: Boolean get() = enabled && (punctuation || hasValueFormatting)

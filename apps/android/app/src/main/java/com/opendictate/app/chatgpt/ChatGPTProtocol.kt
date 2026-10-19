@@ -86,3 +86,43 @@ object ChatGPTProtocol {
     }
 }
 class ChatGPTException : Exception("ChatGPT unavailable. Check your connection and plan usage. No API fallback was used.")
+
+/** Some plan streams omit output snapshots from response.completed; retain finished items until then. */
+class ChatGPTResponseAccumulator {
+    private val items = sortedMapOf<Int, JSONObject>()
+    private var completed: JSONObject? = null
+    private var failed = false
+
+    fun consume(data: String) {
+        try {
+            check(!failed)
+            if (data == "[DONE]") return
+            val event = JSONObject(data)
+            when (event.optString("type")) {
+                "response.output_item.done" -> {
+                    require(event.get("output_index") is Number)
+                    val index = event.getInt("output_index")
+                    require(index in 0..1023 && event.getDouble("output_index") == index.toDouble())
+                    items[index] = event.getJSONObject("item")
+                }
+                "response.completed" -> {
+                    val response = requireNotNull(ChatGPTProtocol.completedEvent(data))
+                    val output = if (response.isNull("output")) null else response.getJSONArray("output")
+                    if ((output == null || output.length() == 0) && items.isNotEmpty()) {
+                        response.put("output", JSONArray(items.values.toList()))
+                    }
+                    completed = response
+                }
+                "response.failed", "response.incomplete", "error" -> throw ChatGPTException()
+            }
+        } catch (error: Exception) {
+            failed = true; completed = null
+            throw error
+        }
+    }
+
+    fun result(): JSONObject {
+        check(!failed)
+        return completed ?: throw ChatGPTException()
+    }
+}

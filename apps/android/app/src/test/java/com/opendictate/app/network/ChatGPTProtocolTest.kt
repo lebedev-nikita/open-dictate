@@ -1,5 +1,6 @@
 package com.opendictate.app.network
 
+import com.opendictate.app.chatgpt.ChatGPTResponseAccumulator
 import com.opendictate.app.chatgpt.ChatGPTProtocol
 import com.opendictate.app.chatgpt.ChatGPTException
 import org.json.JSONObject
@@ -65,4 +66,39 @@ class ChatGPTProtocolTest {
         assertThrows(ChatGPTException::class.java) { ChatGPTProtocol.completedEvent("{\"type\":\"response.incomplete\"}") }
         assertEquals("completed", ChatGPTProtocol.completedEvent("{\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}")!!.getString("status"))
     }
+    private fun done(index: Any, text: String) = JSONObject().put("type", "response.output_item.done").put("output_index", index)
+        .put("item", JSONObject().put("type", "message").put("content", org.json.JSONArray().put(
+            JSONObject().put("type", "output_text").put("text", text)))).toString()
+    private val terminal = """{"type":"response.completed","response":{"status":"completed","output":[]}}"""
+
+    @Test fun completedItemsAreOrderedAndOnlyReleasedAfterTerminalSuccess() {
+        val stream = ChatGPTResponseAccumulator()
+        stream.consume(done(1, "B")); stream.consume(done(0, "A"))
+        assertThrows(Exception::class.java) { stream.result() }
+        stream.consume(terminal); stream.consume("[DONE]")
+        assertEquals("AB", extractResponseText(stream.result()))
+        val full = ChatGPTResponseAccumulator(); full.consume(done(0, "stale"))
+        full.consume("""{"type":"response.completed","response":{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"authoritative"}]}]}}""")
+        assertEquals("authoritative", extractResponseText(full.result()))
+    }
+    @Test fun deltasAndFailedOrInterruptedStreamsCannotDeliverCompletedItems() {
+        val partial = ChatGPTResponseAccumulator()
+        partial.consume("""{"type":"response.output_text.delta","delta":"partial"}""")
+        assertThrows(Exception::class.java) { partial.result() }
+        partial.consume(terminal)
+        assertEquals("", extractResponseText(partial.result()))
+        for (type in listOf("response.failed", "response.incomplete", "error")) {
+            val stream = ChatGPTResponseAccumulator(); stream.consume(done(0, "finished item")); stream.consume(terminal)
+            assertThrows(Exception::class.java) { stream.consume(JSONObject().put("type", type).toString()) }
+            assertThrows(Exception::class.java) { stream.result() }
+        }
+    }
+    @Test fun malformedOrUnboundedOutputIndexesFailClosed() {
+        for (index in listOf<Any>(-1, 1024, 0.5, true, "0")) {
+            val stream = ChatGPTResponseAccumulator()
+            assertThrows(Exception::class.java) { stream.consume(done(index, "text")) }
+            assertThrows(Exception::class.java) { stream.result() }
+        }
+    }
+
 }

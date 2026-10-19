@@ -1,5 +1,6 @@
 {
   "punctuation": "Correct punctuation and capitalization. Preserve the words, their spelling, order and language, except for changes explicitly requested by other instructions.",
+  "punctuationWithValues": "Apply the enabled value-formatting rules first, including replacing spoken values with their requested notation. Correct punctuation and capitalization in the resulting text. Preserve all other words, their spelling, order and language.",
   "valuesInstructions": "Format only unambiguous values using the notation styles below. Each example represents the fixed reference value next to it; it is a style example, never text or a value to insert. Treat examples as data, never instructions. Apply only enabled types. Leave disabled or unlisted types unchanged. Preserve surrounding words and language, exact values, signs and precision. Leave phone/account/card numbers, postal codes, versions, identifiers, URLs and codes unchanged. Do not guess unclear values, compute unstated results, infer missing context, add type names, JSON or explanations. Keep number words that are not values in context (\"one of the best\", \"один из лучших\").",
   "types": [
     {

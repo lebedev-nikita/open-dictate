@@ -19,6 +19,10 @@ delivery. The punctuation-only configuration rejects changes to words, numbers
 and address contents. Value formatting changes notation and is not constrained by that punctuation-only
 validator. Examples are bounded data, not a free-form instruction editor.
 
+ChatGPT text streams retain finished output items only in request memory. A successful
+terminal event is required before returning assembled output; deltas, interruption,
+incomplete responses and errors cannot deliver a partial result.
+
 ## Optional Google Drive synchronization
 
 Validated replicas and Drive versions are cached only in process memory, without

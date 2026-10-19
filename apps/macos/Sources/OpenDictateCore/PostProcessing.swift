@@ -18,7 +18,7 @@ public struct PostProcessingSettings: Equatable, Sendable {
     public var hasValueFormatting: Bool { formatValues && formats?.hasEnabledTypes == true }
     public var effectivePrompt: String {
         var parts: [String] = []
-        if punctuation { parts.append(PostProcessingRules.root.punctuation) }
+        if punctuation { parts.append(hasValueFormatting ? PostProcessingRules.root.punctuationWithValues : PostProcessingRules.root.punctuation) }
         if hasValueFormatting { parts.append(formats!.instruction) }
         return parts.joined(separator: "\n\n")
     }

@@ -70,4 +70,40 @@ final class ChatGPTProtocolTests: XCTestCase {
         XCTAssertThrowsError(try ChatGPTProtocol.completedEvent(#"{"type":"response.incomplete"}"#))
         XCTAssertEqual(try ChatGPTProtocol.completedEvent(#"{"type":"response.completed","response":{"status":"completed"}}"#)?["status"] as? String, "completed")
     }
+    private func done(_ index: Any, _ text: String) throws -> String {
+        let value: [String: Any] = ["type": "response.output_item.done", "output_index": index,
+            "item": ["type": "message", "content": [["type": "output_text", "text": text]]]]
+        return String(decoding: try JSONSerialization.data(withJSONObject: value), as: UTF8.self)
+    }
+    private var terminal: String { #"{"type":"response.completed","response":{"status":"completed","output":[]}}"# }
+    func testCompletedItemsAreOrderedAndOnlyReleasedAfterTerminalSuccess() throws {
+        var stream = ChatGPTResponseAccumulator()
+        try stream.consume(done(1, "B")); try stream.consume(done(0, "A"))
+        XCTAssertThrowsError(try stream.result())
+        try stream.consume(terminal); try stream.consume("[DONE]")
+        XCTAssertEqual(OpenAIRequest.responseText(try stream.result()), "AB")
+        var full = ChatGPTResponseAccumulator(); try full.consume(done(0, "stale"))
+        try full.consume(#"{"type":"response.completed","response":{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"authoritative"}]}]}}"#)
+        XCTAssertEqual(OpenAIRequest.responseText(try full.result()), "authoritative")
+    }
+    func testDeltasAndFailedOrInterruptedStreamsCannotDeliverCompletedItems() throws {
+        var partial = ChatGPTResponseAccumulator()
+        try partial.consume(#"{"type":"response.output_text.delta","delta":"partial"}"#)
+        XCTAssertThrowsError(try partial.result())
+        try partial.consume(terminal)
+        XCTAssertEqual(OpenAIRequest.responseText(try partial.result()), "")
+        for type in ["response.failed", "response.incomplete", "error"] {
+            var stream = ChatGPTResponseAccumulator(); try stream.consume(done(0, "finished item")); try stream.consume(terminal)
+            XCTAssertThrowsError(try stream.consume("{\"type\":\"\(type)\"}"))
+            XCTAssertThrowsError(try stream.result())
+        }
+    }
+    func testMalformedOrUnboundedOutputIndexesFailClosed() throws {
+        for index: Any in [-1, 1024, 0.5, true, "0"] as [Any] {
+            var stream = ChatGPTResponseAccumulator()
+            XCTAssertThrowsError(try stream.consume(done(index, "text")))
+            XCTAssertThrowsError(try stream.result())
+        }
+    }
+
 }

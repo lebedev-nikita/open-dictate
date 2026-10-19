@@ -202,14 +202,14 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                             throw ChatGPTException()
                         }
                         if (body != null) {
-                            val source = it.body.source(); val data = StringBuilder(); var size = 0; var completed: JSONObject? = null
+                            val source = it.body.source(); val data = StringBuilder(); var size = 0; val stream = ChatGPTResponseAccumulator()
                             while (!source.exhausted()) {
                                 val line = source.readUtf8LineStrict(1_048_576); size += line.length; require(size <= 2_097_152)
                                 if (line.isEmpty()) {
-                                    if (data.isNotEmpty()) { ChatGPTProtocol.completedEvent(data.toString())?.let { event -> completed = event }; data.setLength(0) }
+                                    if (data.isNotEmpty()) { stream.consume(data.toString()); data.setLength(0) }
                                 } else if (line.startsWith("data:")) { if (data.isNotEmpty()) data.append('\n'); data.append(line.substring(5).trimStart()) }
                             }
-                            completed ?: throw ChatGPTException()
+                            stream.result()
                         } else if (empty) JSONObject() else {
                             val source = it.body.source(); source.request(2_097_153)
                             require(source.buffer.size <= 2_097_152)

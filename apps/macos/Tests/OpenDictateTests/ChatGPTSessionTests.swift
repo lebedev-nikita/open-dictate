@@ -55,4 +55,27 @@ final class ChatGPTSessionTests: XCTestCase {
         let record = try await client.registration()
         XCTAssertEqual(record?.client, "oaiapp_test"); XCTAssertTrue(record?.refresh.isEmpty == true)
     }
+    func testCompletedItemFeedsPostProcessingWhenTerminalOutputIsEmpty() async throws {
+        let item: [String: Any] = ["type": "message", "role": "assistant", "status": "completed",
+            "content": [["type": "output_text", "text": "{\"transformed_text\":\"123\"}"]]]
+        let done = String(decoding: try JSONSerialization.data(withJSONObject: ["type": "response.output_item.done", "output_index": 0, "item": item]), as: UTF8.self)
+        let stream = "data: \(done)\n\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"output\":[]}}\n\n"
+        ChatGPTHTTP.handler = { request in
+            if request.url!.path.hasSuffix("/oauth/token") {
+                return (200, #"{"access_token":"synthetic-new","refresh_token":"synthetic-rotated","scope":"chatgpt.tokens.use.direct","token_type":"Bearer","expires_in":3600}"#)
+            }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer synthetic-new")
+            return (200, stream)
+        }
+        let client = broker()
+        let settings = PostProcessingSettings(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
+        let result = try await PostProcessing.apply(source: "сто двадцать три", settings: settings) {
+            let response = try await client.response(account: "oaiapp_test", body: OpenAIRequest.postProcessing(source: "сто двадцать три", settings: settings))
+            let data = Data(OpenAIRequest.responseText(response).utf8)
+            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            return object?["transformed_text"] as? String ?? ""
+        }
+        XCTAssertFalse(result.failed); XCTAssertEqual(result.text, "123")
+    }
+
 }
