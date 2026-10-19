@@ -17,7 +17,11 @@ post-processing or no enabled rules makes no additional request. Failures retain
 the original transcript and display a curated warning; cancellation still prevents
 delivery. The punctuation-only configuration rejects changes to words, numbers
 and address contents. Value formatting changes notation and is not constrained by that punctuation-only
-validator. Examples are bounded data, not a free-form instruction editor.
+validator. A bounded Russian/English cardinal parser checks supported scaled integer
+values before accepting formatted output; changed values retain the source with the
+existing failure warning. This is not a general semantic validator for all languages
+or numeric types. Fractional expressions and convertible durations are excluded
+from that integer check. Examples are bounded data, not a free-form instruction editor.
 
 ChatGPT text streams retain finished output items only in request memory. A successful
 terminal event is required before returning assembled output; deltas, interruption,

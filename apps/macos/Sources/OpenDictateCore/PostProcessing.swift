@@ -77,6 +77,9 @@ public enum PostProcessing {
             let candidate = try await request().trimmingCharacters(in: .whitespacesAndNewlines)
             try Task.checkCancellation()
             guard !candidate.isEmpty else { return PostProcessingResult(text: source, failed: true) }
+            if settings.hasValueFormatting, !ScaledIntegerGuard.preserves(source: source, candidate: candidate) {
+                return PostProcessingResult(text: source, failed: true)
+            }
             if settings.punctuation && !settings.hasValueFormatting,
                PunctuationCorrection.validated(candidate, source: source) != candidate {
                 return PostProcessingResult(text: source, failed: true)

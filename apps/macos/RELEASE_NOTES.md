@@ -1,5 +1,6 @@
-# OpenDictate for macOS 0.5.0-rc.15
+# OpenDictate for macOS 0.5.0-rc.16
 
+- Preserve omitted zero groups when formatting spoken large numbers, including money. Reject changed values for supported Russian/English scaled integer phrases and retain the source on failure.
 - Fix ChatGPT post-processing and transformation when the final completed event omits its output snapshot. Retain finished stream items in memory and require terminal success before returning them.
 - Give enabled value formatting explicit priority when combined with punctuation, so number words can become digits.
 - Replace the editable post-processing prompt with punctuation and value-format settings. Edit system-region examples for ten value types in a native popover; sync saved examples across platforms. Retire earlier custom prompts while preserving enabled state.

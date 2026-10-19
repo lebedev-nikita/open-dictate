@@ -91,4 +91,13 @@ final class PostProcessingTests: XCTestCase {
         let input = try JSONSerialization.jsonObject(with: Data((request["input"] as! String).utf8)) as! [String: String]
         XCTAssertEqual(input, ["source_text": source, "instruction": settings.effectivePrompt])
     }
+    func testScaledIntegerValuesCannotChangeDuringFormatting() async throws {
+        struct Example: Decodable { let source: String; let candidate: String; let valid: Bool }
+        let cases = try JSONDecoder().decode([Example].self, from: fixture("scaled-integers.json"))
+        for (i, row) in cases.enumerated() {
+            let result = try await PostProcessing.apply(source: row.source, settings: values()) { row.candidate }
+            XCTAssertEqual(result, PostProcessingResult(text: row.valid ? row.candidate : row.source, failed: !row.valid), "case \(i)")
+        }
+    }
+
 }

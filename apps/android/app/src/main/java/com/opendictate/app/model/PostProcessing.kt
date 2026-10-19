@@ -60,7 +60,8 @@ object PostProcessing {
             require(settings.isValid)
             val candidate = request().trim()
             currentCoroutineContext().ensureActive()
-            if (candidate.isBlank() || settings.punctuation && !settings.hasValueFormatting &&
+            if (candidate.isBlank() || settings.hasValueFormatting && !ScaledIntegerGuard.preserves(source, candidate) ||
+                settings.punctuation && !settings.hasValueFormatting &&
                 !validPunctuation(candidate, source)) PostProcessingResult(source, failed = true)
             else PostProcessingResult(candidate)
         } catch (error: CancellationException) { throw error }

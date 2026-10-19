@@ -111,4 +111,16 @@ class PostProcessingTest {
         assertEquals(settings.effectivePrompt, input.getString("instruction"))
         assertTrue(runCatching { extractPostProcessingResult(JSONObject("{\"status\":\"incomplete\",\"output\":[]}")) }.isFailure)
     }
+    @Test fun scaledIntegerValuesCannotChangeDuringFormatting() = runTest {
+        val cases = org.json.JSONArray(fixture("scaled-integers.json"))
+        for (i in 0 until cases.length()) {
+            val row = cases.getJSONObject(i)
+            val source = row.getString("source")
+            val candidate = row.getString("candidate")
+            val valid = row.getBoolean("valid")
+            val result = PostProcessing.apply(source, values()) { candidate }
+            assertEquals("case $i", PostProcessingResult(if (valid) candidate else source, !valid), result)
+        }
+    }
+
 }
