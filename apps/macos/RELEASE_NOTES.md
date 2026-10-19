@@ -1,6 +1,6 @@
-# OpenDictate for macOS 0.5.0-rc.5
+# OpenDictate for macOS 0.5.0-rc.6
 
-- Add an optional Post-processing section shared with Android. Always use GPT-6-Luna, edit the prompt, and append punctuation or number-formatting instructions with plus buttons on the right. Keep the prompt editor at the bottom of the section.
+- Add an optional Post-processing section shared with Android. Always use GPT-6-Luna, edit the prompt, and append punctuation or number-formatting instructions with plus buttons on the right. Place prompt actions below the editor.
 - Start with punctuation and capitalization instructions. Post-processing remains off by default; clearing the prompt skips the extra request. Saved settings synchronize through optional Google Drive sync, while the bundled default prompt stays on the device.
 - Show and apply post-processing only for Accurate dictation and Accurate retranscription, before local replacements. Live retains the saved settings without running post-processing. Preserve the original transcript with a warning if processing fails. Voice editing keeps its own instructions.
 - Remove the transcription prompt editor and stop sending prompts to transcription models. Language and dictionary hints remain separate; punctuation and number formatting use Post-processing.

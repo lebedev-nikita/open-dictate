@@ -107,8 +107,8 @@ In Accurate mode, Settings → Dictation → **Post-processing** expands when en
 Live hides the section and retains its saved settings. It is off by default and always uses `gpt-6-luna`. A punctuation
 instruction is prefilled. Edit the prompt, then choose **Save**.
 **Correct punctuation** and **Format numbers** have a plus button on the right
-that appends an editable instruction block without duplicates. The prompt editor
-is at the bottom of the section. **Reset prompt** stages the punctuation default; Save applies
+that appends an editable instruction block without duplicates. Prompt actions sit below
+the editor. **Reset prompt** stages the punctuation default; Save applies
 it. Clearing the prompt skips the additional request.
 
 It runs once after ordinary Accurate dictation or Accurate retranscription, before local word

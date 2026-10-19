@@ -25,16 +25,6 @@ struct PostProcessingSettingsView: View {
                     if preferences.postProcessing.enabled {
                         presetRow(t("Correct punctuation", "Исправить пунктуацию"), preset: .punctuation)
                         presetRow(t("Format numbers", "Отформатировать числа"), preset: .numbers)
-                        HStack {
-                            Button(t("Reset prompt", "Сбросить промпт")) { prompt = PostProcessingPreset.punctuation.text }
-                                .disabled(prompt == PostProcessingPreset.punctuation.text)
-                            Spacer()
-                            if changed { Button(t("Cancel", "Отмена")) { load(preferences.postProcessing) } }
-                            Button(t("Save", "Сохранить")) {
-                                preferences.postProcessing = draft
-                                load(preferences.postProcessing)
-                            }.disabled(!changed || !draft.isValid)
-                        }
                         VStack(alignment: .leading, spacing: 6) {
                             Text(t("Post-processing prompt", "Промпт постобработки"))
                             TextEditor(text: $prompt).font(.body).scrollContentBackground(.hidden)
@@ -46,6 +36,16 @@ struct PostProcessingSettingsView: View {
                                 Text(t("Use at most 16,384 UTF-8 bytes.", "Не более 16 384 байт UTF-8."))
                                     .font(.caption).foregroundStyle(.red)
                             }
+                        }
+                        HStack {
+                            Button(t("Reset prompt", "Сбросить промпт")) { prompt = PostProcessingPreset.punctuation.text }
+                                .disabled(prompt == PostProcessingPreset.punctuation.text)
+                            Spacer()
+                            if changed { Button(t("Cancel", "Отмена")) { load(preferences.postProcessing) } }
+                            Button(t("Save", "Сохранить")) {
+                                preferences.postProcessing = draft
+                                load(preferences.postProcessing)
+                            }.disabled(!changed || !draft.isValid)
                         }
                     }
                 }

@@ -66,7 +66,7 @@ class PostProcessingSettingsTest {
             action(R.string.postprocessing_reset)
             action(R.string.postprocessing_save)
             assertNull(store.postProcessing.prompt)
-            compose.onNodeWithText(label(R.string.postprocessing_prompt)).performScrollTo()
+            compose.onNodeWithText(label(R.string.postprocessing_save)).performScrollTo()
             capture("expanded-bottom")
             compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).performScrollTo()
             capture("expanded")

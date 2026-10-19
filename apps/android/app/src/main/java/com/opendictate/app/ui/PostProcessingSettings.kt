@@ -51,6 +51,12 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                     }
                 }
             }
+            OutlinedTextField(value = prompt, onValueChange = { prompt = it },
+                label = { Text(stringResource(R.string.postprocessing_prompt)) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).keepFullBoundsInView(),
+                isError = prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES,
+                supportingText = if (prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES)
+                    {{ Text(stringResource(R.string.postprocessing_prompt_limit)) }} else null)
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { prompt = PostProcessingPreset.PUNCTUATION.text },
                     enabled = prompt != PostProcessingPreset.PUNCTUATION.text, modifier = Modifier.heightIn(min = 48.dp)) {
@@ -62,12 +68,6 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                 Button(onClick = { onChange(draft); load(draft) }, enabled = changed && draft.isValid,
                     modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.postprocessing_save)) }
             }
-            OutlinedTextField(value = prompt, onValueChange = { prompt = it },
-                label = { Text(stringResource(R.string.postprocessing_prompt)) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).keepFullBoundsInView(),
-                isError = prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES,
-                supportingText = if (prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES)
-                    {{ Text(stringResource(R.string.postprocessing_prompt_limit)) }} else null)
         }
     }
 }
