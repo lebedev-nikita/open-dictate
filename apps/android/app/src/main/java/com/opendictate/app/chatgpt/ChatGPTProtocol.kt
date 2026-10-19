@@ -59,7 +59,12 @@ object ChatGPTProtocol {
         })
         val claims = JSONObject(String(Base64.getUrlDecoder().decode(parts[1]), Charsets.UTF_8))
         val aud = claims.get("aud")
-        require(aud == client || aud is JSONArray && (0 until aud.length()).any { aud.getString(it) == client } && claims.optString("azp") == client)
+        val authorizedParty = if (claims.has("azp")) claims.getString("azp") else null
+        require(authorizedParty == null || authorizedParty == client)
+        // OIDC permits a single audience as either a string or a one-element array.
+        // Keep authorized-party validation for tokens with multiple audiences.
+        require(aud == client || aud is JSONArray && (0 until aud.length()).any { aud.getString(it) == client } &&
+            (aud.length() == 1 || authorizedParty == client))
         require(claims.getString("iss") == ISSUER && claims.getString("nonce") == nonce && claims.getLong("exp") > now)
         require(claims.getString("sub").isNotBlank())
         return claims

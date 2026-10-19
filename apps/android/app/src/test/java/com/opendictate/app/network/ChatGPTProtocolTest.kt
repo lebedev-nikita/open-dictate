@@ -40,6 +40,18 @@ class ChatGPTProtocolTest {
         assertThrows(Exception::class.java) { ChatGPTProtocol.identity(jwt, jwks, "oaiapp_test", "other", 1000) }
         assertThrows(Exception::class.java) { ChatGPTProtocol.identity(jwt, jwks, "oaiapp_test", "nonce", 2000) }
         assertThrows(Exception::class.java) { ChatGPTProtocol.identity(jwt.dropLast(8) + "AAAAAAAA", jwks, "oaiapp_test", "nonce", 1000) }
+        // OpenAI can encode the single client audience as an array without azp.
+        claims.put("aud", org.json.JSONArray().put("oaiapp_test"))
+        assertEquals("synthetic", ChatGPTProtocol.identity(signed(claims), jwks, "oaiapp_test", "nonce", 1000).getString("sub"))
+        claims.put("aud", org.json.JSONArray().put("oaiapp_other"))
+        assertThrows(Exception::class.java) { ChatGPTProtocol.identity(signed(claims), jwks, "oaiapp_test", "nonce", 1000) }
+        claims.put("aud", org.json.JSONArray().put("oaiapp_test").put("oaiapp_other"))
+        assertThrows(Exception::class.java) { ChatGPTProtocol.identity(signed(claims), jwks, "oaiapp_test", "nonce", 1000) }
+        claims.put("azp", "oaiapp_test")
+        assertEquals("synthetic", ChatGPTProtocol.identity(signed(claims), jwks, "oaiapp_test", "nonce", 1000).getString("sub"))
+        claims.put("aud", "oaiapp_test").put("azp", "oaiapp_other")
+        assertThrows(Exception::class.java) { ChatGPTProtocol.identity(signed(claims), jwks, "oaiapp_test", "nonce", 1000) }
+        claims.remove("azp")
         assertThrows(Exception::class.java) { ChatGPTProtocol.identity(signed(claims.put("iss", "https://example.com")), jwks, "oaiapp_test", "nonce", 1000) }
     }
     @Test fun planBodyRequiresStreamAndTerminalCompletionRatherThanDeltas() {

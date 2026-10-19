@@ -44,6 +44,18 @@ final class ChatGPTProtocolTests: XCTestCase {
         XCTAssertThrowsError(try ChatGPTProtocol.identity(jwt, jwks: jwks, client: "oaiapp_test", nonce: "other", now: 1000))
         XCTAssertThrowsError(try ChatGPTProtocol.identity(jwt, jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 2000))
         XCTAssertThrowsError(try ChatGPTProtocol.identity(String(jwt.dropLast(8)) + "AAAAAAAA", jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
+        // A single audience may be encoded as an array without an authorized-party claim.
+        claims["aud"] = ["oaiapp_test"]
+        XCTAssertEqual(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000)["sub"] as? String, "synthetic")
+        claims["aud"] = ["oaiapp_other"]
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
+        claims["aud"] = ["oaiapp_test", "oaiapp_other"]
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
+        claims["azp"] = "oaiapp_test"
+        XCTAssertEqual(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000)["sub"] as? String, "synthetic")
+        claims["aud"] = "oaiapp_test"; claims["azp"] = "oaiapp_other"
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
+        claims.removeValue(forKey: "azp")
         claims["iss"] = "https://example.com"
         XCTAssertThrowsError(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
     }

@@ -64,8 +64,12 @@ public enum ChatGPTProtocol {
               try SecKeyVerifySignature(key, .rsaSignatureMessagePKCS1v15SHA256,
                   Data((parts[0] + "." + parts[1]).utf8) as CFData, decode(parts[2]) as CFData, nil) else { throw ChatGPTError.unavailable }
         let claims = try object(decode(parts[1]))
-        let audienceMatches = claims["aud"] as? String == client || ((claims["aud"] as? [String])?.contains(client) == true && claims["azp"] as? String == client)
-        guard audienceMatches, claims["iss"] as? String == issuer, claims["nonce"] as? String == nonce,
+        let audiences = claims["aud"] as? [String]
+        // A one-element audience array does not require an authorized-party claim.
+        let audienceMatches = claims["aud"] as? String == client ||
+            (audiences?.contains(client) == true && (audiences?.count == 1 || claims["azp"] as? String == client))
+        let authorizedPartyMatches = claims["azp"] == nil || claims["azp"] as? String == client
+        guard audienceMatches, authorizedPartyMatches, claims["iss"] as? String == issuer, claims["nonce"] as? String == nonce,
               let expiry = claims["exp"] as? Double, expiry > now,
               let subject = claims["sub"] as? String, !subject.isEmpty else { throw ChatGPTError.unavailable }
         return claims

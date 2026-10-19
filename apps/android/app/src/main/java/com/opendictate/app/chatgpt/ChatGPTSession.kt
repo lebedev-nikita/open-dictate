@@ -90,7 +90,8 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                             }
                             if (target.path != "/auth/callback" || states != listOf(state)) return@use
                             val accepted = runCatching { ChatGPTProtocol.callback(first[1], state, previousID) }
-                            incoming.getOutputStream().write("HTTP/1.1 200 OK\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: 44\r\n\r\nReturn to OpenDictate. You may close this tab.".toByteArray())
+                            val message = "Return to OpenDictate. You may close this tab."
+                            incoming.getOutputStream().write(("HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: ${message.toByteArray(Charsets.UTF_8).size}\r\n\r\n" + message).toByteArray(Charsets.UTF_8))
                             callback = accepted.getOrThrow()
                         }
                     }
