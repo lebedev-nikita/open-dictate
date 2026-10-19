@@ -180,6 +180,9 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
     }
     private suspend fun request(url: String, bearer: String? = null, fields: Map<String, String>? = null,
                                 body: JSONObject? = null, empty: Boolean = false): JSONObject = suspendCancellableCoroutine { continuation ->
+        val phase = if (body != null) "inference" else if (url == ChatGPTProtocol.TOKEN) "token" else "other"
+        if (body != null) android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] begin tier=" +
+            body.optString("service_tier").takeIf { it in setOf("default", "fast", "priority") })
         val request = Request.Builder().url(url).header("User-Agent", "OpenDictate-Android")
         if (bearer != null) request.header("Authorization", "Bearer $bearer")
         if (fields != null) request.post(ChatGPTProtocol.form(fields).toRequestBody("application/x-www-form-urlencoded".toMediaType()))
@@ -187,11 +190,21 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
         val call = http.newCall(request.build())
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: java.io.IOException) { if (continuation.isActive) continuation.resumeWithException(ChatGPTException()) }
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] phase=$phase transport=${e.javaClass.simpleName}")
+                if (continuation.isActive) continuation.resumeWithException(ChatGPTException())
+            }
             override fun onResponse(call: Call, response: Response) {
                 val result = runCatching {
                     response.use {
+                        android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] phase=$phase http=${it.code}")
                         if (!it.isSuccessful) {
+                            if (body != null) {
+                                val source = it.body.source(); source.request(65537)
+                                val error = if (source.buffer.size <= 65536)
+                                    runCatching { JSONObject(source.buffer.clone().readUtf8()).optJSONObject("error") }.getOrNull() else null
+                                android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] " + chatGPTDiagnostic(error))
+                            }
                             if (url == ChatGPTProtocol.TOKEN) {
                                 val source = it.body.source(); source.request(65537)
                                 if (source.buffer.size <= 65536) {
@@ -206,7 +219,14 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                             while (!source.exhausted()) {
                                 val line = source.readUtf8LineStrict(1_048_576); size += line.length; require(size <= 2_097_152)
                                 if (line.isEmpty()) {
-                                    if (data.isNotEmpty()) { stream.consume(data.toString()); data.setLength(0) }
+                                    if (data.isNotEmpty()) {
+                                        val event = runCatching { JSONObject(data.toString()) }.getOrNull()
+                                        val type = event?.optString("type")
+                                        if (type in setOf("error", "response.failed", "response.incomplete"))
+                                            android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] event=$type " +
+                                                chatGPTDiagnostic(event?.optJSONObject("error") ?: event?.optJSONObject("response")?.optJSONObject("error") ?: event))
+                                        stream.consume(data.toString()); data.setLength(0)
+                                    }
                                 } else if (line.startsWith("data:")) { if (data.isNotEmpty()) data.append('\n'); data.append(line.substring(5).trimStart()) }
                             }
                             stream.result()
@@ -218,6 +238,7 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                         }
                     }
                 }
+                result.exceptionOrNull()?.let { android.util.Log.w("ODFastDiagnostic", "[DEBUG-fast-route] phase=$phase failure=${it.javaClass.simpleName}") }
                 if (continuation.isActive) result.fold({ continuation.resume(it) }, { continuation.resumeWithException(if (it is ChatGPTReauthentication) it else ChatGPTException()) })
             }
         })
