@@ -24,7 +24,12 @@ validator. A bounded Russian/English cardinal parser checks supported scaled int
 values before accepting formatted output; changed values retain the source with the
 existing failure warning. This is not a general semantic validator for all languages
 or numeric types. Fractional expressions and convertible durations are excluded
-from that integer check. Examples are bounded data, not a free-form instruction editor.
+from that integer check. Examples are bounded data, not a free-form instruction editor. Custom rules pair
+a value type and language/all-language scope with the desired rendering of a
+bundled fixed reference value; no model is called to configure or reconstruct it.
+Version-2 settings synchronize those examples and captured regional locale tags.
+Specific language styles override general styles; unknown/mixed-language input
+uses the general style. Invalid or oversized remote settings are rejected atomically.
 
 ChatGPT text streams retain finished output items only in request memory. A successful
 terminal event is required before returning assembled output; deltas, interruption,
@@ -40,7 +45,7 @@ sync offline and resume queued work when connectivity returns.
 Sync uses Google's HTTPS endpoints without a backend, requests only
 `drive.appdata` and exports an allowlist of dictionary, replacement, mode and
 model settings and post-processing
-configuration (enabled rules and editable format examples). A shared text-processing
+configuration (enabled value types, scoped format examples and regional locale tags). A shared text-processing
 model defaults to GPT-6 Luna and is captured at session start for transformation
 and post-processing. Legacy Accurate punctuation and transcription-prompt/text-model sync entries are discarded.
 API keys, audio and history are excluded. Tokens, formatting examples, dictionary/replacement contents and raw

@@ -29,7 +29,11 @@ No enabled rules means no additional request. Errors retain the original transcr
 
 Post-processing and text transformation use the shared Text model setting,
 which defaults to `gpt-6-luna`. The default instruction corrects punctuation.
-Choose punctuation and configure value-format examples in the settings menu.
+Choose punctuation and configure value-format rules in the settings menu.
+A rule stores a value type, language or all-language scope, and a formatted
+example for a fixed sample supplied by the app. Creating a rule makes no AI
+request. Automatic formatting uses captured regional locale tags; those tags and
+custom rules are included in optional settings synchronization.
 The final instruction is generated inside the app. Post-processing settings synchronize through
 Google Drive when connected; transcripts are never included in synchronization.
 

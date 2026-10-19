@@ -125,17 +125,26 @@ Live hides the section and retains its saved settings. Post-processing is off by
 default; punctuation is the initial rule. The shared Text model selection controls
 both post-processing and voice editing.
 
-Enable **Format values** to use system-region defaults. Its button opens a native
-popover with integers, decimals, dates, time, durations, percentages, money,
-measurements, ranges and fractions. Change the examples directly or choose a
-suggested style; each type can be disabled. **Done** saves, **Cancel** discards the
-popover draft, and **System defaults** reloads the current system region’s examples.
-**Reset settings** restores punctuation only. There is no final-prompt editor.
+Enable **Format values** for automatic language/regional styles. The native
+popover lists only custom rules, grouped by value type; **All languages** comes
+first, followed by languages alphabetically. **Add rule** asks for a type,
+language or All languages, and the desired result for a fixed source value.
+Dates show a named month so the source is unambiguous. Source values are bundled
+with the app; configuring a rule never calls a model. Ten value types can be
+individually enabled under **Value types**.
 
-The saved examples synchronize unchanged between devices, independent of their
-current region or interface language. Earlier arbitrary prompts are replaced with
-punctuation settings, preserving the global enabled state. Both apps share the
-[instruction rules](Sources/OpenDictateCore/Resources/postprocessing-rules.json).
+A language-specific rule overrides a general rule; general rules override
+automatic language defaults. Unknown or mixed-language text uses the general
+style. Explicit language rules also work with automatic detection. **Save rule**
+returns to the popover draft; **Done** saves it and **Cancel** discards it.
+**System defaults** clears custom rules and captures current regional preferences.
+**Reset settings** restores punctuation only. The final prompt stays hidden.
+
+Rules and captured regional preferences synchronize through Google Drive in
+version-2 post-processing settings. Version-1 fixed examples remain readable and
+appear as All languages rules, preserving existing styles and enabled types.
+Earlier arbitrary prompts retain the existing punctuation-only migration.
+Both apps share the [instruction rules and fixed source values](Sources/OpenDictateCore/Resources/postprocessing-rules.json).
 
 Value formatting adds only the [language examples](Sources/OpenDictateCore/Resources/postprocessing-languages.json)
 for the speech languages captured at session start. Automatic detection adds no

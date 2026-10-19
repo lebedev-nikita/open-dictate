@@ -13,6 +13,7 @@ import com.opendictate.app.R
 import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.ValueKind
 import com.opendictate.app.model.ValueFormatting
+import com.opendictate.app.model.ValueFormatRule
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -50,28 +51,43 @@ class PostProcessingLayoutTest {
         val viewport = compose.onNodeWithTag("valueFormattingViewport")
         val initialBounds = viewport.fetchSemanticsNode().boundsInWindow
         val initialTop = initialBounds.top
-        var keyboardBottom: Float? = null
-        val russian = context.resources.configuration.locales[0].language == "ru"
-        for (kind in listOf(ValueKind.INTEGER, ValueKind.DATE, ValueKind.FRACTION, ValueKind.DECIMAL)) {
-            compose.onNode(hasSetTextAction() and hasContentDescription(kind.title(russian)))
-                .performScrollTo().performClick().performTextInput("0")
-            compose.waitForIdle()
-            android.os.SystemClock.sleep(500)
-            val bounds = viewport.fetchSemanticsNode().boundsInWindow
-            assertTrue("Keyboard must be visible", bounds.bottom < initialBounds.bottom)
-            keyboardBottom?.let { assertEquals("Keyboard geometry changed between fields", it, bounds.bottom, 1f) }
-            keyboardBottom = bounds.bottom
-            capture("keyboard-${kind.name}")
-            assertEquals("The panel must stay anchored when focusing $kind", initialTop, viewport.fetchSemanticsNode().boundsInWindow.top, 1f)
-            compose.onNode(hasSetTextAction() and hasContentDescription(kind.title(russian))).assertIsDisplayed()
-        }
-        androidx.test.espresso.Espresso.closeSoftKeyboard()
-        compose.waitForIdle()
+        compose.onNodeWithTag("addValueRule").performClick()
+        compose.onNodeWithTag("valueRuleExample").performClick().performTextInput("0")
+        compose.waitForIdle(); android.os.SystemClock.sleep(500)
+        val keyboardBounds = viewport.fetchSemanticsNode().boundsInWindow
+        assertTrue("Keyboard must be visible", keyboardBounds.bottom < initialBounds.bottom)
+        assertEquals(initialTop, keyboardBounds.top, 1f)
+        capture("keyboard-rule")
+        androidx.test.espresso.Espresso.closeSoftKeyboard(); compose.waitForIdle()
         assertEquals(initialTop, viewport.fetchSemanticsNode().boundsInWindow.top, 1f)
+        compose.onNodeWithText(label(R.string.postprocessing_cancel)).performClick()
+        compose.onNodeWithTag("addValueRule").performClick()
+        compose.onNodeWithTag("valueRuleExample").performClick()
+        compose.waitForIdle(); android.os.SystemClock.sleep(500)
+        assertEquals(initialTop, viewport.fetchSemanticsNode().boundsInWindow.top, 1f)
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+    }
+
+    private fun manyRules(): ValueFormatting {
+        var formats = ValueFormatting.systemDefaults(Locale.US)
+        for (kind in ValueKind.entries) for (language in listOf(null, "en", "ru"))
+            formats = formats.settingRule(ValueFormatRule(kind, language, formats.entries.getValue(kind).example))
+        return formats
+    }
+
+    @Test fun allLanguagesPrecedesAlphabeticalLanguageRules() {
+        val formats = manyRules()
+        compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, {}, {}) } }
+        val russian = context.resources.configuration.locales[0].language == "ru"
+        val all = compose.onAllNodesWithText(ValueFormatRule(ValueKind.INTEGER, null, "1").languageTitle(russian))[0].fetchSemanticsNode().boundsInRoot
+        val english = compose.onAllNodesWithText(ValueFormatRule(ValueKind.INTEGER, "en", "1").languageTitle(russian))[0].fetchSemanticsNode().boundsInRoot
+        val ru = compose.onAllNodesWithText(ValueFormatRule(ValueKind.INTEGER, "ru", "1").languageTitle(russian))[0].fetchSemanticsNode().boundsInRoot
+        assertTrue(all.top < english.top); assertTrue(english.top < ru.top)
+        capture("sorted-rules")
     }
 
     @Test fun fastFlingsToBothEndsKeepTheFormattingPanelStill() {
-        val formats = ValueFormatting.systemDefaults(Locale.US)
+        val formats = manyRules()
         var dismissed = false
         compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, { dismissed = true }, {}) } }
         val title = compose.onNodeWithText(label(R.string.postprocessing_values))
@@ -98,7 +114,7 @@ class PostProcessingLayoutTest {
     }
 
     @Test fun scrollingAtTheStartDoesNotDragTheFormattingPanel() {
-        val formats = ValueFormatting.systemDefaults(Locale.US)
+        val formats = manyRules()
         var dismissed = false
         compose.setContent { OpenDictateTheme { ValueFormattingSheet(formats, formats, { dismissed = true }, {}) } }
         val title = compose.onNodeWithText(label(R.string.postprocessing_values))

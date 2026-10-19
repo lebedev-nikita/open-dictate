@@ -17,7 +17,7 @@ data class PostProcessingSettings(
     fun prompt(languages: Collection<String>): String = buildList {
         if (punctuation) add(if (hasValueFormatting) PostProcessingRules.punctuationWithValues else PostProcessingRules.punctuation)
         if (hasValueFormatting) {
-            add(requireNotNull(formats).instruction)
+            add(requireNotNull(formats).instruction(languages))
             PostProcessingLanguages.instruction(languages).takeIf(String::isNotEmpty)?.let(::add)
         }
     }.joinToString("\n\n")
@@ -25,18 +25,18 @@ data class PostProcessingSettings(
     val isValid: Boolean get() = (!formatValues || formats != null) && formats?.isValid != false
     fun toJson(): String {
         require(isValid)
-        return "{\"enabled\":$enabled,\"formats\":${formats?.json() ?: "null"},\"punctuation\":$punctuation,\"schemaVersion\":1,\"valuesEnabled\":$formatValues}"
+        return "{\"enabled\":$enabled,\"formats\":${formats?.json() ?: "null"},\"punctuation\":$punctuation,\"schemaVersion\":${if (formats?.customRules == null && formats?.languageLocales == null) 1 else 2},\"valuesEnabled\":$formatValues}"
     }
     companion object {
         const val MAXIMUM_PROMPT_BYTES = 16_384
         fun fromJson(value: String): PostProcessingSettings {
             require(value.toByteArray(Charsets.UTF_8).size <= MAXIMUM_PROMPT_BYTES)
             val json = JSONObject(value)
-            require(json.get("schemaVersion") is Number && json.getDouble("schemaVersion") == 1.0)
+            require(json.get("schemaVersion") is Number && json.getDouble("schemaVersion") in listOf(1.0, 2.0))
             require(listOf("enabled", "punctuation", "valuesEnabled").all { json.get(it) is Boolean })
             require(json.has("formats"))
             return PostProcessingSettings(json.getBoolean("enabled"), json.getBoolean("punctuation"), json.getBoolean("valuesEnabled"),
-                if (json.isNull("formats")) null else ValueFormatting.fromJson(json.getJSONObject("formats"))).also { require(it.isValid) }
+                if (json.isNull("formats")) null else ValueFormatting.fromJson(json.getJSONObject("formats"))).also { require(it.isValid && (json.getDouble("schemaVersion") == 2.0) == (it.formats?.customRules != null || it.formats?.languageLocales != null)) }
         }
         /** Retire arbitrary prompt text; only the global enabled state carries forward. */
         fun fromLegacyJson(value: String): PostProcessingSettings {

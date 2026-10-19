@@ -21,7 +21,7 @@ public struct PostProcessingSettings: Equatable, Sendable {
         var parts: [String] = []
         if punctuation { parts.append(hasValueFormatting ? PostProcessingRules.root.punctuationWithValues : PostProcessingRules.root.punctuation) }
         if hasValueFormatting {
-            parts.append(formats!.instruction)
+            parts.append(formats!.instruction(languages: languages))
             let examples = PostProcessingLanguages.instruction(languages: languages)
             if !examples.isEmpty { parts.append(examples) }
         }
@@ -32,19 +32,19 @@ public struct PostProcessingSettings: Equatable, Sendable {
     public func encoded() throws -> String {
         guard isValid else { throw SyncFormatError.invalid }
         return canonicalJSON(["enabled": enabled, "punctuation": punctuation, "valuesEnabled": formatValues,
-                              "formats": formats?.jsonObject as Any? ?? NSNull(), "schemaVersion": 1])
+                              "formats": formats?.jsonObject as Any? ?? NSNull(), "schemaVersion": formats?.customRules == nil && formats?.languageLocales == nil ? 1 : 2])
     }
     public static func decode(_ value: String) throws -> Self {
         guard value.utf8.count <= maximumPromptBytes,
               let object = try JSONSerialization.jsonObject(with: Data(value.utf8)) as? [String: Any],
-              let version = object["schemaVersion"] as? NSNumber, CFGetTypeID(version) != CFBooleanGetTypeID(), version.doubleValue == 1,
+              let version = object["schemaVersion"] as? NSNumber, CFGetTypeID(version) != CFBooleanGetTypeID(), [1.0, 2.0].contains(version.doubleValue),
               let enabled = object["enabled"] as? NSNumber, CFGetTypeID(enabled) == CFBooleanGetTypeID(),
               let punctuation = object["punctuation"] as? NSNumber, CFGetTypeID(punctuation) == CFBooleanGetTypeID(),
               let formatValues = object["valuesEnabled"] as? NSNumber, CFGetTypeID(formatValues) == CFBooleanGetTypeID(),
               let rawFormats = object["formats"] else { throw SyncFormatError.invalid }
         let result = Self(enabled: enabled.boolValue, punctuation: punctuation.boolValue, formatValues: formatValues.boolValue,
                           formats: rawFormats is NSNull ? nil : try ValueFormatting.decode(rawFormats))
-        guard result.isValid else { throw SyncFormatError.invalid }
+        guard result.isValid, (version.doubleValue == 2) == (result.formats?.customRules != nil || result.formats?.languageLocales != nil) else { throw SyncFormatError.invalid }
         return result
     }
     /// Arbitrary legacy prompt text is deliberately retired; preserve the global enabled state only.

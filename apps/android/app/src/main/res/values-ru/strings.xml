@@ -304,4 +304,17 @@
     <string name="value_formats_choose">Выбрать формат: %1$s</string>
     <string name="value_formats_system">Системный: %1$s</string>
     <string name="value_formats_reset">Как в системе</string>
+    <string name="value_rule_title">Свой формат</string>
+    <string name="value_rule_add">Добавить правило</string>
+    <string name="value_rule_types">Типы значений</string>
+    <string name="value_rules_automatic">Форматы выбираются по языку диктовки и региональным настройкам. Чтобы изменить формат, добавьте правило.</string>
+    <string name="value_rule_type">Тип значения</string>
+    <string name="value_rule_language">Язык</string>
+    <string name="value_rule_all_languages">Все языки</string>
+    <string name="value_rule_source">Исходное значение</string>
+    <string name="value_rule_result">Результат в нужном формате</string>
+    <string name="value_rule_save">Сохранить правило</string>
+    <string name="value_rule_duplicate">Правило для этого типа и языка уже есть. Отредактируйте его.</string>
+    <string name="value_rule_delete">Удалить правило: %1$s, %2$s</string>
+    <string name="value_rule_too_large">Сократите образец или удалите ненужные правила.</string>
 </resources>
