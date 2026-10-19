@@ -139,6 +139,9 @@ those system interactions.
 
 ## Releases and secrets
 
+Create every Android and macOS release candidate as a draft GitHub release.
+Verify `draft: true` after the release workflow finishes.
+
 Release signing is configured only when `SIGNING_KEY`, `KEY_ALIAS`,
 `KEY_PASSWORD`, and `STORE_PASSWORD` are present. `SIGNING_KEY` is a base64 JKS.
 Never commit a keystore, decoded signing material, API key, or local properties.
