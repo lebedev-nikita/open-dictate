@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T13:36:11Z",
+  "generatedAt": "2026-10-19T14:10:17Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -194,22 +194,25 @@
       },
       "postProcessing": {
         "implementation": "PostProcessingSettings.kt; SettingsScreen.kt Accurate-only group; model/PostProcessing.kt; model/ValueFormatting.kt; shared postprocessing-rules.json",
-        "presentation": "Neutral Material 3 group, 16dp padding, 14dp spacing and 48dp targets. Punctuation switch plus Format values switch/popup action; no prompt editor or plus/Save actions. Fully expanded native bottom sheet with scrollable keyboard-aware outlined fields, type checkboxes and suggestion menus.",
-        "interaction": "Off/collapsed initially; punctuation initially on. Ordinary switches save immediately and values off retains examples. Menu edits a saveable draft: System defaults resets it, Cancel discards, Done saves valid examples and enables values. Reset settings restores punctuation only while retaining global enabled. Region defaults use system locale independently of app language and honor Settings.System.TIME_12_24.",
+        "presentation": "Neutral Material 3 group with 16dp horizontal/8dp vertical insets, 56dp toggle/value rows and a header divider padded 8dp vertically. BodyMedium option labels share a leading edge; Reset settings has zero content padding. No prompt editor or plus/Save actions. Full-height non-draggable native sheet without a drag handle; outlined fields, type checkboxes, suggestion menus and wrapping 48dp footer actions.",
+        "interaction": "Off/collapsed initially; punctuation initially on. Ordinary switches save immediately and values off retains examples. Menu edits a saveable draft: System defaults resets it, Cancel discards, Done saves valid examples and enables values. Reset settings restores punctuation only while retaining global enabled. Region defaults use system locale independently of app language and honor Settings.System.TIME_12_24. The sheet owns native keyboard insets without redundant inner IME padding; content owns scrolling with edge stretch disabled. At viewport height >=360dp, title/hint/footer stay pinned around the value list; below360dp the complete form scrolls with titleMedium and no hint. Fields bring their complete bounds into view.",
         "scope": "Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it while preserving saved configuration, and voice editing remains separate. Cancellation and failures preserve the existing delivery and transcript safeguards. Drive synchronizes the atomic version-1 postprocessingOptions configuration, including enabled state, punctuation, value-formatting state and stored examples. The generated prompt is assembled from shared postprocessing-rules.json rules at request time and never synchronized. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared textProcessingModel key remains independent; retired textModel and postprocessing entries do not restore prompt editing. No new tokens or shipping assets.",
         "review": {
           "disposition": "ship",
-          "findings": "Documentation-fix verification resolved the sole stale-documentation finding; prior UI/source inspection passed with all nine required captures viewed and valid. Ship covers this scored fix scope.",
+          "findings": "Fresh narrow Android UI/source review found no material fixes; all nine required native captures were viewed and valid.",
           "screenshots": [
-            ".impeccable/review/post-menu-android-phone-en-formats.png",
-            ".impeccable/review/post-menu-android-phone-en-formats-bottom.png",
-            ".impeccable/review/post-menu-android-phone-ru-large-formats.png",
-            ".impeccable/review/post-menu-android-tablet-en-formats.png",
-            ".impeccable/review/post-menu-android-tablet-landscape-en-formats.png",
-            ".impeccable/review/post-menu-android-phone-en-expanded.png"
+            ".impeccable/review/layout-fix-phone-en-expanded.png",
+            ".impeccable/review/layout-fix-phone-en-formats.png",
+            ".impeccable/review/layout-fix-phone-en-keyboard-fraction.png",
+            ".impeccable/review/layout-fix-phone-ru-large-expanded.png",
+            ".impeccable/review/layout-fix-phone-ru-large-keyboard-fraction.png",
+            ".impeccable/review/layout-fix-tablet-en-expanded.png",
+            ".impeccable/review/layout-fix-tablet-en-keyboard-date.png",
+            ".impeccable/review/layout-fix-tablet-landscape-en-formats-bottom.png",
+            ".impeccable/review/layout-fix-phone-landscape-en-keyboard-fraction.png"
           ],
-          "validation": "Supplied: 172 JVM tests; Debug/Release lint and assemblies; three UI instrumentation tests in four English/Russian phone/tablet configurations, including Russian 1.3 font scale and tablet landscape.",
-          "limits": "Native emulator review evidence; no HTML detector, fresh physical-device smoke, real Drive/API requests, insertion or model-output verification."
+          "validation": "Supplied: 172 JVM tests; Debug/Release lint and assemblies; seven instrumentation tests in five configurations (English phone portrait/landscape, Russian dark phone at 1.3 font scale, tablet portrait/landscape), plus three focused full-panel capture runs. Geometric regressions check label alignment, inertial edge scrolling and field-to-field keyboard stability.",
+          "limits": "Native emulator review evidence only; no HTML detector, hardware frame-rate claim, fresh physical-device smoke, real Drive/API requests, insertion or model-output verification. No new tokens or shipping assets."
         }
       },
       "wordReplacements": {

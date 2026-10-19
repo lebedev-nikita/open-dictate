@@ -1,6 +1,8 @@
 package com.opendictate.app.ui
 
 import android.content.res.Resources
+import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,14 +40,16 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
         val twentyFourHour = when (hourPreference) { "24" -> true; "12" -> false; else -> null }
         return ValueFormatting.systemDefaults(Resources.getSystem().configuration.locales[0], twentyFourHour)
     }
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         PostProcessingToggle(title, settings.enabled, { onChange(settings.copy(enabled = it)) }, heading = true)
         if (settings.enabled) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             PostProcessingToggle(stringResource(R.string.postprocessing_punctuation), settings.punctuation,
                 { onChange(settings.copy(punctuation = it)) })
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { formatsOpen = true }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.postprocessing_values), Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Button) { formatsOpen = true }
+                    .padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.postprocessing_values), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                     Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null)
                 }
                 val valuesTitle = stringResource(R.string.postprocessing_values)
@@ -54,7 +58,8 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                     modifier = Modifier.semantics { contentDescription = valuesTitle })
             }
             TextButton(onClick = { onChange(PostProcessingSettings(enabled = settings.enabled)) },
-                enabled = settings != PostProcessingSettings(enabled = settings.enabled), modifier = Modifier.heightIn(min = 48.dp)) {
+                enabled = settings != PostProcessingSettings(enabled = settings.enabled),
+                contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.postprocessing_reset_settings))
             }
             if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(),
@@ -67,7 +72,7 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
 
 @Composable
 private fun PostProcessingToggle(title: String, checked: Boolean, onChange: (Boolean) -> Unit, heading: Boolean = false) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
         .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
         .semantics { contentDescription = title }, verticalAlignment = Alignment.CenterVertically) {
         Text(title, Modifier.weight(1f), style = if (heading) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium)
@@ -84,49 +89,58 @@ private val FormatsSaver = listSaver<ValueFormatting, String>(
 internal fun ValueFormattingSheet(initial: ValueFormatting, defaults: ValueFormatting, onDismiss: () -> Unit, onSave: (ValueFormatting) -> Unit) {
     var draft by rememberSaveable(stateSaver = FormatsSaver) { mutableStateOf(initial) }
     val russian = LocalConfiguration.current.locales[0].language == "ru"
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.88f).imePadding().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.postprocessing_values), style = MaterialTheme.typography.headlineSmall)
-            Text(stringResource(R.string.value_formats_hint), style = MaterialTheme.typography.bodyMedium)
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                ValueKind.entries.forEach { kind ->
-                    val value = draft.entries.getValue(kind)
-                    val label = kind.title(russian)
-                    var expanded by remember { mutableStateOf(false) }
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                            .toggleable(value = value.enabled, role = Role.Checkbox, onValueChange = { draft = draft.updating(kind, value.copy(enabled = it)) }),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                            Checkbox(value.enabled, onCheckedChange = null)
-                        }
-                        OutlinedTextField(value.example, onValueChange = { draft = draft.updating(kind, value.copy(example = it)) },
-                            modifier = Modifier.fillMaxWidth().keepFullBoundsInView().semantics { contentDescription = label }, singleLine = true, enabled = value.enabled,
-                            isError = !value.isValid,
-                            supportingText = if (!value.isValid) {{ Text(stringResource(R.string.value_formats_invalid)) }} else null,
-                            trailingIcon = {
-                                Box {
-                                    IconButton(onClick = { expanded = true }, enabled = value.enabled) {
-                                        Icon(Icons.Outlined.ArrowDropDown, stringResource(R.string.value_formats_choose, label))
-                                    }
-                                    DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.value_formats_system, defaults.entries.getValue(kind).example)) }, onClick = {
-                                            draft = draft.updating(kind, value.copy(example = defaults.entries.getValue(kind).example)); expanded = false
-                                        })
-                                        kind.examples.forEach { example -> DropdownMenuItem(text = { Text(example) }, onClick = {
-                                            draft = draft.updating(kind, value.copy(example = example)); expanded = false
-                                        }) }
-                                    }
+    // Let the list own edge flings and keep the sheet anchored while the IME resizes its viewport.
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetGesturesEnabled = false, dragHandle = null, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        CompositionLocalProvider(LocalOverscrollFactory provides null) {
+            BoxWithConstraints(Modifier.fillMaxSize().testTag("valueFormattingViewport")) {
+                val compact = maxHeight < 360.dp
+                val pageScroll = rememberScrollState()
+                val valuesScroll = rememberScrollState()
+                Column(Modifier.fillMaxSize().then(if (compact) Modifier.verticalScroll(pageScroll) else Modifier)
+                    .padding(start = 24.dp, end = 24.dp, top = if (compact) 12.dp else 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.postprocessing_values), style = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall)
+                    if (!compact) Text(stringResource(R.string.value_formats_hint), style = MaterialTheme.typography.bodyMedium)
+                    Column(if (compact) Modifier else Modifier.weight(1f).verticalScroll(valuesScroll), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        ValueKind.entries.forEach { kind ->
+                            val value = draft.entries.getValue(kind)
+                            val label = kind.title(russian)
+                            var expanded by remember { mutableStateOf(false) }
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                    .toggleable(value = value.enabled, role = Role.Checkbox, onValueChange = { draft = draft.updating(kind, value.copy(enabled = it)) }),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Text(label, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                                    Checkbox(value.enabled, onCheckedChange = null)
                                 }
-                            })
+                                OutlinedTextField(value.example, onValueChange = { draft = draft.updating(kind, value.copy(example = it)) },
+                                    modifier = Modifier.fillMaxWidth().keepFullBoundsInView().semantics { contentDescription = label }, singleLine = true, enabled = value.enabled,
+                                    isError = !value.isValid,
+                                    supportingText = if (!value.isValid) {{ Text(stringResource(R.string.value_formats_invalid)) }} else null,
+                                    trailingIcon = {
+                                        Box {
+                                            IconButton(onClick = { expanded = true }, enabled = value.enabled) {
+                                                Icon(Icons.Outlined.ArrowDropDown, stringResource(R.string.value_formats_choose, label))
+                                            }
+                                            DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+                                                DropdownMenuItem(text = { Text(stringResource(R.string.value_formats_system, defaults.entries.getValue(kind).example)) }, onClick = {
+                                                    draft = draft.updating(kind, value.copy(example = defaults.entries.getValue(kind).example)); expanded = false
+                                                })
+                                                kind.examples.forEach { example -> DropdownMenuItem(text = { Text(example) }, onClick = {
+                                                    draft = draft.updating(kind, value.copy(example = example)); expanded = false
+                                                }) }
+                                            }
+                                        }
+                                    })
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    FlowRow(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { draft = defaults }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.value_formats_reset)) }
+                        TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.postprocessing_cancel)) }
+                        Button(onClick = { onSave(draft) }, enabled = draft.isValid, modifier = Modifier.heightIn(min = 48.dp).testTag("valueFormatsSave")) { Text(stringResource(R.string.settings_done)) }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-            }
-            FlowRow(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { draft = defaults }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.value_formats_reset)) }
-                TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.postprocessing_cancel)) }
-                Button(onClick = { onSave(draft) }, enabled = draft.isValid, modifier = Modifier.heightIn(min = 48.dp).testTag("valueFormatsSave")) { Text(stringResource(R.string.settings_done)) }
             }
         }
     }

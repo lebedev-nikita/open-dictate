@@ -75,6 +75,7 @@ class PostProcessingSettingsTest {
             dateField().assertTextContains(ValueFormatting.systemDefaults(Resources.getSystem().configuration.locales[0]).entries.getValue(ValueKind.DATE).example)
             compose.onNodeWithTag("valueFormatsSave").performClick(); compose.waitForIdle()
             compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).performScrollTo()
+            compose.onNodeWithText(label(R.string.postprocessing_reset_settings)).performScrollTo()
             capture("expanded")
             action(R.string.postprocessing_reset_settings)
             assertEquals(PostProcessingSettings(enabled = true), store.postProcessing)
