@@ -6,7 +6,7 @@ import org.json.JSONObject
 data class SettingsSyncEntry(val value: String?, val modifiedAt: Long, val deviceId: String)
 
 data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = emptyMap()) {
-    private fun syncEntries() = entries.filterKeys { it !in DEVICE_LOCAL_KEYS }
+    private fun syncEntries() = entries.filterKeys { it !in RETIRED_KEYS }
 
     fun merge(other: SettingsSyncDocument): SettingsSyncDocument {
         val result = syncEntries().toMutableMap()
@@ -24,7 +24,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
         val result = syncEntries().toMutableMap()
         val clock = maxOf(now, (result.values.maxOfOrNull { it.modifiedAt } ?: 0L) + 1)
         KEYS.forEach { key ->
-            if (key !in values || (seed && key == "transcriptionPrompt" && values[key] == null)) return@forEach
+            if (key !in values) return@forEach
             val value = values[key]
             if (key !in result || result[key]?.value != value) result[key] = SettingsSyncEntry(value, if (seed) 0 else clock, if (seed) "" else deviceId)
         }
@@ -47,10 +47,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
         val preferred = if (source == ConnectionSource.CLOUD) remote else this
         val latest = maxOf(syncEntries().values.maxOfOrNull { it.modifiedAt } ?: 0L,
             remote.syncEntries().values.maxOfOrNull { it.modifiedAt } ?: 0L)
-        val values = preferred.entries.mapValues { it.value.value }.toMutableMap()
-        if ("transcriptionPrompt" !in values && ("transcriptionPrompt" in entries || "transcriptionPrompt" in remote.entries)) {
-            values["transcriptionPrompt"] = null
-        }
+        val values = preferred.entries.mapValues { it.value.value }
         return merge(remote).record(values, deviceId, maxOf(now, latest + 1))
             .promoteSeeds(deviceId, now)
     }
@@ -69,9 +66,9 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
     }).toString()
 
     companion object {
-        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt", "postprocessing")
-        // Discard legacy punctuation correction entries from old journals and replicas.
-        private val DEVICE_LOCAL_KEYS = setOf("accuratePunctuationEnabled")
+        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing")
+        // Decode retired fields for compatibility, then discard them from journals and replicas.
+        private val RETIRED_KEYS = setOf("accuratePunctuationEnabled", "transcriptionPrompt")
         const val MAXIMUM_BYTES = 1_048_576L
         fun fromJson(json: String): SettingsSyncDocument {
             require(json.toByteArray().size <= MAXIMUM_BYTES)
@@ -92,7 +89,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
                 val time = timestamp.toLong()
                 require(timestamp.toDouble() == time.toDouble() && time >= 0 && time < Long.MAX_VALUE - 1)
                 SettingsSyncEntry(value as String?, time, device)
-            }.filterKeys { it !in DEVICE_LOCAL_KEYS })
+            }.filterKeys { it !in RETIRED_KEYS })
         }
     }
 }

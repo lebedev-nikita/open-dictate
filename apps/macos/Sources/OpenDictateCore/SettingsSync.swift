@@ -36,10 +36,10 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
     }
     public var entries: [String: Entry] = [:]
     public init() {}
-    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "transcriptionPrompt", "postprocessing"]
-    // Remove the former synced field from old journals and replicas without touching its local value.
-    private static let deviceLocalKeys: Set<String> = ["accuratePunctuationEnabled"]
-    private var syncEntries: [String: Entry] { entries.filter { !Self.deviceLocalKeys.contains($0.key) } }
+    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing"]
+    // Retired fields are decoded for compatibility, then removed from journals and replicas.
+    private static let retiredKeys: Set<String> = ["accuratePunctuationEnabled", "transcriptionPrompt"]
+    private var syncEntries: [String: Entry] { entries.filter { !Self.retiredKeys.contains($0.key) } }
     public static let maximumBytes = 1_048_576
 
     public func encode(to encoder: Encoder) throws {
@@ -81,7 +81,7 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
         entries = syncEntries
         let clock = max(now, (entries.values.map(\.modifiedAt).max() ?? 0) + 1)
         for key in Self.keys {
-            guard let value = values[key], !(seed && key == "transcriptionPrompt" && value == nil),
+            guard let value = values[key],
                   entries[key] == nil || entries[key]?.value != value else { continue }
             entries[key] = Entry(value: value, modifiedAt: seed ? 0 : clock, deviceId: seed ? "" : deviceId)
         }
@@ -106,10 +106,7 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
         var result = self
         result.merge(remote)
         let preferred = source == .cloud ? remote : self
-        var values = preferred.entries.mapValues(\.value)
-        if values["transcriptionPrompt"] == nil && (entries["transcriptionPrompt"] != nil || remote.entries["transcriptionPrompt"] != nil) {
-            values.updateValue(nil, forKey: "transcriptionPrompt")
-        }
+        let values = preferred.entries.mapValues(\.value)
         // Include losing entries too, so stale replicas cannot undo the explicit choice.
         let latest = max(syncEntries.values.map(\.modifiedAt).max() ?? 0,
                          remote.syncEntries.values.map(\.modifiedAt).max() ?? 0)

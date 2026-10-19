@@ -53,7 +53,6 @@ data class MainUiState(
     val transformationButtonEnabled: Boolean = true,
     val languages: Set<DictationLanguage> = emptySet(),
     val prompt: String = "",
-    val customTranscriptionPrompt: String? = null,
     val postProcessing: com.opendictate.app.model.PostProcessingSettings = com.opendictate.app.model.PostProcessingSettings(),
     val selectionDictionaryActionEnabled: Boolean = true,
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
@@ -114,7 +113,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
-                    customTranscriptionPrompt = settings.customTranscriptionPrompt,
                     postProcessing = settings.postProcessing,
                     liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId,
                     transformationModelId = settings.transformationModelId) }
@@ -293,11 +291,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(prompt = settings.prompt) }
     }
 
-    fun saveTranscriptionPrompt(value: String?) {
-        settings.customTranscriptionPrompt = value
-        mutableState.update { it.copy(customTranscriptionPrompt = settings.customTranscriptionPrompt) }
-    }
-
     fun refreshPrompt() {
         mutableState.update { it.copy(prompt = settings.prompt) }
     }
@@ -446,7 +439,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         transformationButtonEnabled = settings.transformationButtonEnabled,
         languages = settings.languages,
         prompt = settings.prompt,
-        customTranscriptionPrompt = settings.customTranscriptionPrompt,
         postProcessing = settings.postProcessing,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,

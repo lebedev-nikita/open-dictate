@@ -4,37 +4,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSyncDocumentTest {
-    @Test fun `nullable prompt reset round trips and defeats stale replicas without seeding defaults`() {
+    @Test fun `retired prompt is dropped without a connection choice`() {
         val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
             .first { java.io.File(it, "shared/settings-sync-prompts.json").isFile }
-        val reset = SettingsSyncDocument.fromJson(java.io.File(root, "shared/settings-sync-prompts.json").readText())
-        assertEquals(reset, SettingsSyncDocument.fromJson(reset.toJson()))
-        assertTrue(reset.entries.containsKey("transcriptionPrompt"))
-        assertNull(reset.entries.getValue("transcriptionPrompt").value)
-        assertTrue(reset.toJson().contains("\"value\":null"))
-        val old = document("transcriptionPrompt", "Сохраняй слова 📝\nExactly.", 49, "android")
-        assertEquals(reset.merge(old), old.merge(reset))
-        assertNull(reset.merge(old).entries.getValue("transcriptionPrompt").value)
-        assertFalse(SettingsSyncDocument().record(mapOf("transcriptionPrompt" to null), "a", 0, seed = true)
-            .entries.containsKey("transcriptionPrompt"))
-        val explicitReset = old.record(mapOf("transcriptionPrompt" to null), "a", 1)
-        assertEquals(50L, explicitReset.entries.getValue("transcriptionPrompt").modifiedAt)
-        val empty = explicitReset.record(mapOf("transcriptionPrompt" to ""), "a", 51)
-        assertEquals("", empty.merge(reset).entries.getValue("transcriptionPrompt").value)
-        assertEquals("preserved", reset.entries["future.preference"]?.value)
-    }
-
-    @Test fun `prompt defaults can be explicitly chosen over a cloud override`() {
+        val remote = SettingsSyncDocument.fromJson(java.io.File(root, "shared/settings-sync-prompts.json").readText())
+        assertNull(remote.entries["transcriptionPrompt"])
+        assertEquals("preserved", remote.entries["future.preference"]?.value)
+        val legacy = document("transcriptionPrompt", "Ignored", 500, "old")
         val local = SettingsSyncDocument()
-        val cloud = document("transcriptionPrompt", "Cloud", 500, "mac")
-        val selected = local.resolvingConnection(cloud, SettingsSyncDocument.ConnectionSource.LOCAL, "a", 1)
-        assertNull(selected.entries.getValue("transcriptionPrompt").value)
-        assertEquals(selected, selected.merge(cloud))
-        assertEquals("Cloud", local.resolvingConnection(cloud, SettingsSyncDocument.ConnectionSource.CLOUD, "a", 1)
-            .entries.getValue("transcriptionPrompt").value)
-        val tied = SettingsSyncDocument(mapOf("transcriptionPrompt" to SettingsSyncEntry(null, 500, "mac")))
-        assertEquals(tied.merge(cloud), cloud.merge(tied))
-        assertEquals("Cloud", tied.merge(cloud).entries.getValue("transcriptionPrompt").value)
+        assertFalse(local.needsConnectionChoice(legacy))
+        assertTrue(local.hasSameSettings(legacy))
+        SettingsSyncDocument.ConnectionSource.entries.forEach { source ->
+            assertNull(local.resolvingConnection(legacy, source, "a", 1).entries["transcriptionPrompt"])
+        }
+        val edited = legacy.record(mapOf("dictionary" to "Updated", "transcriptionPrompt" to "Ignored"), "a", 1)
+        assertNull(edited.entries["transcriptionPrompt"])
+        assertEquals("Updated", edited.entries["dictionary"]?.value)
+        assertFalse(legacy.toJson().contains("transcriptionPrompt"))
+        assertEquals(1, org.json.JSONObject(remote.toJson()).getInt("schemaVersion"))
     }
 
     @Test fun `null is accepted only for the prompt in version two and never a missing value`() {

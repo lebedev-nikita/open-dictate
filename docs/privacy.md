@@ -13,10 +13,6 @@ synchronizes rules and their enabled states with your other devices.
 Completed text saved to history or copied to the clipboard includes replacements.
 An explicit AI history search may send that saved text to OpenAI.
 
-## Transcription prompt
-
-Custom transcription prompts are saved locally and sent directly to OpenAI with transcription requests. Connecting Google Drive synchronizes saved custom text and explicit resets. Untouched built-in prompt text is not uploaded to Drive. An empty custom prompt sends no prompt to OpenAI. Prompts are never logged.
-
 ## Optional post-processing
 
 On either platform, **Post-processing** is off by default. When enabled, it sends
@@ -40,7 +36,7 @@ connectivity returns; macOS monitors network availability for the same purpose.
 
 
 If you connect Google Drive in Settings, the dictionary, word replacement rules and
-enabled states, custom transcription prompt and explicit resets, post-processing
+enabled states, post-processing
 configuration, dictation mode and selected model IDs are sent directly to
 Google and stored in your account's hidden app-data folder. Sync requests only `drive.appdata`, without access to
 ordinary Drive files. API keys, audio, transcripts/history, exclusions and

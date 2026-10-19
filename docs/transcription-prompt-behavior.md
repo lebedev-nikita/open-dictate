@@ -132,6 +132,16 @@ existing OpenDictate Keychain API credential and went directly to OpenAI.
 
 ## Product recommendation
 
+The product decision supersedes the original recommendations below: remove the
+transcription-prompt editor and stop sending application prompts on both
+platforms. Language and dictionary hints remain; punctuation and number
+formatting use Post-processing. Old local preferences are cleared and old Drive
+entries are discarded. The occasional lexical effect measured above does not
+justify a separate setting for this product. This does not mean the API prompt
+is universally ineffective.
+
+Original recommendations at the measured baseline:
+
 1. Keep the optional shared/synced field, but explain it as **recognition
    context**, with examples of topics and names. Keep exact terms in the existing
    dictionary when possible; keywords are also hints rather than guarantees.

@@ -32,6 +32,32 @@ final class PostProcessingPreferencesTests: XCTestCase {
         XCTAssertEqual(other.dictionary, dictionary)
     }
 
+    @MainActor func testSettingsWithoutTranscriptionPromptLayouts() throws {
+        let suite = "removed-prompt-layout-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = AppModel(localOnly: true, defaults: defaults)
+        for (language, dark, enabled) in [("en", true, false), ("ru", false, false), ("ru", false, true)] {
+            model.preferences.interfaceLanguage = language
+            model.preferences.theme = dark ? .dark : .light
+            model.preferences.postProcessing.enabled = enabled
+            let host = NSHostingView(rootView: SettingsView(model: model, preferences: model.preferences,
+                history: model.history, replacements: model.replacements).frame(width: 1000, height: 900))
+            host.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+            host.frame = NSRect(x: 0, y: 0, width: 1000, height: 900)
+            let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false; window.contentView = host; window.appearance = host.appearance
+            window.makeKeyAndOrderFront(nil); host.layoutSubtreeIfNeeded()
+            RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+            if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
+                let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                host.cacheDisplay(in: host.bounds, to: bitmap)
+                try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("removed-prompt-macos-\(language)-\(enabled).png"))
+            }
+            window.close()
+        }
+    }
+
     @MainActor func testNativePostProcessingSectionLayouts() throws {
         let suite = "postprocessing-layout-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }

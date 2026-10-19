@@ -22,6 +22,10 @@ class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
     private val replacementPrefs = context.getSharedPreferences("word_replacements", Context.MODE_PRIVATE)
 
+    init {
+        prefs.edit { remove("custom_transcription_prompt"); remove("transcription_prompt_configured") }
+    }
+
     var theme: AppTheme
         get() = AppTheme.fromStored(prefs.getString(KEY_THEME, null))
         set(value) = prefs.edit { putString(KEY_THEME, value.name) }
@@ -117,16 +121,6 @@ class SettingsStore(context: Context) {
         get() = normalizeDictionaryTerms(prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty())
         set(value) = saveSynced { putString(KEY_PROMPT, normalizeDictionaryTerms(value).trim()) }
 
-    var customTranscriptionPrompt: String?
-        get() = prefs.getString(KEY_TRANSCRIPTION_PROMPT, null)
-        set(value) {
-            require(value == null || com.opendictate.app.model.TranscriptionPrompt.isValid(value))
-            saveSynced {
-                putString(KEY_TRANSCRIPTION_PROMPT, value)
-                putBoolean("transcription_prompt_configured", true)
-            }
-        }
-
     var postProcessing: PostProcessingSettings
         get() = prefs.getString("postprocessing", null)?.let { runCatching { PostProcessingSettings.fromJson(it) }.getOrNull() }
             ?: PostProcessingSettings()
@@ -192,7 +186,6 @@ class SettingsStore(context: Context) {
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
         ).also { values ->
-            if (prefs.getBoolean("transcription_prompt_configured", false)) values["transcriptionPrompt"] = customTranscriptionPrompt
             require(values.values.all { it == null || it.toByteArray().size <= 262_144 })
         }
     }
@@ -239,10 +232,6 @@ class SettingsStore(context: Context) {
         if (replacementJSON != null || enabled != null) replacements.applySync(replacementJSON, enabled?.toBooleanStrict())
         prefs.edit {
             values["dictionary"]?.let { putString(KEY_PROMPT, it.value) }
-            values["transcriptionPrompt"]?.let {
-                putString(KEY_TRANSCRIPTION_PROMPT, it.value)
-                putBoolean("transcription_prompt_configured", true)
-            }
             values["mode"]?.let { putString(KEY_MODEL, requireNotNull(it.value).uppercase()) }
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
@@ -261,7 +250,6 @@ class SettingsStore(context: Context) {
         listOf("liveModel", "accurateModel", "textModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }
         }
-        values["transcriptionPrompt"]?.value?.let { require(com.opendictate.app.model.TranscriptionPrompt.isValid(it)) }
         val replacementJSON = values["wordReplacements"]?.value
         replacementJSON?.let(ReplacementDocument::fromJson)
         val enabled = values["wordReplacementsEnabled"]?.value
@@ -285,7 +273,6 @@ class SettingsStore(context: Context) {
         private const val KEY_LANGUAGES = "languages"
         private const val KEY_LANGUAGE = "language"
         private const val KEY_PROMPT = "prompt"
-        private const val KEY_TRANSCRIPTION_PROMPT = "custom_transcription_prompt"
         private const val KEY_TRANSFORMATION_BUTTON_ENABLED = "transformation_button_enabled"
         private const val KEY_EXCLUDED_PACKAGES = "excluded_packages"
         private const val KEY_ALLOWED_PACKAGES = "allowed_packages"

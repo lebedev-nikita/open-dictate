@@ -72,14 +72,11 @@ or validate that processing.
 
 ## OpenDictate integration
 
-Both request builders already send the configured prompt directly to transcription:
-[macOS](../apps/macos/Sources/OpenDictateCore/OpenAIProtocol.swift) and
-[Android](../apps/android/app/src/main/java/com/opendictate/app/network/OpenAiTranscriptionClient.kt).
-The defaults are `gpt-live-transcribe` for Live and `gpt-transcribe` for Accurate.
-The [prompt editor documentation](../apps/macos/README.md#transcription-prompt)
-explains that a custom prompt replaces the entire built-in prompt and an empty
-custom value omits it. Preserve any desired language and punctuation context
-when experimenting. A transcription prompt adds no separate formatting call.
+The application no longer sends a transcription prompt or exposes its editor.
+Language and dictionary hints remain separate. Text formatting is configured in
+[Post-processing](../apps/macos/README.md#post-processing).
+The experiments below describe the earlier request builders at the measured
+commit; they do not imply the removed control is still available.
 
 ## Empirical results
 

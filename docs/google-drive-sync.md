@@ -1,7 +1,7 @@
 # Google Drive settings synchronization
 
 Connect Google Drive in Settings on Android and macOS, using the same Google
-account. Sync transfers the dictionary, custom transcription prompts and resets, word replacement rules and enabled
+account. Sync transfers the dictionary, word replacement rules and enabled
 states, post-processing configuration, Live/Accurate mode and selected Live, Accurate
 and text model IDs.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
@@ -38,13 +38,14 @@ a fresh download. Restarting the process clears the cache. Uploads remain condit
 on actual merged changes or a missing own replica. API keys, audio and history
 never enter the cache or synchronization payload.
 
-## Transcription prompt
+## Retired transcription prompts
 
-The prompt editor on each platform saves a custom override or an explicit reset. Untouched defaults create no sync entry. Custom prompts replace the complete built-in text; selected languages and dictionary terms remain separate. Save commits a draft locally even while offline. Incoming sync does not replace an open draft; saving that draft is a new local edit. Disconnect preserves local and cloud values.
-
-A reset is a timestamped `transcriptionPrompt` entry with `value: null`; its text is resolved from the installed app's defaults. Keep this entry so a stale replica cannot restore an older custom prompt. An empty string is a custom prompt that sends no prompt to OpenAI. Both platforms use the same UTF-8 byte limit and shared defaults resource.
-
-Documents containing a null reset use schema version 2; string-only documents retain version 1. New clients read both versions. Older clients reject version 2 and pause synchronization without overwriting it; update both platforms after a reset. Different app versions may contain different built-in defaults. The reset propagates the choice of defaults, not a copy of their text.
+Transcription requests no longer accept an application prompt. Legacy local
+prompt preferences are removed. Both platforms read schema versions 1 and 2,
+including old nullable prompt resets, then discard the retired
+transcriptionPrompt entry from journals, merges and exports. It does not
+trigger a source choice or change post-processing settings. String-only exports
+use schema version 1; unknown future settings remain preserved.
 
 ## Post-processing
 
@@ -226,7 +227,7 @@ Delete hidden app data.
 
 Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
 `liveModel`, `accurateModel`, `textModel`, `wordReplacements` and
-`wordReplacementsEnabled`, `transcriptionPrompt` and `postprocessing`:
+`wordReplacementsEnabled` and `postprocessing`:
 
 ```json
 {

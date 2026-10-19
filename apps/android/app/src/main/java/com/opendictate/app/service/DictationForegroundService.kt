@@ -102,7 +102,6 @@ class DictationForegroundService : Service() {
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
         val dictionary = settings.prompt
-        val transcriptionPrompt = settings.customTranscriptionPrompt ?: com.opendictate.app.model.TranscriptionPrompt.defaultText(languages)
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
         val sessionId = nextSession.incrementAndGet()
         val previousJob = activeJob
@@ -145,7 +144,6 @@ class DictationForegroundService : Service() {
                             recorder = recorder,
                             languages = languages,
                             dictionary = dictionary,
-                            prompt = transcriptionPrompt,
                             responseTimeoutSeconds = responseTimeoutSeconds,
                             waitForStop = { stopSignal.await() },
                             onReady = {
@@ -233,7 +231,6 @@ class DictationForegroundService : Service() {
                             languages,
                             dictionary,
                             responseTimeoutSeconds,
-                            prompt = transcriptionPrompt,
                         )
                     }
                 }
@@ -332,7 +329,6 @@ class DictationForegroundService : Service() {
         val accurateModelId = settings.accurateModelId
         val languages = settings.languages
         val dictionary = settings.prompt
-        val transcriptionPrompt = settings.customTranscriptionPrompt ?: com.opendictate.app.model.TranscriptionPrompt.defaultText(languages)
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
         val postProcessing = settings.postProcessing
         activeOperation = DictationOperation.DICTATION
@@ -355,7 +351,6 @@ class DictationForegroundService : Service() {
                     languages,
                     dictionary,
                     responseTimeoutSeconds,
-                    prompt = transcriptionPrompt,
                 )
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))

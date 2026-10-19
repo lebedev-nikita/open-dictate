@@ -18,32 +18,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class OpenAiTranscriptionClientTest {
-    @Test fun `custom and empty prompts replace defaults in both requests without changing languages or dictionary`() {
-        val file = java.io.File.createTempFile("prompt-test", ".wav")
-        try {
-            for (prompt in listOf("Точные слова 📝\n\"Quoted\".", "")) {
-                val languages = setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH)
-                val session = realtimeTranscriptionSessionUpdate("gpt-live-transcribe", languages, "OpenDictate", prompt)
-                val transcription = session.getJSONObject("session").getJSONObject("audio").getJSONObject("input").getJSONObject("transcription")
-                assertEquals(prompt.isNotEmpty(), transcription.has("prompt"))
-                if (prompt.isNotEmpty()) assertEquals(prompt, transcription.getString("prompt"))
-                assertEquals("OpenDictate", transcription.getJSONArray("keywords").getString(0))
-                assertEquals(2, transcription.getJSONArray("languages").length())
-                val body = transcriptionMultipartBody("gpt-transcribe", file, languages, "OpenDictate", prompt)
-                val buffer = okio.Buffer(); body.writeTo(buffer)
-                val text = buffer.readUtf8()
-                assertEquals(prompt.isNotEmpty(), text.contains("name=\"prompt\""))
-                if (prompt.isNotEmpty()) assertTrue(text.contains("\r\n\r\n$prompt\r\n"))
-                assertFalse(text.contains("Multilingual dictation"))
-            }
-            assertTrue(com.opendictate.app.model.TranscriptionPrompt.isValid("я".repeat(8192)))
-            assertFalse(com.opendictate.app.model.TranscriptionPrompt.isValid("я".repeat(8193)))
-        } finally { file.delete() }
-    }
-
-    @Test fun `default transcription context is empty`() {
-        assertEquals("", transcriptionPrompt(setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH)))
-    }
     @Test
     fun `file transcription uses configured overall timeout or none`() {
         val base = OkHttpClient.Builder()
@@ -138,13 +112,20 @@ class OpenAiTranscriptionClientTest {
     }
 
     @Test
-    fun `empty default covers every configured language and automatic detection`() {
+    fun `transcription omits prompt for every language and automatic detection`() {
         val languageSelections = listOf(emptySet<DictationLanguage>()) + DictationLanguage.entries.map { setOf(it) } +
             listOf(DictationLanguage.entries.toSet())
 
         languageSelections.forEach { languages ->
-            val context = transcriptionPrompt(languages)
-            assertEquals("", context)
+            val transcription = realtimeTranscriptionSessionUpdate("gpt-live-transcribe", languages, "")
+                .getJSONObject("session").getJSONObject("audio").getJSONObject("input").getJSONObject("transcription")
+            assertFalse(transcription.has("prompt"))
+            val file = java.io.File.createTempFile("transcription-test", ".wav")
+            try {
+                val buffer = okio.Buffer()
+                transcriptionMultipartBody("gpt-transcribe", file, languages, "").writeTo(buffer)
+                assertFalse(buffer.readUtf8().contains("name=\"prompt\""))
+            } finally { file.delete() }
         }
     }
 

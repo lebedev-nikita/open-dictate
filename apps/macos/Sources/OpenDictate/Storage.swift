@@ -14,13 +14,6 @@ final class Preferences: ObservableObject {
     }
     @Published var interfaceLanguage: String { didSet { defaults.set(interfaceLanguage, forKey: "interfaceLanguage") } }
     @Published var dictionary: String { didSet { defaults.set(dictionary, forKey: "dictionary"); recordSyncChange() } }
-    @Published var customTranscriptionPrompt: String? {
-        didSet {
-            defaults.set(customTranscriptionPrompt, forKey: "customTranscriptionPrompt")
-            defaults.set(true, forKey: "transcriptionPromptConfigured")
-            recordSyncChange()
-        }
-    }
     @Published var postProcessing: PostProcessingSettings {
         didSet {
             if let encoded = try? postProcessing.encoded() { defaults.set(encoded, forKey: "postprocessing") }
@@ -70,7 +63,8 @@ final class Preferences: ObservableObject {
         defaults.set(languages, forKey: "speechLanguages")
         interfaceLanguage = defaults.string(forKey: "interfaceLanguage") ?? "auto"
         dictionary = defaults.string(forKey: "dictionary") ?? "OpenDictate"
-        customTranscriptionPrompt = defaults.string(forKey: "customTranscriptionPrompt")
+        defaults.removeObject(forKey: "customTranscriptionPrompt")
+        defaults.removeObject(forKey: "transcriptionPromptConfigured")
         postProcessing = defaults.string(forKey: "postprocessing").flatMap { try? PostProcessingSettings.decode($0) }
             ?? PostProcessingSettings(enabled: defaults.bool(forKey: "accuratePunctuationEnabled"))
         saveHistory = defaults.object(forKey: "saveHistory") as? Bool ?? true
@@ -104,11 +98,7 @@ final class Preferences: ObservableObject {
             var values: [String: String?] = ["dictionary": dictionary, "mode": mode.rawValue, "liveModel": liveModel,
                           "accurateModel": accurateModel, "textModel": textModel, "postprocessing": try postProcessing.encoded()]
             values.merge(try replacements.syncValues) { _, new in new }
-            if defaults.bool(forKey: "transcriptionPromptConfigured") {
-                values.updateValue(customTranscriptionPrompt, forKey: "transcriptionPrompt")
-            }
-            guard customTranscriptionPrompt.map(TranscriptionPrompt.isValid) ?? true,
-                  values.values.allSatisfy({ ($0?.utf8.count ?? 0) <= 262_144 }) else { throw SyncFormatError.invalid }
+            guard values.values.allSatisfy({ ($0?.utf8.count ?? 0) <= 262_144 }) else { throw SyncFormatError.invalid }
             return values
         }
     }
@@ -147,9 +137,6 @@ final class Preferences: ObservableObject {
         defer { applyingSync = false }
         try replacements.applySync(json: replacementJSON, enabled: replacementEnabled.map { $0 == "true" })
         if let value = merged.entries["dictionary"]?.value, dictionary != value { dictionary = value }
-        if let entry = merged.entries["transcriptionPrompt"], customTranscriptionPrompt != entry.value {
-            customTranscriptionPrompt = entry.value
-        }
         if let value = merged.entries["mode"]?.value, let next = DictationMode(rawValue: value), mode != next { mode = next }
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
@@ -164,9 +151,6 @@ final class Preferences: ObservableObject {
 
     func validateSync(_ merged: SettingsSyncDocument) throws {
         if let value = merged.entries["postprocessing"]?.value { _ = try PostProcessingSettings.decode(value) }
-        if let value = merged.entries["transcriptionPrompt"]?.value, !TranscriptionPrompt.isValid(value) {
-            throw SyncFormatError.invalid
-        }
         if let value = merged.entries["mode"]?.value, DictationMode(rawValue: value) == nil { throw SyncFormatError.invalid }
         for key in ["liveModel", "accurateModel", "textModel"] {
             if let value = merged.entries[key]?.value,
@@ -187,7 +171,6 @@ final class Preferences: ObservableObject {
     var context: TranscriptionContext {
         var context = TranscriptionContext(languages: SpeechLanguage.normalize(speechLanguages),
                                            dictionary: DictionaryTerms.normalize(dictionary))
-        context.customPrompt = customTranscriptionPrompt
         context.liveModel = liveModel; context.accurateModel = accurateModel
         return context
     }

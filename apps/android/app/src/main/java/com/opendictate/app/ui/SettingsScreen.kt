@@ -119,7 +119,6 @@ internal fun SettingsScreen(
 ) {
     var setupExpanded by rememberSaveable { mutableStateOf(false) }
     var replacementsOpen by rememberSaveable { mutableStateOf(false) }
-    var transcriptionPromptOpen by rememberSaveable { mutableStateOf(false) }
     var dictionaryOpen by rememberSaveable { mutableStateOf(false) }
     var languagesOpen by rememberSaveable { mutableStateOf(false) }
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
@@ -221,10 +220,6 @@ internal fun SettingsScreen(
                         SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
-                        SettingsDivider()
-                        ActionRow(Icons.Outlined.Article, stringResource(R.string.transcription_prompt_title),
-                            stringResource(if (state.customTranscriptionPrompt == null) R.string.transcription_prompt_default else R.string.transcription_prompt_custom),
-                            { transcriptionPromptOpen = true })
                         SettingsDivider()
                         ActionRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.replacements_title),
                             stringResource(R.string.replacements_summary, replacements.document.rules.size), { replacementsOpen = true })
@@ -335,9 +330,6 @@ internal fun SettingsScreen(
     ) { buttonAppearanceOpen = false }
     if (replacementsOpen) ReplacementSheet(viewModel.replacements) { replacementsOpen = false }
     if (languagesOpen) LanguagesSheet(state.languages, viewModel::toggleLanguage, viewModel::useAutomaticLanguageDetection) { languagesOpen = false }
-    if (transcriptionPromptOpen) TranscriptionPromptSheet(state.customTranscriptionPrompt,
-        com.opendictate.app.model.TranscriptionPrompt.defaultText(state.languages), viewModel::saveTranscriptionPrompt,
-        onDismiss = { transcriptionPromptOpen = false })
     if (dictionaryOpen) DictionarySheet(state.prompt, viewModel::savePrompt) { dictionaryOpen = false }
     if (timeoutOpen) TranscriptionTimeoutDialog(state.transcriptionResponseTimeoutSeconds,
         onDismiss = { timeoutOpen = false }, onSave = { viewModel.setTranscriptionResponseTimeout(it); timeoutOpen = false })

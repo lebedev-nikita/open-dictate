@@ -56,7 +56,7 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                 modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).keepFullBoundsInView(),
                 isError = prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES,
                 supportingText = if (prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES)
-                    {{ Text(stringResource(R.string.transcription_prompt_limit)) }} else null)
+                    {{ Text(stringResource(R.string.postprocessing_prompt_limit)) }} else null)
             Text(stringResource(R.string.postprocessing_add_instruction), style = MaterialTheme.typography.labelMedium, color = SettingsMuted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { prompt = PostProcessingPreset.PUNCTUATION.appendTo(prompt) },
@@ -75,10 +75,10 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                     Text(stringResource(R.string.postprocessing_reset))
                 }
                 if (changed) TextButton(onClick = { load(settings) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.transcription_prompt_cancel))
+                    Text(stringResource(R.string.postprocessing_cancel))
                 }
                 Button(onClick = { onChange(draft); load(draft) }, enabled = changed && draft.isValid,
-                    modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.transcription_prompt_save)) }
+                    modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.postprocessing_save)) }
             }
         }
     }

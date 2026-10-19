@@ -65,9 +65,8 @@ class OpenAiTranscriptionClient(
         languages: Set<DictationLanguage>,
         dictionary: String,
         responseTimeoutSeconds: Int?,
-        prompt: String = transcriptionPrompt(languages),
     ): String = withContext(Dispatchers.IO) {
-        val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary, prompt)
+        val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary)
         val request = authorizedRequest(apiKey, TRANSCRIPTIONS_URL)
             .post(multipart)
             .build()
@@ -97,9 +96,8 @@ class OpenAiTranscriptionClient(
         onReady: () -> Unit,
         onPartial: (String) -> Unit,
         onAudio: (ByteArray) -> Unit = {},
-        prompt: String = transcriptionPrompt(languages),
     ): String {
-        val session = LiveSession(apiKey, modelId, languages, dictionary, prompt, onPartial)
+        val session = LiveSession(apiKey, modelId, languages, dictionary, onPartial)
         try {
             session.connect()
             recorder.start(scope) { chunk ->
@@ -253,7 +251,6 @@ class OpenAiTranscriptionClient(
         private val modelId: String,
         private val languages: Set<DictationLanguage>,
         private val dictionary: String,
-        private val prompt: String,
         private val onPartial: (String) -> Unit,
     ) : WebSocketListener() {
         val ready = CompletableDeferred<Unit>()
@@ -273,7 +270,7 @@ class OpenAiTranscriptionClient(
         }
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary, prompt).toString())
+            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary).toString())
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -702,12 +699,10 @@ internal fun transcriptionMultipartBody(
     audioFile: File,
     languages: Set<DictationLanguage>,
     dictionary: String,
-    prompt: String = transcriptionPrompt(languages),
 ): MultipartBody = MultipartBody.Builder()
     .setType(MultipartBody.FORM)
     .addFormDataPart("model", modelId)
     .addFormDataPart("file", "dictation.wav", audioFile.asRequestBody("audio/wav".toMediaType()))
-    .apply { if (prompt.isNotEmpty()) addFormDataPart("prompt", prompt) }
     .apply {
         languages.forEach { addFormDataPart("languages[]", it.code) }
         transcriptionKeywords(dictionary).forEach { addFormDataPart("keywords[]", it) }
@@ -718,11 +713,9 @@ internal fun realtimeTranscriptionSessionUpdate(
     modelId: String,
     languages: Set<DictationLanguage>,
     dictionary: String,
-    prompt: String = transcriptionPrompt(languages),
 ): JSONObject {
     val transcription = JSONObject()
         .put("model", modelId)
-    if (prompt.isNotEmpty()) transcription.put("prompt", prompt)
     val keywords = transcriptionKeywords(dictionary)
     if (keywords.isNotEmpty()) transcription.put("keywords", JSONArray(keywords))
     if (languages.isNotEmpty()) {
@@ -741,8 +734,5 @@ internal fun realtimeTranscriptionSessionUpdate(
                 .put("audio", JSONObject().put("input", input)),
         )
 }
-
-internal fun transcriptionPrompt(languages: Set<DictationLanguage>): String =
-    com.opendictate.app.model.TranscriptionPrompt.defaultText(languages)
 
 class OpenAiException(message: String, cause: Throwable? = null) : IOException(message, cause)
