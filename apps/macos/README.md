@@ -103,6 +103,10 @@ preferences migrate automatically. Language hints remain local preferences.
 
 ### Post-processing
 
+The shared **Text model** selector sits beside recognition models and defaults to
+GPT-6 Luna. Voice editing and post-processing use its session-start selection;
+Google Drive synchronizes the saved model independently of prompt drafts.
+
 In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
 Live hides the section and retains its saved settings. It is off by default and always uses `gpt-6-luna`. A punctuation
 instruction is prefilled. Edit the prompt, then choose **Save**.

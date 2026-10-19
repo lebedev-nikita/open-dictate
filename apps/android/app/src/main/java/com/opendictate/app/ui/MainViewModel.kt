@@ -46,6 +46,7 @@ data class MainUiState(
     val liveModelId: String = ModelCatalog.DEFAULT.live.first(),
     val accurateModelId: String = ModelCatalog.DEFAULT.accurate.first(),
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
+    val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
     val newModelCount: Int = 0,
@@ -112,7 +113,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
-                    postProcessing = settings.postProcessing,
+                    postProcessing = settings.postProcessing, textProcessingModel = settings.textProcessingModel,
                     liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId) }
             }
         }
@@ -188,6 +189,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (id !in modelOptions(mutableState.value.modelCatalog.accurate, ModelCatalog.DEFAULT.accurate)) return
         settings.accurateModelId = id
         mutableState.update { it.copy(accurateModelId = id) }
+    }
+
+    fun selectTextProcessingModel(id: String) {
+        if (!com.opendictate.app.model.TextProcessingModel.isValid(id)) return
+        settings.textProcessingModel = id
+        mutableState.update { it.copy(textProcessingModel = id) }
     }
 
     fun savePostProcessing(value: com.opendictate.app.model.PostProcessingSettings) {
@@ -427,6 +434,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         languages = settings.languages,
         prompt = settings.prompt,
         postProcessing = settings.postProcessing,
+        textProcessingModel = settings.textProcessingModel,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
         appFilter = settings.appFilter,

@@ -29,7 +29,9 @@ sync offline and resume queued work when connectivity returns.
 Sync uses Google's HTTPS endpoints without a backend, requests only
 `drive.appdata` and exports an allowlist of dictionary, replacement, mode and
 model settings and post-processing
-configuration (enabled and optional prompt override). Its model is always GPT-6 Luna. Legacy Accurate punctuation and transcription-prompt/text-model sync entries are discarded.
+configuration (enabled and optional prompt override). A shared text-processing
+model defaults to GPT-6 Luna and is captured at session start for transformation
+and post-processing. Legacy Accurate punctuation and transcription-prompt/text-model sync entries are discarded.
 API keys, audio and history are excluded. Tokens, custom prompts, dictionary/replacement contents and raw
 provider payloads are never logged. Drive clients disable redirects, cookies and
 persistent caches. Remote data is bounded and validated before application;
@@ -117,8 +119,9 @@ OpenDictate intentionally never logs authorization headers, API keys, audio,
 transcript contents, transformation instructions, or focused-field text.
 Model discovery calls OpenAI directly and stores only model IDs in app-private
 preferences. The model list API does not supply endpoint capabilities or prices,
-so the picker keeps only the transcription aliases. Post-processing, voice editing
-and AI history search always use GPT-6 Luna; legacy selections cannot override it.
+so recognition pickers keep only the transcription aliases. Text model offers
+GPT-6 Luna by default and controls post-processing and voice editing. AI history
+search remains fixed to GPT-6 Luna; retired legacy selections cannot override it.
 The app picker queries launchable apps only. The filter mode and separate allowed
 and excluded package lists stay in app-private preferences, outside Drive sync.
 The accessibility service checks the filter before showing the overlay, starting

@@ -79,17 +79,17 @@ actor OpenAIClient {
         return text
     }
 
-    func transform(source: String, instruction: String, key: String) async throws -> (String, String?) {
-        let response = try await response(OpenAIRequest.transform(source: source, instruction: instruction), key: key)
+    func transform(source: String, instruction: String, key: String, model: String = TextProcessingModel.id) async throws -> (String, String?) {
+        let response = try await response(OpenAIRequest.transform(source: source, instruction: instruction, model: model), key: key)
         guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
               let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }
         return (text, (result["message"] as? String).map { String($0.prefix(1000)) })
     }
 
-    func postProcess(source: String, key: String, settings: PostProcessingSettings) async throws -> PostProcessingResult {
+    func postProcess(source: String, key: String, settings: PostProcessingSettings, model: String = TextProcessingModel.id) async throws -> PostProcessingResult {
         try await PostProcessing.apply(source: source, settings: settings) {
-            let response = try await self.response(OpenAIRequest.postProcessing(source: source, settings: settings), key: key)
+            let response = try await self.response(OpenAIRequest.postProcessing(source: source, settings: settings, model: model), key: key)
             guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
                   let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }

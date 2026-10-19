@@ -69,6 +69,14 @@ class SettingsStore(context: Context) {
         )
         set(value) = saveSynced { putString(KEY_ACCURATE_MODEL_ID, value) }
 
+    var textProcessingModel: String
+        get() = prefs.getString("text_processing_model", null)?.takeIf(com.opendictate.app.model.TextProcessingModel::isValid)
+            ?: com.opendictate.app.model.TextProcessingModel.ID
+        set(value) {
+            require(com.opendictate.app.model.TextProcessingModel.isValid(value))
+            saveSynced { putString("text_processing_model", value) }
+        }
+
     var modelCatalog: ModelCatalog
         get() = ModelCatalog.fromCachedJson(prefs.getString(KEY_MODEL_CATALOG_V2, null))
         set(value) = prefs.edit {
@@ -166,6 +174,7 @@ class SettingsStore(context: Context) {
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
         "postprocessing" to postProcessing.toJson(),
+        "textProcessingModel" to textProcessingModel,
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
         ).also { values ->
@@ -218,6 +227,7 @@ class SettingsStore(context: Context) {
             values["mode"]?.let { putString(KEY_MODEL, requireNotNull(it.value).uppercase()) }
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
+            values["textProcessingModel"]?.let { putString("text_processing_model", it.value) }
             values["postprocessing"]?.let { putString("postprocessing", it.value) }
             putString("sync_document", merged.toJson())
         }
@@ -229,7 +239,7 @@ class SettingsStore(context: Context) {
         val values = merged.entries
         values["postprocessing"]?.value?.let(PostProcessingSettings::fromJson)
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
-        listOf("liveModel", "accurateModel").forEach { key ->
+        listOf("liveModel", "accurateModel", "textProcessingModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }
         }
         val replacementJSON = values["wordReplacements"]?.value

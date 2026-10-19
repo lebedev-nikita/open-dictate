@@ -20,7 +20,7 @@ public struct PostProcessingSettings: Codable, Equatable, Sendable {
     }
     public func encoded() throws -> String {
         guard isValid else { throw SyncFormatError.invalid }
-        // Fixed model metadata preserves earlier RC compatibility; null keeps the default text local.
+        // Legacy model metadata; shared textProcessingModel controls requests. Nil keeps default text local.
         let object: [String: Any] = ["enabled": enabled, "model": TextProcessingModel.id, "prompt": prompt as Any? ?? NSNull()]
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
         return String(decoding: data, as: UTF8.self)

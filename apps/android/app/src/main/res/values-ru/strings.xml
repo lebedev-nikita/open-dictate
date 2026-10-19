@@ -291,4 +291,5 @@
     <string name="history_transcription_time_description">Транскрипция: %1$s с</string>
     <string name="history_postprocessing_time_description">Постобработка: %1$s с</string>
     <string name="history_live_description">Диктовка Live</string>
+    <string name="settings_text_model">Текстовая модель</string>
 </resources>

@@ -23,6 +23,20 @@ class RetiredTranscriptionPromptTest {
             assertFalse(prefs.contains("transcription_prompt_configured"))
             assertFalse(prefs.contains("transformation_model"))
             assertFalse(prefs.contains("transformation_model_id"))
+            assertEquals("gpt-6-luna", store.textProcessingModel)
+            store.textProcessingModel = "test-text-model"
+            assertEquals("test-text-model", SettingsStore(context).textProcessingModel)
+            assertEquals("test-text-model", store.syncDocument().entries["textProcessingModel"]?.value)
+            val invalid = SettingsSyncDocument(mapOf(
+                "textProcessingModel" to SettingsSyncEntry("invalid model", Long.MAX_VALUE - 10, "remote"),
+                "dictionary" to SettingsSyncEntry("Must not apply", Long.MAX_VALUE - 10, "remote")))
+            assertThrows(Exception::class.java) { store.mergeSyncDocument(invalid, ReplacementStore(context)) }
+            assertEquals("test-text-model", store.textProcessingModel)
+            val other = SettingsStore(object : ContextWrapper(context) {
+                override fun getSharedPreferences(name: String, mode: Int) = super.getSharedPreferences(name + "-other", mode)
+            })
+            other.mergeSyncDocument(store.syncDocument(), ReplacementStore(context))
+            assertEquals("test-text-model", other.textProcessingModel)
             val original = store.postProcessing
             val remote = SettingsSyncDocument(mapOf(
                 "transcriptionPrompt" to SettingsSyncEntry("Ignored", 500, "old"),
@@ -33,6 +47,7 @@ class RetiredTranscriptionPromptTest {
         } finally {
             actual.deleteSharedPreferences(prefix + "-opendictate_settings")
             actual.deleteSharedPreferences(prefix + "-word_replacements")
+            actual.deleteSharedPreferences(prefix + "-opendictate_settings-other")
         }
     }
 }

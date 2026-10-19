@@ -106,7 +106,7 @@ final class DictationFocusTests: XCTestCase {
             var active = first
             let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
                 captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
-                processTranscript: { _, _, settings in await processor.process(settings) })
+                processTranscript: { _, _, settings, _ in await processor.process(settings) })
             model.preferences.postProcessing = .init(enabled: true, prompt: "Original instruction")
             model.toggleLocalRecording(mode: .accurate)
             await waitFor(.recording, in: model)
@@ -136,15 +136,18 @@ final class DictationFocusTests: XCTestCase {
                     await Task.yield()
                     await MainActor.run { clock.value += .milliseconds(1250) }
                     return "synthetic transcript"
-                }, processTranscript: { source, _, _ in
+                }, processTranscript: { source, _, _, selectedModel in
+                    XCTAssertEqual(selectedModel, "test-text-model")
                     await Task.yield()
                     await MainActor.run { clock.value += .milliseconds(450) }
                     return .init(text: source, failed: failed)
                 }, requestClock: { clock.value })
+            model.preferences.textProcessingModel = "test-text-model"
             model.preferences.saveHistory = true
             model.preferences.postProcessing = .init(enabled: true)
             model.toggleLocalRecording(mode: .accurate)
             await waitFor(.recording, in: model)
+            model.preferences.textProcessingModel = TextProcessingModel.id
             clock.value += .seconds(40) // User recording time must not be included.
             model.preferences.mode = .live
             model.stop()
@@ -160,7 +163,7 @@ final class DictationFocusTests: XCTestCase {
         let editor = FocusEditor("original "), processor = HeldPostProcessor()
         let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
             captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
-            processTranscript: { _, _, settings in await processor.process(settings) })
+            processTranscript: { _, _, settings, _ in await processor.process(settings) })
         defer { model.shutdown() }
         model.preferences.postProcessing.enabled = true
         model.toggleLocalRecording(mode: .live)
@@ -180,7 +183,7 @@ final class DictationFocusTests: XCTestCase {
     @MainActor func testVoiceEditSkipsPostProcessing() async {
         let editor = FocusEditor("original "), processor = HeldPostProcessor()
         let model = AppModel(localOnly: true, defaults: isolatedDefaults(), captureTarget: { _, _ in editor.target() },
-            makeRecorder: { FocusRecorder() }, processTranscript: { _, _, settings in await processor.process(settings) })
+            makeRecorder: { FocusRecorder() }, processTranscript: { _, _, settings, _ in await processor.process(settings) })
         defer { model.shutdown() }
         model.preferences.postProcessing.enabled = true
         model.toggleLocalRecording(transform: true)

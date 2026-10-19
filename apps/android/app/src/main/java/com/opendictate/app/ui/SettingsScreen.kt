@@ -219,6 +219,14 @@ internal fun SettingsScreen(
                             onSelect = if (live) viewModel::selectLiveModel else viewModel::selectAccurateModel,
                         )
                         SettingsDivider()
+                        ModelPicker(
+                            label = stringResource(R.string.settings_text_model),
+                            selected = state.textProcessingModel,
+                            options = com.opendictate.app.model.TextProcessingModel.defaults,
+                            onSelect = viewModel::selectTextProcessingModel,
+                            displayName = com.opendictate.app.model.TextProcessingModel::title,
+                        )
+                        SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
                         SettingsDivider()
@@ -437,21 +445,21 @@ private fun ModeSelector(selected: TranscriptionModel, onSelect: (TranscriptionM
 }
 
 @Composable
-private fun ModelPicker(label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true) {
+private fun ModelPicker(label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true, displayName: (String) -> String = { it }) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         Surface(onClick = { expanded = true }, enabled = enabled, color = SettingsSurface) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(label, style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
-                    Text(selected, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                    Text(displayName(selected), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
                 }
                 Icon(Icons.Outlined.UnfoldMore, null, Modifier.size(20.dp), tint = SettingsMuted)
             }
         }
         DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
             options.forEach { id ->
-                DropdownMenuItem(text = { Text(id, fontFamily = FontFamily.Monospace) },
+                DropdownMenuItem(text = { Text(displayName(id), fontFamily = FontFamily.Monospace) },
                     onClick = { onSelect(id); expanded = false },
                     leadingIcon = { if (id == selected) Icon(Icons.Outlined.Check, null) else Spacer(Modifier.size(24.dp)) })
             }

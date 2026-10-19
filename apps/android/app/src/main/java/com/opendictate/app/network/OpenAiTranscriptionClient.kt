@@ -128,13 +128,14 @@ class OpenAiTranscriptionClient(
         apiKey: String,
         sourceText: String,
         instruction: String,
+        modelId: String = TextProcessingModel.ID,
     ): TextTransformationResult = try {
         withTimeout(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
                 val request = authorizedRequest(apiKey, RESPONSES_URL)
                     .header("Content-Type", "application/json")
                     .post(
-                        textTransformationRequest(sourceText, instruction)
+                        textTransformationRequest(sourceText, instruction, modelId)
                             .toString()
                             .toRequestBody(JSON),
                     )
@@ -171,12 +172,12 @@ class OpenAiTranscriptionClient(
         throw OpenAiException(error.userMessage(), error)
     }
 
-    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings): PostProcessingResult =
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID): PostProcessingResult =
         PostProcessing.apply(source, settings) {
             withContext(Dispatchers.IO) {
                 val request = authorizedRequest(apiKey, RESPONSES_URL)
                     .header("Content-Type", "application/json")
-                    .post(postProcessingRequest(source, settings).toString().toRequestBody(JSON)).build()
+                    .post(postProcessingRequest(source, settings, modelId).toString().toRequestBody(JSON)).build()
                 client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
                     val body = response.body.string()
                     if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body))
@@ -559,8 +560,9 @@ private const val MAX_HISTORY_REQUEST_CHARS = 40_000
 internal fun textTransformationRequest(
     sourceText: String,
     instruction: String,
+    modelId: String = TextProcessingModel.ID,
 ): JSONObject = JSONObject()
-    .put("model", TextProcessingModel.ID)
+    .put("model", modelId)
     .put("store", false)
     .put("reasoning", JSONObject().put("effort", "low"))
     .put(
@@ -649,8 +651,8 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 
 private const val MAX_USER_MESSAGE_CHARS = 1_000
 
-internal fun postProcessingRequest(source: String, settings: PostProcessingSettings): JSONObject {
-    val request = textTransformationRequest(source, settings.effectivePrompt)
+internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID): JSONObject {
+    val request = textTransformationRequest(source, settings.effectivePrompt, modelId)
         .put("instructions", PostProcessing.INSTRUCTIONS)
     val format = request.getJSONObject("text").getJSONObject("format")
     format.put("name", "post_processing")

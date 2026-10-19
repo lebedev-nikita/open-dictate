@@ -10,6 +10,18 @@ final class PostProcessingPreferencesTests: XCTestCase {
         let otherSuite = suite + "-other", otherDefaults = UserDefaults(suiteName: otherSuite)!
         defer { defaults.removePersistentDomain(forName: suite); otherDefaults.removePersistentDomain(forName: otherSuite) }
         let local = Preferences(defaults: defaults), other = Preferences(defaults: otherDefaults)
+        XCTAssertEqual(local.textProcessingModel, TextProcessingModel.id)
+        local.textProcessingModel = "test-text-model"
+        XCTAssertEqual(Preferences(defaults: defaults).textProcessingModel, "test-text-model")
+        _ = try other.mergeSync(local.syncDocument())
+        XCTAssertEqual(other.textProcessingModel, "test-text-model")
+        var invalidModel = try local.syncDocument()
+        invalidModel.entries["textProcessingModel"] = .init(value: "invalid model", modifiedAt: Int64.max - 10, deviceId: "remote")
+        invalidModel.entries["dictionary"] = .init(value: "Must not apply", modifiedAt: Int64.max - 10, deviceId: "remote")
+        let before = other.dictionary
+        XCTAssertThrowsError(try other.mergeSync(invalidModel))
+        XCTAssertEqual(other.dictionary, before)
+        XCTAssertEqual(other.textProcessingModel, "test-text-model")
         XCTAssertEqual(local.postProcessing, .init())
         let snapshot = local.postProcessing
         let custom = PostProcessingSettings(enabled: true, prompt: "Format numbers\n📝")
@@ -32,7 +44,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
         XCTAssertEqual(other.dictionary, dictionary)
     }
 
-    @MainActor func testSettingsWithoutTranscriptionPromptLayouts() throws {
+    @MainActor func testSettingsWithSharedTextModelLayouts() throws {
         let suite = "removed-prompt-layout-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = AppModel(localOnly: true, defaults: defaults)
@@ -53,7 +65,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
                 let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                 host.cacheDisplay(in: host.bounds, to: bitmap)
                 try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("accurate-post-macos-full-\(mode.rawValue)-\(language)-\(enabled).png"))
+                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("text-model-macos-\(mode.rawValue)-\(language)-\(enabled).png"))
             }
             window.close()
         }

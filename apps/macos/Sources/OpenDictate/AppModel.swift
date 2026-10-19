@@ -7,7 +7,7 @@ import OpenDictateCore
 @MainActor
 final class AppModel: ObservableObject {
     typealias AudioTranscriber = @Sendable (Data, String, TranscriptionContext, Int) async throws -> String
-    typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings) async throws -> PostProcessingResult
+    typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings, String) async throws -> PostProcessingResult
     enum Phase {
         case idle, preparing, recording, processing
         var showsFinishControl: Bool { self == .preparing || self == .recording }
@@ -61,6 +61,7 @@ final class AppModel: ObservableObject {
         let transform: Bool
         let key: String
         let context: TranscriptionContext
+        let textProcessingModel: String
         let postProcessing: PostProcessingSettings
         let timeout: Int
         let replacements: WordReplacementEngine
@@ -82,6 +83,7 @@ final class AppModel: ObservableObject {
             self.target = target; self.transform = transform; self.key = key
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
             context = preferences.context
+            textProcessingModel = preferences.textProcessingModel
             postProcessing = preferences.postProcessing.forMode(mode)
             timeout = preferences.timeout
         }
@@ -362,8 +364,8 @@ final class AppModel: ObservableObject {
             let processed: PostProcessingResult
             if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
                 let started = requestClock()
-                if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing) }
-                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing) }
+                if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel) }
+                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, model: session.textProcessingModel) }
                 if session.postProcessing.shouldProcess { postProcessingMillis = requestMilliseconds(since: started) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
@@ -373,7 +375,7 @@ final class AppModel: ObservableObject {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
                 let (transformed, responseMessage) = try await client.transform(source: target.snapshot.selectedText,
-                    instruction: result, key: session.key)
+                    instruction: result, key: session.key, model: session.textProcessingModel)
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
                 if let responseMessage, !responseMessage.isEmpty {

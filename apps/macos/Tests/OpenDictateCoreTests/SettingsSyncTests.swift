@@ -7,6 +7,21 @@ final class SettingsSyncTests: XCTestCase {
         result.entries[key] = .init(value: value, modifiedAt: time, deviceId: device)
         return result
     }
+    func testSelectedTextModelSyncsAndFeedsBothTextRequests() throws {
+        var seed = SettingsSyncDocument()
+        seed.record(["textProcessingModel": "gpt-6-luna"], deviceId: "new", now: 0, seed: true)
+        let remote = document("textProcessingModel", "test-text-model", 500, "other")
+        var merged = seed; merged.merge(remote)
+        var reversed = remote; reversed.merge(seed)
+        XCTAssertEqual(merged, reversed)
+        XCTAssertTrue(seed.needsConnectionChoice(with: remote))
+        let selected = try XCTUnwrap(SettingsSyncDocument.decode(JSONEncoder().encode(merged)).entries["textProcessingModel"]?.value)
+        XCTAssertEqual(selected, "test-text-model")
+        XCTAssertEqual(OpenAIRequest.transform(source: "Text", instruction: "Edit", model: selected)["model"] as? String, selected)
+        XCTAssertEqual(OpenAIRequest.postProcessing(source: "Text", settings: .init(enabled: true), model: selected)["model"] as? String, selected)
+        XCTAssertEqual(OpenAIRequest.search(query: "Find", entries: [])["model"] as? String, "gpt-6-luna")
+    }
+
     func testOldModelChoicesCannotAffectRequestsOrRequireSourceChoice() throws {
         let leftJSON = #"{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"#
         let rightJSON = #"{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"#

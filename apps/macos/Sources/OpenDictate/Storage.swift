@@ -31,6 +31,7 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(indicatorStyle.rawValue, forKey: "indicatorStyle") }
     }
 
+    @Published var textProcessingModel: String { didSet { defaults.set(textProcessingModel, forKey: "textProcessingModel"); recordSyncChange() } }
     @Published var liveModel: String { didSet { defaults.set(liveModel, forKey: "liveModel"); recordSyncChange() } }
     @Published var accurateModel: String { didSet { defaults.set(accurateModel, forKey: "accurateModel"); recordSyncChange() } }
     @Published var driveSyncEnabled: Bool { didSet { defaults.set(driveSyncEnabled, forKey: "driveSyncEnabled") } }
@@ -50,6 +51,7 @@ final class Preferences: ObservableObject {
         theme = AppTheme(rawValue: defaults.string(forKey: "theme") ?? "") ?? .dark
         syncDeviceID = defaults.string(forKey: "syncDeviceID") ?? UUID().uuidString.lowercased()
         defaults.set(syncDeviceID, forKey: "syncDeviceID")
+        textProcessingModel = defaults.string(forKey: "textProcessingModel") ?? TextProcessingModel.id
         liveModel = defaults.string(forKey: "liveModel") ?? DictationMode.live.model
         accurateModel = defaults.string(forKey: "accurateModel") ?? DictationMode.accurate.model
         driveSyncEnabled = defaults.bool(forKey: "driveSyncEnabled")
@@ -95,7 +97,7 @@ final class Preferences: ObservableObject {
     private var syncValues: [String: String?] {
         get throws {
             var values: [String: String?] = ["dictionary": dictionary, "mode": mode.rawValue, "liveModel": liveModel,
-                          "accurateModel": accurateModel, "postprocessing": try postProcessing.encoded()]
+                          "accurateModel": accurateModel, "postprocessing": try postProcessing.encoded(), "textProcessingModel": textProcessingModel]
             values.merge(try replacements.syncValues) { _, new in new }
             guard values.values.allSatisfy({ ($0?.utf8.count ?? 0) <= 262_144 }) else { throw SyncFormatError.invalid }
             return values
@@ -139,6 +141,7 @@ final class Preferences: ObservableObject {
         if let value = merged.entries["mode"]?.value, let next = DictationMode(rawValue: value), mode != next { mode = next }
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
+        if let value = merged.entries["textProcessingModel"]?.value, textProcessingModel != value { textProcessingModel = value }
         if let value = merged.entries["postprocessing"]?.value {
             let next = try PostProcessingSettings.decode(value)
             if postProcessing != next { postProcessing = next }
@@ -150,7 +153,7 @@ final class Preferences: ObservableObject {
     func validateSync(_ merged: SettingsSyncDocument) throws {
         if let value = merged.entries["postprocessing"]?.value { _ = try PostProcessingSettings.decode(value) }
         if let value = merged.entries["mode"]?.value, DictationMode(rawValue: value) == nil { throw SyncFormatError.invalid }
-        for key in ["liveModel", "accurateModel"] {
+        for key in ["liveModel", "accurateModel", "textProcessingModel"] {
             if let value = merged.entries[key]?.value,
                value.range(of: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", options: .regularExpression) == nil { throw SyncFormatError.invalid }
         }

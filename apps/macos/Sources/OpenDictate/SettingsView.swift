@@ -163,6 +163,14 @@ struct SettingsView: View {
             modelField(t("Live model", "Модель Live"), $preferences.liveModel)
             modelField(t("Accurate model", "Модель Accurate"), $preferences.accurateModel)
             HStack {
+                Text(t("Text model", "Текстовая модель")); Spacer()
+                Picker(t("Text model", "Текстовая модель"), selection: $preferences.textProcessingModel) {
+                    ForEach(TextProcessingModel.defaults, id: \.self) { id in
+                        Text(TextProcessingModel.title(id)).tag(id)
+                    }
+                }.labelsHidden().fixedSize().disabled(model.isActive)
+            }
+            HStack {
                 Text(t("Speech languages", "Языки речи"))
                 Spacer()
                 SpeechLanguagePicker(preferences: preferences).disabled(model.isActive)

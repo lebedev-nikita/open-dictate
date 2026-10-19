@@ -56,10 +56,12 @@ so older replicas cannot restore a removed custom prompt. The outer value remain
 a string and needs no new document version. Older clients preserve this unknown
 entry; update both apps to use it.
 
-The model is fixed to GPT-6 Luna. The wire model field is constant compatibility
-metadata for earlier RCs; importing an old model selection normalizes it to Luna.
-The retired standalone textModel entry is discarded. Model-only legacy
-differences do not require a connection source choice.
+The separate `textProcessingModel` entry selects one shared model for text
+transformation and post-processing, defaulting to GPT-6 Luna. It appears beside
+recognition models and uses the same conflict rules. The inner `postprocessing.model`
+field remains constant compatibility metadata for earlier RCs; it does not
+override the shared selection. The retired `textModel` entry stays discarded,
+so old RC preferences cannot unexpectedly restore an earlier choice.
 
 The section saves prompt drafts explicitly. Incoming sync does not replace
 an unsaved draft. Toggling off preserves the prompt. Active sessions use

@@ -3,7 +3,7 @@ package com.opendictate.app.model
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Recognition choices only; text processing uses the fixed TextProcessingModel. */
+/** Recognition choices only; text choices are defined by TextProcessingModel. */
 data class ModelCatalog(
     val live: List<String>,
     val accurate: List<String>,

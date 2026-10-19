@@ -27,7 +27,8 @@ or Accurate retranscription, before local word replacements. Live dictation and
 voice-edit commands skip it.
 A blank prompt makes no additional request. Errors retain the original transcript.
 
-The model is fixed to `gpt-6-luna`; the default instruction corrects punctuation.
+Post-processing and text transformation use the shared Text model setting,
+which defaults to `gpt-6-luna`. The default instruction corrects punctuation.
 Buttons add editable punctuation or value-formatting instructions. Custom
 instructions may rewrite text. Post-processing settings synchronize through
 Google Drive when connected; transcripts are never included in synchronization.
@@ -43,7 +44,7 @@ connectivity returns; macOS monitors network availability for the same purpose.
 
 If you connect Google Drive in Settings, the dictionary, word replacement rules and
 enabled states, post-processing
-configuration, dictation mode and selected recognition model IDs are sent directly to
+configuration, dictation mode and selected recognition/text model IDs are sent directly to
 Google and stored in your account's hidden app-data folder. Sync requests only `drive.appdata`, without access to
 ordinary Drive files. API keys, audio, transcripts/history, exclusions and
 permissions are excluded; other preferences remain local.

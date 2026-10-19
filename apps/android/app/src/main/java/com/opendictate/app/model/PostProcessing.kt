@@ -15,7 +15,7 @@ data class PostProcessingSettings(
     val isValid: Boolean get() = (prompt?.toByteArray(Charsets.UTF_8)?.size ?: 0) <= MAXIMUM_PROMPT_BYTES
     fun toJson(): String {
         require(isValid)
-        // Fixed wire metadata keeps earlier RCs compatible; callers cannot choose a model.
+        // Legacy compatibility metadata; the shared textProcessingModel setting controls requests.
         return "{\"enabled\":$enabled,\"model\":\"${TextProcessingModel.ID}\",\"prompt\":${prompt?.let(::quote) ?: "null"}}"
     }
     companion object {

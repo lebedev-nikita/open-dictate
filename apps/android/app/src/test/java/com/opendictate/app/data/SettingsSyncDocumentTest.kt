@@ -4,6 +4,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSyncDocumentTest {
+    @Test fun selectedTextModelSyncsAndFeedsBothTextRequests() {
+        val seed = SettingsSyncDocument().record(mapOf("textProcessingModel" to "gpt-6-luna"), "new", 0, seed = true)
+        val remote = document("textProcessingModel", "test-text-model", 500, "other")
+        val merged = seed.merge(remote)
+        assertEquals(merged, remote.merge(seed))
+        assertTrue(seed.needsConnectionChoice(remote))
+        assertEquals("test-text-model", SettingsSyncDocument.fromJson(merged.toJson()).entries["textProcessingModel"]?.value)
+        val selected = merged.entries.getValue("textProcessingModel").value!!
+        assertEquals(selected, com.opendictate.app.network.textTransformationRequest("Text", "Edit", selected).getString("model"))
+        assertEquals(selected, com.opendictate.app.network.postProcessingRequest("Text", com.opendictate.app.model.PostProcessingSettings(true), selected).getString("model"))
+        assertEquals("gpt-6-luna", com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()).getString("model"))
+    }
+
     @Test fun fixedModelIgnoresLegacyChoicesWithoutSourceChoice() {
         val old = """{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"""
         val other = """{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"""
