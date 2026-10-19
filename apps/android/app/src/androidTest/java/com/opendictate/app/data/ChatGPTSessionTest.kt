@@ -44,6 +44,7 @@ class ChatGPTSessionTest {
                     val buffer = okio.Buffer(); request.body!!.writeTo(buffer)
                     val payload = JSONObject(buffer.readUtf8())
                     assertTrue(payload.getBoolean("stream")); assertFalse(payload.getBoolean("store")); assertTrue(payload.get("input") is org.json.JSONArray)
+                    assertEquals("priority", payload.getString("service_tier"))
                     responses.incrementAndGet()
                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"
                 }
@@ -91,6 +92,7 @@ class ChatGPTSessionTest {
                     assertEquals("Bearer synthetic-new", request.header("Authorization"))
                     val buffer = okio.Buffer(); requireNotNull(request.body).writeTo(buffer)
                     val body = JSONObject(buffer.readUtf8())
+                    assertEquals("priority", body.getString("service_tier"))
                     val input = JSONObject(body.getJSONArray("input").getJSONObject(0).getString("content"))
                     assertTrue(input.getString("instruction").contains("[ru] Russian."))
                     assertFalse(input.getString("instruction").contains("[en] English."))
