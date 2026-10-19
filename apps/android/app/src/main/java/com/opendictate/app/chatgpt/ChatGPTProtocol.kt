@@ -71,6 +71,8 @@ object ChatGPTProtocol {
     }
     fun planRequest(body: JSONObject): JSONObject = JSONObject(body.toString()).apply {
         put("store", false); put("stream", true)
+        // The ChatGPT plan route validates Fast using its protocol name, priority.
+        if (optString("service_tier") == "fast") put("service_tier", "priority")
         val input = get("input")
         if (input is String) put("input", JSONArray().put(JSONObject().put("role", "user").put("content", input)))
     }

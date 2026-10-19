@@ -12,6 +12,22 @@ import java.security.interfaces.RSAPublicKey
 import java.util.Base64
 
 class ChatGPTProtocolTest {
+    @Test fun fastPlanRequestsUsePriorityWhileApiRequestsAndSavedChoicesKeepFast() {
+        val requests = listOf(
+            textTransformationRequest("Synthetic", "Edit"),
+            postProcessingRequest("Synthetic", com.opendictate.app.model.PostProcessingSettings(enabled = true)),
+        )
+        requests.forEach { body ->
+            val plan = ChatGPTProtocol.planRequest(body)
+            assertEquals("priority", plan.getString("service_tier"))
+            assertEquals("fast", body.getString("service_tier"))
+            assertEquals("gpt-6-luna", plan.getString("model"))
+            assertEquals(body.getJSONObject("text").toString(), plan.getJSONObject("text").toString())
+        }
+        val standard = textTransformationRequest("Synthetic", "Edit", serviceTier = com.opendictate.app.model.TextProcessingServiceTier.STANDARD)
+        assertEquals("default", ChatGPTProtocol.planRequest(standard).getString("service_tier"))
+        assertEquals("fast", com.opendictate.app.model.TextProcessingServiceTier.FAST.apiValue)
+    }
     @Test fun callbackBindsStateClientAndPathAndRejectsAmbiguity() {
         assertEquals("code" to "oaiapp_test", ChatGPTProtocol.callback("/auth/callback?state=s&code=code&client_id=oaiapp_test", "s", null))
         listOf("/callback?state=s&code=c&client_id=oaiapp_test", "/auth/callback?state=wrong&code=c&client_id=oaiapp_test",

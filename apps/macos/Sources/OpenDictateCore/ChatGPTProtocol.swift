@@ -76,6 +76,8 @@ public enum ChatGPTProtocol {
     }
     public static func planRequest(_ body: [String: Any]) -> [String: Any] {
         var result = body; result["store"] = false; result["stream"] = true
+        // The ChatGPT plan route validates Fast using its protocol name, priority.
+        if result["service_tier"] as? String == "fast" { result["service_tier"] = "priority" }
         if let text = result["input"] as? String { result["input"] = [["role": "user", "content": text]] }
         return result
     }

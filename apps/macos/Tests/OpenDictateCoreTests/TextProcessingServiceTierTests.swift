@@ -11,8 +11,8 @@ final class TextProcessingServiceTierTests: XCTestCase {
             for request in [OpenAIRequest.transform(source: "Draft", instruction: "Shorten", model: model, serviceTier: tier),
                             OpenAIRequest.postProcessing(source: "Draft", settings: .init(enabled: true), model: model, serviceTier: tier)] {
                 XCTAssertEqual(request["model"] as? String, "gpt-6-luna")
+                XCTAssertEqual(ChatGPTProtocol.planRequest(request)["service_tier"] as? String, tier == .fast ? "priority" : "default")
                 XCTAssertEqual(request["service_tier"] as? String, tier.rawValue)
-                XCTAssertEqual(ChatGPTProtocol.planRequest(request)["service_tier"] as? String, tier.rawValue)
                 XCTAssertEqual(request["store"] as? Bool, false)
             }
         }
