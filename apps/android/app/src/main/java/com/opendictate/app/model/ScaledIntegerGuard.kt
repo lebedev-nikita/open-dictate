@@ -14,6 +14,7 @@ internal object ScaledIntegerGuard {
     private val tokens = Regex("[\\p{L}]+|[\\p{Nd}]+")
     private val gap = Regex("[\\s\\p{Z}-]+")
     private val fractionContext = setOf("point", "comma", "half", "полтора", "полторы", "половиной", "целая", "целое", "целых", "десятых", "сотых")
+    private val ordinalContext = Regex("(?:first|second|third|.*(?:th|st|nd|rd)|(?:перв|втор|трет|четв[её]рт|пят|шест|седьм|восьм|девят|десят|одиннадцат|двенадцат|тринадцат|четырнадцат|пятнадцат|шестнадцат|семнадцат|восемнадцат|девятнадцат|двадцат|тридцат|сороков|пятидесят|шестидесят|семидесят|восьмидесят|девяност|сот|тысячн|миллионн|миллиардн).*)")
     private val durationContext = Regex("(?:hours?|minutes?|seconds?|days?|weeks?|час.*|минут.*|секунд.*|дней|дня|день|недел.*)")
     // Standard and Indian grouping; decimal tails are excluded from this integer-magnitude check.
     private val minusWord = Regex("(?:minus|negative|минус)\\s*$", RegexOption.IGNORE_CASE)
@@ -47,7 +48,7 @@ internal object ScaledIntegerGuard {
             val after = matches.getOrNull(end + 1)
             // Do not extract an integer fragment from a fractional amount or a convertible duration.
             val nearby = matches.subList(maxOf(0, start - 2), minOf(matches.size, end + 3)).map { it.value }
-            if (nearby.any { it in fractionContext } || after?.value?.matches(durationContext) == true) continue
+            if (nearby.any { it in fractionContext } || after?.value?.matches(durationContext) == true || after?.value?.matches(ordinalContext) == true) continue
             if (before != null && before.value.first().isDigit() &&
                 normalized.substring(before.range.last + 1, matches[start].range.first).matches(Regex("[.,]"))) continue
             if (after != null && after.value.first().isDigit() &&

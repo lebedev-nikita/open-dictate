@@ -208,5 +208,20 @@
     "source": "пять миллионов четыреста тридцать два лари",
     "candidate": "5_000_432 лари",
     "valid": true
+  },
+  {
+    "source": "две тысячи двадцать шестой год",
+    "candidate": "2026 год",
+    "valid": true
+  },
+  {
+    "source": "two thousand twenty-first",
+    "candidate": "2021st",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов три четверти",
+    "candidate": "5 000 000 3/4",
+    "valid": true
   }
 ]

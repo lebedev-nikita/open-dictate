@@ -1,4 +1,4 @@
-# OpenDictate for macOS 0.5.0-rc.16
+# OpenDictate for macOS 0.5.0-rc.17
 
 - Preserve omitted zero groups when formatting spoken large numbers, including money. Reject changed values for supported Russian/English scaled integer phrases and retain the source on failure.
 - Fix ChatGPT post-processing and transformation when the final completed event omits its output snapshot. Retain finished stream items in memory and require terminal success before returning them.

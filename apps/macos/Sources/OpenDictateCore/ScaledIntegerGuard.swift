@@ -13,6 +13,7 @@ enum ScaledIntegerGuard {
     private static let tokens = try! NSRegularExpression(pattern: #"[\p{L}]+|[\p{Nd}]+"#)
     private static let gap = try! NSRegularExpression(pattern: #"^[\s\p{Z}-]+$"#)
     private static let fractionContext: Set<String> = ["point", "comma", "half", "полтора", "полторы", "половиной", "целая", "целое", "целых", "десятых", "сотых"]
+    private static let ordinalContext = try! NSRegularExpression(pattern: #"^(?:first|second|third|.*(?:th|st|nd|rd)|(?:перв|втор|трет|четв[её]рт|пят|шест|седьм|восьм|девят|десят|одиннадцат|двенадцат|тринадцат|четырнадцат|пятнадцат|шестнадцат|семнадцат|восемнадцат|девятнадцат|двадцат|тридцат|сороков|пятидесят|шестидесят|семидесят|восьмидесят|девяност|сот|тысячн|миллионн|миллиардн).*)$"#)
     private static let durationContext = try! NSRegularExpression(pattern: #"^(?:hours?|minutes?|seconds?|days?|weeks?|час.*|минут.*|секунд.*|дней|дня|день|недел.*)$"#)
     // Standard and Indian grouping. Fractional tails are outside this integer-magnitude check.
     private static let minusWord = try! NSRegularExpression(pattern: #"(?:minus|negative|минус)\s*$"#, options: .caseInsensitive)
@@ -56,7 +57,7 @@ enum ScaledIntegerGuard {
             let end = i; i += 1
             let nearby = words[max(0, start - 2)..<min(words.count, end + 3)]
             if nearby.contains(where: { fractionContext.contains($0) }) { continue }
-            if end + 1 < words.count, matches(durationContext, words[end + 1]) { continue }
+            if end + 1 < words.count, matches(durationContext, words[end + 1]) || matches(ordinalContext, words[end + 1]) { continue }
             if start > 0, words[start - 1].first?.isNumber == true, [".", ","].contains(between(spans[start - 1], spans[start])) { continue }
             if end + 1 < words.count, words[end + 1].first?.isNumber == true, [".", ","].contains(between(spans[end], spans[end + 1])) { continue }
             guard let value = parse(Array(words[start...end])) else { continue }
