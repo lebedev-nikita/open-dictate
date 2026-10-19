@@ -7,7 +7,7 @@ import OpenDictateCore
 @MainActor
 final class AppModel: ObservableObject {
     typealias AudioTranscriber = @Sendable (Data, String, TranscriptionContext, Int) async throws -> String
-    typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings, String) async throws -> PostProcessingResult
+    typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings, String, [String]) async throws -> PostProcessingResult
     enum Phase {
         case idle, preparing, recording, processing
         var showsFinishControl: Bool { self == .preparing || self == .recording }
@@ -368,8 +368,8 @@ final class AppModel: ObservableObject {
             let processed: PostProcessingResult
             if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
                 let started = requestClock()
-                if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel) }
-                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount) }
+                if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel, session.context.languages) }
+                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, languages: session.context.languages, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount) }
                 if session.postProcessing.shouldProcess { postProcessingMillis = requestMilliseconds(since: started) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }

@@ -48,6 +48,28 @@ class PostProcessingTest {
             assertFalse(migrated.toJson().contains("legacy"))
         }
     }
+    @Test fun languageExamplesMatchBothPlatformsAndOnlySelectedLanguagesEnterRequests() {
+        assertEquals(64, PostProcessingLanguages.supportedCodes.size)
+        assertTrue(DictationLanguage.entries.all { it.code in PostProcessingLanguages.supportedCodes })
+        val settingsCases = JSONObject(fixture("postprocessing-settings.json")).getJSONArray("cases")
+        val cases = org.json.JSONArray(fixture("postprocessing-language-selection.json"))
+        for (i in 0 until cases.length()) {
+            val row = cases.getJSONObject(i)
+            val encoded = settingsCases.getJSONObject(row.getInt("settingsCase")).getString("encoded")
+            val settings = PostProcessingSettings.fromJson(encoded)
+            val languages = row.getJSONArray("languages").let { a -> List(a.length()) { a.getString(it) } }
+            val snippet = row.getString("expectedSnippet")
+            val expected = settings.effectivePrompt + if (snippet.isEmpty()) "" else "\n\n$snippet"
+            val request = postProcessingRequest("synthetic source", settings, languages = languages)
+            assertEquals("case $i", expected, JSONObject(request.getString("input")).getString("instruction"))
+            assertEquals(encoded, settings.toJson())
+            for (code in PostProcessingLanguages.supportedCodes) {
+                assertEquals("case $i language $code", settings.hasValueFormatting && code in languages, expected.contains("[$code] "))
+            }
+        }
+        assertEquals("", PostProcessingLanguages.instruction(emptyList()))
+        assertEquals("", PostProcessingLanguages.instruction(listOf("unknown")))
+    }
     @Test fun systemRegionProvidesEditableDefaultsWithoutARequestTimeLocaleDependency() {
         ValueKind.entries.forEach { kind -> kind.examples.forEach { assertTrue(ValueFormat(example = it).isValid) } }
         val us = ValueFormatting.systemDefaults(Locale.US)

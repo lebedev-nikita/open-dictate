@@ -10,7 +10,10 @@ Rules are applied on-device. Optional Drive sync uses the same app-data scope
 for the rule list and enabled states.
 
 Optional post-processing sends recognized dictation text and generated
-instructions plus configured value-format examples directly to OpenAI through Responses with storage disabled. It is
+instructions plus configured value-format examples directly to OpenAI through Responses with storage disabled.
+Only the session’s selected speech languages contribute bundled language-specific
+examples; automatic detection sends no such examples. Generated prompts remain
+request-only and never enter synchronization or history. It is
 available after ordinary Accurate dictation and Accurate retranscription on both platforms;
 voice-edit commands skip it. Settings are captured at session start. Disabled
 post-processing or no enabled rules makes no additional request. Failures retain

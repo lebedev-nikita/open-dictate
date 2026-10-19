@@ -48,9 +48,10 @@ private actor ReplayTranscriber {
 
 private actor HeldPostProcessor {
     private(set) var settings: [PostProcessingSettings] = []
+    private(set) var languages: [[String]] = []
     private var pending: CheckedContinuation<PostProcessingResult, Never>?
-    func process(_ value: PostProcessingSettings) async -> PostProcessingResult {
-        settings.append(value)
+    func process(_ value: PostProcessingSettings, languages: [String] = []) async -> PostProcessingResult {
+        settings.append(value); self.languages.append(languages)
         return await withCheckedContinuation { pending = $0 }
     }
     func release() { pending?.resume(returning: .init(text: "processed transcript")); pending = nil }
@@ -83,6 +84,14 @@ private actor HeldPostProcessor {
 
 @MainActor private final class HistoryRequestClock { var value = Duration.zero }
 
+private actor PostLanguageCapture {
+    private(set) var calls: [[String]] = []
+    func process(source: String, languages: [String]) -> PostProcessingResult {
+        calls.append(languages)
+        return .init(text: source)
+    }
+}
+
 final class DictationFocusTests: XCTestCase {
     private var defaultsDomains: [String] = []
     private func isolatedDefaults() -> UserDefaults {
@@ -106,16 +115,20 @@ final class DictationFocusTests: XCTestCase {
             var active = first
             let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
                 captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
-                processTranscript: { _, _, settings, _ in await processor.process(settings) })
+                processTranscript: { _, _, settings, _, languages in await processor.process(settings, languages: languages) })
+            model.preferences.speechLanguages = ["ru", "en"]
             model.preferences.postProcessing = .init(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
             model.toggleLocalRecording(mode: .accurate)
             await waitFor(.recording, in: model)
+            model.preferences.speechLanguages = ["ja"]
             let originalDate = model.preferences.postProcessing.formats?[.date].example
             model.preferences.postProcessing.formats?[.date].example = "2026-03-05"
             model.stop()
             let deadline = ContinuousClock.now + .seconds(2)
             while await processor.settings.isEmpty && ContinuousClock.now < deadline { await Task.yield() }
             let captured = await processor.settings.first
+            let capturedLanguages = await processor.languages.first
+            XCTAssertEqual(capturedLanguages, ["en", "ru"])
             XCTAssertEqual(captured?.formats?[.date].example, originalDate)
             if cancel { model.cancel() }
             else { first.focused = false; active = second; model.tick() }
@@ -137,7 +150,7 @@ final class DictationFocusTests: XCTestCase {
                     await Task.yield()
                     await MainActor.run { clock.value += .milliseconds(1250) }
                     return "synthetic transcript"
-                }, processTranscript: { source, _, _, selectedModel in
+                }, processTranscript: { source, _, _, selectedModel, _ in
                     XCTAssertEqual(selectedModel, "test-text-model")
                     await Task.yield()
                     await MainActor.run { clock.value += .milliseconds(450) }
@@ -160,11 +173,33 @@ final class DictationFocusTests: XCTestCase {
         }
     }
 
+    @MainActor func testPostProcessingCapturesLanguagesForRecordingAndAccurateRetry() async {
+        let editor = FocusEditor("original "), capture = PostLanguageCapture()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+            captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() }, accessibilityTrust: { true },
+            processTranscript: { source, _, _, _, languages in await capture.process(source: source, languages: languages) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        model.preferences.speechLanguages = ["ru"]
+        model.toggleLocalRecording(mode: .accurate)
+        await waitFor(.recording, in: model)
+        model.preferences.speechLanguages = ["en"]
+        model.stop()
+        await waitFor(.idle, in: model)
+        XCTAssertTrue(model.canRetranscribe)
+        model.preferences.speechLanguages = ["de"]
+        model.retranscribeLast()
+        model.preferences.speechLanguages = ["ja"]
+        await waitFor(.idle, in: model)
+        let calls = await capture.calls
+        XCTAssertEqual(calls, [["ru"], ["de"]])
+    }
+
     @MainActor func testLiveSkipsPostProcessingEvenWhenEnabledAndModeChangesBeforeStop() async {
         let editor = FocusEditor("original "), processor = HeldPostProcessor()
         let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
             captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
-            processTranscript: { _, _, settings, _ in await processor.process(settings) })
+            processTranscript: { _, _, settings, _, _ in await processor.process(settings) })
         defer { model.shutdown() }
         model.preferences.postProcessing.enabled = true
         model.toggleLocalRecording(mode: .live)
@@ -184,7 +219,7 @@ final class DictationFocusTests: XCTestCase {
     @MainActor func testVoiceEditSkipsPostProcessing() async {
         let editor = FocusEditor("original "), processor = HeldPostProcessor()
         let model = AppModel(localOnly: true, defaults: isolatedDefaults(), captureTarget: { _, _ in editor.target() },
-            makeRecorder: { FocusRecorder() }, processTranscript: { _, _, settings, _ in await processor.process(settings) })
+            makeRecorder: { FocusRecorder() }, processTranscript: { _, _, settings, _, _ in await processor.process(settings) })
         defer { model.shutdown() }
         model.preferences.postProcessing.enabled = true
         model.toggleLocalRecording(transform: true)

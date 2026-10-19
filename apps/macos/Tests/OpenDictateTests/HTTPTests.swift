@@ -59,13 +59,13 @@ final class HTTPTests: XCTestCase {
                 XCTAssertEqual(request.timeoutInterval, 30)
                 return (status, Data(body.utf8))
             }
-            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: .init(enabled: true))
+            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: .init(enabled: true), languages: ["ru"])
             XCTAssertEqual(result.text, expected)
             XCTAssertEqual(result.failed, expected == "привет мир")
         }
         MockHTTP.handler = { _ in XCTFail("Disabled/empty rules must not make a request"); return (500, Data()) }
         for settings in [PostProcessingSettings(), PostProcessingSettings(enabled: true, punctuation: false)] {
-            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: settings)
+            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: settings, languages: ["ru"])
             XCTAssertEqual(result, .init(text: "привет мир"))
         }
     }
@@ -79,5 +79,28 @@ final class HTTPTests: XCTestCase {
         }
         let (text, message) = try await client().transform(source: "Long synthetic text", instruction: "Shorten", key: "synthetic-test-key")
         XCTAssertEqual(text, "Short text"); XCTAssertNil(message)
+    }
+
+    func testPostProcessingSendsOnlyCapturedInputLanguageExamples() async throws {
+        MockHTTP.handler = { request in
+            var data = request.httpBody ?? Data()
+            if let stream = request.httpBodyStream {
+                stream.open(); defer { stream.close() }
+                var buffer = [UInt8](repeating: 0, count: 4096)
+                while stream.hasBytesAvailable {
+                    let count = stream.read(&buffer, maxLength: buffer.count)
+                    guard count > 0 else { break }
+                    data.append(contentsOf: buffer.prefix(count))
+                }
+            }
+            let body = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            let input = try JSONSerialization.jsonObject(with: Data((body["input"] as! String).utf8)) as! [String: String]
+            XCTAssertTrue(input["instruction"]!.contains("[ru] Russian."))
+            XCTAssertFalse(input["instruction"]!.contains("[en] English."))
+            return (200, Data(#"{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"{\"transformed_text\":\"123\"}"}]}]}"#.utf8))
+        }
+        let settings = PostProcessingSettings(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
+        let result = try await client().postProcess(source: "сто двадцать три", key: "synthetic-test-key", settings: settings, languages: ["ru"])
+        XCTAssertEqual(result, .init(text: "123"))
     }
 }

@@ -16,10 +16,15 @@ public struct PostProcessingSettings: Equatable, Sendable {
         return result
     }
     public var hasValueFormatting: Bool { formatValues && formats?.hasEnabledTypes == true }
-    public var effectivePrompt: String {
+    public var effectivePrompt: String { prompt(languages: []) }
+    public func prompt(languages: [String]) -> String {
         var parts: [String] = []
         if punctuation { parts.append(hasValueFormatting ? PostProcessingRules.root.punctuationWithValues : PostProcessingRules.root.punctuation) }
-        if hasValueFormatting { parts.append(formats!.instruction) }
+        if hasValueFormatting {
+            parts.append(formats!.instruction)
+            let examples = PostProcessingLanguages.instruction(languages: languages)
+            if !examples.isEmpty { parts.append(examples) }
+        }
         return parts.joined(separator: "\n\n")
     }
     public var shouldProcess: Bool { enabled && (punctuation || hasValueFormatting) }

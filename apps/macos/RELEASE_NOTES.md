@@ -1,5 +1,6 @@
-# OpenDictate for macOS 0.5.0-rc.17
+# OpenDictate for macOS 0.5.0-rc.18
 
+- Add shared value-formatting language examples for all 64 supported speech languages. Include only the session’s selected languages; automatic detection uses general rules without language-specific examples.
 - Preserve omitted zero groups when formatting spoken large numbers, including money. Reject changed values for supported Russian/English scaled integer phrases and retain the source on failure.
 - Fix ChatGPT post-processing and transformation when the final completed event omits its output snapshot. Retain finished stream items in memory and require terminal success before returning them.
 - Give enabled value formatting explicit priority when combined with punctuation, so number words can become digits.
@@ -18,3 +19,5 @@
 Legacy transcription-prompt preferences are cleared locally and discarded from Drive replicas, including nullable resets. Earlier post-processing prompts are replaced by menu defaults while preserving their enabled state. Old text-model selections are ignored; post-processing and voice editing use the shared Text model setting; AI history search uses GPT-6 Luna.
 
 This release candidate is ad-hoc signed and not notarized by Apple. See INSTALL.txt in the disk image for Gatekeeper instructions.
+
+Language-example smoke: the final unseen-value check passed for 62/64 languages and both automatic-detection cases. Azerbaijani and Gujarati results remained nondeterministic. Language examples guide Luna; they do not provide a general numerical validator for every language.

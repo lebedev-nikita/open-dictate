@@ -133,13 +133,21 @@ current region or interface language. Earlier arbitrary prompts are replaced wit
 punctuation settings, preserving the global enabled state. Both apps share the
 [instruction rules](Sources/OpenDictateCore/Resources/postprocessing-rules.json).
 
+Value formatting adds only the [language examples](Sources/OpenDictateCore/Resources/postprocessing-languages.json)
+for the speech languages captured at session start. Automatic detection adds no
+language-specific examples. These reference phrases preserve omitted place-value
+groups; your saved notation examples still control the output style. Both platforms
+use the same bundled data, independent of OS spellout support or interface language.
+
 Post-processing runs once after ordinary Accurate dictation or Accurate
 retranscription, before local replacements. Live and voice editing skip it.
 No enabled rules means no extra request. Text and generated instructions go
 directly to OpenAI Responses with `store: false`. Failure preserves the original
 transcript; cancellation and focus guards still apply. Punctuation-only processing
 rejects changes to words and numbers. Model-based value formatting preserves
-ambiguous values and identifiers by instruction, not deterministic validation.
+ambiguous values and identifiers by instruction. A bounded Russian/English parser
+rejects changed supported scaled integers; it is not a general validator for other
+languages or numeric expressions.
 
 ### Retranscribe the last recording
 

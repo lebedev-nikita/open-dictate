@@ -153,10 +153,10 @@ class OpenAiTranscriptionClient(
         throw OpenAiException(error.userMessage(), error)
     }
 
-    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null): PostProcessingResult =
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null): PostProcessingResult =
         PostProcessing.apply(source, settings) {
             withContext(Dispatchers.IO) {
-                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId), chatGPTAccount))
+                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }), chatGPTAccount))
             }
         }
 
@@ -640,8 +640,8 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 
 private const val MAX_USER_MESSAGE_CHARS = 1_000
 
-internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID): JSONObject {
-    val request = textTransformationRequest(source, settings.effectivePrompt, modelId)
+internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, languages: Collection<String> = emptyList()): JSONObject {
+    val request = textTransformationRequest(source, settings.prompt(languages), modelId)
         .put("instructions", PostProcessing.INSTRUCTIONS)
     val format = request.getJSONObject("text").getJSONObject("format")
     format.put("name", "post_processing")

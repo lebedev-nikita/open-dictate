@@ -87,7 +87,15 @@ class ChatGPTSessionTest {
                 val request = chain.request()
                 val body = if (request.url.encodedPath.endsWith("/oauth/token"))
                     """{"access_token":"synthetic-new","refresh_token":"synthetic-rotated","scope":"chatgpt.tokens.use.direct","expires_in":3600,"token_type":"Bearer"}"""
-                else { assertEquals("Bearer synthetic-new", request.header("Authorization")); stream }
+                else {
+                    assertEquals("Bearer synthetic-new", request.header("Authorization"))
+                    val buffer = okio.Buffer(); requireNotNull(request.body).writeTo(buffer)
+                    val body = JSONObject(buffer.readUtf8())
+                    val input = JSONObject(body.getJSONArray("input").getJSONObject(0).getString("content"))
+                    assertTrue(input.getString("instruction").contains("[ru] Russian."))
+                    assertFalse(input.getString("instruction").contains("[en] English."))
+                    stream
+                }
                 Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(200).message("OK")
                     .body(body.toResponseBody("text/event-stream".toMediaType())).build()
             }.build()
@@ -95,7 +103,7 @@ class ChatGPTSessionTest {
             val settings = com.opendictate.app.model.PostProcessingSettings(enabled = true, formatValues = true,
                 formats = com.opendictate.app.model.ValueFormatting.systemDefaults(java.util.Locale.US))
             val result = com.opendictate.app.network.OpenAiTranscriptionClient(chatGPT = session)
-                .postProcess("must-not-be-used", "сто двадцать три", settings, chatGPTAccount = "oaiapp_test")
+                .postProcess("must-not-be-used", "сто двадцать три", settings, languages = setOf(com.opendictate.app.model.DictationLanguage.RUSSIAN), chatGPTAccount = "oaiapp_test")
             assertFalse(result.failed); assertEquals("123", result.text)
         } finally { cleanup() }
     }

@@ -51,6 +51,28 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertEqual(restored.formats?[.date].example, "2026-03-05")
         for tag in ["ar_EG", "hi_IN", "fr_FR", "th_TH", "ja_JP"] { XCTAssertTrue(ValueFormatting.systemDefaults(locale: Locale(identifier: tag)).isValid) }
     }
+    func testLanguageExamplesMatchBothPlatformsAndOnlySelectedLanguagesEnterRequests() throws {
+        XCTAssertEqual(PostProcessingLanguages.supportedCodes, Set(SpeechLanguage.all.map(\.id)))
+        struct SettingsCase: Decodable { let encoded: String }
+        struct SettingsFixture: Decodable { let cases: [SettingsCase] }
+        struct LanguageCase: Decodable { let settingsCase: Int; let languages: [String]; let expectedSnippet: String }
+        let settingsCases = try JSONDecoder().decode(SettingsFixture.self, from: fixture("postprocessing-settings.json")).cases
+        let cases = try JSONDecoder().decode([LanguageCase].self, from: fixture("postprocessing-language-selection.json"))
+        for (i, row) in cases.enumerated() {
+            let encoded = settingsCases[row.settingsCase].encoded
+            let settings = try PostProcessingSettings.decode(encoded)
+            let expected = settings.effectivePrompt + (row.expectedSnippet.isEmpty ? "" : "\n\n" + row.expectedSnippet)
+            let request = OpenAIRequest.postProcessing(source: "synthetic source", settings: settings, languages: row.languages)
+            let input = try JSONSerialization.jsonObject(with: Data((request["input"] as! String).utf8)) as! [String: String]
+            XCTAssertEqual(input["instruction"], expected, "case \(i)")
+            XCTAssertEqual(try settings.encoded(), encoded)
+            for code in PostProcessingLanguages.supportedCodes {
+                XCTAssertEqual(expected.contains("[\(code)] "), settings.hasValueFormatting && row.languages.contains(code), "case \(i), language \(code)")
+            }
+        }
+        XCTAssertEqual(PostProcessingLanguages.instruction(languages: []), "")
+        XCTAssertEqual(PostProcessingLanguages.instruction(languages: ["unknown"]), "")
+    }
     func testDisabledTypesAndZeroRulesSkipRequest() async throws {
         var allOff = values(); allOff.punctuation = false
         for kind in ValueKind.allCases { allOff.formats?[kind].enabled = false }

@@ -259,7 +259,7 @@ class DictationForegroundService : Service() {
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, textProcessingModel, chatGPTAccount) }
+                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount) }
                     if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
                     val processed = timed.value
                     ensureActive()
@@ -358,7 +358,7 @@ class DictationForegroundService : Service() {
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, textProcessingModel, chatGPTAccount) }
+                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount) }
                 val processed = postProcessingAttempt.value
                 ensureActive()
                 val result = replacements.apply(processed.text)

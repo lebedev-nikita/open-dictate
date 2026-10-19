@@ -54,10 +54,10 @@ public enum OpenAIRequest {
             properties: ["transformed_text": ["type": "string"], "message": ["type": ["string", "null"]]])
     }
 
-    public static func postProcessing(source: String, settings: PostProcessingSettings, model: String = TextProcessingModel.id) -> [String: Any] {
+    public static func postProcessing(source: String, settings: PostProcessingSettings, languages: [String] = [], model: String = TextProcessingModel.id) -> [String: Any] {
         var request = structured(name: "post_processing", model: model,
             instructions: PostProcessing.instructions,
-            input: ["source_text": source, "instruction": settings.effectivePrompt],
+            input: ["source_text": source, "instruction": settings.prompt(languages: languages)],
             properties: ["transformed_text": ["type": "string"]])
         request["reasoning"] = ["effort": "none"]
         return request
