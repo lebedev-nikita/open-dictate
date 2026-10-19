@@ -100,6 +100,7 @@ class DictationForegroundService : Service() {
         val accurateModelId = settings.accurateModelId
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
+        val textProcessingServiceTier = settings.textProcessingServiceTier
         val postProcessing = settings.postProcessing.forMode(model)
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
@@ -254,12 +255,13 @@ class DictationForegroundService : Service() {
                         sourceText = requireNotNull(sourceText),
                         instruction = transcript.trim(),
                         modelId = textProcessingModel,
+                        serviceTier = textProcessingServiceTier,
                         chatGPTAccount = chatGPTAccount,
                     )
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount) }
+                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
                     if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
                     val processed = timed.value
                     ensureActive()
@@ -337,6 +339,7 @@ class DictationForegroundService : Service() {
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
+        val textProcessingServiceTier = settings.textProcessingServiceTier
         val postProcessing = settings.postProcessing.forMode(model)
         activeOperation = DictationOperation.DICTATION
         startForeground(NOTIFICATION_ID, notification(true, DictationOperation.DICTATION))
@@ -358,7 +361,7 @@ class DictationForegroundService : Service() {
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount) }
+                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
                 val processed = postProcessingAttempt.value
                 ensureActive()
                 val result = replacements.apply(processed.text)

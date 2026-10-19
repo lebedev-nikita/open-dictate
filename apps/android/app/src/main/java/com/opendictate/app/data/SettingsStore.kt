@@ -83,6 +83,11 @@ class SettingsStore(context: Context) {
             saveSynced { putString("text_processing_model", value) }
         }
 
+    var textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier
+        get() = com.opendictate.app.model.TextProcessingServiceTier.fromValue(prefs.getString("text_processing_service_tier", null))
+            ?: com.opendictate.app.model.TextProcessingServiceTier.FAST
+        set(value) = saveSynced { putString("text_processing_service_tier", value.apiValue) }
+
     var modelCatalog: ModelCatalog
         get() = ModelCatalog.fromCachedJson(prefs.getString(KEY_MODEL_CATALOG_V2, null))
         set(value) = prefs.edit {
@@ -181,6 +186,7 @@ class SettingsStore(context: Context) {
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
         "postprocessingOptions" to postProcessing.toJson(),
         "textProcessingModel" to textProcessingModel,
+        "textProcessingServiceTier" to textProcessingServiceTier.apiValue,
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
         ).also { values ->
@@ -234,6 +240,7 @@ class SettingsStore(context: Context) {
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
             values["textProcessingModel"]?.let { putString("text_processing_model", it.value) }
+            values["textProcessingServiceTier"]?.let { putString("text_processing_service_tier", it.value) }
             values["postprocessingOptions"]?.let { putString("postprocessingOptions", it.value) }
             putString("sync_document", merged.toJson())
         }
@@ -247,6 +254,9 @@ class SettingsStore(context: Context) {
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
         listOf("liveModel", "accurateModel", "textProcessingModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }
+        }
+        values["textProcessingServiceTier"]?.value?.let {
+            require(com.opendictate.app.model.TextProcessingServiceTier.fromValue(it) != null)
         }
         val replacementJSON = values["wordReplacements"]?.value
         replacementJSON?.let(ReplacementDocument::fromJson)

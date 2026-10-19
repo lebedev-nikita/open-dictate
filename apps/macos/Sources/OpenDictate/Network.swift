@@ -79,17 +79,17 @@ actor OpenAIClient {
         return text
     }
 
-    func transform(source: String, instruction: String, key: String, model: String = TextProcessingModel.id, chatGPTAccount: String? = nil) async throws -> (String, String?) {
-        let response = try await response(OpenAIRequest.transform(source: source, instruction: instruction, model: model), key: key, chatGPTAccount: chatGPTAccount)
+    func transform(source: String, instruction: String, key: String, model: String = TextProcessingModel.id, chatGPTAccount: String? = nil, serviceTier: TextProcessingServiceTier = .fast) async throws -> (String, String?) {
+        let response = try await response(OpenAIRequest.transform(source: source, instruction: instruction, model: model, serviceTier: serviceTier), key: key, chatGPTAccount: chatGPTAccount)
         guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
               let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }
         return (text, (result["message"] as? String).map { String($0.prefix(1000)) })
     }
 
-    func postProcess(source: String, key: String, settings: PostProcessingSettings, languages: [String], model: String = TextProcessingModel.id, chatGPTAccount: String? = nil) async throws -> PostProcessingResult {
+    func postProcess(source: String, key: String, settings: PostProcessingSettings, languages: [String], model: String = TextProcessingModel.id, chatGPTAccount: String? = nil, serviceTier: TextProcessingServiceTier = .fast) async throws -> PostProcessingResult {
         try await PostProcessing.apply(source: source, settings: settings) {
-            let response = try await self.response(OpenAIRequest.postProcessing(source: source, settings: settings, languages: languages, model: model), key: key, chatGPTAccount: chatGPTAccount)
+            let response = try await self.response(OpenAIRequest.postProcessing(source: source, settings: settings, languages: languages, model: model, serviceTier: serviceTier), key: key, chatGPTAccount: chatGPTAccount)
             guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
                   let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }

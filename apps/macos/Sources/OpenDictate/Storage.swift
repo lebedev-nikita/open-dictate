@@ -32,6 +32,16 @@ final class Preferences: ObservableObject {
     }
 
     @Published var textProcessingModel: String { didSet { defaults.set(textProcessingModel, forKey: "textProcessingModel"); recordSyncChange() } }
+    @Published var textProcessingServiceTier: TextProcessingServiceTier { didSet {
+        defaults.set(textProcessingServiceTier.rawValue, forKey: "textProcessingServiceTier"); recordSyncChange()
+    } }
+    var textProcessingSelection: String {
+        get { TextProcessingModel.selection(model: textProcessingModel, tier: textProcessingServiceTier) }
+        set {
+            textProcessingModel = TextProcessingModel.model(for: newValue)
+            textProcessingServiceTier = TextProcessingModel.tier(for: newValue)
+        }
+    }
     @Published var liveModel: String { didSet { defaults.set(liveModel, forKey: "liveModel"); recordSyncChange() } }
     @Published var accurateModel: String { didSet { defaults.set(accurateModel, forKey: "accurateModel"); recordSyncChange() } }
     @Published var driveSyncEnabled: Bool { didSet { defaults.set(driveSyncEnabled, forKey: "driveSyncEnabled") } }
@@ -52,6 +62,8 @@ final class Preferences: ObservableObject {
         syncDeviceID = defaults.string(forKey: "syncDeviceID") ?? UUID().uuidString.lowercased()
         defaults.set(syncDeviceID, forKey: "syncDeviceID")
         textProcessingModel = defaults.string(forKey: "textProcessingModel") ?? TextProcessingModel.id
+        textProcessingServiceTier = defaults.string(forKey: "textProcessingServiceTier")
+            .flatMap(TextProcessingServiceTier.init(rawValue:)) ?? .fast
         liveModel = defaults.string(forKey: "liveModel") ?? DictationMode.live.model
         accurateModel = defaults.string(forKey: "accurateModel") ?? DictationMode.accurate.model
         driveSyncEnabled = defaults.bool(forKey: "driveSyncEnabled")
@@ -99,7 +111,7 @@ final class Preferences: ObservableObject {
     private var syncValues: [String: String?] {
         get throws {
             var values: [String: String?] = ["dictionary": dictionary, "mode": mode.rawValue, "liveModel": liveModel,
-                          "accurateModel": accurateModel, "postprocessingOptions": try postProcessing.encoded(), "textProcessingModel": textProcessingModel]
+                          "accurateModel": accurateModel, "postprocessingOptions": try postProcessing.encoded(), "textProcessingModel": textProcessingModel, "textProcessingServiceTier": textProcessingServiceTier.rawValue]
             values.merge(try replacements.syncValues) { _, new in new }
             guard values.values.allSatisfy({ ($0?.utf8.count ?? 0) <= 262_144 }) else { throw SyncFormatError.invalid }
             return values
@@ -144,6 +156,8 @@ final class Preferences: ObservableObject {
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
         if let value = merged.entries["textProcessingModel"]?.value, textProcessingModel != value { textProcessingModel = value }
+        if let value = merged.entries["textProcessingServiceTier"]?.value,
+           let tier = TextProcessingServiceTier(rawValue: value), textProcessingServiceTier != tier { textProcessingServiceTier = tier }
         if let value = merged.entries["postprocessingOptions"]?.value {
             let next = try PostProcessingSettings.decode(value)
             if postProcessing != next { postProcessing = next }
@@ -159,6 +173,8 @@ final class Preferences: ObservableObject {
             if let value = merged.entries[key]?.value,
                value.range(of: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", options: .regularExpression) == nil { throw SyncFormatError.invalid }
         }
+        if let value = merged.entries["textProcessingServiceTier"]?.value,
+           TextProcessingServiceTier(rawValue: value) == nil { throw SyncFormatError.invalid }
         let replacementJSON = merged.entries["wordReplacements"]?.value
         try replacements.validateSync(json: replacementJSON)
         let replacementEnabled = merged.entries["wordReplacementsEnabled"]?.value

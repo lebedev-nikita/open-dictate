@@ -221,7 +221,7 @@ internal fun SettingsScreen(
                         SettingsDivider()
                         ModelPicker(
                             label = stringResource(R.string.settings_text_model),
-                            selected = state.textProcessingModel,
+                            selected = com.opendictate.app.model.TextProcessingModel.selection(state.textProcessingModel, state.textProcessingServiceTier),
                             options = com.opendictate.app.model.TextProcessingModel.defaults,
                             onSelect = viewModel::selectTextProcessingModel,
                             displayName = com.opendictate.app.model.TextProcessingModel::title,

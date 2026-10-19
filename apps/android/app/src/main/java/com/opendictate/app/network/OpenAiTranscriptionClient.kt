@@ -10,6 +10,7 @@ import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessing
 import com.opendictate.app.model.TextProcessingModel
+import com.opendictate.app.model.TextProcessingServiceTier
 import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.PostProcessingResult
 import kotlinx.coroutines.CompletableDeferred
@@ -131,10 +132,11 @@ class OpenAiTranscriptionClient(
         instruction: String,
         modelId: String = TextProcessingModel.ID,
         chatGPTAccount: String? = null,
+        serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST,
     ): TextTransformationResult = try {
         withTimeout(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
-                val body = textResponse(apiKey, textTransformationRequest(sourceText, instruction, modelId), chatGPTAccount)
+                val body = textResponse(apiKey, textTransformationRequest(sourceText, instruction, modelId, serviceTier), chatGPTAccount)
                 runCatching { extractTransformationResult(body) }
                     .getOrElse { throw OpenAiException(localized(R.string.error_transformation_empty, "OpenAI returned no transformed text")) }
             }
@@ -153,10 +155,10 @@ class OpenAiTranscriptionClient(
         throw OpenAiException(error.userMessage(), error)
     }
 
-    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null): PostProcessingResult =
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null, serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST): PostProcessingResult =
         PostProcessing.apply(source, settings) {
             withContext(Dispatchers.IO) {
-                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }), chatGPTAccount))
+                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }, serviceTier), chatGPTAccount))
             }
         }
 
@@ -550,8 +552,10 @@ internal fun textTransformationRequest(
     sourceText: String,
     instruction: String,
     modelId: String = TextProcessingModel.ID,
+    serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST,
 ): JSONObject = JSONObject()
     .put("model", modelId)
+    .put("service_tier", serviceTier.apiValue)
     .put("store", false)
     .put("reasoning", JSONObject().put("effort", "low"))
     .put(
@@ -640,8 +644,8 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 
 private const val MAX_USER_MESSAGE_CHARS = 1_000
 
-internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, languages: Collection<String> = emptyList()): JSONObject {
-    val request = textTransformationRequest(source, settings.prompt(languages), modelId)
+internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, languages: Collection<String> = emptyList(), serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST): JSONObject {
+    val request = textTransformationRequest(source, settings.prompt(languages), modelId, serviceTier)
         .put("instructions", PostProcessing.INSTRUCTIONS)
     val format = request.getJSONObject("text").getJSONObject("format")
     format.put("name", "post_processing")

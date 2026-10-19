@@ -164,7 +164,7 @@ struct SettingsView: View {
             modelField(t("Accurate model", "Модель Accurate"), $preferences.accurateModel)
             HStack {
                 Text(t("Text model", "Текстовая модель")); Spacer()
-                Picker(t("Text model", "Текстовая модель"), selection: $preferences.textProcessingModel) {
+                Picker(t("Text model", "Текстовая модель"), selection: $preferences.textProcessingSelection) {
                     ForEach(TextProcessingModel.defaults, id: \.self) { id in
                         Text(TextProcessingModel.title(id)).tag(id)
                     }

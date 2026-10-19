@@ -79,7 +79,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
     }).toString()
 
     companion object {
-        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessingOptions", "textProcessingModel")
+        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessingOptions", "textProcessingModel", "textProcessingServiceTier")
         // Decode retired fields for compatibility, then discard them from journals and replicas.
         private val RETIRED_KEYS = setOf("postprocessing", "accuratePunctuationEnabled", "transcriptionPrompt", "textModel")
         const val MAXIMUM_BYTES = 1_048_576L

@@ -112,9 +112,13 @@ rotation use device-only Keychain storage, independent of Drive. See
 
 ### Post-processing
 
-The shared **Text model** selector sits beside recognition models and defaults to
-GPT-6 Luna. Voice editing and post-processing use its session-start selection;
-Google Drive synchronizes the saved model independently of prompt drafts.
+The shared **Text model** selector sits beside recognition models and offers
+**GPT-6 Luna** and **GPT-6 Luna Fast**, with Fast selected by default. Both use
+`gpt-6-luna`; Fast sends `service_tier: "fast"`, while ordinary Luna sends
+`service_tier: "default"`. Voice editing and post-processing capture the model
+and tier at session start. Google Drive synchronizes both settings. Existing
+preferences without a saved tier use Fast; an explicit ordinary Luna choice
+survives restarts and synchronization.
 
 In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
 Live hides the section and retains its saved settings. Post-processing is off by

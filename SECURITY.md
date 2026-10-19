@@ -152,7 +152,9 @@ transcript contents, transformation instructions, or focused-field text.
 Model discovery calls OpenAI directly and stores only model IDs in app-private
 preferences. The model list API does not supply endpoint capabilities or prices,
 so recognition pickers keep only the transcription aliases. Text model offers
-GPT-6 Luna by default and controls post-processing and voice editing. AI history
+GPT-6 Luna and GPT-6 Luna Fast, defaulting to Fast, and controls post-processing
+and voice editing. The service tier is stored and synchronized separately from
+the model ID and captured at session start. AI history
 search remains fixed to GPT-6 Luna; retired legacy selections cannot override it.
 The app picker queries launchable apps only. The filter mode and separate allowed
 and excluded package lists stay in app-private preferences, outside Drive sync.

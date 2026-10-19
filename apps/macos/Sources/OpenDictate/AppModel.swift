@@ -64,6 +64,7 @@ final class AppModel: ObservableObject {
         let context: TranscriptionContext
         let chatGPTAccount: String?
         let textProcessingModel: String
+        let textProcessingServiceTier: TextProcessingServiceTier
         let postProcessing: PostProcessingSettings
         let timeout: Int
         let replacements: WordReplacementEngine
@@ -87,6 +88,7 @@ final class AppModel: ObservableObject {
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
             context = preferences.context
             textProcessingModel = preferences.textProcessingModel
+            textProcessingServiceTier = preferences.textProcessingServiceTier
             postProcessing = preferences.postProcessing.forMode(mode)
             timeout = preferences.timeout
         }
@@ -369,7 +371,7 @@ final class AppModel: ObservableObject {
             if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
                 let started = requestClock()
                 if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel, session.context.languages) }
-                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, languages: session.context.languages, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount) }
+                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, languages: session.context.languages, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount, serviceTier: session.textProcessingServiceTier) }
                 if session.postProcessing.shouldProcess { postProcessingMillis = requestMilliseconds(since: started) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
@@ -379,7 +381,7 @@ final class AppModel: ObservableObject {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
                 let (transformed, responseMessage) = try await client.transform(source: target.snapshot.selectedText,
-                    instruction: result, key: session.key, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount)
+                    instruction: result, key: session.key, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount, serviceTier: session.textProcessingServiceTier)
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
                 if let responseMessage, !responseMessage.isEmpty {

@@ -47,6 +47,7 @@ data class MainUiState(
     val accurateModelId: String = ModelCatalog.DEFAULT.accurate.first(),
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
     val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
+    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.FAST,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
     val newModelCount: Int = 0,
@@ -115,7 +116,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
-                    postProcessing = settings.postProcessing, textProcessingModel = settings.textProcessingModel,
+                    postProcessing = settings.postProcessing, textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
                     liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId) }
             }
         }
@@ -209,8 +210,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectTextProcessingModel(id: String) {
         if (!com.opendictate.app.model.TextProcessingModel.isValid(id)) return
-        settings.textProcessingModel = id
-        mutableState.update { it.copy(textProcessingModel = id) }
+        val model = com.opendictate.app.model.TextProcessingModel.model(id)
+        val tier = com.opendictate.app.model.TextProcessingModel.tier(id)
+        settings.textProcessingModel = model
+        settings.textProcessingServiceTier = tier
+        mutableState.update { it.copy(textProcessingModel = model, textProcessingServiceTier = tier) }
     }
 
     fun savePostProcessing(value: com.opendictate.app.model.PostProcessingSettings) {
@@ -450,7 +454,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         languages = settings.languages,
         prompt = settings.prompt,
         postProcessing = settings.postProcessing,
-        textProcessingModel = settings.textProcessingModel,
+        textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
         appFilter = settings.appFilter,
