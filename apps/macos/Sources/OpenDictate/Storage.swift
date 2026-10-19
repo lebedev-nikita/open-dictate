@@ -16,7 +16,7 @@ final class Preferences: ObservableObject {
     @Published var dictionary: String { didSet { defaults.set(dictionary, forKey: "dictionary"); recordSyncChange() } }
     @Published var postProcessing: PostProcessingSettings {
         didSet {
-            if let encoded = try? postProcessing.encoded() { defaults.set(encoded, forKey: "postprocessing") }
+            if let encoded = try? postProcessing.encoded() { defaults.set(encoded, forKey: "postprocessingOptions") }
             recordSyncChange()
         }
     }
@@ -66,8 +66,10 @@ final class Preferences: ObservableObject {
         dictionary = defaults.string(forKey: "dictionary") ?? "OpenDictate"
         defaults.removeObject(forKey: "customTranscriptionPrompt")
         defaults.removeObject(forKey: "transcriptionPromptConfigured")
-        postProcessing = defaults.string(forKey: "postprocessing").flatMap { try? PostProcessingSettings.decode($0) }
+        postProcessing = defaults.string(forKey: "postprocessingOptions").flatMap { try? PostProcessingSettings.decode($0) }
+            ?? defaults.string(forKey: "postprocessing").flatMap { try? PostProcessingSettings.migrateLegacy($0) }
             ?? PostProcessingSettings(enabled: defaults.bool(forKey: "accuratePunctuationEnabled"))
+        defaults.removeObject(forKey: "postprocessing")
         saveHistory = defaults.object(forKey: "saveHistory") as? Bool ?? true
         if let data = defaults.data(forKey: "shortcuts"),
            let saved = try? JSONDecoder().decode(ShortcutBindings.self, from: data), saved.isValid {
@@ -81,7 +83,7 @@ final class Preferences: ObservableObject {
         excludedApps = defaults.stringArray(forKey: "excludedApps") ?? []
         showStatus = defaults.object(forKey: "showStatus") as? Bool ?? true
         indicatorStyle = RecordingIndicatorStyle(rawValue: defaults.string(forKey: "indicatorStyle") ?? "") ?? .compact
-        defaults.set(try? postProcessing.encoded(), forKey: "postprocessing")
+        defaults.set(try? postProcessing.encoded(), forKey: "postprocessingOptions")
         defaults.removeObject(forKey: "accuratePunctuationEnabled")
         do {
             var seed = try defaults.data(forKey: "syncDocument").map(SettingsSyncDocument.decode) ?? SettingsSyncDocument()
@@ -97,7 +99,7 @@ final class Preferences: ObservableObject {
     private var syncValues: [String: String?] {
         get throws {
             var values: [String: String?] = ["dictionary": dictionary, "mode": mode.rawValue, "liveModel": liveModel,
-                          "accurateModel": accurateModel, "postprocessing": try postProcessing.encoded(), "textProcessingModel": textProcessingModel]
+                          "accurateModel": accurateModel, "postprocessingOptions": try postProcessing.encoded(), "textProcessingModel": textProcessingModel]
             values.merge(try replacements.syncValues) { _, new in new }
             guard values.values.allSatisfy({ ($0?.utf8.count ?? 0) <= 262_144 }) else { throw SyncFormatError.invalid }
             return values
@@ -142,7 +144,7 @@ final class Preferences: ObservableObject {
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
         if let value = merged.entries["textProcessingModel"]?.value, textProcessingModel != value { textProcessingModel = value }
-        if let value = merged.entries["postprocessing"]?.value {
+        if let value = merged.entries["postprocessingOptions"]?.value {
             let next = try PostProcessingSettings.decode(value)
             if postProcessing != next { postProcessing = next }
         }
@@ -151,7 +153,7 @@ final class Preferences: ObservableObject {
     }
 
     func validateSync(_ merged: SettingsSyncDocument) throws {
-        if let value = merged.entries["postprocessing"]?.value { _ = try PostProcessingSettings.decode(value) }
+        if let value = merged.entries["postprocessingOptions"]?.value { _ = try PostProcessingSettings.decode(value) }
         if let value = merged.entries["mode"]?.value, DictationMode(rawValue: value) == nil { throw SyncFormatError.invalid }
         for key in ["liveModel", "accurateModel", "textProcessingModel"] {
             if let value = merged.entries[key]?.value,

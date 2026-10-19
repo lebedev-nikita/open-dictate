@@ -48,26 +48,28 @@ use schema version 1; unknown future settings remain preserved.
 
 ## Post-processing
 
-The `postprocessing` entry stores an atomic JSON configuration with `enabled`,
-`model` and `prompt`. A null inner `prompt` resolves the shared bundled punctuation
-instruction; an empty string skips the extra request. Only the override, not the
-default instruction text, is uploaded. Reset is a new timestamped configuration,
-so older replicas cannot restore a removed custom prompt. The outer value remains
-a string and needs no new document version. Older clients preserve this unknown
-entry; update both apps to use it.
+The `postprocessingOptions` entry stores an atomic version-1 JSON configuration
+with `enabled`, `punctuation`, `valuesEnabled` and `formats`. Format examples are
+captured from the system region on first use and remain identical on both devices
+after sync. Each type has an enabled flag and editable example. Instruction text
+is bundled and never uploaded to Drive. Reset creates a new timestamped
+configuration. The outer value remains a string.
+
+Earlier `postprocessing` entries seed punctuation-only defaults at timestamp zero;
+arbitrary prompts are discarded. Explicit new settings win over legacy clocks.
+Local migration preserves the global enabled state and removes the old preference.
+Older apps preserve the new unknown key; update both apps to use these controls.
 
 The separate `textProcessingModel` entry selects one shared model for text
 transformation and post-processing, defaulting to GPT-6 Luna. It appears beside
-recognition models and uses the same conflict rules. The inner `postprocessing.model`
-field remains constant compatibility metadata for earlier RCs; it does not
-override the shared selection. The retired `textModel` entry stays discarded,
+recognition models and uses the same conflict rules. The retired `textModel` entry stays discarded,
 so old RC preferences cannot unexpectedly restore an earlier choice.
 
-The section saves prompt drafts explicitly. Incoming sync does not replace
-an unsaved draft. Toggling off preserves the prompt. Active sessions use
-an immutable snapshot; retry captures current settings. The former macOS local
-punctuation switch migrates into this configuration, while old synced punctuation
-entries remain ignored.
+Punctuation and enable switches save immediately. Value-format drafts save with
+Done and are discarded with Cancel; incoming sync does not overwrite a draft.
+Turning formatting off preserves saved examples. Active sessions use an immutable
+snapshot; retry captures current settings. The former macOS local Accurate
+punctuation switch migrates to this section.
 
 ## Google Cloud setup
 
@@ -233,7 +235,7 @@ Delete hidden app data.
 
 Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
 `liveModel`, `accurateModel`, `wordReplacements` and
-`wordReplacementsEnabled` and `postprocessing`:
+`wordReplacementsEnabled`, `postprocessingOptions` and `textProcessingModel`:
 
 ```json
 {

@@ -7,53 +7,39 @@ import org.json.JSONObject
 
 data class PostProcessingSettings(
     val enabled: Boolean = false,
-    val prompt: String? = null,
+    val punctuation: Boolean = true,
+    val formatValues: Boolean = false,
+    val formats: ValueFormatting? = null,
 ) {
     fun forMode(mode: TranscriptionModel): PostProcessingSettings = if (mode == TranscriptionModel.ACCURATE) this else copy(enabled = false)
-    val effectivePrompt: String get() = prompt ?: PostProcessingPreset.PUNCTUATION.text
-    val shouldProcess: Boolean get() = enabled && effectivePrompt.isNotBlank()
-    val isValid: Boolean get() = (prompt?.toByteArray(Charsets.UTF_8)?.size ?: 0) <= MAXIMUM_PROMPT_BYTES
+    val hasValueFormatting: Boolean get() = formatValues && formats?.hasEnabledTypes == true
+    val effectivePrompt: String get() = buildList {
+        if (punctuation) add(PostProcessingRules.punctuation)
+        if (hasValueFormatting) add(requireNotNull(formats).instruction)
+    }.joinToString("\n\n")
+    val shouldProcess: Boolean get() = enabled && (punctuation || hasValueFormatting)
+    val isValid: Boolean get() = (!formatValues || formats != null) && formats?.isValid != false
     fun toJson(): String {
         require(isValid)
-        // Legacy compatibility metadata; the shared textProcessingModel setting controls requests.
-        return "{\"enabled\":$enabled,\"model\":\"${TextProcessingModel.ID}\",\"prompt\":${prompt?.let(::quote) ?: "null"}}"
+        return "{\"enabled\":$enabled,\"formats\":${formats?.json() ?: "null"},\"punctuation\":$punctuation,\"schemaVersion\":1,\"valuesEnabled\":$formatValues}"
     }
     companion object {
         const val MAXIMUM_PROMPT_BYTES = 16_384
-        // Canonical encoding matches Foundation's sortedKeys/withoutEscapingSlashes.
-        private fun quote(value: String): String = buildString {
-            append('"')
-            value.forEach { character ->
-                append(when (character) {
-                    '"' -> "\\\""; '\\' -> "\\\\"; '\b' -> "\\b"; '\u000c' -> "\\f"
-                    '\n' -> "\\n"; '\r' -> "\\r"; '\t' -> "\\t"
-                    else -> if (character.code < 32) "\\u" + character.code.toString(16).padStart(4, '0') else character.toString()
-                })
-            }
-            append('"')
-        }
         fun fromJson(value: String): PostProcessingSettings {
+            require(value.toByteArray(Charsets.UTF_8).size <= MAXIMUM_PROMPT_BYTES)
+            val json = JSONObject(value)
+            require(json.get("schemaVersion") is Number && json.getDouble("schemaVersion") == 1.0)
+            require(listOf("enabled", "punctuation", "valuesEnabled").all { json.get(it) is Boolean })
+            require(json.has("formats"))
+            return PostProcessingSettings(json.getBoolean("enabled"), json.getBoolean("punctuation"), json.getBoolean("valuesEnabled"),
+                if (json.isNull("formats")) null else ValueFormatting.fromJson(json.getJSONObject("formats"))).also { require(it.isValid) }
+        }
+        /** Retire arbitrary prompt text; only the global enabled state carries forward. */
+        fun fromLegacyJson(value: String): PostProcessingSettings {
             require(value.toByteArray(Charsets.UTF_8).size <= MAXIMUM_PROMPT_BYTES * 6 + 1024)
             val json = JSONObject(value)
             require(json.get("enabled") is Boolean)
-            val prompt = if (!json.has("prompt") || json.isNull("prompt")) null else json.get("prompt").also { require(it is String) } as String
-            return PostProcessingSettings(json.getBoolean("enabled"), prompt).also { require(it.isValid) }
-        }
-    }
-}
-
-enum class PostProcessingPreset(private val key: String) {
-    PUNCTUATION("punctuation"), VALUES("values");
-    val text: String get() = texts.getString(key)
-    fun appendTo(prompt: String): String = when {
-        prompt.contains(text) -> prompt
-        prompt.isBlank() -> text
-        else -> "$prompt\n\n$text"
-    }
-    companion object {
-        private val texts: JSONObject by lazy {
-            val stream = requireNotNull(PostProcessingPreset::class.java.classLoader!!.getResourceAsStream("postprocessing-presets.json"))
-            stream.bufferedReader().use { JSONObject(it.readText()) }
+            return PostProcessingSettings(enabled = json.getBoolean("enabled"))
         }
     }
 }
@@ -74,7 +60,7 @@ object PostProcessing {
             require(settings.isValid)
             val candidate = request().trim()
             currentCoroutineContext().ensureActive()
-            if (candidate.isBlank() || settings.effectivePrompt.trim() == PostProcessingPreset.PUNCTUATION.text &&
+            if (candidate.isBlank() || settings.punctuation && !settings.hasValueFormatting &&
                 !validPunctuation(candidate, source)) PostProcessingResult(source, failed = true)
             else PostProcessingResult(candidate)
         } catch (error: CancellationException) { throw error }

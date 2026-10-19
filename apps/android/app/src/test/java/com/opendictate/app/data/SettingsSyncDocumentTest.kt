@@ -17,6 +17,21 @@ class SettingsSyncDocumentTest {
         assertEquals("gpt-6-luna", com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()).getString("model"))
     }
 
+    @Test fun legacyPostProcessingCannotOverwriteStructuredOptionsAndSourceChoiceUsesMigratedValues() {
+        val chosen = com.opendictate.app.model.PostProcessingSettings(enabled = false, punctuation = false)
+        val modern = document("postprocessingOptions", chosen.toJson(), 1, "new")
+        val old = document("postprocessing", "{\"enabled\":true,\"prompt\":\"Old instruction\"}", 500, "old")
+        val merged = modern.merge(old)
+        assertEquals(chosen.toJson(), merged.entries.getValue("postprocessingOptions").value)
+        assertNull(merged.entries["postprocessing"])
+        val disabled = document("postprocessing", "{\"enabled\":false,\"prompt\":null}", 10, "other")
+        for (source in SettingsSyncDocument.ConnectionSource.entries) {
+            val result = old.resolvingConnection(disabled, source, "new", 1000)
+            assertEquals(source == SettingsSyncDocument.ConnectionSource.LOCAL,
+                com.opendictate.app.model.PostProcessingSettings.fromJson(result.entries.getValue("postprocessingOptions").value!!).enabled)
+        }
+    }
+
     @Test fun fixedModelIgnoresLegacyChoicesWithoutSourceChoice() {
         val old = """{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"""
         val other = """{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"""
@@ -28,15 +43,17 @@ class SettingsSyncDocumentTest {
         assertFalse(local.needsConnectionChoice(remote))
         val merged = local.merge(remote)
         assertNull(merged.entries["textModel"])
-        val settings = com.opendictate.app.model.PostProcessingSettings.fromJson(merged.entries.getValue("postprocessing").value!!)
+        val settings = com.opendictate.app.model.PostProcessingSettings.fromJson(merged.entries.getValue("postprocessingOptions").value!!)
         val requests = listOf(
             com.opendictate.app.network.textTransformationRequest("Text", "Edit"),
             com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()),
             com.opendictate.app.network.postProcessingRequest("Text", settings))
         requests.forEach { assertEquals("gpt-6-luna", it.getString("model")) }
         assertTrue(settings.enabled)
-        assertEquals("Keep text", settings.prompt)
-        assertEquals(20L, merged.entries.getValue("postprocessing").modifiedAt)
+        assertTrue(settings.punctuation)
+        assertFalse(settings.formatValues)
+        assertNull(merged.entries["postprocessing"])
+        assertEquals(0L, merged.entries.getValue("postprocessingOptions").modifiedAt)
     }
 
     @Test fun `retired prompt is dropped without a connection choice`() {

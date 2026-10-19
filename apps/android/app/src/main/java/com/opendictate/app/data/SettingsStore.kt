@@ -22,6 +22,12 @@ class SettingsStore(context: Context) {
     private val replacementPrefs = context.getSharedPreferences("word_replacements", Context.MODE_PRIVATE)
 
     init {
+        if (!prefs.contains("postprocessingOptions")) prefs.getString("postprocessing", null)?.let { legacy ->
+            runCatching { PostProcessingSettings.fromLegacyJson(legacy).toJson() }.getOrNull()?.let { encoded ->
+                prefs.edit { putString("postprocessingOptions", encoded) }
+            }
+        }
+        prefs.edit { remove("postprocessing") }
         prefs.edit { remove("custom_transcription_prompt"); remove("transcription_prompt_configured"); remove("transformation_model"); remove("transformation_model_id") }
     }
 
@@ -114,9 +120,9 @@ class SettingsStore(context: Context) {
         set(value) = saveSynced { putString(KEY_PROMPT, normalizeDictionaryTerms(value).trim()) }
 
     var postProcessing: PostProcessingSettings
-        get() = prefs.getString("postprocessing", null)?.let { runCatching { PostProcessingSettings.fromJson(it) }.getOrNull() }
+        get() = prefs.getString("postprocessingOptions", null)?.let { runCatching { PostProcessingSettings.fromJson(it) }.getOrNull() }
             ?: PostProcessingSettings()
-        set(value) = saveSynced { putString("postprocessing", value.toJson()) }
+        set(value) = saveSynced { putString("postprocessingOptions", value.toJson()) }
 
     var transformationButtonEnabled: Boolean
         get() = prefs.getBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, true)
@@ -173,7 +179,7 @@ class SettingsStore(context: Context) {
         "dictionary" to prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty(), "mode" to model.name.lowercase(),
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
-        "postprocessing" to postProcessing.toJson(),
+        "postprocessingOptions" to postProcessing.toJson(),
         "textProcessingModel" to textProcessingModel,
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
@@ -228,7 +234,7 @@ class SettingsStore(context: Context) {
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
             values["textProcessingModel"]?.let { putString("text_processing_model", it.value) }
-            values["postprocessing"]?.let { putString("postprocessing", it.value) }
+            values["postprocessingOptions"]?.let { putString("postprocessingOptions", it.value) }
             putString("sync_document", merged.toJson())
         }
         merged
@@ -237,7 +243,7 @@ class SettingsStore(context: Context) {
     fun validateSyncDocument(merged: SettingsSyncDocument) {
         SettingsSyncDocument.fromJson(merged.toJson())
         val values = merged.entries
-        values["postprocessing"]?.value?.let(PostProcessingSettings::fromJson)
+        values["postprocessingOptions"]?.value?.let(PostProcessingSettings::fromJson)
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
         listOf("liveModel", "accurateModel", "textProcessingModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }

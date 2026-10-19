@@ -9,15 +9,15 @@ text, and never alter the captured original field or voice-edit instructions.
 Rules are applied on-device. Optional Drive sync uses the same app-data scope
 for the rule list and enabled states.
 
-Optional post-processing sends recognized dictation text and the configured
-instruction directly to OpenAI through Responses with storage disabled. It is
+Optional post-processing sends recognized dictation text and generated
+instructions plus configured value-format examples directly to OpenAI through Responses with storage disabled. It is
 available after ordinary Accurate dictation and Accurate retranscription on both platforms;
 voice-edit commands skip it. Settings are captured at session start. Disabled
-post-processing or an empty prompt makes no additional request. Failures retain
+post-processing or no enabled rules makes no additional request. Failures retain
 the original transcript and display a curated warning; cancellation still prevents
-delivery. The built-in punctuation-only preset rejects changes to words, numbers
-and address contents. Custom instructions, including value formatting, can
-rewrite text and are not constrained by that punctuation-only validator.
+delivery. The punctuation-only configuration rejects changes to words, numbers
+and address contents. Value formatting changes notation and is not constrained by that punctuation-only
+validator. Examples are bounded data, not a free-form instruction editor.
 
 ## Optional Google Drive synchronization
 
@@ -29,10 +29,10 @@ sync offline and resume queued work when connectivity returns.
 Sync uses Google's HTTPS endpoints without a backend, requests only
 `drive.appdata` and exports an allowlist of dictionary, replacement, mode and
 model settings and post-processing
-configuration (enabled and optional prompt override). A shared text-processing
+configuration (enabled rules and editable format examples). A shared text-processing
 model defaults to GPT-6 Luna and is captured at session start for transformation
 and post-processing. Legacy Accurate punctuation and transcription-prompt/text-model sync entries are discarded.
-API keys, audio and history are excluded. Tokens, custom prompts, dictionary/replacement contents and raw
+API keys, audio and history are excluded. Tokens, formatting examples, dictionary/replacement contents and raw
 provider payloads are never logged. Drive clients disable redirects, cookies and
 persistent caches. Remote data is bounded and validated before application;
 unknown keys survive, while unsupported versions stop sync.

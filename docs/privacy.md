@@ -21,16 +21,16 @@ Drive or AI search.
 ## Optional post-processing
 
 On either platform, **Post-processing** is off by default. When enabled, it sends
-only the recognized transcript and your instruction directly to OpenAI through
+only the recognized transcript, generated instructions and saved format examples directly to OpenAI through
 the Responses API with `store: false`. It runs after ordinary Accurate dictation
 or Accurate retranscription, before local word replacements. Live dictation and
 voice-edit commands skip it.
-A blank prompt makes no additional request. Errors retain the original transcript.
+No enabled rules means no additional request. Errors retain the original transcript.
 
 Post-processing and text transformation use the shared Text model setting,
 which defaults to `gpt-6-luna`. The default instruction corrects punctuation.
-Buttons add editable punctuation or value-formatting instructions. Custom
-instructions may rewrite text. Post-processing settings synchronize through
+Choose punctuation and configure value-format examples in the settings menu.
+The final instruction is generated inside the app. Post-processing settings synchronize through
 Google Drive when connected; transcripts are never included in synchronization.
 
 ## Optional ChatGPT plan usage

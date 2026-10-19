@@ -22,6 +22,20 @@ final class SettingsSyncTests: XCTestCase {
         XCTAssertEqual(OpenAIRequest.search(query: "Find", entries: [])["model"] as? String, "gpt-6-luna")
     }
 
+    func testLegacyCannotOverwriteOptionsAndSourceChoiceUsesMigratedValues() throws {
+        let chosen = PostProcessingSettings(enabled: false, punctuation: false)
+        var modern = document("postprocessingOptions", try chosen.encoded(), 1, "new")
+        let old = document("postprocessing", #"{"enabled":true,"prompt":"Old instruction"}"#, 500, "old")
+        modern.merge(old)
+        XCTAssertEqual(modern.entries["postprocessingOptions"]?.value, try chosen.encoded())
+        XCTAssertNil(modern.entries["postprocessing"])
+        let disabled = document("postprocessing", #"{"enabled":false,"prompt":null}"#, 10, "other")
+        for source in [SettingsSyncDocument.ConnectionSource.local, .cloud] {
+            let result = old.resolvingConnection(with: disabled, source: source, deviceId: "new", now: 1000)
+            XCTAssertEqual(try PostProcessingSettings.decode(result.entries["postprocessingOptions"]!.value!).enabled, source == .local)
+        }
+    }
+
     func testOldModelChoicesCannotAffectRequestsOrRequireSourceChoice() throws {
         let leftJSON = #"{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"#
         let rightJSON = #"{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"#
@@ -32,14 +46,16 @@ final class SettingsSyncTests: XCTestCase {
         XCTAssertFalse(local.needsConnectionChoice(with: remote))
         local.merge(remote)
         XCTAssertNil(local.entries["textModel"])
-        let settings = try PostProcessingSettings.decode(local.entries["postprocessing"]!.value!)
+        let settings = try PostProcessingSettings.decode(local.entries["postprocessingOptions"]!.value!)
         let requests = [OpenAIRequest.transform(source: "Text", instruction: "Edit"),
                         OpenAIRequest.search(query: "Find", entries: []),
                         OpenAIRequest.postProcessing(source: "Text", settings: settings)]
         for request in requests { XCTAssertEqual(request["model"] as? String, "gpt-6-luna") }
-        XCTAssertEqual(settings.prompt, "Keep text")
+        XCTAssertTrue(settings.punctuation)
+        XCTAssertFalse(settings.formatValues)
+        XCTAssertNil(local.entries["postprocessing"])
         XCTAssertTrue(settings.enabled)
-        XCTAssertEqual(local.entries["postprocessing"]?.modifiedAt, 20)
+        XCTAssertEqual(local.entries["postprocessingOptions"]?.modifiedAt, 0)
     }
 
     func testRetiredPromptIsDroppedWithoutAConnectionChoice() throws {

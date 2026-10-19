@@ -36,14 +36,20 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
     }
     public var entries: [String: Entry] = [:]
     public init() {}
-    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing", "textProcessingModel"]
+    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessingOptions", "textProcessingModel"]
     // Retired fields are decoded for compatibility, then removed from journals and replicas.
-    private static let retiredKeys: Set<String> = ["accuratePunctuationEnabled", "transcriptionPrompt", "textModel"]
+    private static let retiredKeys: Set<String> = ["postprocessing", "accuratePunctuationEnabled", "transcriptionPrompt", "textModel"]
     private var syncEntries: [String: Entry] {
-        var result = entries.filter { !Self.retiredKeys.contains($0.key) }
-        if let value = result["postprocessing"]?.value,
+        var migrated = entries
+        // Retired prompts seed defaults; their old clocks cannot override edited structured settings.
+        if migrated["postprocessingOptions"] == nil, let legacy = entries["postprocessing"], let value = legacy.value,
+           let normalized = try? PostProcessingSettings.migrateLegacy(value).encoded() {
+            migrated["postprocessingOptions"] = Entry(value: normalized, modifiedAt: 0, deviceId: legacy.deviceId)
+        }
+        var result = migrated.filter { !Self.retiredKeys.contains($0.key) }
+        if let value = result["postprocessingOptions"]?.value,
            let normalized = try? PostProcessingSettings.decode(value).encoded() {
-            result["postprocessing"]?.value = normalized
+            result["postprocessingOptions"]?.value = normalized
         }
         return result
     }
@@ -113,7 +119,7 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
         var result = self
         result.merge(remote)
         let preferred = source == .cloud ? remote : self
-        let values = preferred.entries.mapValues(\.value)
+        let values = preferred.syncEntries.mapValues(\.value)
         // Include losing entries too, so stale replicas cannot undo the explicit choice.
         let latest = max(syncEntries.values.map(\.modifiedAt).max() ?? 0,
                          remote.syncEntries.values.map(\.modifiedAt).max() ?? 0)

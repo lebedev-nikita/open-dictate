@@ -63,8 +63,8 @@ final class HTTPTests: XCTestCase {
             XCTAssertEqual(result.text, expected)
             XCTAssertEqual(result.failed, expected == "привет мир")
         }
-        MockHTTP.handler = { _ in XCTFail("Disabled/empty prompt must not make a request"); return (500, Data()) }
-        for settings in [PostProcessingSettings(), PostProcessingSettings(enabled: true, prompt: "")] {
+        MockHTTP.handler = { _ in XCTFail("Disabled/empty rules must not make a request"); return (500, Data()) }
+        for settings in [PostProcessingSettings(), PostProcessingSettings(enabled: true, punctuation: false)] {
             let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: settings)
             XCTAssertEqual(result, .init(text: "привет мир"))
         }

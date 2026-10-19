@@ -25,7 +25,7 @@ no backend, analytics or account to create.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
 - Voice-directed editing of the selection, or the whole field without a selection,
   using the shared text model (GPT-6 Luna by default).
-- Configurable Accurate post-processing with punctuation/value presets, a transcription dictionary, local history with request durations, on-device search, and explicit AI search.
+- Configurable Accurate post-processing with punctuation and editable value-format examples, a transcription dictionary, local history with request durations, on-device search, and explicit AI search.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
 - Optional [ChatGPT plan usage](docs/chatgpt-plan.md) for Luna text processing; transcription still requires an API key.

@@ -31,7 +31,7 @@ final class ReplacementSyncTests: XCTestCase {
         defaults.set(true, forKey: "accuratePunctuationEnabled")
         let preferences = Preferences(defaults: defaults)
         XCTAssertTrue(preferences.postProcessing.enabled)
-        XCTAssertNil(preferences.postProcessing.prompt)
+        XCTAssertTrue(preferences.postProcessing.punctuation)
         XCTAssertNil(defaults.object(forKey: "accuratePunctuationEnabled"))
         preferences.postProcessing.enabled = false
         var remote = SettingsSyncDocument()

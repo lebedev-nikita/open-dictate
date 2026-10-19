@@ -26,24 +26,37 @@ final class PostProcessingPreferencesTests: XCTestCase {
         XCTAssertEqual(other.textProcessingModel, "test-text-model")
         XCTAssertEqual(local.postProcessing, .init())
         let snapshot = local.postProcessing
-        let custom = PostProcessingSettings(enabled: true, prompt: "Format numbers\n📝")
+        let custom = PostProcessingSettings(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "ru_RU")))
         local.postProcessing = custom
         XCTAssertFalse(snapshot.enabled)
         XCTAssertEqual(Preferences(defaults: defaults).postProcessing, custom)
         _ = try other.mergeSync(local.syncDocument())
         XCTAssertEqual(other.postProcessing, custom)
-        local.postProcessing.prompt = nil
+        local.postProcessing = .init(enabled: true)
         _ = try other.mergeSync(local.syncDocument())
-        XCTAssertNil(other.postProcessing.prompt)
-        XCTAssertEqual(other.postProcessing.effectivePrompt, PostProcessingPreset.punctuation.text)
-        XCTAssertFalse(try other.syncDocument().entries["postprocessing"]!.value!.contains(PostProcessingPreset.punctuation.text))
+        XCTAssertNil(other.postProcessing.formats)
+        XCTAssertEqual(other.postProcessing.effectivePrompt, PostProcessingSettings(enabled: true).effectivePrompt)
+        XCTAssertFalse(try other.syncDocument().entries["postprocessingOptions"]!.value!.contains(PostProcessingSettings(enabled: true).effectivePrompt))
         var invalid = try local.syncDocument()
-        invalid.entries["postprocessing"] = .init(value: #"{"enabled":true,"prompt":123}"#,
+        invalid.entries["postprocessingOptions"] = .init(value: #"{"schemaVersion":1,"enabled":true,"punctuation":true,"valuesEnabled":true,"formats":{}}"#,
             modifiedAt: Int64.max - 10, deviceId: "remote")
         invalid.entries["dictionary"] = .init(value: "Must not apply", modifiedAt: Int64.max - 10, deviceId: "remote")
         let dictionary = other.dictionary
         XCTAssertThrowsError(try other.mergeSync(invalid))
         XCTAssertEqual(other.dictionary, dictionary)
+    }
+
+    @MainActor func testLegacyPromptReplacementIsOneTimeAndExplicitSettingsSurviveRelaunch() throws {
+        let suite = "postprocessing-migrate-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(#"{"enabled":true,"prompt":"Old arbitrary instruction","model":"gpt-6-luna"}"#, forKey: "postprocessing")
+        let preferences = Preferences(defaults: defaults)
+        XCTAssertEqual(preferences.postProcessing, .init(enabled: true))
+        XCTAssertNil(defaults.object(forKey: "postprocessing"))
+        preferences.postProcessing = .init(enabled: false, punctuation: false)
+        defaults.set(#"{"enabled":true,"prompt":"Return old instruction"}"#, forKey: "postprocessing")
+        XCTAssertEqual(Preferences(defaults: defaults).postProcessing, .init(enabled: false, punctuation: false))
+        XCTAssertNil(defaults.object(forKey: "postprocessing"))
     }
 
     @MainActor func testSettingsWithSharedTextModelLayouts() throws {
@@ -73,6 +86,38 @@ final class PostProcessingPreferencesTests: XCTestCase {
         }
     }
 
+    @MainActor func testNativeValueFormattingMenuLayouts() throws {
+        for (language, appearance) in [("en", NSAppearance.Name.darkAqua), ("ru", .aqua)] {
+            let formats = ValueFormatting.systemDefaults(locale: Locale(identifier: language == "ru" ? "ru_RU" : "en_US"))
+            let host = NSHostingView(rootView: ValueFormattingMenu(initial: formats, russian: language == "ru", defaults: formats,
+                onCancel: {}, onSave: { _ in }).background(Color(nsColor: .windowBackgroundColor)))
+            host.frame = NSRect(x: 0, y: 0, width: 460, height: 580)
+            host.appearance = NSAppearance(named: appearance)
+            let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false; window.contentView = host; window.appearance = host.appearance
+            window.makeKeyAndOrderFront(nil); host.layoutSubtreeIfNeeded()
+            RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+            for bottom in [false, true] {
+                if bottom {
+                    func descendants(_ view: NSView) -> [NSView] { view.subviews.flatMap { [$0] + descendants($0) } }
+                    if let scroll = descendants(host).compactMap({ $0 as? NSScrollView }).first,
+                       let document = scroll.documentView {
+                        scroll.contentView.scroll(to: NSPoint(x: 0, y: max(0, document.bounds.height - scroll.contentView.bounds.height)))
+                        scroll.reflectScrolledClipView(scroll.contentView)
+                    }
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+                }
+                if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
+                    let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                    host.cacheDisplay(in: host.bounds, to: bitmap)
+                    try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to:
+                        URL(fileURLWithPath: output).appendingPathComponent("value-formats-macos-\(language)-\(bottom ? "bottom" : "top").png"))
+                }
+            }
+            window.close()
+        }
+    }
+
     @MainActor func testNativePostProcessingSectionLayouts() throws {
         let suite = "postprocessing-layout-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -80,8 +125,8 @@ final class PostProcessingPreferencesTests: XCTestCase {
         for (language, dark, enabled, width, values) in [("en", true, true, 568.0, false), ("ru", false, true, 464.0, false), ("ru", false, false, 464.0, false), ("en", true, true, 568.0, true), ("ru", false, true, 464.0, true)] {
             preferences.interfaceLanguage = language
             preferences.mode = .accurate
-            preferences.postProcessing = .init(enabled: enabled,
-                prompt: values ? PostProcessingPreset.values.append(to: PostProcessingPreset.punctuation.text) : nil)
+            preferences.postProcessing = .init(enabled: enabled, formatValues: values,
+                formats: values ? .systemDefaults(locale: Locale(identifier: language == "ru" ? "ru_RU" : "en_US")) : nil)
             let host = NSHostingView(rootView: PostProcessingSettingsView(preferences: preferences).padding(28)
                 .frame(width: width, height: enabled ? 650 : 120, alignment: .topLeading)
                 .background(Color(nsColor: .windowBackgroundColor)))

@@ -107,15 +107,16 @@ final class DictationFocusTests: XCTestCase {
             let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
                 captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
                 processTranscript: { _, _, settings, _ in await processor.process(settings) })
-            model.preferences.postProcessing = .init(enabled: true, prompt: "Original instruction")
+            model.preferences.postProcessing = .init(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
             model.toggleLocalRecording(mode: .accurate)
             await waitFor(.recording, in: model)
-            model.preferences.postProcessing.prompt = "Changed after start"
+            let originalDate = model.preferences.postProcessing.formats?[.date].example
+            model.preferences.postProcessing.formats?[.date].example = "2026-03-05"
             model.stop()
             let deadline = ContinuousClock.now + .seconds(2)
             while await processor.settings.isEmpty && ContinuousClock.now < deadline { await Task.yield() }
             let captured = await processor.settings.first
-            XCTAssertEqual(captured?.prompt, "Original instruction")
+            XCTAssertEqual(captured?.formats?[.date].example, originalDate)
             if cancel { model.cancel() }
             else { first.focused = false; active = second; model.tick() }
             await processor.release()

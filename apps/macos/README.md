@@ -117,26 +117,29 @@ GPT-6 Luna. Voice editing and post-processing use its session-start selection;
 Google Drive synchronizes the saved model independently of prompt drafts.
 
 In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
-Live hides the section and retains its saved settings. It is off by default and always uses `gpt-6-luna`. A punctuation
-instruction is prefilled. Edit the prompt, then choose **Save**.
-**Correct punctuation** and **Format values** have a plus button on the right
-that appends an editable instruction block without duplicates. Prompt actions sit below
-the editor. **Reset prompt** stages the punctuation default; Save applies
-it. Clearing the prompt skips the additional request.
+Live hides the section and retains its saved settings. Post-processing is off by
+default; punctuation is the initial rule. The shared Text model selection controls
+both post-processing and voice editing.
 
-It runs once after ordinary Accurate dictation or Accurate retranscription, before local word
-replacements. Voice-edit commands skip it. The transcript goes directly to OpenAI
-Responses with `store: false`. Failure keeps the original transcript and shows a
-warning; cancellation and focus guards still apply. The punctuation-only default
-rejects changes to words and numbers; custom instructions can rewrite text.
-The value preset includes examples for integers, decimals, dates, times and other
-quantities. It preserves ambiguous values and identifiers. Existing saved prompts
-are unchanged; use the plus button to append the new instruction. Model-based
-formatting is not deterministic validation.
+Enable **Format values** to use system-region defaults. Its button opens a native
+popover with integers, decimals, dates, time, durations, percentages, money,
+measurements, ranges and fractions. Change the examples directly or choose a
+suggested style; each type can be disabled. **Done** saves, **Cancel** discards the
+popover draft, and **System defaults** reloads the current system region’s examples.
+**Reset settings** restores punctuation only. There is no final-prompt editor.
 
-Both apps share [preset text](Sources/OpenDictateCore/Resources/postprocessing-presets.json)
-and synchronize enabled state and optional prompt override through Drive.
-The former local Accurate punctuation switch migrates to this section.
+The saved examples synchronize unchanged between devices, independent of their
+current region or interface language. Earlier arbitrary prompts are replaced with
+punctuation settings, preserving the global enabled state. Both apps share the
+[instruction rules](Sources/OpenDictateCore/Resources/postprocessing-rules.json).
+
+Post-processing runs once after ordinary Accurate dictation or Accurate
+retranscription, before local replacements. Live and voice editing skip it.
+No enabled rules means no extra request. Text and generated instructions go
+directly to OpenAI Responses with `store: false`. Failure preserves the original
+transcript; cancellation and focus guards still apply. Punctuation-only processing
+rejects changes to words and numbers. Model-based value formatting preserves
+ambiguous values and identifiers by instruction, not deterministic validation.
 
 ### Retranscribe the last recording
 

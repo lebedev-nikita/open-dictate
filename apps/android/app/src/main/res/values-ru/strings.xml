@@ -278,15 +278,10 @@
     <string name="gestures_hide_right_hint">Смахните вправо без записи</string>
     <string name="gestures_hide_left_hint">Смахните влево без записи</string>
     <string name="gestures_keyboard_recovery">Чтобы вернуть кнопку, закройте и снова откройте клавиатуру.</string>
-    <string name="postprocessing_prompt_limit">Промпт слишком длинный. Максимум: 16 384 байта UTF-8.</string>
     <string name="postprocessing_cancel">Отмена</string>
-    <string name="postprocessing_save">Сохранить</string>
     <string name="postprocessing_title">Постобработка</string>
-    <string name="postprocessing_prompt">Промпт постобработки</string>
-    <string name="postprocessing_add_instruction">Добавить инструкцию: %1$s</string>
     <string name="postprocessing_punctuation">Исправить пунктуацию</string>
     <string name="postprocessing_values">Отформатировать значения</string>
-    <string name="postprocessing_reset">Сбросить промпт</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
     <string name="history_transcription_time">Транскр. %1$s с</string>
     <string name="history_postprocessing_time">Постобр. %1$s с</string>
@@ -303,4 +298,10 @@
     <string name="chatgpt_reconnect">Войти в ChatGPT снова</string>
     <string name="chatgpt_revoke_failed">На этом устройстве выполнен выход. Отзыв доступа не подтверждён; отключите приложение в настройках ChatGPT.</string>
     <string name="chatgpt_waiting">Ожидание ChatGPT…</string>
+    <string name="postprocessing_reset_settings">Сбросить настройки</string>
+    <string name="value_formats_hint">Измените образцы или выберите формат.</string>
+    <string name="value_formats_invalid">Образец должен содержать цифры, не более 96 символов и без переноса строк.</string>
+    <string name="value_formats_choose">Выбрать формат: %1$s</string>
+    <string name="value_formats_system">Системный: %1$s</string>
+    <string name="value_formats_reset">Как в системе</string>
 </resources>

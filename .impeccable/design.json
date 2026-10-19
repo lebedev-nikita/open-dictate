@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T10:35:56Z",
+  "generatedAt": "2026-10-19T13:36:11Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -41,16 +41,17 @@
       { "name": "stack", "value": "1040px" },
       { "name": "mobile", "value": "700px" }
     ],
-    "postProcessingPresets": {
-      "source": "apps/macos/Sources/OpenDictateCore/Resources/postprocessing-presets.json",
-      "values": "Shared values key; Format values / Отформатировать значения. Russian/English examples cover integers, decimals, dates, clock times, durations, percentages, money, measurements, ranges and fractions, with ambiguity, precision and identifier guards.",
-      "persistence": "Explicit plus appends an editable block and exact-block deduplication disables the action. Saved prompts remain plain strings; no automatic migration of existing prompt text. Punctuation remains the default."
+    "postProcessingOptions": {
+      "source": "apps/macos/Sources/OpenDictateCore/Resources/postprocessing-rules.json",
+      "values": "Ten shared type definitions, suggestions and rules; native menus edit examples instead of exposing the generated prompt.",
+      "persistence": "System-region examples are stored on first enable or menu save, then synchronized unchanged. Legacy arbitrary prompts are replaced by menu settings; punctuation starts on.",
+      "synchronization": "Atomic version-1 postprocessingOptions contains enabled, punctuation, valuesEnabled and formats; generated instructions never enter Drive."
     },
     "textProcessingModel": {
       "label": "Text model / Текстовая модель",
       "defaults": "TextProcessingModel.defaults on each platform owns the sole built-in GPT-6 Luna option (gpt-6-luna), selected by default.",
-      "behavior": "Saved independently of prompt drafts. Transformation/voice editing and post-processing use an immutable session-start snapshot; Accurate retry captures the choice at invocation. Selector stays visible in Live for transformation; post-processing remains Accurate-only. AI history search stays fixed to gpt-6-luna.",
-      "synchronization": "Drive syncs textProcessingModel and validates model ID syntax before atomic import. Retired textModel remains discarded; inner postprocessing.model stays fixed compatibility metadata and does not select requests.",
+      "behavior": "Saved independently of post-processing options. Transformation/voice editing and post-processing use an immutable session-start snapshot; Accurate retry captures the choice at invocation. Selector stays visible in Live for transformation; post-processing remains Accurate-only. AI history search stays fixed to gpt-6-luna.",
+      "synchronization": "Drive syncs textProcessingModel and validates model ID syntax before atomic import. Retired textModel remains discarded; postprocessingOptions stores structured post-processing choices independently.",
       "scope": "Existing native worlds, controls and tokens retained; no new shipping raster asset."
     },
     "historyTimings": {
@@ -192,18 +193,23 @@
         }
       },
       "postProcessing": {
-        "implementation": "PostProcessingSettings.kt; SettingsScreen.kt Accurate-only group after Dictation; model/PostProcessing.kt; DictationForegroundService.kt",
-        "presentation": "Existing neutral Material 3 group; one full-row 48dp minimum switch semantic target, 16dp padding and 14dp spacing. Instruction rows have text left and accessible plus buttons right; the 160–280dp outlined prompt editor precedes wrapping Reset prompt/Cancel/Save actions. Keyboard-aware fields; auxiliary helper prose removed, localized validation retained.",
-        "interaction": "Visible only in Accurate; Live hides the group while retaining saved settings and saveable unsaved drafts across mode switching and Activity recreation. Off collapses controls; switch saves immediately. Prompt defaults to punctuation/capitalization correction. Plus buttons append editable punctuation/value blocks and disable for an existing exact block. Reset stages the prompt default only; Cancel reloads saved values; Save commits valid changed drafts. Empty prompt skips processing. Incoming sync preserves edited drafts. Localized validation retains the 16KiB UTF-8 prompt bound. Post-processing and transformation/voice editing use the shared saved textProcessingModel snapshot. AI history search remains fixed to gpt-6-luna. The shared Text model / Текстовая модель selector stays visible in both modes beside transcription models.",
-        "scope": "Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it without changing saved configuration, and voice editing remains separate. Drive syncs saved configuration with nullable prompt, without bundled default text. Drive syncs textProcessingModel with model-ID validation before atomic import. Retired textModel remains discarded; inner postprocessing.model is fixed compatibility metadata only. Enabled state, prompt and source-choice behavior remain unchanged. No new tokens or shipping assets.",
+        "implementation": "PostProcessingSettings.kt; SettingsScreen.kt Accurate-only group; model/PostProcessing.kt; model/ValueFormatting.kt; shared postprocessing-rules.json",
+        "presentation": "Neutral Material 3 group, 16dp padding, 14dp spacing and 48dp targets. Punctuation switch plus Format values switch/popup action; no prompt editor or plus/Save actions. Fully expanded native bottom sheet with scrollable keyboard-aware outlined fields, type checkboxes and suggestion menus.",
+        "interaction": "Off/collapsed initially; punctuation initially on. Ordinary switches save immediately and values off retains examples. Menu edits a saveable draft: System defaults resets it, Cancel discards, Done saves valid examples and enables values. Reset settings restores punctuation only while retaining global enabled. Region defaults use system locale independently of app language and honor Settings.System.TIME_12_24.",
+        "scope": "Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it while preserving saved configuration, and voice editing remains separate. Cancellation and failures preserve the existing delivery and transcript safeguards. Drive synchronizes the atomic version-1 postprocessingOptions configuration, including enabled state, punctuation, value-formatting state and stored examples. The generated prompt is assembled from shared postprocessing-rules.json rules at request time and never synchronized. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared textProcessingModel key remains independent; retired textModel and postprocessing entries do not restore prompt editing. No new tokens or shipping assets.",
         "review": {
-          "verdict": "pass",
           "disposition": "ship",
-          "scope": "Narrow native Accurate-only value-formatting preset addition; Reset prompt/Cancel/Save remain below the prompt editor.",
-          "findings": "Earlier UI/source finish review passed the value-formatting preset addition, with disposition ship and no material fixes.",
-          "screenshots": [".impeccable/review/accurate-post-android-en-phone-expanded.png", ".impeccable/review/accurate-post-android-en-phone-values.png", ".impeccable/review/accurate-post-android-ru-dark-large-expanded.png", ".impeccable/review/accurate-post-android-ru-dark-large-values.png", ".impeccable/review/accurate-post-android-tablet-expanded.png", ".impeccable/review/accurate-post-android-tablet-values.png"],
-          "validation": "Supplied verification: 164 JVM tests, focused long-resource round trips, three English UI tests and one each on Russian dark phone at 1.3 font scale and tablet, covering new-block Save, deduplication, recreation and reset. Required Android unit, Debug/Release lint and assembly checks passed. Fresh finish review viewed six valid expanded/value captures; values show saved long-prompt excerpts in the native scrollable editor. Other Live, bottom and collapsed captures were regenerated as supporting evidence.",
-          "limits": "Native emulator review evidence; no HTML detector. Physical-device behavior, end-to-end insertion, real Google sign-in, paid OpenAI requests and model-output quality remain outside scope."
+          "findings": "Documentation-fix verification resolved the sole stale-documentation finding; prior UI/source inspection passed with all nine required captures viewed and valid. Ship covers this scored fix scope.",
+          "screenshots": [
+            ".impeccable/review/post-menu-android-phone-en-formats.png",
+            ".impeccable/review/post-menu-android-phone-en-formats-bottom.png",
+            ".impeccable/review/post-menu-android-phone-ru-large-formats.png",
+            ".impeccable/review/post-menu-android-tablet-en-formats.png",
+            ".impeccable/review/post-menu-android-tablet-landscape-en-formats.png",
+            ".impeccable/review/post-menu-android-phone-en-expanded.png"
+          ],
+          "validation": "Supplied: 172 JVM tests; Debug/Release lint and assemblies; three UI instrumentation tests in four English/Russian phone/tablet configurations, including Russian 1.3 font scale and tablet landscape.",
+          "limits": "Native emulator review evidence; no HTML detector, fresh physical-device smoke, real Drive/API requests, insertion or model-output verification."
         }
       },
       "wordReplacements": {
@@ -423,17 +429,20 @@
           },
           {
             "name": "Post-processing Settings",
-            "implementation": "PostProcessingSettingsView.swift; SettingsView.swift Dictation page; AppModel.swift; OpenDictateCore/PostProcessing.swift",
-            "description": "Accurate-only native section between transcription and shortcuts; Live hides section/divider while retaining saved settings and unsaved draft. Immediate switch collapses controls while off. Existing system type, semantic surfaces, 14pt spacing and 150pt prompt editor with 8pt inset/corner. Instruction rows place wrapping text left and accessible plus buttons right; Reset prompt/Cancel/Save sit below the editor. Auxiliary helper prose removed; localized validation remains.",
-            "interaction": "Post-processing and transformation/voice editing use the shared saved textProcessingModel snapshot. AI history search remains fixed to gpt-6-luna. The shared Text model / Текстовая модель selector stays visible in both modes beside transcription models. Prompt defaults to punctuation/capitalization correction. Plus buttons append editable punctuation/value blocks once and disable for an existing exact block; Reset stages prompt default only, Cancel reloads saved values, Save commits valid changed drafts. Empty prompt skips processing; incoming sync preserves edited drafts. An inline error covers the 16KiB UTF-8 prompt bound.",
-            "scope": "Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it without changing saved configuration, and voice editing remains separate. Drive syncs saved configuration with nullable prompt, without bundled default text. Drive syncs textProcessingModel with model-ID validation before atomic import. Retired textModel remains discarded; inner postprocessing.model is fixed compatibility metadata only. Enabled state, prompt and source-choice behavior remain unchanged. No new tokens or shipping assets.",
+            "implementation": "PostProcessingSettingsView.swift; OpenDictateCore/PostProcessing.swift; OpenDictateCore/ValueFormatting.swift; shared postprocessing-rules.json",
+            "description": "Accurate-only section with native system type, semantic surfaces and 14pt spacing. Off/collapsed by default; punctuation initially on. Format values has a switch and a separate native-popover action with ten checkboxes, editable examples and suggestion menus. No final-prompt editor or plus/Save prompt controls.",
+            "interaction": "Ordinary switches save immediately; values off retains examples. Popover uses 420pt width, 20pt padding and 370pt scroll viewport. System defaults resets draft; Cancel/Escape discards; Done/Enter saves valid draft and enables values. Reset settings restores punctuation only while preserving global enabled. Stored defaults derive from system region independently of app-language override.",
+            "scope": "Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it while preserving saved configuration, and voice editing remains separate. Cancellation and failures preserve the existing delivery and transcript safeguards. Drive synchronizes the atomic version-1 postprocessingOptions configuration, including enabled state, punctuation, value-formatting state and stored examples. The generated prompt is assembled from shared postprocessing-rules.json rules at request time and never synchronized. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared textProcessingModel key remains independent; retired textModel and postprocessing entries do not restore prompt editing. No new tokens or shipping assets.",
             "review": {
-              "verdict": "pass",
               "disposition": "ship",
-              "screenshots": [".impeccable/review/accurate-post-macos-en-true.png", ".impeccable/review/accurate-post-macos-en-true-values.png", ".impeccable/review/accurate-post-macos-ru-true.png", ".impeccable/review/accurate-post-macos-ru-true-values.png"],
-              "validation": "Supplied verification: 187 Swift tests, focused long-resource round trips and successful universal native packaging. Fresh finish review viewed four valid English/Russian expanded/value captures; values show saved long-prompt excerpts in the native scrollable editor. Other collapsed components and full Accurate/Live pages were regenerated as supporting evidence.",
-              "findings": "Earlier UI/source finish review passed the value-formatting preset addition, with disposition ship and no material fixes.",
-              "limits": "Isolated localOnly NSHostingView captures are review evidence; test-runner footer version is not installer evidence. No HTML detector. OS integration, TCC, insertion, physical devices, real Google sign-in, paid OpenAI requests and model-output quality remain outside scope."
+              "findings": "Documentation-fix verification resolved the sole stale-documentation finding; prior UI/source inspection passed with all nine required captures viewed and valid. Ship covers this scored fix scope.",
+              "screenshots": [
+                ".impeccable/review/value-formats-macos-ru-top.png",
+                ".impeccable/review/value-formats-macos-en-bottom.png",
+                ".impeccable/review/postprocessing-macos-ru-true.png"
+              ],
+              "validation": "Supplied: 203 Swift tests and successful universal packaging.",
+              "limits": "Isolated native production-component captures, not full OS flow or installer evidence. No HTML detector, fresh TCC/hotkey/insertion smoke, real Drive/API requests or model-output verification."
             }
           },
           {

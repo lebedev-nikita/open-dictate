@@ -282,15 +282,10 @@
     <string name="gestures_hide_right_hint">Swipe right when not recording</string>
     <string name="gestures_hide_left_hint">Swipe left when not recording</string>
     <string name="gestures_keyboard_recovery">To bring the button back, close and reopen the keyboard.</string>
-    <string name="postprocessing_prompt_limit">Prompt is too long. Maximum: 16,384 UTF-8 bytes.</string>
     <string name="postprocessing_cancel">Cancel</string>
-    <string name="postprocessing_save">Save</string>
     <string name="postprocessing_title">Post-processing</string>
-    <string name="postprocessing_prompt">Post-processing prompt</string>
-    <string name="postprocessing_add_instruction">Add instruction: %1$s</string>
     <string name="postprocessing_punctuation">Correct punctuation</string>
     <string name="postprocessing_values">Format values</string>
-    <string name="postprocessing_reset">Reset prompt</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>
     <string name="history_transcription_time">Transcr. %1$s s</string>
     <string name="history_postprocessing_time">Post-proc. %1$s s</string>
@@ -307,4 +302,10 @@
     <string name="chatgpt_reconnect">Reconnect ChatGPT</string>
     <string name="chatgpt_revoke_failed">Signed out on this device. Remote sign-out was not confirmed; disconnect the app in ChatGPT settings.</string>
     <string name="chatgpt_waiting">Waiting for ChatGPT…</string>
+    <string name="postprocessing_reset_settings">Reset settings</string>
+    <string name="value_formats_hint">Edit the examples or choose a format.</string>
+    <string name="value_formats_invalid">Use an example with digits, at most 96 characters and no line breaks.</string>
+    <string name="value_formats_choose">Choose format: %1$s</string>
+    <string name="value_formats_system">System: %1$s</string>
+    <string name="value_formats_reset">System defaults</string>
 </resources>
