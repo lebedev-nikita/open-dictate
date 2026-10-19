@@ -169,7 +169,7 @@ struct SettingsView: View {
             }
             Divider()
             PostProcessingSettingsView(preferences: preferences)
-            Divider()
+            if preferences.mode == .accurate { Divider() }
             VStack(alignment: .leading, spacing: 10) {
                 shortcutRow(t("Start / finish dictation", "Начать / завершить диктовку"), preferences.shortcutLabel)
                 shortcutRow(t("Edit selected text by voice", "Изменить выделение голосом"), preferences.editShortcutLabel)

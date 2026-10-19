@@ -81,7 +81,7 @@ final class AppModel: ObservableObject {
             self.target = target; self.transform = transform; self.key = key
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
             context = preferences.context
-            postProcessing = preferences.postProcessing
+            postProcessing = preferences.postProcessing.forMode(mode)
             timeout = preferences.timeout
         }
     }
@@ -352,7 +352,7 @@ final class AppModel: ObservableObject {
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
             let processed: PostProcessingResult
-            if !session.transform && (!localOnly || processTranscript != nil) {
+            if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
                 if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing) }
                 else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing) }
                 try Task.checkCancellation()

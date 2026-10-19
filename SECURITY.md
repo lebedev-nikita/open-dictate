@@ -11,7 +11,7 @@ for the rule list and enabled states.
 
 Optional post-processing sends recognized dictation text and the configured
 instruction directly to OpenAI through Responses with storage disabled. It is
-available after ordinary Live, Accurate and retranscription on both platforms;
+available after ordinary Accurate dictation and Accurate retranscription on both platforms;
 voice-edit commands skip it. Settings are captured at session start. Disabled
 post-processing or an empty prompt makes no additional request. Failures retain
 the original transcript and display a curated warning; cancellation still prevents

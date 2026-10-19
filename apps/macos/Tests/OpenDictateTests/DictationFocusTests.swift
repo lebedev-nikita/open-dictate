@@ -106,7 +106,7 @@ final class DictationFocusTests: XCTestCase {
                 captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
                 processTranscript: { _, _, settings in await processor.process(settings) })
             model.preferences.postProcessing = .init(enabled: true, prompt: "Original instruction")
-            model.toggleLocalRecording(mode: .live)
+            model.toggleLocalRecording(mode: .accurate)
             await waitFor(.recording, in: model)
             model.preferences.postProcessing.prompt = "Changed after start"
             model.stop()
@@ -123,6 +123,24 @@ final class DictationFocusTests: XCTestCase {
             XCTAssertEqual(model.lastTranscript, cancel ? "" : "processed transcript")
             model.shutdown()
         }
+    }
+
+    @MainActor func testLiveSkipsPostProcessingEvenWhenEnabledAndModeChangesBeforeStop() async {
+        let editor = FocusEditor("original "), processor = HeldPostProcessor()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+            captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
+            processTranscript: { _, _, settings in await processor.process(settings) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        model.toggleLocalRecording(mode: .live)
+        await waitFor(.recording, in: model)
+        model.preferences.mode = .accurate
+        model.stop()
+        await waitFor(.idle, in: model)
+        let count = await processor.settings.count
+        await processor.release()
+        XCTAssertEqual(count, 0)
+        XCTAssertFalse(model.lastTranscript.isEmpty)
     }
 
     @MainActor func testVoiceEditSkipsPostProcessing() async {

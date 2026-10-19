@@ -9,6 +9,7 @@ data class PostProcessingSettings(
     val enabled: Boolean = false,
     val prompt: String? = null,
 ) {
+    fun forMode(mode: TranscriptionModel): PostProcessingSettings = if (mode == TranscriptionModel.ACCURATE) this else copy(enabled = false)
     val effectivePrompt: String get() = prompt ?: PostProcessingPreset.PUNCTUATION.text
     val shouldProcess: Boolean get() = enabled && effectivePrompt.isNotBlank()
     val isValid: Boolean get() = (prompt?.toByteArray(Charsets.UTF_8)?.size ?: 0) <= MAXIMUM_PROMPT_BYTES

@@ -29,12 +29,19 @@ class PostProcessingSettingsTest {
     @Test fun toggleDraftPresetsSaveResetAndRestart() {
         val store = SettingsStore(compose.activity)
         val original = store.postProcessing
+        val originalMode = store.model
         val preferences = compose.activity.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE)
         val journal = preferences.getString("sync_document", null)
         preferences.edit().remove("sync_document").commit()
         try {
-            store.postProcessing = PostProcessingSettings()
-            compose.activityRule.scenario.recreate()
+            compose.runOnIdle {
+                androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java]
+                    .savePostProcessing(PostProcessingSettings())
+            }
+            action(R.string.settings_mode_live)
+            compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).assertDoesNotExist()
+            capture("live")
+            action(R.string.settings_mode_accurate)
             compose.onNodeWithText("Transcription prompt").assertDoesNotExist()
             compose.onNodeWithText("Промпт транскрипции").assertDoesNotExist()
             compose.onNodeWithText(label(R.string.postprocessing_prompt)).assertDoesNotExist()
@@ -46,9 +53,12 @@ class PostProcessingSettingsTest {
             compose.onNodeWithText("Модель постобработки").assertDoesNotExist()
             compose.onNodeWithText("Editing model").assertDoesNotExist()
             compose.onNodeWithText("Модель для правок").assertDoesNotExist()
-            compose.onNodeWithText(label(R.string.postprocessing_punctuation)).performScrollTo().assertIsNotEnabled()
-            action(R.string.postprocessing_numbers)
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.postprocessing_add_instruction, label(R.string.postprocessing_punctuation))).performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.postprocessing_add_instruction, label(R.string.postprocessing_numbers))).performScrollTo().performClick()
             assertNull(store.postProcessing.prompt)
+            action(R.string.settings_mode_live)
+            compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).assertDoesNotExist()
+            action(R.string.settings_mode_accurate)
             compose.activityRule.scenario.recreate()
             compose.onNodeWithText(PostProcessingPreset.NUMBERS.text, substring = true).assertExists()
             action(R.string.postprocessing_save)
@@ -56,6 +66,7 @@ class PostProcessingSettingsTest {
             action(R.string.postprocessing_reset)
             action(R.string.postprocessing_save)
             assertNull(store.postProcessing.prompt)
+            compose.onNodeWithText(label(R.string.postprocessing_prompt)).performScrollTo()
             capture("expanded-bottom")
             compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).performScrollTo()
             capture("expanded")
@@ -66,6 +77,7 @@ class PostProcessingSettingsTest {
             capture("collapsed")
         } finally {
             store.postProcessing = original
+            store.model = originalMode
             preferences.edit().putString("sync_document", journal).commit()
         }
     }

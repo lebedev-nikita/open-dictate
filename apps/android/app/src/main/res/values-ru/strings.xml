@@ -280,12 +280,10 @@
     <string name="postprocessing_cancel">Отмена</string>
     <string name="postprocessing_save">Сохранить</string>
     <string name="postprocessing_title">Постобработка</string>
-    <string name="postprocessing_description">Применяется после завершения Live или Accurate. Отправляет расшифровку в OpenAI дополнительным запросом.</string>
     <string name="postprocessing_prompt">Промпт постобработки</string>
-    <string name="postprocessing_add_instruction">Добавить инструкцию</string>
+    <string name="postprocessing_add_instruction">Добавить инструкцию: %1$s</string>
     <string name="postprocessing_punctuation">Исправить пунктуацию</string>
     <string name="postprocessing_numbers">Отформатировать числа</string>
     <string name="postprocessing_reset">Сбросить промпт</string>
-    <string name="postprocessing_hint">Кнопки добавляют редактируемый текст. Пустой промпт пропускает постобработку. Сохраните изменения для следующей диктовки.</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
 </resources>

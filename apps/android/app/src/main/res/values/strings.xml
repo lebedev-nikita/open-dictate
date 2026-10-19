@@ -284,12 +284,10 @@
     <string name="postprocessing_cancel">Cancel</string>
     <string name="postprocessing_save">Save</string>
     <string name="postprocessing_title">Post-processing</string>
-    <string name="postprocessing_description">Applies after Live or Accurate finishes. Sends the transcript to OpenAI in an additional request.</string>
     <string name="postprocessing_prompt">Post-processing prompt</string>
-    <string name="postprocessing_add_instruction">Add an instruction</string>
+    <string name="postprocessing_add_instruction">Add instruction: %1$s</string>
     <string name="postprocessing_punctuation">Correct punctuation</string>
     <string name="postprocessing_numbers">Format numbers</string>
     <string name="postprocessing_reset">Reset prompt</string>
-    <string name="postprocessing_hint">The buttons add editable text. An empty prompt skips post-processing. Save to apply changes to the next dictation.</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>
 </resources>

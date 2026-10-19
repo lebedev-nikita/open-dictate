@@ -12,6 +12,20 @@ import java.io.File
 import java.io.IOException
 
 class PostProcessingTest {
+    @Test fun liveSnapshotSkipsRequestWithoutChangingSavedSettings() = runTest {
+        val settings = PostProcessingSettings(true, "Keep text")
+        val live = settings.forMode(TranscriptionModel.LIVE)
+        val result = PostProcessing.apply("Original", live) {
+            fail("Live must not make a post-processing request")
+            "Changed"
+        }
+        assertEquals("Original", result.text)
+        assertFalse(live.enabled)
+        assertEquals(settings.prompt, live.prompt)
+        assertTrue(settings.enabled)
+        assertEquals(settings, settings.forMode(TranscriptionModel.ACCURATE))
+    }
+
     @Test fun sharedSettingsFixture() {
         val fixture = File("../../shared/postprocessing-settings.json").takeIf(File::isFile)
             ?: File("../../../shared/postprocessing-settings.json")

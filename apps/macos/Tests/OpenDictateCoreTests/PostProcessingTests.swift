@@ -2,6 +2,20 @@ import XCTest
 @testable import OpenDictateCore
 
 final class PostProcessingTests: XCTestCase {
+    func testLiveSnapshotDisablesProcessingWithoutChangingSavedSettings() async throws {
+        let settings = PostProcessingSettings(enabled: true, prompt: "Keep text")
+        let live = settings.forMode(.live)
+        let result = try await PostProcessing.apply(source: "Original", settings: live) {
+            XCTFail("Live must not make a post-processing request")
+            return "Changed"
+        }
+        XCTAssertEqual(result.text, "Original")
+        XCTAssertFalse(live.enabled)
+        XCTAssertEqual(live.prompt, settings.prompt)
+        XCTAssertTrue(settings.enabled)
+        XCTAssertEqual(settings.forMode(.accurate), settings)
+    }
+
     func testCrossPlatformSettingsFixture() throws {
         struct Example: Decodable { let encoded: String; let enabled: Bool; let legacyEncoded: String; let prompt: String? }
         var root = URL(fileURLWithPath: #filePath)

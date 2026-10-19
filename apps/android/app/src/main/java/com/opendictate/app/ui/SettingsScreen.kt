@@ -72,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -230,8 +231,13 @@ internal fun SettingsScreen(
                             { dictionaryOpen = true })
                     }
 
-                    Spacer(Modifier.height(28.dp))
-                    SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, viewModel::savePostProcessing) }
+                    val postProcessingState = rememberSaveableStateHolder()
+                    if (state.model == TranscriptionModel.ACCURATE) {
+                        Spacer(Modifier.height(28.dp))
+                        postProcessingState.SaveableStateProvider("postprocessing") {
+                            SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, viewModel::savePostProcessing) }
+                        }
+                    }
 
                     SectionTitle(stringResource(R.string.dictation_button_title))
                     SettingsGroup {

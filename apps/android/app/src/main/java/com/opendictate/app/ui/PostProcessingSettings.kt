@@ -2,6 +2,8 @@ package com.opendictate.app.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -38,25 +40,17 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
             Switch(settings.enabled, onCheckedChange = null)
         }
         if (settings.enabled) {
-            Text(stringResource(R.string.postprocessing_description), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
-            OutlinedTextField(value = prompt, onValueChange = { prompt = it },
-                label = { Text(stringResource(R.string.postprocessing_prompt)) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).keepFullBoundsInView(),
-                isError = prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES,
-                supportingText = if (prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES)
-                    {{ Text(stringResource(R.string.postprocessing_prompt_limit)) }} else null)
-            Text(stringResource(R.string.postprocessing_add_instruction), style = MaterialTheme.typography.labelMedium, color = SettingsMuted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { prompt = PostProcessingPreset.PUNCTUATION.appendTo(prompt) },
-                    enabled = !prompt.contains(PostProcessingPreset.PUNCTUATION.text), modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.postprocessing_punctuation))
-                }
-                OutlinedButton(onClick = { prompt = PostProcessingPreset.NUMBERS.appendTo(prompt) },
-                    enabled = !prompt.contains(PostProcessingPreset.NUMBERS.text), modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.postprocessing_numbers))
+            for ((preset, label) in listOf(
+                PostProcessingPreset.PUNCTUATION to stringResource(R.string.postprocessing_punctuation),
+                PostProcessingPreset.NUMBERS to stringResource(R.string.postprocessing_numbers))) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    IconButton(onClick = { prompt = preset.appendTo(prompt) }, enabled = !prompt.contains(preset.text),
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+                        Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.postprocessing_add_instruction, label))
+                    }
                 }
             }
-            Text(stringResource(R.string.postprocessing_hint), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { prompt = PostProcessingPreset.PUNCTUATION.text },
                     enabled = prompt != PostProcessingPreset.PUNCTUATION.text, modifier = Modifier.heightIn(min = 48.dp)) {
@@ -68,6 +62,12 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
                 Button(onClick = { onChange(draft); load(draft) }, enabled = changed && draft.isValid,
                     modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.postprocessing_save)) }
             }
+            OutlinedTextField(value = prompt, onValueChange = { prompt = it },
+                label = { Text(stringResource(R.string.postprocessing_prompt)) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).keepFullBoundsInView(),
+                isError = prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES,
+                supportingText = if (prompt.toByteArray(Charsets.UTF_8).size > PostProcessingSettings.MAXIMUM_PROMPT_BYTES)
+                    {{ Text(stringResource(R.string.postprocessing_prompt_limit)) }} else null)
         }
     }
 }

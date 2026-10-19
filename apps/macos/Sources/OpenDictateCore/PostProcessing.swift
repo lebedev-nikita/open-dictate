@@ -8,6 +8,11 @@ public struct PostProcessingSettings: Codable, Equatable, Sendable {
     public init(enabled: Bool = false, prompt: String? = nil) {
         self.enabled = enabled; self.prompt = prompt
     }
+    public func forMode(_ mode: DictationMode) -> Self {
+        var result = self
+        if mode != .accurate { result.enabled = false }
+        return result
+    }
     public var effectivePrompt: String { prompt ?? PostProcessingPreset.punctuation.text }
     public var shouldProcess: Bool { enabled && !effectivePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     public var isValid: Bool {

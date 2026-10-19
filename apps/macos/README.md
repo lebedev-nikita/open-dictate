@@ -103,14 +103,15 @@ preferences migrate automatically. Language hints remain local preferences.
 
 ### Post-processing
 
-Settings → Dictation → **Post-processing** expands when enabled and retains its
-settings when disabled. It is off by default and always uses `gpt-6-luna`. A punctuation
+In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
+Live hides the section and retains its saved settings. It is off by default and always uses `gpt-6-luna`. A punctuation
 instruction is prefilled. Edit the prompt, then choose **Save**.
-**Correct punctuation** and **Format numbers** append editable instruction blocks
-without duplicates. **Reset prompt** stages the punctuation default; Save applies
+**Correct punctuation** and **Format numbers** have a plus button on the right
+that appends an editable instruction block without duplicates. The prompt editor
+is at the bottom of the section. **Reset prompt** stages the punctuation default; Save applies
 it. Clearing the prompt skips the additional request.
 
-It runs once after ordinary Live, Accurate or retranscription, before local word
+It runs once after ordinary Accurate dictation or Accurate retranscription, before local word
 replacements. Voice-edit commands skip it. The transcript goes directly to OpenAI
 Responses with `store: false`. Failure keeps the original transcript and shows a
 warning; cancellation and focus guards still apply. The punctuation-only default

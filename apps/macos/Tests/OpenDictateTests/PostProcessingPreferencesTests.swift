@@ -36,9 +36,10 @@ final class PostProcessingPreferencesTests: XCTestCase {
         let suite = "removed-prompt-layout-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = AppModel(localOnly: true, defaults: defaults)
-        for (language, dark, enabled) in [("en", true, false), ("ru", false, false), ("ru", false, true)] {
+        for (language, dark, enabled, mode) in [("en", true, false, DictationMode.accurate), ("ru", false, false, .accurate), ("ru", false, true, .accurate), ("en", false, true, .live)] {
             model.preferences.interfaceLanguage = language
             model.preferences.theme = dark ? .dark : .light
+            model.preferences.mode = mode
             model.preferences.postProcessing.enabled = enabled
             let host = NSHostingView(rootView: SettingsView(model: model, preferences: model.preferences,
                 history: model.history, replacements: model.replacements).frame(width: 1000, height: 900))
@@ -52,7 +53,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
                 let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                 host.cacheDisplay(in: host.bounds, to: bitmap)
                 try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("removed-prompt-macos-\(language)-\(enabled).png"))
+                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("accurate-post-macos-full-\(mode.rawValue)-\(language)-\(enabled).png"))
             }
             window.close()
         }
@@ -64,6 +65,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
         let preferences = Preferences(defaults: defaults)
         for (language, dark, enabled, width) in [("en", true, true, 568.0), ("ru", false, true, 464.0), ("ru", false, false, 464.0)] {
             preferences.interfaceLanguage = language
+            preferences.mode = .accurate
             preferences.postProcessing.enabled = enabled
             let host = NSHostingView(rootView: PostProcessingSettingsView(preferences: preferences).padding(28)
                 .frame(width: width, height: enabled ? 650 : 120, alignment: .topLeading)

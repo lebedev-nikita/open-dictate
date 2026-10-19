@@ -97,7 +97,7 @@ class DictationForegroundService : Service() {
         val model = settings.model
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
-        val postProcessing = settings.postProcessing
+        val postProcessing = settings.postProcessing.forMode(model)
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
         val dictionary = settings.prompt
@@ -328,7 +328,7 @@ class DictationForegroundService : Service() {
         val languages = settings.languages
         val dictionary = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
-        val postProcessing = settings.postProcessing
+        val postProcessing = settings.postProcessing.forMode(model)
         activeOperation = DictationOperation.DICTATION
         startForeground(NOTIFICATION_ID, notification(true, DictationOperation.DICTATION))
         DictationStateBus.set(
