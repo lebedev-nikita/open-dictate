@@ -13,16 +13,22 @@ synchronizes rules and their enabled states with your other devices.
 Completed text saved to history or copied to the clipboard includes replacements.
 An explicit AI history search may send that saved text to OpenAI.
 
+On both platforms, local history may also include request durations for Accurate
+transcription and optional post-processing, or a Live mode label. This metadata
+stays on the device and is removed with its history entry; it is not sent through
+Drive or AI search.
+
 ## Optional post-processing
 
 On either platform, **Post-processing** is off by default. When enabled, it sends
 only the recognized transcript and your instruction directly to OpenAI through
-the Responses API with `store: false`. It runs after ordinary Live, Accurate or
-retranscription, before local word replacements. Voice-edit commands skip it.
+the Responses API with `store: false`. It runs after ordinary Accurate dictation
+or Accurate retranscription, before local word replacements. Live dictation and
+voice-edit commands skip it.
 A blank prompt makes no additional request. Errors retain the original transcript.
 
 The model is fixed to `gpt-6-luna`; the default instruction corrects punctuation.
-Buttons add editable punctuation or number-formatting instructions. Custom
+Buttons add editable punctuation or value-formatting instructions. Custom
 instructions may rewrite text. Post-processing settings synchronize through
 Google Drive when connected; transcripts are never included in synchronization.
 

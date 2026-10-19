@@ -81,6 +81,8 @@ private actor HeldPostProcessor {
     }
 }
 
+@MainActor private final class HistoryRequestClock { var value = Duration.zero }
+
 final class DictationFocusTests: XCTestCase {
     private var defaultsDomains: [String] = []
     private func isolatedDefaults() -> UserDefaults {
@@ -125,6 +127,35 @@ final class DictationFocusTests: XCTestCase {
         }
     }
 
+    @MainActor func testHistoryMeasuresEachAwaitedRequestAndExcludesRecordingEvenWhenPostProcessingFails() async {
+        for failed in [false, true] {
+            let clock = HistoryRequestClock(), editor = FocusEditor("original ")
+            let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+                captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
+                transcribeAudio: { _, _, _, _ in
+                    await Task.yield()
+                    await MainActor.run { clock.value += .milliseconds(1250) }
+                    return "synthetic transcript"
+                }, processTranscript: { source, _, _ in
+                    await Task.yield()
+                    await MainActor.run { clock.value += .milliseconds(450) }
+                    return .init(text: source, failed: failed)
+                }, requestClock: { clock.value })
+            model.preferences.saveHistory = true
+            model.preferences.postProcessing = .init(enabled: true)
+            model.toggleLocalRecording(mode: .accurate)
+            await waitFor(.recording, in: model)
+            clock.value += .seconds(40) // User recording time must not be included.
+            model.preferences.mode = .live
+            model.stop()
+            await waitFor(.idle, in: model)
+            XCTAssertEqual(model.history.entries.first?.mode, "accurate")
+            XCTAssertEqual(model.history.entries.first?.transcriptionMillis, 1250)
+            XCTAssertEqual(model.history.entries.first?.postProcessingMillis, 450)
+            model.shutdown()
+        }
+    }
+
     @MainActor func testLiveSkipsPostProcessingEvenWhenEnabledAndModeChangesBeforeStop() async {
         let editor = FocusEditor("original "), processor = HeldPostProcessor()
         let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
@@ -141,6 +172,9 @@ final class DictationFocusTests: XCTestCase {
         await processor.release()
         XCTAssertEqual(count, 0)
         XCTAssertFalse(model.lastTranscript.isEmpty)
+        XCTAssertEqual(model.history.entries.first?.mode, "live")
+        XCTAssertNil(model.history.entries.first?.transcriptionMillis)
+        XCTAssertNil(model.history.entries.first?.postProcessingMillis)
     }
 
     @MainActor func testVoiceEditSkipsPostProcessing() async {
@@ -337,6 +371,8 @@ final class DictationFocusTests: XCTestCase {
         XCTAssertEqual(second.text, "second replaced transcript")
         XCTAssertEqual(model.history.entries.first?.mode, "accurate")
         XCTAssertEqual(model.history.entries.first?.text, model.lastTranscript)
+        XCTAssertNotNil(model.history.entries.first?.transcriptionMillis)
+        XCTAssertNil(model.history.entries.first?.postProcessingMillis)
         XCTAssertTrue(model.canRetranscribe)
     }
 

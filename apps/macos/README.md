@@ -199,7 +199,10 @@ See [Apple's function-key guide](https://support.apple.com/102439) and
 Credentials live in a device-only, non-synchronizing Keychain item. Preferences
 use the app's UserDefaults domain. The last 500 completed transcripts are saved
 in `~/Library/Application Support/OpenDictate/history.json` with owner-only
-permissions. Disable history to stop saving future results; delete existing
+permissions. Accurate history includes separate transcription and post-processing
+request durations, including upload and the full response; Live shows its mode
+without timings. Old entries and skipped stages have no invented durations.
+Disable history to stop saving future results; delete existing
 history separately. Audio is never persisted on macOS.
 
 Errors use native macOS notifications without opening Settings or taking focus.

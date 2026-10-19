@@ -258,18 +258,9 @@ struct SettingsView: View {
             } else {
                 LazyVStack(alignment: .leading, spacing: 18) {
                     ForEach(displayedHistory) { entry in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(entry.date, format: .dateTime.day().month().hour().minute()).foregroundStyle(.secondary)
-                                Spacer()
-                                Button { model.copy(entry.text) } label: { Image(systemName: "doc.on.doc") }
-                                    .help(t("Copy transcript", "Скопировать текст"))
-                                Button { model.cancelSearch(); history.delete(entry.id) } label: { Image(systemName: "trash") }
-                                    .help(t("Delete transcript", "Удалить текст"))
-                            }.font(.caption).buttonStyle(.borderless)
-                            Text(entry.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-                            Divider().padding(.top, 8)
-                        }
+                        HistoryEntryView(entry: entry, russian: preferences.isRussian,
+                            onCopy: { model.copy(entry.text) },
+                            onDelete: { model.cancelSearch(); history.delete(entry.id) })
                     }
                 }
             }

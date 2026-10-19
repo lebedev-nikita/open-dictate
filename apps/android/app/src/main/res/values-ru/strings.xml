@@ -286,4 +286,9 @@
     <string name="postprocessing_values">Отформатировать значения</string>
     <string name="postprocessing_reset">Сбросить промпт</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
+    <string name="history_transcription_time">Транскр. %1$s с</string>
+    <string name="history_postprocessing_time">Постобр. %1$s с</string>
+    <string name="history_transcription_time_description">Транскрипция: %1$s с</string>
+    <string name="history_postprocessing_time_description">Постобработка: %1$s с</string>
+    <string name="history_live_description">Диктовка Live</string>
 </resources>

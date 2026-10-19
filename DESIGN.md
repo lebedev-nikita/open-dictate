@@ -282,6 +282,12 @@ The prompt defaults to punctuation and capitalization correction. Reset changes 
 
 Android retains the neutral Material 3 group, one full-row switch semantic target, outlined fields, wrapping action rows, 48 dp targets and keyboard-aware scrolling. macOS retains system controls, semantic surfaces and an 8pt editor corner. Saved configuration synchronizes through Drive with a nullable prompt rather than uploading bundled default text. Legacy text-model choices are ignored; post-processing model metadata normalizes to the fixed model for earlier RC compatibility without changing enabled state, prompt or the source-choice flow. Processing applies to ordinary Accurate final text and Accurate retry; voice editing retains its own path. Surface briefs record native review evidence and limits. No tokens or shipping raster assets are added.
 
+### Native History Timings
+
+Saved history places compact timing captions between the date and transcript. Accurate entries show separate Transcr. / Post-proc. labels (Транскр. / Постобр. in Russian), with locale-aware seconds to one decimal and <0.1 / <0,1 for sub-100ms requests. Live shows the literal Live label alone. Unknown metadata and skipped post-processing remain absent. Full accessibility names expand the abbreviations.
+
+Android uses wrapping bodySmall labels in SettingsMuted, with 12 dp horizontal and 2 dp vertical gaps. macOS uses a vertically wrapping system caption in semantic primary foreground; the date remains secondary and copy/delete actions retain native styling. Preserve the existing density, hierarchy and appearance choices; no chip, token or raster asset is added. Durations describe each complete network await, including upload/server/response, while excluding recording, local replacements and delivery. Failed post-processing attempts retain elapsed time. Metadata stays local and is excluded from Drive synchronization and AI search. Surface briefs record native review evidence and limits.
+
 ### Cards / Containers
 
 - **Dictation Field:** An Instrument Panel surface with a 1px Hairline Slate border, 16px corners, metadata at the top, and a large cumulative transcript below.

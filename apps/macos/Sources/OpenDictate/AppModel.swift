@@ -37,6 +37,7 @@ final class AppModel: ObservableObject {
     private let transcribeAudio: AudioTranscriber?
     private let processTranscript: TextPostProcessor?
     private let notifyError: (String) -> Void
+    private let requestClock: () -> Duration
     let hotKeys = HotKeys()
     private let client = OpenAIClient()
     private var current: Session?
@@ -93,7 +94,10 @@ final class AppModel: ObservableObject {
          accessibilityTrust: @escaping () -> Bool = { AXIsProcessTrusted() },
          transcribeAudio: AudioTranscriber? = nil,
          processTranscript: TextPostProcessor? = nil,
-         notifyError: @escaping (String) -> Void = { _ in }) {
+         notifyError: @escaping (String) -> Void = { _ in },
+         requestClock: (() -> Duration)? = nil) {
+        let clockOrigin = ContinuousClock.now
+        self.requestClock = requestClock ?? { clockOrigin.duration(to: .now) }
         self.captureTarget = captureTarget
         self.makeRecorder = makeRecorder
         self.accessibilityTrust = accessibilityTrust
@@ -339,6 +343,7 @@ final class AppModel: ObservableObject {
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
             guard bytes >= 4_800 else { throw DictationError.tooShort }
+            let transcriptionStarted = requestClock()
             let transcript: String
             if let transcribeAudio {
                 transcript = try await transcribeAudio(pcm, session.key, session.context, session.timeout)
@@ -351,10 +356,15 @@ final class AppModel: ObservableObject {
             }
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
+            let transcriptionMillis = session.mode == .accurate && (!localOnly || transcribeAudio != nil)
+                ? requestMilliseconds(since: transcriptionStarted) : nil
+            var postProcessingMillis: Int64?
             let processed: PostProcessingResult
             if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
+                let started = requestClock()
                 if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing) }
                 else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing) }
+                if session.postProcessing.shouldProcess { postProcessingMillis = requestMilliseconds(since: started) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
             } else { processed = PostProcessingResult(text: transcript) }
@@ -383,7 +393,8 @@ final class AppModel: ObservableObject {
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
             lastTranscript = result
-            if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue) }
+            if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue,
+                transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis) }
             message = delivered ? preferences.t("Text inserted.", "Текст вставлен.") :
                 preferences.t("Your text is ready to copy from the menu.", "Текст готов. Скопируйте его из меню.")
             if processed.failed {
@@ -392,6 +403,11 @@ final class AppModel: ObservableObject {
             }
             finish(session)
         } catch { if current?.id == session.id { fail(error, session: session) } }
+    }
+
+    private func requestMilliseconds(since start: Duration) -> Int64 {
+        let elapsed = (requestClock() - start).components
+        return max(0, elapsed.seconds * 1_000 + elapsed.attoseconds / 1_000_000_000_000_000)
     }
 
     private func receive(_ text: String, id: UUID) {

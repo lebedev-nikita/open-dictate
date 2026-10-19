@@ -73,8 +73,13 @@ public struct HistoryEntry: Codable, Identifiable, Equatable, Sendable {
     public let date: Date
     public let text: String
     public let mode: String
-    public init(id: UUID = UUID(), date: Date = Date(), text: String, mode: String) {
+    public let transcriptionMillis: Int64?
+    public let postProcessingMillis: Int64?
+    public init(id: UUID = UUID(), date: Date = Date(), text: String, mode: String,
+                transcriptionMillis: Int64? = nil, postProcessingMillis: Int64? = nil) {
         self.id = id; self.date = date; self.text = text; self.mode = mode
+        self.transcriptionMillis = mode == "live" ? nil : transcriptionMillis.flatMap { $0 >= 0 ? $0 : nil }
+        self.postProcessingMillis = mode == "live" ? nil : postProcessingMillis.flatMap { $0 >= 0 ? $0 : nil }
     }
 }
 

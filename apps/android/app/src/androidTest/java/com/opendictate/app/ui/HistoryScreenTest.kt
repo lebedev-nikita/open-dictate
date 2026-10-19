@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import com.opendictate.app.R
 import com.opendictate.app.data.TranscriptHistoryItem
+import com.opendictate.app.model.TranscriptionModel
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -64,6 +65,37 @@ class HistoryScreenTest {
         compose.onNodeWithContentDescription(context.getString(R.string.history_delete_item)).performScrollTo().performClick()
         compose.onNodeWithText(context.getString(R.string.history_delete_action)).performClick()
         assertEquals(entry.id, deleted)
+    }
+
+    @Test fun requestTimingsRemainCompactAndLiveOnlyShowsItsLabel() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val entries = listOf(
+            TranscriptHistoryItem(1, "Synthetic Accurate transcript with both request timings.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, 1250, 450),
+            TranscriptHistoryItem(2, "Synthetic Live transcript.", 1_760_000_000_000,
+                TranscriptionModel.LIVE, 9000, 1000),
+            TranscriptHistoryItem(3, "Synthetic transcript without post-processing.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, 800),
+            TranscriptHistoryItem(4, "Synthetic legacy transcript without recorded timings.", 1_760_000_000_000),
+        )
+        compose.setContent {
+            OpenDictateTheme {
+                TranscriptHistoryScreen(HistoryUiState(entries = entries, isLoading = false),
+                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {})
+            }
+        }
+        val locale = context.resources.configuration.locales[0]
+        val transcription = context.getString(R.string.history_transcription_time_description, formatHistorySeconds(1250, locale))
+        val postProcessing = context.getString(R.string.history_postprocessing_time_description, formatHistorySeconds(450, locale))
+        compose.onNodeWithContentDescription(transcription).assertExists()
+        compose.onNodeWithContentDescription(postProcessing).assertExists()
+        capture("history-timing-top")
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entries[1].text))
+        compose.onNodeWithContentDescription(context.getString(R.string.history_live_description)).assertExists()
+        compose.onNodeWithText(context.getString(R.string.history_transcription_time, formatHistorySeconds(9000, locale))).assertDoesNotExist()
+        compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entries.last().text))
+        compose.onNodeWithText(entries.last().text).assertIsDisplayed()
+        capture("history-timing-bottom")
     }
 
     private fun capture(name: String) {

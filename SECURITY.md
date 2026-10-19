@@ -142,3 +142,8 @@ history. The floating menu's Paste last action inserts text directly without
 changing the clipboard. The fallback clipboard item is marked sensitive so
 Android can conceal its preview; users should still treat the system clipboard
 as shared device state.
+
+History request durations and the Live mode label remain local history metadata.
+They are excluded from Drive synchronization and AI history-search payloads.
+Accurate timings use monotonic elapsed time around each full request, including
+upload and response. Recording and text delivery are excluded.

@@ -3,6 +3,8 @@ package com.opendictate.app.ui
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,16 +61,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 import com.opendictate.app.data.TranscriptHistoryItem
+import com.opendictate.app.model.TranscriptionModel
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -405,6 +410,7 @@ private fun HistoryItem(
                     color = SettingsMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                HistoryTimings(item)
                 Spacer(Modifier.height(7.dp))
                 Text(
                     text = item.text,
@@ -423,6 +429,35 @@ private fun HistoryItem(
                     contentDescription = stringResource(R.string.history_delete_item),
                     tint = SettingsSecondary,
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HistoryTimings(item: TranscriptHistoryItem) {
+    val locale = LocalConfiguration.current.locales[0]
+    val labels = if (item.mode == TranscriptionModel.LIVE) {
+        listOf("Live" to stringResource(R.string.history_live_description))
+    } else buildList {
+        item.transcriptionMillis?.takeIf { it >= 0 }?.let {
+            val seconds = formatHistorySeconds(it, locale)
+            add(stringResource(R.string.history_transcription_time, seconds) to
+                stringResource(R.string.history_transcription_time_description, seconds))
+        }
+        item.postProcessingMillis?.takeIf { it >= 0 }?.let {
+            val seconds = formatHistorySeconds(it, locale)
+            add(stringResource(R.string.history_postprocessing_time, seconds) to
+                stringResource(R.string.history_postprocessing_time_description, seconds))
+        }
+    }
+    if (labels.isNotEmpty()) {
+        FlowRow(Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            labels.forEach { (label, description) ->
+                Text(label, color = SettingsMuted, style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.semantics { contentDescription = description })
             }
         }
     }

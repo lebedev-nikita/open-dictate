@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.opendictate.app.MainActivity
@@ -125,6 +126,8 @@ class DictationForegroundService : Service() {
             var savedRecording: LastDictationAudioStore.Recording? = null
             var modelMessage: String? = null
             var postProcessingFailed = false
+            var transcriptionMillis: Long? = null
+            var postProcessingMillis: Long? = null
             try {
                 // The idle button can be tapped while the previous session is still cleaning up.
                 // Publish ownership first, then wait before opening another microphone or file.
@@ -223,14 +226,11 @@ class DictationForegroundService : Service() {
                             ),
                         )
                         updateNotification(true, operation)
-                        apiClient.transcribeFile(
-                            apiKey,
-                            accurateModelId,
-                            file,
-                            languages,
-                            dictionary,
-                            responseTimeoutSeconds,
-                        )
+                        val timed = measureRequest(SystemClock::elapsedRealtime) {
+                            apiClient.transcribeFile(apiKey, accurateModelId, file, languages, dictionary, responseTimeoutSeconds)
+                        }
+                        transcriptionMillis = timed.milliseconds
+                        timed.value
                     }
                 }
                 if (transcript.isBlank()) {
@@ -255,7 +255,9 @@ class DictationForegroundService : Service() {
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    val processed = apiClient.postProcess(apiKey, transcript, postProcessing)
+                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing) }
+                    if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
+                    val processed = timed.value
                     ensureActive()
                     postProcessingFailed = processed.failed
                     replacements.apply(processed.text)
@@ -276,7 +278,8 @@ class DictationForegroundService : Service() {
                 if (completed && operation == DictationOperation.DICTATION) {
                     withContext(Dispatchers.IO) {
                         runCatching {
-                            (application as OpenDictateApplication).transcriptHistoryStore.add(result)
+                            (application as OpenDictateApplication).transcriptHistoryStore.add(result,
+                                mode = model, transcriptionMillis = transcriptionMillis, postProcessingMillis = postProcessingMillis)
                         }
                     }
                 }
@@ -342,18 +345,15 @@ class DictationForegroundService : Service() {
                 val file = withContext(Dispatchers.IO) {
                     (application as OpenDictateApplication).lastDictationAudioStore.latestFile()
                 } ?: throw IllegalStateException(getString(R.string.error_no_last_dictation))
-                val transcript = apiClient.transcribeFile(
-                    apiKey,
-                    accurateModelId,
-                    file,
-                    languages,
-                    dictionary,
-                    responseTimeoutSeconds,
-                )
+                val transcription = measureRequest(SystemClock::elapsedRealtime) {
+                    apiClient.transcribeFile(apiKey, accurateModelId, file, languages, dictionary, responseTimeoutSeconds)
+                }
+                val transcript = transcription.value
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val processed = apiClient.postProcess(apiKey, transcript, postProcessing)
+                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing) }
+                val processed = postProcessingAttempt.value
                 ensureActive()
                 val result = replacements.apply(processed.text)
                 val completed = publishWhileActive(
@@ -367,7 +367,9 @@ class DictationForegroundService : Service() {
                 )
                 if (completed) withContext(Dispatchers.IO) {
                     runCatching {
-                        (application as OpenDictateApplication).transcriptHistoryStore.add(result)
+                        (application as OpenDictateApplication).transcriptHistoryStore.add(result, mode = model,
+                            transcriptionMillis = transcription.milliseconds,
+                            postProcessingMillis = postProcessingAttempt.milliseconds.takeIf { postProcessing.shouldProcess })
                     }
                 }
                 if (completed && processed.failed) showModelMessage(getString(R.string.postprocessing_failed))

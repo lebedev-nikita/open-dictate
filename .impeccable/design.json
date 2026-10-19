@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T09:09:20Z",
+  "generatedAt": "2026-10-19T09:39:14Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -45,6 +45,12 @@
       "source": "apps/macos/Sources/OpenDictateCore/Resources/postprocessing-presets.json",
       "values": "Shared values key; Format values / Отформатировать значения. Russian/English examples cover integers, decimals, dates, clock times, durations, percentages, money, measurements, ranges and fractions, with ambiguity, precision and identifier guards.",
       "persistence": "Explicit plus appends an editable block and exact-block deduplication disables the action. Saved prompts remain plain strings; no automatic migration of existing prompt text. Punctuation remains the default."
+    },
+    "historyTimings": {
+      "semantics": "Accurate history shows separate transcription and post-processing durations around complete monotonic network awaits, including upload/server/response and excluding recording, local replacements and delivery. Accurate retry uses the same boundaries; failed post-processing attempts retain elapsed time.",
+      "labels": "Transcr. / Post-proc. in English; Транскр. / Постобр. in Russian. Locale-aware seconds to one decimal; <0.1 / <0,1 below 100ms. Full localized accessibility names expand abbreviations. Live shows literal Live only. Unknown metadata and skipped post-processing are omitted.",
+      "persistence": "Optional local-only metadata; Android SQLite v1→v2 migration and backward-compatible macOS JSON. Excluded from Drive synchronization and AI search.",
+      "scope": "Existing native visual worlds, tokens, density and actions retained; no new token or shipping raster asset."
     },
     "androidSettings": {
       "scope": "Android settings; website tokens remain separate",
@@ -131,6 +137,24 @@
       "dictationSettings": {
         "implementation": "SettingsScreen.kt",
         "description": "Operate: native neutral Material 3 Dictation group with mode, recognition model, languages, word replacements and dictionary; one inset divider between adjacent rows. No transcription prompt control or editor. Existing native tokens and geometry retained."
+      },
+      "historyTimings": {
+        "implementation": "TranscriptHistoryScreen.kt HistoryTimings; HistoryTiming.kt; DictationForegroundService.kt; MeasuredRequest.kt; TranscriptHistoryStore.kt",
+        "presentation": "Between date and transcript: SettingsMuted bodySmall FlowRow, 4dp top padding, 12dp horizontal gaps and 2dp vertical gaps; wraps with localized full accessibility names. Existing copy/delete/expand actions retained.",
+        "review": {
+          "verdict": "ship",
+          "findings": "No material Android findings.",
+          "screenshots": [
+            ".impeccable/review/history-timing-android-en-phone-top.png",
+            ".impeccable/review/history-timing-android-en-phone-bottom.png",
+            ".impeccable/review/history-timing-android-ru-dark-large-top.png",
+            ".impeccable/review/history-timing-android-ru-dark-large-bottom.png",
+            ".impeccable/review/history-timing-android-tablet-top.png",
+            ".impeccable/review/history-timing-android-tablet-bottom.png"
+          ],
+          "validation": "Supplied: 167 JVM tests, SQLite v1→v2 migration instrumentation and deterministic request-boundary tests; four English history UI tests and one each on Russian dark phone at 1.3 font scale and tablet passed.",
+          "limits": "Native emulator captures are ignored review evidence. No HTML detector, physical phone, real OpenAI request or end-to-end insertion verification."
+        }
       },
       "postProcessing": {
         "implementation": "PostProcessingSettings.kt; SettingsScreen.kt Accurate-only group after Dictation; model/PostProcessing.kt; DictationForegroundService.kt",
@@ -351,7 +375,22 @@
             "states": "Blank-input disabled saving, localized validation, empty example and storage-error guidance preserving saved data.",
             "scope": "Rules apply to the next Live or Accurate dictation; recognition hints remain separate. Google Drive synchronizes the replacement list and its global enabled state when connected."
           },
-          { "name": "History", "implementation": "SettingsView.historyPage", "description": "Native empty-state view or ruled transcript rows with copy/delete actions, local search and explicit AI search." },
+          {
+            "name": "History",
+            "implementation": "SettingsView.historyPage; HistoryEntryView.swift; OpenDictateCore/HistoryTiming.swift; AppModel.swift; Storage.swift",
+            "description": "Native empty state or ruled transcript rows with copy/delete actions, local search and explicit AI search. Timing captions sit between date/actions and transcript in the existing 8pt stack. System caption wraps vertically in semantic primary foreground; date remains secondary. Localized full accessibility names expand compact labels.",
+            "review": {
+              "verdict": "ship",
+              "findings": "Sole material fix resolved: new timing caption changed from secondary to primary foreground; both final recaptures confirmed.",
+              "screenshots": [
+                ".impeccable/review/history-timing-macos-en.png",
+                ".impeccable/review/history-timing-macos-ru.png"
+              ],
+              "captureScope": "Isolated production NSHostingView component rows: English dark at 568pt width, Russian light at 464pt width. Ignored review evidence, not shipping artwork.",
+              "validation": "Supplied: 193 Swift tests, JSON compatibility/persistence and deterministic request-boundary coverage.",
+              "limits": "No HTML detector; component captures do not establish full Settings, TCC, hotkey, insertion or real OpenAI behavior."
+            }
+          },
           {
             "name": "Recording Indicator",
             "implementation": "RecordingIndicator, RecordingStatusView, WaveformGeometry and AppDelegate.updateState()",

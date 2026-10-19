@@ -213,11 +213,11 @@ final class HistoryStore: ObservableObject {
     @Published private(set) var entries = [HistoryEntry]()
     @Published private(set) var error: String?
     private let url: URL?
-    init(inMemory: Bool = false) {
+    init(inMemory: Bool = false, fileURL: URL? = nil) {
         if inMemory { url = nil; return }
-        let folder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("OpenDictate", isDirectory: true)
-        let historyURL = folder.appendingPathComponent("history.json")
+        let historyURL = fileURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("OpenDictate/history.json")
+        let folder = historyURL.deletingLastPathComponent()
         url = historyURL
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true,
@@ -227,9 +227,10 @@ final class HistoryStore: ObservableObject {
             }
         } catch { self.error = DictationError.storage.localizedDescription }
     }
-    func add(_ text: String, mode: String) {
+    func add(_ text: String, mode: String, transcriptionMillis: Int64? = nil, postProcessingMillis: Int64? = nil) {
         guard !text.isEmpty else { return }
-        entries.insert(HistoryEntry(text: text, mode: mode), at: 0)
+        entries.insert(HistoryEntry(text: text, mode: mode,
+            transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis), at: 0)
         entries = Array(entries.prefix(500)); persist()
     }
     func delete(_ id: UUID) { entries.removeAll { $0.id == id }; persist() }
