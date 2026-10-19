@@ -2,19 +2,19 @@
   {
     "encoded": "{\"enabled\":false,\"model\":\"gpt-6-luna\",\"prompt\":null}",
     "enabled": false,
-    "model": "gpt-6-luna",
-    "prompt": null
+    "prompt": null,
+    "legacyEncoded": "{\"enabled\":false,\"model\":\"gpt-6-luna\",\"prompt\":null}"
   },
   {
-    "encoded": "{\"enabled\":true,\"model\":\"gpt-6-sol\",\"prompt\":\"\"}",
+    "encoded": "{\"enabled\":true,\"model\":\"gpt-6-luna\",\"prompt\":\"\"}",
     "enabled": true,
-    "model": "gpt-6-sol",
-    "prompt": ""
+    "prompt": "",
+    "legacyEncoded": "{\"enabled\":true,\"model\":\"gpt-6-sol\",\"prompt\":\"\"}"
   },
   {
-    "encoded": "{\"enabled\":true,\"model\":\"gpt-4o-mini\",\"prompt\":\"Сохрани «Ёж» 📝.\\nhttps://example.test/a/b\\t12 345,67\"}",
+    "encoded": "{\"enabled\":true,\"model\":\"gpt-6-luna\",\"prompt\":\"Сохрани «Ёж» 📝.\\nhttps://example.test/a/b\\t12 345,67\"}",
     "enabled": true,
-    "model": "gpt-4o-mini",
-    "prompt": "Сохрани «Ёж» 📝.\nhttps://example.test/a/b\t12 345,67"
+    "prompt": "Сохрани «Ёж» 📝.\nhttps://example.test/a/b\t12 345,67",
+    "legacyEncoded": "{\"enabled\":true,\"model\":\"gpt-4o-mini\",\"prompt\":\"Сохрани «Ёж» 📝.\\nhttps://example.test/a/b\\t12 345,67\"}"
   }
 ]

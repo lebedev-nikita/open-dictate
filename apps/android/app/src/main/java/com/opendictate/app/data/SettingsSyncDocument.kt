@@ -6,7 +6,11 @@ import org.json.JSONObject
 data class SettingsSyncEntry(val value: String?, val modifiedAt: Long, val deviceId: String)
 
 data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = emptyMap()) {
-    private fun syncEntries() = entries.filterKeys { it !in RETIRED_KEYS }
+    private fun syncEntries() = entries.filterKeys { it !in RETIRED_KEYS }.mapValues { (key, entry) ->
+        if (key == "postprocessing" && entry.value != null) entry.copy(value = runCatching {
+            com.opendictate.app.model.PostProcessingSettings.fromJson(entry.value).toJson()
+        }.getOrDefault(entry.value)) else entry
+    }
 
     fun merge(other: SettingsSyncDocument): SettingsSyncDocument {
         val result = syncEntries().toMutableMap()
@@ -35,10 +39,10 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
 
     /** Compare visible settings, excluding clocks and unknown future entries. */
     fun hasSameSettings(other: SettingsSyncDocument): Boolean =
-        KEYS.all { entries[it]?.value == other.entries[it]?.value }
+        KEYS.all { syncEntries()[it]?.value == other.syncEntries()[it]?.value }
 
     fun needsConnectionChoice(remote: SettingsSyncDocument): Boolean = KEYS.any { key ->
-        remote.entries[key]?.let { it.value != entries[key]?.value } == true
+        remote.syncEntries()[key]?.let { it.value != syncEntries()[key]?.value } == true
     }
 
     /** An explicit choice wins over offline clocks without deleting unknown settings. */
@@ -66,9 +70,9 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
     }).toString()
 
     companion object {
-        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing")
+        val KEYS = setOf("dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing")
         // Decode retired fields for compatibility, then discard them from journals and replicas.
-        private val RETIRED_KEYS = setOf("accuratePunctuationEnabled", "transcriptionPrompt")
+        private val RETIRED_KEYS = setOf("accuratePunctuationEnabled", "transcriptionPrompt", "textModel")
         const val MAXIMUM_BYTES = 1_048_576L
         fun fromJson(json: String): SettingsSyncDocument {
             require(json.toByteArray().size <= MAXIMUM_BYTES)
@@ -89,7 +93,7 @@ data class SettingsSyncDocument(val entries: Map<String, SettingsSyncEntry> = em
                 val time = timestamp.toLong()
                 require(timestamp.toDouble() == time.toDouble() && time >= 0 && time < Long.MAX_VALUE - 1)
                 SettingsSyncEntry(value as String?, time, device)
-            }.filterKeys { it !in RETIRED_KEYS })
+            }.filterKeys { it !in RETIRED_KEYS }).let { SettingsSyncDocument(it.syncEntries()) }
         }
     }
 }

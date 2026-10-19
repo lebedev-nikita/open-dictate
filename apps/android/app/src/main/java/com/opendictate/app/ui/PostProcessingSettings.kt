@@ -2,7 +2,6 @@ package com.opendictate.app.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -12,8 +11,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 import com.opendictate.app.model.PostProcessingPreset
@@ -23,15 +20,13 @@ import com.opendictate.app.model.PostProcessingSettings
 @Composable
 internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onChange: (PostProcessingSettings) -> Unit) {
     val title = stringResource(R.string.postprocessing_title)
-    var model by rememberSaveable { mutableStateOf(settings.model) }
     var prompt by rememberSaveable { mutableStateOf(settings.effectivePrompt) }
-    var originalModel by rememberSaveable { mutableStateOf(settings.model) }
     var originalPrompt by rememberSaveable { mutableStateOf(settings.effectivePrompt) }
-    val changed = model != originalModel || prompt != originalPrompt
-    val draft = settings.copy(model = model, prompt = prompt.takeUnless { it == PostProcessingPreset.PUNCTUATION.text })
+    val changed = prompt != originalPrompt
+    val draft = settings.copy(prompt = prompt.takeUnless { it == PostProcessingPreset.PUNCTUATION.text })
     fun load(value: PostProcessingSettings) {
-        model = value.model; prompt = value.effectivePrompt
-        originalModel = value.model; originalPrompt = value.effectivePrompt
+        prompt = value.effectivePrompt
+        originalPrompt = value.effectivePrompt
     }
     LaunchedEffect(settings) { if (!changed) load(settings) }
 
@@ -44,13 +39,6 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
         }
         if (settings.enabled) {
             Text(stringResource(R.string.postprocessing_description), style = MaterialTheme.typography.bodyMedium, color = SettingsMuted)
-            OutlinedTextField(value = model, onValueChange = { model = it },
-                label = { Text(stringResource(R.string.postprocessing_model)) },
-                modifier = Modifier.fillMaxWidth().keepFullBoundsInView(), singleLine = true,
-                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Ascii),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                isError = !PostProcessingSettings(model = model).isValid,
-                supportingText = if (!PostProcessingSettings(model = model).isValid) {{ Text(stringResource(R.string.postprocessing_invalid_model)) }} else null)
             OutlinedTextField(value = prompt, onValueChange = { prompt = it },
                 label = { Text(stringResource(R.string.postprocessing_prompt)) },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 280.dp).keepFullBoundsInView(),

@@ -2,24 +2,21 @@ import Foundation
 
 public struct PostProcessingSettings: Codable, Equatable, Sendable {
     public var enabled: Bool
-    public var model: String
     /// Nil follows the bundled default; an empty override skips the extra request.
     public var prompt: String?
-    public static let defaultModel = "gpt-6-luna"
     public static let maximumPromptBytes = 16_384
-    public init(enabled: Bool = false, model: String = defaultModel, prompt: String? = nil) {
-        self.enabled = enabled; self.model = model; self.prompt = prompt
+    public init(enabled: Bool = false, prompt: String? = nil) {
+        self.enabled = enabled; self.prompt = prompt
     }
     public var effectivePrompt: String { prompt ?? PostProcessingPreset.punctuation.text }
     public var shouldProcess: Bool { enabled && !effectivePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     public var isValid: Bool {
-        model.range(of: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\\z", options: .regularExpression) != nil &&
         (prompt?.utf8.count ?? 0) <= Self.maximumPromptBytes
     }
     public func encoded() throws -> String {
         guard isValid else { throw SyncFormatError.invalid }
-        // Match Android's field order; null keeps the default text out of Drive.
-        let object: [String: Any] = ["enabled": enabled, "model": model, "prompt": prompt as Any? ?? NSNull()]
+        // Fixed model metadata preserves earlier RC compatibility; null keeps the default text local.
+        let object: [String: Any] = ["enabled": enabled, "model": TextProcessingModel.id, "prompt": prompt as Any? ?? NSNull()]
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
         return String(decoding: data, as: UTF8.self)
     }

@@ -104,8 +104,8 @@ preferences migrate automatically. Language hints remain local preferences.
 ### Post-processing
 
 Settings → Dictation → **Post-processing** expands when enabled and retains its
-settings when disabled. It is off by default, with `gpt-6-luna` and a punctuation
-instruction prefilled. Edit the model ID or prompt, then choose **Save**.
+settings when disabled. It is off by default and always uses `gpt-6-luna`. A punctuation
+instruction is prefilled. Edit the prompt, then choose **Save**.
 **Correct punctuation** and **Format numbers** append editable instruction blocks
 without duplicates. **Reset prompt** stages the punctuation default; Save applies
 it. Clearing the prompt skips the additional request.
@@ -118,7 +118,7 @@ rejects changes to words and numbers; custom instructions can rewrite text.
 Number formatting through a model is not a deterministic numeric validator.
 
 Both apps share [preset text](Sources/OpenDictateCore/Resources/postprocessing-presets.json)
-and synchronize enabled state, model and optional prompt override through Drive.
+and synchronize enabled state and optional prompt override through Drive.
 The former local Accurate punctuation switch migrates to this section.
 
 ### Retranscribe the last recording

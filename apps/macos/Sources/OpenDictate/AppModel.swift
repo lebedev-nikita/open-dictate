@@ -60,7 +60,6 @@ final class AppModel: ObservableObject {
         let transform: Bool
         let key: String
         let context: TranscriptionContext
-        let textModel: String
         let postProcessing: PostProcessingSettings
         let timeout: Int
         let replacements: WordReplacementEngine
@@ -81,7 +80,7 @@ final class AppModel: ObservableObject {
             self.exclusions = preferences.excludedApps
             self.target = target; self.transform = transform; self.key = key
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
-            context = preferences.context; textModel = preferences.textModel
+            context = preferences.context
             postProcessing = preferences.postProcessing
             timeout = preferences.timeout
         }
@@ -364,7 +363,7 @@ final class AppModel: ObservableObject {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
                 let (transformed, responseMessage) = try await client.transform(source: target.snapshot.selectedText,
-                    instruction: result, key: session.key, model: session.textModel)
+                    instruction: result, key: session.key)
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
                 if let responseMessage, !responseMessage.isEmpty {
@@ -531,13 +530,13 @@ final class AppModel: ObservableObject {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         do {
             guard let key = try APIKeyStore.load(), !key.isEmpty else { throw DictationError.missingKey }
-            let entries = history.entries, model = preferences.textModel
+            let entries = history.entries
             let id = UUID(); searchID = id
             isSearching = true
             searchTask = Task {
                 defer { if searchID == id { isSearching = false } }
                 do {
-                    let matches = try await client.search(query: query, entries: entries, key: key, model: model)
+                    let matches = try await client.search(query: query, entries: entries, key: key)
                     try Task.checkCancellation()
                     if searchID == id { searchMatches = matches }
                 } catch { if !Task.isCancelled && searchID == id { present(error) } }

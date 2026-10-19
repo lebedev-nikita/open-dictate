@@ -7,6 +7,26 @@ final class SettingsSyncTests: XCTestCase {
         result.entries[key] = .init(value: value, modifiedAt: time, deviceId: device)
         return result
     }
+    func testOldModelChoicesCannotAffectRequestsOrRequireSourceChoice() throws {
+        let leftJSON = #"{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"#
+        let rightJSON = #"{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"#
+        var local = document("postprocessing", leftJSON, 10, "mac")
+        var remote = document("postprocessing", rightJSON, 20, "android")
+        remote.entries["textModel"] = .init(value: "gpt-6-sol", modifiedAt: 30, deviceId: "old")
+        XCTAssertTrue(local.hasSameSettings(as: remote))
+        XCTAssertFalse(local.needsConnectionChoice(with: remote))
+        local.merge(remote)
+        XCTAssertNil(local.entries["textModel"])
+        let settings = try PostProcessingSettings.decode(local.entries["postprocessing"]!.value!)
+        let requests = [OpenAIRequest.transform(source: "Text", instruction: "Edit"),
+                        OpenAIRequest.search(query: "Find", entries: []),
+                        OpenAIRequest.postProcessing(source: "Text", settings: settings)]
+        for request in requests { XCTAssertEqual(request["model"] as? String, "gpt-6-luna") }
+        XCTAssertEqual(settings.prompt, "Keep text")
+        XCTAssertTrue(settings.enabled)
+        XCTAssertEqual(local.entries["postprocessing"]?.modifiedAt, 20)
+    }
+
     func testRetiredPromptIsDroppedWithoutAConnectionChoice() throws {
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<5 { root.deleteLastPathComponent() }
@@ -60,7 +80,7 @@ final class SettingsSyncTests: XCTestCase {
 
     func testIndependentChangesAndConcurrentConflictsConverge() {
         var android = document("dictionary", "Android\nНикита", 100, "android")
-        android.merge(document("textModel", "gpt-6-sol", 120, "android"))
+        android.merge(document("accurateModel", "gpt-transcribe", 120, "android"))
         var mac = document("dictionary", "Mac", 100, "mac")
         mac.merge(document("mode", "live", 130, "mac"))
         var left = android; left.merge(mac)
@@ -69,7 +89,7 @@ final class SettingsSyncTests: XCTestCase {
         left.merge(android); left.merge(mac); XCTAssertEqual(left, right)
         XCTAssertEqual(left.entries["dictionary"]?.value, "Mac")
         XCTAssertEqual(left.entries["mode"]?.value, "live")
-        XCTAssertEqual(left.entries["textModel"]?.value, "gpt-6-sol")
+        XCTAssertEqual(left.entries["accurateModel"]?.value, "gpt-transcribe")
     }
     func testEmptyDictionarySurvivesStaleReplica() {
         let old = document("dictionary", "OpenDictate", 1, "mac")
@@ -92,7 +112,7 @@ final class SettingsSyncTests: XCTestCase {
         let json = #"{"schemaVersion":1,"entries":{"dictionary":{"value":"Никита\nOpenDictate 📝","modifiedAt":1760000000000,"deviceId":"mac"},"future.color":{"value":"dark","modifiedAt":2,"deviceId":"mac"}}}"#
         var parsed = try SettingsSyncDocument.decode(Data(json.utf8))
         XCTAssertEqual(parsed, try SettingsSyncDocument.decode(JSONEncoder().encode(parsed)))
-        parsed.record(["textModel": "gpt-6-sol", "apiKey": "private-test-key", "history": "private-test-history"], deviceId: "android", now: 1)
+        parsed.record(["accurateModel": "gpt-transcribe", "apiKey": "private-test-key", "history": "private-test-history"], deviceId: "android", now: 1)
         XCTAssertEqual(parsed.entries["future.color"]?.value, "dark")
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(parsed), as: UTF8.self).contains("private-test"))
     }

@@ -2,8 +2,7 @@
 
 Connect Google Drive in Settings on Android and macOS, using the same Google
 account. Sync transfers the dictionary, word replacement rules and enabled
-states, post-processing configuration, Live/Accurate mode and selected Live, Accurate
-and text model IDs.
+states, post-processing configuration, Live/Accurate mode and selected Live and Accurate model IDs.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
 OpenAI API key and local model catalogue.
 
@@ -57,8 +56,13 @@ so older replicas cannot restore a removed custom prompt. The outer value remain
 a string and needs no new document version. Older clients preserve this unknown
 entry; update both apps to use it.
 
-The section saves model/prompt drafts explicitly. Incoming sync does not replace
-an unsaved draft. Toggling off preserves the model and prompt. Active sessions use
+The model is fixed to GPT-6 Luna. The wire model field is constant compatibility
+metadata for earlier RCs; importing an old model selection normalizes it to Luna.
+The retired standalone textModel entry is discarded. Model-only legacy
+differences do not require a connection source choice.
+
+The section saves prompt drafts explicitly. Incoming sync does not replace
+an unsaved draft. Toggling off preserves the prompt. Active sessions use
 an immutable snapshot; retry captures current settings. The former macOS local
 punctuation switch migrates into this configuration, while old synced punctuation
 entries remain ignored.
@@ -226,7 +230,7 @@ Delete hidden app data.
 ## Extending the format
 
 Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
-`liveModel`, `accurateModel`, `textModel`, `wordReplacements` and
+`liveModel`, `accurateModel`, `wordReplacements` and
 `wordReplacementsEnabled` and `postprocessing`:
 
 ```json

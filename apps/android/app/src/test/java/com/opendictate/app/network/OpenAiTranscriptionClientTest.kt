@@ -183,14 +183,14 @@ class OpenAiTranscriptionClientTest {
     }
 
     @Test
-    fun `text transformation request uses selected model without storage`() {
+    fun `text transformation request always uses Luna without storage`() {
         val request = textTransformationRequest(
-            model = "gpt-6-sol",
+
             sourceText = "Черновик",
             instruction = "Сделай вежливее",
         )
 
-        assertEquals("gpt-6-sol", request.getString("model"))
+        assertEquals("gpt-6-luna", request.getString("model"))
         assertFalse(request.getBoolean("store"))
         assertEquals("low", request.getJSONObject("reasoning").getString("effort"))
         val format = request.getJSONObject("text").getJSONObject("format")
@@ -264,7 +264,7 @@ class OpenAiTranscriptionClientTest {
     @Test
     fun `history search request uses structured output without storage`() {
         val request = transcriptHistorySearchRequest(
-            model = "gpt-6-luna",
+
             query = "project planning",
             documents = listOf(
                 TranscriptSearchDocument(7, "Discuss the roadmap"),

@@ -97,7 +97,6 @@ class DictationForegroundService : Service() {
         val model = settings.model
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
-        val transformationModelId = settings.transformationModelId
         val postProcessing = settings.postProcessing
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
@@ -250,7 +249,6 @@ class DictationForegroundService : Service() {
                     updateNotification(true, operation)
                     val transformation = apiClient.transformText(
                         apiKey = apiKey,
-                        model = transformationModelId,
                         sourceText = requireNotNull(sourceText),
                         instruction = transcript.trim(),
                     )

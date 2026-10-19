@@ -36,10 +36,17 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
     }
     public var entries: [String: Entry] = [:]
     public init() {}
-    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "textModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing"]
+    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessing"]
     // Retired fields are decoded for compatibility, then removed from journals and replicas.
-    private static let retiredKeys: Set<String> = ["accuratePunctuationEnabled", "transcriptionPrompt"]
-    private var syncEntries: [String: Entry] { entries.filter { !Self.retiredKeys.contains($0.key) } }
+    private static let retiredKeys: Set<String> = ["accuratePunctuationEnabled", "transcriptionPrompt", "textModel"]
+    private var syncEntries: [String: Entry] {
+        var result = entries.filter { !Self.retiredKeys.contains($0.key) }
+        if let value = result["postprocessing"]?.value,
+           let normalized = try? PostProcessingSettings.decode(value).encoded() {
+            result["postprocessing"]?.value = normalized
+        }
+        return result
+    }
     public static let maximumBytes = 1_048_576
 
     public func encode(to encoder: Encoder) throws {
@@ -91,12 +98,12 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
 
     /// Compare user-visible synced values, excluding timestamps and unknown future settings.
     public func hasSameSettings(as other: Self) -> Bool {
-        Self.keys.allSatisfy { entries[$0]?.value == other.entries[$0]?.value }
+        Self.keys.allSatisfy { syncEntries[$0]?.value == other.syncEntries[$0]?.value }
     }
 
     public func needsConnectionChoice(with remote: Self) -> Bool {
         Self.keys.contains { key in
-            remote.entries[key].map { $0.value != entries[key]?.value } ?? false
+            remote.syncEntries[key].map { $0.value != syncEntries[key]?.value } ?? false
         }
     }
 

@@ -201,14 +201,13 @@
     <string name="settings_processing">Preparing your text…</string>
     <string name="settings_dictation">Dictation</string>
     <string name="settings_recognition_model">Recognition model</string>
-    <string name="settings_editing_model">Editing model</string>
     <string name="settings_dictionary">Personal dictionary</string>
     <string name="settings_dictionary_empty">Names, terms and uncommon words</string>
     <string name="settings_dictionary_count">Dictionary entries: %1$d</string>
     <string name="settings_transformation_hint">Show “Edit text” in the button menu</string>
     <string name="settings_selection_dictionary">Add selected text to dictionary</string>
     <string name="settings_refresh_models">Refresh OpenAI models</string>
-    <string name="settings_models_hint">Get the available recognition and editing models</string>
+    <string name="settings_models_hint">Get the available recognition models</string>
     <string name="settings_models_retry">Couldn’t refresh. Tap to try again.</string>
     <string name="settings_saved_automatically">Changes are saved automatically</string>
     <string name="settings_done">Done</string>
@@ -286,13 +285,11 @@
     <string name="postprocessing_save">Save</string>
     <string name="postprocessing_title">Post-processing</string>
     <string name="postprocessing_description">Applies after Live or Accurate finishes. Sends the transcript to OpenAI in an additional request.</string>
-    <string name="postprocessing_model">Post-processing model</string>
     <string name="postprocessing_prompt">Post-processing prompt</string>
     <string name="postprocessing_add_instruction">Add an instruction</string>
     <string name="postprocessing_punctuation">Correct punctuation</string>
     <string name="postprocessing_numbers">Format numbers</string>
     <string name="postprocessing_reset">Reset prompt</string>
     <string name="postprocessing_hint">The buttons add editable text. An empty prompt skips post-processing. Save to apply changes to the next dictation.</string>
-    <string name="postprocessing_invalid_model">Enter a valid OpenAI model ID.</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>
 </resources>

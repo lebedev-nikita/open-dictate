@@ -77,7 +77,7 @@ final class HTTPTests: XCTestCase {
                 ["type": "message", "content": [["type": "output_text", "text": "{\"transformed_text\":\"Short text\",\"message\":null}"]]]
             ]]))
         }
-        let (text, message) = try await client().transform(source: "Long synthetic text", instruction: "Shorten", key: "synthetic-test-key", model: "gpt-6-luna")
+        let (text, message) = try await client().transform(source: "Long synthetic text", instruction: "Shorten", key: "synthetic-test-key")
         XCTAssertEqual(text, "Short text"); XCTAssertNil(message)
     }
 }

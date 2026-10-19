@@ -324,12 +324,6 @@ struct SettingsView: View {
                     }.labelsHidden().frame(width: 180)
                 }
                 HStack {
-                    Text(t("Voice editing model", "Модель голосовой правки")); Spacer()
-                    Picker(t("Voice editing model", "Модель голосовой правки"), selection: $preferences.textModel) {
-                        ForEach(Array(Set(["gpt-6-luna", "gpt-6-sol", preferences.textModel])).sorted(), id: \.self) { id in Text(id).tag(id) }
-                    }.labelsHidden().frame(width: 180)
-                }
-                HStack {
                     Text(t("Response timeout", "Ожидание ответа")); Spacer()
                     Picker(t("Response timeout", "Ожидание ответа"), selection: $preferences.timeout) {
                         ForEach([30, 60, 120], id: \.self) { seconds in Text(t("\(seconds) seconds", "\(seconds) секунд")).tag(seconds) }

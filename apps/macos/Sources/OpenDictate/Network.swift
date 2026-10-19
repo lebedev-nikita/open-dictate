@@ -79,8 +79,8 @@ actor OpenAIClient {
         return text
     }
 
-    func transform(source: String, instruction: String, key: String, model: String) async throws -> (String, String?) {
-        let response = try await response(OpenAIRequest.transform(model: model, source: source, instruction: instruction), key: key)
+    func transform(source: String, instruction: String, key: String) async throws -> (String, String?) {
+        let response = try await response(OpenAIRequest.transform(source: source, instruction: instruction), key: key)
         guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
               let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }
@@ -97,12 +97,12 @@ actor OpenAIClient {
         }
     }
 
-    func search(query: String, entries: [HistoryEntry], key: String, model: String) async throws -> [UUID] {
+    func search(query: String, entries: [HistoryEntry], key: String) async throws -> [UUID] {
         var matches = [UUID]()
         let allowed = Set(entries.map(\.id))
         for batch in OpenAIRequest.historyBatches(entries) {
             try Task.checkCancellation()
-            let result = try await response(OpenAIRequest.search(model: model, query: query, entries: batch), key: key)
+            let result = try await response(OpenAIRequest.search(query: query, entries: batch), key: key)
             guard let data = OpenAIRequest.responseText(result).data(using: .utf8),
                   let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let ids = object["match_ids"] as? [String] else { throw DictationError.invalidResponse }

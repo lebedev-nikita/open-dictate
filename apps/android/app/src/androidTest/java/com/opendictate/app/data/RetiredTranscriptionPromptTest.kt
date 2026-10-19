@@ -16,10 +16,13 @@ class RetiredTranscriptionPromptTest {
         try {
             val prefs = context.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE)
             prefs.edit().putString("custom_transcription_prompt", "Old instructions")
-                .putBoolean("transcription_prompt_configured", true).commit()
+                .putBoolean("transcription_prompt_configured", true)
+                .putString("transformation_model", "SOL").putString("transformation_model_id", "gpt-6-sol").commit()
             val store = SettingsStore(context)
             assertFalse(prefs.contains("custom_transcription_prompt"))
             assertFalse(prefs.contains("transcription_prompt_configured"))
+            assertFalse(prefs.contains("transformation_model"))
+            assertFalse(prefs.contains("transformation_model_id"))
             val original = store.postProcessing
             val remote = SettingsSyncDocument(mapOf(
                 "transcriptionPrompt" to SettingsSyncEntry("Ignored", 500, "old"),

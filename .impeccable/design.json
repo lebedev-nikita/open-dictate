@@ -129,16 +129,16 @@
       },
       "postProcessing": {
         "implementation": "PostProcessingSettings.kt; SettingsScreen.kt separate group after Dictation",
-        "presentation": "Existing neutral Material 3 group; one full-row 48dp minimum switch semantic target, 16dp padding, 14dp spacing, monospaced model field, 160–280dp outlined prompt editor, wrapping action rows and keyboard-aware fields.",
-        "interaction": "Off collapses controls; switch saves immediately. Editable model defaults to gpt-6-luna and prompt to punctuation/capitalization correction. Instruction buttons append editable punctuation/numbers blocks and disable for an existing exact block. Reset stages the prompt default only; Cancel reloads saved values; Save commits valid changed drafts. Empty prompt skips processing. Incoming sync preserves edited drafts.",
-        "scope": "Additional OpenAI request disclosed in supporting copy; ordinary Live/Accurate final text and Accurate retry, separate from voice editing. Drive syncs saved configuration with nullable prompt, without bundled default text. No new tokens or shipping assets.",
+        "presentation": "Existing neutral Material 3 group; one full-row 48dp minimum switch semantic target, 16dp padding, 14dp spacing, 160–280dp outlined prompt editor, wrapping action rows and keyboard-aware fields.",
+        "interaction": "Off collapses controls; switch saves immediately. Prompt defaults to punctuation/capitalization correction. Post-processing, text transformation and AI history search always use gpt-6-luna; no text-model field or editing-model picker. Recognition choices remain. Instruction buttons append editable punctuation/numbers blocks and disable for an existing exact block. Reset stages the prompt default only; Cancel reloads saved values; Save commits valid changed drafts. Empty prompt skips processing. Incoming sync preserves edited drafts.",
+        "scope": "Additional OpenAI request disclosed in supporting copy; ordinary Live/Accurate final text and Accurate retry, separate from voice editing. Drive syncs saved configuration with nullable prompt, without bundled default text. Legacy text-model choices are ignored; fixed post-processing model wire metadata preserves earlier RC compatibility without changing enabled state, prompt or source-choice behavior. No new tokens or shipping assets.",
         "review": {
           "verdict": "pass",
           "disposition": "ship",
-          "scope": "Current settings removal review; final ship disposition at the Android divider-fix scope.",
-          "resolvedFinding": "Doubled divider between Dictation rows removed; full native UI removal otherwise matched.",
-          "screenshots": [".impeccable/review/removed-prompt-android-phone-en.png", ".impeccable/review/removed-prompt-android-phone-en-bottom.png", ".impeccable/review/removed-prompt-android-phone-collapsed.png", ".impeccable/review/removed-prompt-android-phone-dark-large-ru.png", ".impeccable/review/removed-prompt-android-phone-dark-large-ru-bottom.png", ".impeccable/review/removed-prompt-android-tablet-dark-ru.png"],
-          "validation": "Supplied verification: 169 JVM tests; three focused English UI tests and one UI test each on Russian phone/tablet.",
+          "scope": "Narrow native text-model control removal; existing prompt geometry, presets, Save/Cancel/Reset and off/collapsed toggle retained.",
+          "findings": "Fresh finish review: ship, with no material fixes.",
+          "screenshots": [".impeccable/review/fixed-model-android-phone-en.png", ".impeccable/review/fixed-model-android-phone-en-bottom.png", ".impeccable/review/fixed-model-android-phone-collapsed.png", ".impeccable/review/fixed-model-android-phone-dark-large-ru.png", ".impeccable/review/fixed-model-android-phone-dark-large-ru-bottom.png", ".impeccable/review/fixed-model-android-tablet-dark-ru.png"],
+          "validation": "Supplied verification: 163 JVM tests; three focused English UI tests and one UI test each on Russian phone/tablet.",
           "limits": "Native emulator evidence; no HTML detector or physical-device, real Google sign-in or live OpenAI request claim."
         }
       },
@@ -313,22 +313,23 @@
                 ".impeccable/review/removed-prompt-macos-ru-true.png"
               ],
               "captureScope": "Full native Settings captures using an isolated localOnly harness. Test-runner bundle footer version is not product-version evidence; captures are review evidence, not shipping assets.",
-              "review": "Native removal matched; final ship disposition applies to the resolved Android divider fix.",
+              "review": "Fresh finish review: ship, with no material fixes for the narrow text-model control removal. General-page voice-editing model picker removal was source-reviewed without a General-page capture.",
               "limits": "OS integration, TCC, insertion, physical devices and real Google sign-in are outside scope."
             }
           },
           {
             "name": "Post-processing Settings",
             "implementation": "PostProcessingSettingsView.swift; SettingsView Dictation page",
-            "description": "Separate native section between transcription and shortcuts; immediate switch collapses controls while off. Existing system type, semantic surfaces, monospaced model field, 150pt prompt editor with 8pt inset/corner, and instruction buttons that stack at compact widths.",
-            "interaction": "Model defaults to gpt-6-luna; prompt defaults to punctuation/capitalization correction. Append punctuation/numbers blocks once; Reset stages prompt default only, Cancel reloads saved values, Save commits valid changed drafts. Empty prompt skips processing; incoming sync preserves edited drafts. Inline errors cover model ID and 16KiB UTF-8 prompt bound.",
-            "scope": "Supporting copy discloses additional OpenAI request. Ordinary Live/Accurate final text and Accurate retry, separate from voice editing. Drive syncs saved configuration with nullable prompt, without bundled default text. No new tokens or shipping assets.",
+            "description": "Separate native section between transcription and shortcuts; immediate switch collapses controls while off. Existing system type, semantic surfaces, 150pt prompt editor with 8pt inset/corner, and instruction buttons that stack at compact widths.",
+            "interaction": "Post-processing, voice editing and AI history search always use gpt-6-luna; no text-model field or General-page voice-editing model picker. Recognition choices remain. Prompt defaults to punctuation/capitalization correction. Append punctuation/numbers blocks once; Reset stages prompt default only, Cancel reloads saved values, Save commits valid changed drafts. Empty prompt skips processing; incoming sync preserves edited drafts. An inline error covers the 16KiB UTF-8 prompt bound.",
+            "scope": "Supporting copy discloses additional OpenAI request. Ordinary Live/Accurate final text and Accurate retry, separate from voice editing. Drive syncs saved configuration with nullable prompt, without bundled default text. Legacy text-model choices are ignored; fixed post-processing model wire metadata preserves earlier RC compatibility without changing enabled state, prompt or source-choice behavior. No new tokens or shipping assets.",
             "review": {
               "verdict": "pass",
               "disposition": "ship",
-              "screenshots": [".impeccable/review/postprocessing-macos-en-true.png", ".impeccable/review/postprocessing-macos-ru-true.png", ".impeccable/review/postprocessing-macos-ru-false.png"],
-              "validation": "Supplied verification: 184 Swift tests; fresh native English dark and compact Russian light expanded/collapsed component renders.",
-              "limits": "Native component captures; no HTML detector. OS integration, TCC, insertion and real Google sign-in remain outside scope."
+              "screenshots": [".impeccable/review/fixed-model-macos-en-true.png", ".impeccable/review/fixed-model-macos-ru-true.png", ".impeccable/review/fixed-model-macos-ru-false.png"],
+              "validation": "Supplied verification: 185 Swift tests and successful native packaging; fresh native English dark and compact Russian light expanded/collapsed component renders.",
+              "findings": "Fresh finish review: ship, with no material fixes. Prompt geometry, presets, Save/Cancel/Reset and off/collapsed toggle retained.",
+              "limits": "Isolated localOnly NSHostingView component captures; test-runner footer version is not installer evidence. General-page deletion was source-reviewed without a General capture. No HTML detector. OS integration, TCC, insertion and real Google sign-in remain outside scope."
             }
           },
           {

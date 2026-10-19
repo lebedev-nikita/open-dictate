@@ -24,7 +24,6 @@ final class Preferences: ObservableObject {
     @Published var shortcuts: ShortcutBindings {
         didSet { if let data = try? JSONEncoder().encode(shortcuts) { defaults.set(data, forKey: "shortcuts") } }
     }
-    @Published var textModel: String { didSet { defaults.set(textModel, forKey: "textModel"); recordSyncChange() } }
     @Published var timeout: Int { didSet { defaults.set(timeout, forKey: "timeout") } }
     @Published var excludedApps: [String] { didSet { defaults.set(excludedApps, forKey: "excludedApps") } }
     @Published var showStatus: Bool { didSet { defaults.set(showStatus, forKey: "showStatus") } }
@@ -75,7 +74,7 @@ final class Preferences: ObservableObject {
             shortcuts = .legacy(modifiers: defaults.string(forKey: "shortcutModifiers") ?? "option",
                                 key: defaults.string(forKey: "shortcutKey") ?? "space")
         }
-        textModel = defaults.string(forKey: "textModel") ?? "gpt-6-luna"
+        defaults.removeObject(forKey: "textModel")
         timeout = [30, 60, 120].contains(defaults.integer(forKey: "timeout")) ? defaults.integer(forKey: "timeout") : 60
         excludedApps = defaults.stringArray(forKey: "excludedApps") ?? []
         showStatus = defaults.object(forKey: "showStatus") as? Bool ?? true
@@ -96,7 +95,7 @@ final class Preferences: ObservableObject {
     private var syncValues: [String: String?] {
         get throws {
             var values: [String: String?] = ["dictionary": dictionary, "mode": mode.rawValue, "liveModel": liveModel,
-                          "accurateModel": accurateModel, "textModel": textModel, "postprocessing": try postProcessing.encoded()]
+                          "accurateModel": accurateModel, "postprocessing": try postProcessing.encoded()]
             values.merge(try replacements.syncValues) { _, new in new }
             guard values.values.allSatisfy({ ($0?.utf8.count ?? 0) <= 262_144 }) else { throw SyncFormatError.invalid }
             return values
@@ -140,7 +139,6 @@ final class Preferences: ObservableObject {
         if let value = merged.entries["mode"]?.value, let next = DictationMode(rawValue: value), mode != next { mode = next }
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
-        if let value = merged.entries["textModel"]?.value, textModel != value { textModel = value }
         if let value = merged.entries["postprocessing"]?.value {
             let next = try PostProcessingSettings.decode(value)
             if postProcessing != next { postProcessing = next }
@@ -152,7 +150,7 @@ final class Preferences: ObservableObject {
     func validateSync(_ merged: SettingsSyncDocument) throws {
         if let value = merged.entries["postprocessing"]?.value { _ = try PostProcessingSettings.decode(value) }
         if let value = merged.entries["mode"]?.value, DictationMode(rawValue: value) == nil { throw SyncFormatError.invalid }
-        for key in ["liveModel", "accurateModel", "textModel"] {
+        for key in ["liveModel", "accurateModel"] {
             if let value = merged.entries[key]?.value,
                value.range(of: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$", options: .regularExpression) == nil { throw SyncFormatError.invalid }
         }

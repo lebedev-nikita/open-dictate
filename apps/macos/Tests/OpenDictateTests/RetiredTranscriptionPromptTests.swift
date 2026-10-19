@@ -8,7 +8,9 @@ final class RetiredTranscriptionPromptTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         defaults.set("Old instructions", forKey: "customTranscriptionPrompt")
         defaults.set(true, forKey: "transcriptionPromptConfigured")
+        defaults.set("gpt-6-sol", forKey: "textModel")
         let preferences = Preferences(defaults: defaults)
+        XCTAssertNil(defaults.object(forKey: "textModel"))
         XCTAssertNil(defaults.object(forKey: "customTranscriptionPrompt"))
         XCTAssertNil(defaults.object(forKey: "transcriptionPromptConfigured"))
         let settings = preferences.postProcessing

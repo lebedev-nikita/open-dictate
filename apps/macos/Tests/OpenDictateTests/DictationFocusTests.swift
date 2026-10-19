@@ -105,7 +105,7 @@ final class DictationFocusTests: XCTestCase {
             let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
                 captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
                 processTranscript: { _, _, settings in await processor.process(settings) })
-            model.preferences.postProcessing = .init(enabled: true, model: "gpt-6-luna", prompt: "Original instruction")
+            model.preferences.postProcessing = .init(enabled: true, prompt: "Original instruction")
             model.toggleLocalRecording(mode: .live)
             await waitFor(.recording, in: model)
             model.preferences.postProcessing.prompt = "Changed after start"

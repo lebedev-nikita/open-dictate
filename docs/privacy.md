@@ -21,7 +21,7 @@ the Responses API with `store: false`. It runs after ordinary Live, Accurate or
 retranscription, before local word replacements. Voice-edit commands skip it.
 A blank prompt makes no additional request. Errors retain the original transcript.
 
-The model defaults to `gpt-6-luna`; the default instruction corrects punctuation.
+The model is fixed to `gpt-6-luna`; the default instruction corrects punctuation.
 Buttons add editable punctuation or number-formatting instructions. Custom
 instructions may rewrite text. Post-processing settings synchronize through
 Google Drive when connected; transcripts are never included in synchronization.
@@ -37,7 +37,7 @@ connectivity returns; macOS monitors network availability for the same purpose.
 
 If you connect Google Drive in Settings, the dictionary, word replacement rules and
 enabled states, post-processing
-configuration, dictation mode and selected model IDs are sent directly to
+configuration, dictation mode and selected recognition model IDs are sent directly to
 Google and stored in your account's hidden app-data folder. Sync requests only `drive.appdata`, without access to
 ordinary Drive files. API keys, audio, transcripts/history, exclusions and
 permissions are excluded; other preferences remain local.
@@ -115,7 +115,7 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   query and saved transcript text directly to OpenAI. Search results are
   held in memory, and Responses requests set `store: false`.
 - Dictionary terms, excluded app bundle identifiers and preferences are saved in
-  UserDefaults locally. With optional Drive sync, dictionary, replacement and model settings
+  UserDefaults locally. With optional Drive sync, dictionary, replacement and recognition model settings
   also go to Google as described above. Dictionary terms are sent to OpenAI as transcription
   hints only when you start a session. Exclusions are checked before capture.
 - Launch at login is optional and uses macOS Login Items. OpenDictate does

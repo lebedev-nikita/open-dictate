@@ -12,7 +12,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
         let local = Preferences(defaults: defaults), other = Preferences(defaults: otherDefaults)
         XCTAssertEqual(local.postProcessing, .init())
         let snapshot = local.postProcessing
-        let custom = PostProcessingSettings(enabled: true, model: "gpt-6-sol", prompt: "Format numbers\n📝")
+        let custom = PostProcessingSettings(enabled: true, prompt: "Format numbers\n📝")
         local.postProcessing = custom
         XCTAssertFalse(snapshot.enabled)
         XCTAssertEqual(Preferences(defaults: defaults).postProcessing, custom)
@@ -24,7 +24,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
         XCTAssertEqual(other.postProcessing.effectivePrompt, PostProcessingPreset.punctuation.text)
         XCTAssertFalse(try other.syncDocument().entries["postprocessing"]!.value!.contains(PostProcessingPreset.punctuation.text))
         var invalid = try local.syncDocument()
-        invalid.entries["postprocessing"] = .init(value: #"{"enabled":true,"model":"bad model","prompt":null}"#,
+        invalid.entries["postprocessing"] = .init(value: #"{"enabled":true,"prompt":123}"#,
             modifiedAt: Int64.max - 10, deviceId: "remote")
         invalid.entries["dictionary"] = .init(value: "Must not apply", modifiedAt: Int64.max - 10, deviceId: "remote")
         let dictionary = other.dictionary

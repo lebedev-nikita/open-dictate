@@ -11,7 +11,6 @@ import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessingSettings
-import com.opendictate.app.model.TextTransformationModel
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.model.preferredModelId
@@ -23,7 +22,7 @@ class SettingsStore(context: Context) {
     private val replacementPrefs = context.getSharedPreferences("word_replacements", Context.MODE_PRIVATE)
 
     init {
-        prefs.edit { remove("custom_transcription_prompt"); remove("transcription_prompt_configured") }
+        prefs.edit { remove("custom_transcription_prompt"); remove("transcription_prompt_configured"); remove("transformation_model"); remove("transformation_model_id") }
     }
 
     var theme: AppTheme
@@ -54,12 +53,6 @@ class SettingsStore(context: Context) {
         get() = TranscriptionModel.fromStored(prefs.getString(KEY_MODEL, null))
         set(value) = saveSynced { putString(KEY_MODEL, value.name) }
 
-    var transformationModel: TextTransformationModel
-        get() = TextTransformationModel.fromStored(
-            prefs.getString(KEY_TRANSFORMATION_MODEL, null),
-        )
-        set(value) = prefs.edit { putString(KEY_TRANSFORMATION_MODEL, value.name) }
-
     var liveModelId: String
         get() = preferredModelId(
             prefs.getString(KEY_LIVE_MODEL_ID, null).orEmpty(),
@@ -75,15 +68,6 @@ class SettingsStore(context: Context) {
             ModelCatalog.DEFAULT.accurate,
         )
         set(value) = saveSynced { putString(KEY_ACCURATE_MODEL_ID, value) }
-
-    var transformationModelId: String
-        get() = preferredModelId(
-            prefs.getString(KEY_TRANSFORMATION_MODEL_ID, null).orEmpty()
-                .ifBlank { transformationModel.apiName },
-            modelCatalog.text,
-            ModelCatalog.DEFAULT.text,
-        )
-        set(value) = saveSynced { putString(KEY_TRANSFORMATION_MODEL_ID, value) }
 
     var modelCatalog: ModelCatalog
         get() = ModelCatalog.fromCachedJson(prefs.getString(KEY_MODEL_CATALOG_V2, null))
@@ -181,7 +165,6 @@ class SettingsStore(context: Context) {
         "dictionary" to prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty(), "mode" to model.name.lowercase(),
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
-        "textModel" to prefs.getString(KEY_TRANSFORMATION_MODEL_ID, transformationModel.apiName).orEmpty(),
         "postprocessing" to postProcessing.toJson(),
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
@@ -235,7 +218,6 @@ class SettingsStore(context: Context) {
             values["mode"]?.let { putString(KEY_MODEL, requireNotNull(it.value).uppercase()) }
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
-            values["textModel"]?.let { putString(KEY_TRANSFORMATION_MODEL_ID, it.value) }
             values["postprocessing"]?.let { putString("postprocessing", it.value) }
             putString("sync_document", merged.toJson())
         }
@@ -247,7 +229,7 @@ class SettingsStore(context: Context) {
         val values = merged.entries
         values["postprocessing"]?.value?.let(PostProcessingSettings::fromJson)
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
-        listOf("liveModel", "accurateModel", "textModel").forEach { key ->
+        listOf("liveModel", "accurateModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }
         }
         val replacementJSON = values["wordReplacements"]?.value
@@ -263,10 +245,8 @@ class SettingsStore(context: Context) {
         private const val KEY_BUTTON_POSITION = "dictation_button_position"
         private const val KEY_THEME = "theme"
         private const val KEY_MODEL = "model"
-        private const val KEY_TRANSFORMATION_MODEL = "transformation_model"
         private const val KEY_LIVE_MODEL_ID = "live_model_id"
         private const val KEY_ACCURATE_MODEL_ID = "accurate_model_id"
-        private const val KEY_TRANSFORMATION_MODEL_ID = "transformation_model_id"
         private const val KEY_MODEL_CATALOG = "model_catalog"
         private const val KEY_MODEL_CATALOG_V2 = "model_catalog_v2"
         private const val KEY_MODEL_CATALOG_UPDATED = "model_catalog_updated"

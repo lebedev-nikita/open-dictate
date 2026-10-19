@@ -7,19 +7,17 @@ import org.json.JSONObject
 
 data class PostProcessingSettings(
     val enabled: Boolean = false,
-    val model: String = DEFAULT_MODEL,
     val prompt: String? = null,
 ) {
     val effectivePrompt: String get() = prompt ?: PostProcessingPreset.PUNCTUATION.text
     val shouldProcess: Boolean get() = enabled && effectivePrompt.isNotBlank()
-    val isValid: Boolean get() = model.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")) &&
-        (prompt?.toByteArray(Charsets.UTF_8)?.size ?: 0) <= MAXIMUM_PROMPT_BYTES
+    val isValid: Boolean get() = (prompt?.toByteArray(Charsets.UTF_8)?.size ?: 0) <= MAXIMUM_PROMPT_BYTES
     fun toJson(): String {
         require(isValid)
-        return "{\"enabled\":$enabled,\"model\":${quote(model)},\"prompt\":${prompt?.let(::quote) ?: "null"}}"
+        // Fixed wire metadata keeps earlier RCs compatible; callers cannot choose a model.
+        return "{\"enabled\":$enabled,\"model\":\"${TextProcessingModel.ID}\",\"prompt\":${prompt?.let(::quote) ?: "null"}}"
     }
     companion object {
-        const val DEFAULT_MODEL = "gpt-6-luna"
         const val MAXIMUM_PROMPT_BYTES = 16_384
         // Canonical encoding matches Foundation's sortedKeys/withoutEscapingSlashes.
         private fun quote(value: String): String = buildString {
@@ -36,9 +34,9 @@ data class PostProcessingSettings(
         fun fromJson(value: String): PostProcessingSettings {
             require(value.toByteArray(Charsets.UTF_8).size <= MAXIMUM_PROMPT_BYTES * 6 + 1024)
             val json = JSONObject(value)
-            require(json.get("enabled") is Boolean && json.get("model") is String)
+            require(json.get("enabled") is Boolean)
             val prompt = if (!json.has("prompt") || json.isNull("prompt")) null else json.get("prompt").also { require(it is String) } as String
-            return PostProcessingSettings(json.getBoolean("enabled"), json.getString("model"), prompt).also { require(it.isValid) }
+            return PostProcessingSettings(json.getBoolean("enabled"), prompt).also { require(it.isValid) }
         }
     }
 }

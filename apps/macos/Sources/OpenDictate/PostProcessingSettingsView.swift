@@ -3,17 +3,16 @@ import OpenDictateCore
 
 struct PostProcessingSettingsView: View {
     @ObservedObject var preferences: Preferences
-    @State private var model = PostProcessingSettings.defaultModel
     @State private var prompt = PostProcessingPreset.punctuation.text
     @State private var loaded = false
     @State private var original = PostProcessingSettings()
 
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
     private var draft: PostProcessingSettings {
-        PostProcessingSettings(enabled: preferences.postProcessing.enabled, model: model,
+        PostProcessingSettings(enabled: preferences.postProcessing.enabled,
             prompt: prompt == PostProcessingPreset.punctuation.text ? nil : prompt)
     }
-    private var changed: Bool { model != original.model || prompt != original.effectivePrompt }
+    private var changed: Bool { prompt != original.effectivePrompt }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -25,16 +24,6 @@ struct PostProcessingSettingsView: View {
                 Text(t("Applies after Live or Accurate finishes. Sends the transcript to OpenAI in an additional request.",
                     "Применяется после завершения Live или Accurate. Отправляет расшифровку в OpenAI дополнительным запросом."))
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(t("Post-processing model", "Модель постобработки"))
-                    TextField(PostProcessingSettings.defaultModel, text: $model)
-                        .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced)).autocorrectionDisabled()
-                        .accessibilityLabel(t("Post-processing model", "Модель постобработки"))
-                    if !PostProcessingSettings(model: model).isValid {
-                        Text(t("Enter a valid OpenAI model ID.", "Введите корректный ID модели OpenAI."))
-                            .font(.caption).foregroundStyle(.red)
-                    }
-                }
                 VStack(alignment: .leading, spacing: 6) {
                     Text(t("Post-processing prompt", "Промпт постобработки"))
                     TextEditor(text: $prompt).font(.body).scrollContentBackground(.hidden)
@@ -86,6 +75,6 @@ struct PostProcessingSettingsView: View {
         }
     }
     private func load(_ settings: PostProcessingSettings) {
-        original = settings; model = settings.model; prompt = settings.effectivePrompt
+        original = settings; prompt = settings.effectivePrompt
     }
 }

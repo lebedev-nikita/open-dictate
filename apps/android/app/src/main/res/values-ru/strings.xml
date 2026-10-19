@@ -198,14 +198,13 @@
     <string name="settings_processing">Подготовка текста…</string>
     <string name="settings_dictation">Диктовка</string>
     <string name="settings_recognition_model">Модель распознавания</string>
-    <string name="settings_editing_model">Модель для правок</string>
     <string name="settings_dictionary">Личный словарь</string>
     <string name="settings_dictionary_empty">Имена, термины и редкие слова</string>
     <string name="settings_dictionary_count">Записей в словаре: %1$d</string>
     <string name="settings_transformation_hint">Показывать «Изменить текст» в меню</string>
     <string name="settings_selection_dictionary">В словарь из выделения</string>
     <string name="settings_refresh_models">Обновить модели OpenAI</string>
-    <string name="settings_models_hint">Доступные модели распознавания и правок</string>
+    <string name="settings_models_hint">Доступные модели распознавания</string>
     <string name="settings_models_retry">Не удалось обновить. Нажмите для повтора.</string>
     <string name="settings_saved_automatically">Изменения сохраняются автоматически</string>
     <string name="settings_done">Готово</string>
@@ -282,13 +281,11 @@
     <string name="postprocessing_save">Сохранить</string>
     <string name="postprocessing_title">Постобработка</string>
     <string name="postprocessing_description">Применяется после завершения Live или Accurate. Отправляет расшифровку в OpenAI дополнительным запросом.</string>
-    <string name="postprocessing_model">Модель постобработки</string>
     <string name="postprocessing_prompt">Промпт постобработки</string>
     <string name="postprocessing_add_instruction">Добавить инструкцию</string>
     <string name="postprocessing_punctuation">Исправить пунктуацию</string>
     <string name="postprocessing_numbers">Отформатировать числа</string>
     <string name="postprocessing_reset">Сбросить промпт</string>
     <string name="postprocessing_hint">Кнопки добавляют редактируемый текст. Пустой промпт пропускает постобработку. Сохраните изменения для следующей диктовки.</string>
-    <string name="postprocessing_invalid_model">Введите корректный ID модели OpenAI.</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
 </resources>

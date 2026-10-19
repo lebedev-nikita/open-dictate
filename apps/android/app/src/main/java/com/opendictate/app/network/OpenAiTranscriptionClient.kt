@@ -9,6 +9,7 @@ import com.opendictate.app.data.transcriptionKeywords
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessing
+import com.opendictate.app.model.TextProcessingModel
 import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.PostProcessingResult
 import kotlinx.coroutines.CompletableDeferred
@@ -125,7 +126,6 @@ class OpenAiTranscriptionClient(
 
     internal suspend fun transformText(
         apiKey: String,
-        model: String,
         sourceText: String,
         instruction: String,
     ): TextTransformationResult = try {
@@ -134,7 +134,7 @@ class OpenAiTranscriptionClient(
                 val request = authorizedRequest(apiKey, RESPONSES_URL)
                     .header("Content-Type", "application/json")
                     .post(
-                        textTransformationRequest(model, sourceText, instruction)
+                        textTransformationRequest(sourceText, instruction)
                             .toString()
                             .toRequestBody(JSON),
                     )
@@ -187,20 +187,18 @@ class OpenAiTranscriptionClient(
 
     suspend fun searchTranscriptHistory(
         apiKey: String,
-        model: String,
         query: String,
         documents: List<TranscriptSearchDocument>,
     ): List<Long> {
         if (query.isBlank() || documents.isEmpty()) return emptyList()
         val knownIds = documents.mapTo(mutableSetOf(), TranscriptSearchDocument::id)
         return historySearchBatches(documents).flatMap { batch ->
-            searchTranscriptHistoryBatch(apiKey, model, query.trim(), batch)
+            searchTranscriptHistoryBatch(apiKey, query.trim(), batch)
         }.distinct().filter(knownIds::contains)
     }
 
     private suspend fun searchTranscriptHistoryBatch(
         apiKey: String,
-        model: String,
         query: String,
         documents: List<TranscriptSearchDocument>,
     ): List<Long> = try {
@@ -209,7 +207,7 @@ class OpenAiTranscriptionClient(
                 val request = authorizedRequest(apiKey, RESPONSES_URL)
                     .header("Content-Type", "application/json")
                     .post(
-                        transcriptHistorySearchRequest(model, query, documents)
+                        transcriptHistorySearchRequest(query, documents)
                             .toString()
                             .toRequestBody(JSON),
                     )
@@ -489,11 +487,10 @@ internal fun historySearchBatches(
 }
 
 internal fun transcriptHistorySearchRequest(
-    model: String,
     query: String,
     documents: List<TranscriptSearchDocument>,
 ): JSONObject = JSONObject()
-    .put("model", model)
+    .put("model", TextProcessingModel.ID)
     .put("store", false)
     .put("reasoning", JSONObject().put("effort", "low"))
     .put(
@@ -560,11 +557,10 @@ private const val MAX_HISTORY_DOCUMENT_CHARS = 4_000
 private const val MAX_HISTORY_REQUEST_CHARS = 40_000
 
 internal fun textTransformationRequest(
-    model: String,
     sourceText: String,
     instruction: String,
 ): JSONObject = JSONObject()
-    .put("model", model)
+    .put("model", TextProcessingModel.ID)
     .put("store", false)
     .put("reasoning", JSONObject().put("effort", "low"))
     .put(
@@ -654,7 +650,7 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 private const val MAX_USER_MESSAGE_CHARS = 1_000
 
 internal fun postProcessingRequest(source: String, settings: PostProcessingSettings): JSONObject {
-    val request = textTransformationRequest(settings.model, source, settings.effectivePrompt)
+    val request = textTransformationRequest(source, settings.effectivePrompt)
         .put("instructions", PostProcessing.INSTRUCTIONS)
     val format = request.getJSONObject("text").getJSONObject("format")
     format.put("name", "post_processing")
@@ -662,10 +658,7 @@ internal fun postProcessingRequest(source: String, settings: PostProcessingSetti
     schema.getJSONObject("properties").remove("message")
     schema.getJSONObject("properties").getJSONObject("transformed_text").remove("description")
     schema.put("required", JSONArray().put("transformed_text"))
-    when {
-        settings.model in setOf("gpt-6-luna", "gpt-6-sol") -> request.put("reasoning", JSONObject().put("effort", "none"))
-        !settings.model.matches(Regex("gpt-[5-9].*")) -> request.remove("reasoning")
-    }
+    request.put("reasoning", JSONObject().put("effort", "none"))
     return request
 }
 

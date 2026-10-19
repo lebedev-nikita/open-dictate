@@ -4,6 +4,28 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSyncDocumentTest {
+    @Test fun fixedModelIgnoresLegacyChoicesWithoutSourceChoice() {
+        val old = """{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"""
+        val other = """{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"""
+        val local = document("postprocessing", old, 10, "mac")
+        val remote = document("postprocessing", other, 20, "android")
+            .copy(entries = document("postprocessing", other, 20, "android").entries +
+                ("textModel" to SettingsSyncEntry("gpt-6-sol", 30, "old")))
+        assertTrue(local.hasSameSettings(remote))
+        assertFalse(local.needsConnectionChoice(remote))
+        val merged = local.merge(remote)
+        assertNull(merged.entries["textModel"])
+        val settings = com.opendictate.app.model.PostProcessingSettings.fromJson(merged.entries.getValue("postprocessing").value!!)
+        val requests = listOf(
+            com.opendictate.app.network.textTransformationRequest("Text", "Edit"),
+            com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()),
+            com.opendictate.app.network.postProcessingRequest("Text", settings))
+        requests.forEach { assertEquals("gpt-6-luna", it.getString("model")) }
+        assertTrue(settings.enabled)
+        assertEquals("Keep text", settings.prompt)
+        assertEquals(20L, merged.entries.getValue("postprocessing").modifiedAt)
+    }
+
     @Test fun `retired prompt is dropped without a connection choice`() {
         val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
             .first { java.io.File(it, "shared/settings-sync-prompts.json").isFile }
@@ -79,14 +101,14 @@ class SettingsSyncDocumentTest {
 
     @Test fun `separate preferences merge and concurrent conflicts converge regardless of order`() {
         val android = document("dictionary", "Android\nНикита", 100, "android")
-            .merge(document("textModel", "gpt-6-sol", 120, "android"))
+            .merge(document("accurateModel", "gpt-transcribe", 120, "android"))
         val mac = document("dictionary", "Mac", 100, "mac")
             .merge(document("mode", "live", 130, "mac"))
         val merged = android.merge(mac)
         assertEquals(merged, mac.merge(android))
         assertEquals(merged, merged.merge(android).merge(mac))
         assertEquals("Mac", merged.entries["dictionary"]?.value)
-        assertEquals("gpt-6-sol", merged.entries["textModel"]?.value)
+        assertEquals("gpt-transcribe", merged.entries["accurateModel"]?.value)
         assertEquals("live", merged.entries["mode"]?.value)
     }
 
@@ -111,7 +133,7 @@ class SettingsSyncDocumentTest {
         val fixture = """{"schemaVersion":1,"entries":{"dictionary":{"value":"Никита\nOpenDictate 📝","modifiedAt":1760000000000,"deviceId":"mac"},"future.color":{"value":"dark","modifiedAt":2,"deviceId":"mac"}}}"""
         val parsed = SettingsSyncDocument.fromJson(fixture)
         assertEquals(parsed, SettingsSyncDocument.fromJson(parsed.toJson()))
-        val updated = parsed.record(mapOf("textModel" to "gpt-6-sol", "apiKey" to "private-test-key", "history" to "private-test-history"), "android", 1)
+        val updated = parsed.record(mapOf("accurateModel" to "gpt-transcribe", "apiKey" to "private-test-key", "history" to "private-test-history"), "android", 1)
         assertEquals("dark", updated.entries["future.color"]?.value)
         assertFalse(updated.toJson().contains("private-test"))
     }

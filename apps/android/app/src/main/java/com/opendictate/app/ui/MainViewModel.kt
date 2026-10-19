@@ -45,7 +45,6 @@ data class MainUiState(
     val model: TranscriptionModel = TranscriptionModel.ACCURATE,
     val liveModelId: String = ModelCatalog.DEFAULT.live.first(),
     val accurateModelId: String = ModelCatalog.DEFAULT.accurate.first(),
-    val transformationModelId: String = ModelCatalog.DEFAULT.text.first(),
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
@@ -114,8 +113,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
                     postProcessing = settings.postProcessing,
-                    liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId,
-                    transformationModelId = settings.transformationModelId) }
+                    liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId) }
             }
         }
     }
@@ -139,7 +137,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 modelCatalog = ModelCatalog.DEFAULT,
                 liveModelId = settings.liveModelId,
                 accurateModelId = settings.accurateModelId,
-                transformationModelId = settings.transformationModelId,
                 newModelCount = 0,
             )
         }
@@ -159,7 +156,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 modelCatalog = ModelCatalog.DEFAULT,
                 liveModelId = settings.liveModelId,
                 accurateModelId = settings.accurateModelId,
-                transformationModelId = settings.transformationModelId,
                 modelsLoading = false,
                 newModelCount = 0,
             )
@@ -194,12 +190,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(accurateModelId = id) }
     }
 
-    fun selectTransformationModel(id: String) {
-        if (id !in modelOptions(mutableState.value.modelCatalog.text, ModelCatalog.DEFAULT.text)) return
-        settings.transformationModelId = id
-        mutableState.update { it.copy(transformationModelId = id) }
-    }
-
     fun savePostProcessing(value: com.opendictate.app.model.PostProcessingSettings) {
         if (!value.isValid) return
         settings.postProcessing = value
@@ -217,14 +207,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val previous = mutableState.value.modelCatalog
                 val hadCatalog = settings.modelCatalogUpdatedAt > 0L
                 settings.modelCatalog = catalog
-                val added = (catalog.live + catalog.accurate + catalog.text).toSet() -
-                    (previous.live + previous.accurate + previous.text).toSet()
+                val added = (catalog.live + catalog.accurate).toSet() -
+                    (previous.live + previous.accurate).toSet()
                 mutableState.update {
                     it.copy(
                         modelCatalog = catalog,
                         liveModelId = settings.liveModelId,
                         accurateModelId = settings.accurateModelId,
-                        transformationModelId = settings.transformationModelId,
                         modelsLoading = false,
                         newModelCount = if (hadCatalog) added.size else 0,
                     )
@@ -376,7 +365,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val matches = apiClient.searchTranscriptHistory(
                     apiKey = apiKey,
-                    model = settings.transformationModelId,
                     query = query,
                     documents = state.entries.map {
                         TranscriptSearchDocument(id = it.id, text = it.text)
@@ -434,7 +422,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         model = settings.model,
         liveModelId = settings.liveModelId,
         accurateModelId = settings.accurateModelId,
-        transformationModelId = settings.transformationModelId,
         modelCatalog = settings.modelCatalog,
         transformationButtonEnabled = settings.transformationButtonEnabled,
         languages = settings.languages,
