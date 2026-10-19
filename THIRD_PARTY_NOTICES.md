@@ -7,9 +7,12 @@ Source: https://github.com/google/material-design-icons/blob/master/src/maps/men
 Copyright Google LLC. Licensed under the Apache License, Version 2.0. The
 license text is included in `app/src/main/assets/MATERIAL_ICONS_LICENSE.txt`.
 
-## OpenAI Apps SDK UI — MicLgDictate icon
+## OpenAI Apps SDK UI — MicLgDictate and OpenaiLogoRegular icons
 
-Source: https://github.com/openai/apps-sdk-ui/blob/main/src/components/Icon/svg/MicLgDictate.tsx
+Sources:
+
+- https://github.com/openai/apps-sdk-ui/blob/main/src/components/Icon/svg/MicLgDictate.tsx
+- https://github.com/openai/apps-sdk-ui/blob/main/src/components/Icon/svg/OpenaiLogoRegular.tsx
 
 Copyright 2025 OpenAI
 

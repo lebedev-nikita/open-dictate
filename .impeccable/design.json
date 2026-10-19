@@ -62,8 +62,8 @@
     "chatGPTPlan": {
       "scope": "Optional native Operate extension; incumbent worlds, tokens and website previews retained. Sole built-in text model GPT-6 Luna; no custom model ID.",
       "placement": "Directly below Text model and before speech languages on Android and macOS; visible in Live and Accurate.",
-      "prerequisite": "Continue with ChatGPT is disabled until a transcription API key is saved; brief adjacent guidance explains transcription API use and text-only plan use.",
-      "interaction": "System-browser authorization, saved-account selection/addition, first-login confirmation, busy cancellation, usage management, reconnect and disconnect. Connect and account changes are disabled during active dictation or authorization; disconnect disables while active or busy.",
+      "prerequisite": "Connection switch requires a saved transcription API key unless already connected; sign-out remains available after key deletion. Adjacent guidance explains transcription API use and text-only plan use.",
+      "interaction": "Drive-style provider row: official OpenAI Apps SDK UI OpenaiLogoRegular vector and ChatGPT label left, native switch right. On starts system-browser sign-in; off disconnects. Disabled during active dictation or authorization. Busy keeps the switch checked and disabled with generic Waiting for ChatGPT guidance and Cancel. Saved-account selection/addition, first-login confirmation, usage management, reconnect and failure guidance remain; account changes and reconnect require the API key and disable while active or busy.",
       "routing": "Connected plan is used for eligible GPT-6 Luna transformation/voice-editing and Accurate post-processing. Audio transcription and explicit AI history search remain on the API path. A failed selected-plan request never automatically falls back to paid API text processing; failed post-processing preserves the original transcript.",
       "storage": "Credentials stay device-only in Android Keystore-protected storage or non-synchronizing macOS Keychain; never included in Drive synchronization.",
       "references": "docs/chatgpt-plan.md"
@@ -328,23 +328,25 @@
         "errors": "Background failures produce no toast or notification. Only failed user-initiated Google sign-in displays transient feedback."
       },
       "chatGPTPlan": {
-        "implementation": "ChatGPTSettings.kt; SettingsScreen.kt; MainViewModel.kt; chatgpt/; OpenAiTranscriptionClient.kt; DictationForegroundService.kt",
-        "presentation": "Existing neutral Material 3 Dictation group between Text model and languages, inset dividers, full-width 16dp-padded column with 8dp spacing. Native outlined/text buttons, bodySmall guidance, connected account identity, account dropdown and native first-login AlertDialog. Existing appearance, font scaling and scrolling retained.",
+        "implementation": "ChatGPTSettings.kt; SettingsScreen.kt; MainViewModel.kt; chatgpt/; OpenAiTranscriptionClient.kt; DictationForegroundService.kt; GoogleDriveSyncSettings.kt; ic_chatgpt_24.xml",
+        "presentation": "Existing neutral Material 3 Dictation group between Text model and languages, inset dividers. Drive-style 80dp minimum whole-row Switch semantic target: 24dp official OpenaiLogoRegular vector, ChatGPT label and trailing native switch; 16dp leading, 12dp trailing/vertical insets and 14dp icon gap. Supporting bodySmall copy and native text actions use 54dp leading, 16dp trailing/bottom padding and 8dp spacing. Account dropdown and native first-login AlertDialog retained; existing appearance, font scaling and scrolling preserved. Original vector geometry shared with macOS, with provenance comments and third-party notices.",
         "contract": "extensions.chatGPTPlan",
         "review": {
           "disposition": "ship",
-          "findings": "Final native UI/source review: no material fixes; supplied screenshot matrix viewed and valid.",
+          "findings": "Fresh native UI/source finish review: ship, no material fixes; all nine Android captures in the final 15-capture matrix validated.",
           "screenshots": [
-            ".impeccable/review/chatgpt-android-en-phone-full.png",
-            ".impeccable/review/chatgpt-android-en-phone-ready.png",
-            ".impeccable/review/chatgpt-android-ru-dark-large-full.png",
-            ".impeccable/review/chatgpt-android-ru-dark-large-ready.png",
-            ".impeccable/review/chatgpt-android-tablet-full.png",
-            ".impeccable/review/chatgpt-android-tablet-ready.png",
-            ".impeccable/review/chatgpt-android-en-phone-connected-error.png"
+            ".impeccable/review/chatgpt-switch-android-en-phone-full.png",
+            ".impeccable/review/chatgpt-switch-android-en-phone-ready.png",
+            ".impeccable/review/chatgpt-switch-android-ru-dark-large-full.png",
+            ".impeccable/review/chatgpt-switch-android-ru-dark-large-ready.png",
+            ".impeccable/review/chatgpt-switch-android-tablet-full.png",
+            ".impeccable/review/chatgpt-switch-android-tablet-ready.png",
+            ".impeccable/review/chatgpt-switch-android-en-phone-locked.png",
+            ".impeccable/review/chatgpt-switch-android-en-phone-busy.png",
+            ".impeccable/review/chatgpt-switch-android-en-phone-connected-error.png"
           ],
-          "captureScope": "English phone, Russian dark phone at 1.3 font scale and tablet emulation. Full captures show actual Settings; production-component fixtures use synthetic state.",
-          "validation": "Supplied: 171 JVM tests; required Debug/Release lint and assembly; four English phone, two Russian dark large-text and two tablet instrumentation tests, plus two final focused broker tests passed.",
+          "captureScope": "English light phone 1080 × 2340px density 420; Russian dark phone at 1.3 font scale; tablet emulation 1600 × 2560px density 240. Full captures show actual Settings; production-component fixtures use synthetic state. Connected-error intentionally has no transcription key: reconnect disabled, sign-out enabled.",
+          "validation": "Supplied: 171 JVM tests; required Debug/Release unit, lint and assembly; four English phone, two Russian dark large-text and two tablet instrumentation tests, plus one final focused switch test passed. Tablet model-popup idle timeout passed isolated retry with animations disabled and restored afterward. Version checks and all five shared configuration tests passed.",
           "limits": "Ignored native review captures, not shipping assets. No HTML detector or new tokens. Actual ChatGPT login, eligibility, paid inference, OS insertion and physical-device smoke not verified."
         }
       },
@@ -419,8 +421,8 @@
           },
           {
             "name": "ChatGPT Plan Connection",
-            "implementation": "ChatGPTSettingsView.swift; ChatGPTConnection.swift; ChatGPTSession.swift; ChatGPTAuthorization.swift; SettingsView.swift; AppModel.swift; Network.swift; OpenDictateCore/ChatGPTProtocol.swift",
-            "description": "Optional connection directly below Text model and before Speech languages in both modes. Existing 8pt native stack, system buttons, caption guidance and semantic surfaces. Connected account identity, native account Menu, first-login alert, small busy progress/Cancel, usage/reconnect/disconnect and failure guidance. English/Russian wraps within the existing scrollable Dictation body.",
+            "implementation": "ChatGPTSettingsView.swift; ChatGPTConnection.swift; ChatGPTSession.swift; ChatGPTAuthorization.swift; SettingsView.swift; AppModel.swift; Network.swift; OpenDictateCore/ChatGPTProtocol.swift; GoogleDriveSettingsView.swift; ChatGPTMark.swift",
+            "description": "Optional connection directly below Text model and before Speech languages in both modes. Drive-style native Toggle at regular control size: 24pt official OpenaiLogoRegular vector and ChatGPT label left, switch right, 12pt icon gap. Outer 12pt stack; supporting 8pt caption/actions stack indented 36pt. Connected account identity, native account Menu, first-login alert, generic Waiting for ChatGPT progress/Cancel, usage/reconnect and failure guidance retained. English/Russian wraps within the existing scrollable Dictation body. Original vector geometry shared with Android, with provenance comments and third-party notices.",
             "contract": "extensions.chatGPTPlan",
             "review": "extensions.nativeSurfaces.macos.review.chatGPTPlan"
           },
@@ -511,7 +513,7 @@
         "review": {
           "chatGPTPlan": {
             "disposition": "ship",
-            "findings": "Final native UI/source review: no material fixes; supplied screenshot matrix viewed and valid.",
+            "findings": "Fresh native UI/source finish review: ship, no material fixes; all six macOS captures in the final 15-capture matrix validated.",
             "screenshots": [
               ".impeccable/review/chatgpt-macos-en-locked.png",
               ".impeccable/review/chatgpt-macos-en-ready.png",
@@ -520,8 +522,8 @@
               ".impeccable/review/chatgpt-macos-full-accurate-en-false.png",
               ".impeccable/review/chatgpt-macos-full-accurate-ru-false.png"
             ],
-            "captureScope": "English/Russian production-component fixtures with synthetic locked/ready states; full actual Settings NSHostingView renders in an isolated localOnly harness.",
-            "validation": "Supplied: 200 Swift tests and successful universal packaging.",
+            "captureScope": "English dark production Drive and ChatGPT component fixtures at 568pt and Russian light at 464pt, with synthetic locked/ready states; full actual Settings NSHostingView renders at 1000 × 900pt in an isolated localOnly harness.",
+            "validation": "Supplied: 200 Swift tests, successful universal packaging, version checks and all five shared configuration tests.",
             "limits": "Ignored native review captures, not shipping assets. No HTML detector or new tokens. Actual ChatGPT login, eligibility, paid inference, TCC, hotkeys, OS insertion and physical-device smoke not verified."
           },
           "driveSourceChoice": {

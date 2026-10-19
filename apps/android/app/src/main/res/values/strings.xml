@@ -310,4 +310,5 @@
     <string name="chatgpt_accounts">ChatGPT accounts</string>
     <string name="chatgpt_add_account">Add another account</string>
     <string name="chatgpt_connected_hint">Transcription uses your API key. Text transformation and post-processing use your ChatGPT plan.</string>
+    <string name="chatgpt_waiting">Waiting for ChatGPT…</string>
 </resources>

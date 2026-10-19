@@ -306,4 +306,5 @@
     <string name="chatgpt_accounts">Аккаунты ChatGPT</string>
     <string name="chatgpt_add_account">Добавить другой аккаунт</string>
     <string name="chatgpt_connected_hint">Транскрипция использует API-ключ. Преобразование текста и постобработка — подписку ChatGPT.</string>
+    <string name="chatgpt_waiting">Ожидание ChatGPT…</string>
 </resources>

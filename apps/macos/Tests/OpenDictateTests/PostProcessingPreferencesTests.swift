@@ -15,6 +15,8 @@ final class PostProcessingPreferencesTests: XCTestCase {
         XCTAssertEqual(Preferences(defaults: defaults).textProcessingModel, "test-text-model")
         _ = try other.mergeSync(local.syncDocument())
         XCTAssertEqual(other.textProcessingModel, "test-text-model")
+        // Exchange promoted seed clocks before the next causally later local edit.
+        _ = try local.mergeSync(other.syncDocument())
         var invalidModel = try local.syncDocument()
         invalidModel.entries["textProcessingModel"] = .init(value: "invalid model", modifiedAt: Int64.max - 10, deviceId: "remote")
         invalidModel.entries["dictionary"] = .init(value: "Must not apply", modifiedAt: Int64.max - 10, deviceId: "remote")
