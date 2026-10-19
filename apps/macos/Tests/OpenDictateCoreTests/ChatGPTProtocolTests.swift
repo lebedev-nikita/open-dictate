@@ -1,0 +1,61 @@
+import XCTest
+import Security
+@testable import OpenDictateCore
+
+final class ChatGPTProtocolTests: XCTestCase {
+    func testCallbackBindsStatePathAndClientAndRejectsDuplicatesAndDecline() throws {
+        let callback = try ChatGPTProtocol.callback("/auth/callback?state=s&code=c&client_id=oaiapp_test", state: "s", client: nil)
+        XCTAssertEqual(callback.0, "c"); XCTAssertEqual(callback.1, "oaiapp_test")
+        for target in ["/callback?state=s&code=c&client_id=oaiapp_test", "/auth/callback?state=other&code=c&client_id=oaiapp_test",
+                       "/auth/callback?state=s&state=s&code=c&client_id=oaiapp_test", "/auth/callback?state=s&code=c&client_id=oaiapp_other",
+                       "/auth/callback?state=s&error=access_denied"] {
+            XCTAssertThrowsError(try ChatGPTProtocol.callback(target, state: "s", client: "oaiapp_test"))
+        }
+        let initial = ChatGPTProtocol.authorization(host: "host", redirect: "http://127.0.0.1:123/auth/callback", state: "s", nonce: "n", challenge: "pkce")
+        XCTAssertTrue(initial.absoluteString.contains("client_id=dynamic_agent_client"))
+        XCTAssertTrue(initial.absoluteString.contains("agent_name_hint=OpenDictate"))
+        XCTAssertFalse(ChatGPTProtocol.authorization(host: "host", redirect: "redirect", state: "s", nonce: "n", challenge: "pkce", client: "oaiapp_test").absoluteString.contains("agent_name_hint"))
+    }
+    func testRS256SignatureAndOIDCClaims() throws {
+        let key = try XCTUnwrap(SecKeyCreateRandomKey([kSecAttrKeyType as String: kSecAttrKeyTypeRSA, kSecAttrKeySizeInBits as String: 2048] as CFDictionary, nil))
+        let publicKey = try XCTUnwrap(SecKeyCopyPublicKey(key))
+        let publicBytes = try XCTUnwrap(SecKeyCopyExternalRepresentation(publicKey, nil) as Data?)
+        // Parse the PKCS#1 public key produced by Security into the public JWK integers.
+        var offset = 0
+        func tlv(_ tag: UInt8) throws -> Data {
+            XCTAssertEqual(publicBytes[offset], tag); offset += 1
+            var length = Int(publicBytes[offset]); offset += 1
+            if length >= 128 { let count = length & 127; length = 0; for _ in 0..<count { length = length * 256 + Int(publicBytes[offset]); offset += 1 } }
+            let value = publicBytes.subdata(in: offset..<offset+length); offset += length; return value
+        }
+        let sequence = try tlv(0x30); offset = publicBytes.count - sequence.count
+        let modulus = try tlv(2), exponent = try tlv(2)
+        let jwks: [String: Any] = ["keys": [["kid": "test", "kty": "RSA", "n": ChatGPTProtocol.base64URL(modulus), "e": ChatGPTProtocol.base64URL(exponent)]]]
+        func signed(_ claims: [String: Any]) throws -> String {
+            let header = ChatGPTProtocol.base64URL(Data(#"{"alg":"RS256","kid":"test"}"#.utf8))
+            let input = header + "." + ChatGPTProtocol.base64URL(try JSONSerialization.data(withJSONObject: claims))
+            let signature = try XCTUnwrap(SecKeyCreateSignature(key, .rsaSignatureMessagePKCS1v15SHA256, Data(input.utf8) as CFData, nil) as Data?)
+            return input + "." + ChatGPTProtocol.base64URL(signature)
+        }
+        var claims: [String: Any] = ["iss": ChatGPTProtocol.issuer, "sub": "synthetic", "aud": "oaiapp_test", "nonce": "nonce", "exp": 2000]
+        let jwt = try signed(claims)
+        XCTAssertEqual(try ChatGPTProtocol.identity(jwt, jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000)["sub"] as? String, "synthetic")
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(jwt, jwks: jwks, client: "other", nonce: "nonce", now: 1000))
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(jwt, jwks: jwks, client: "oaiapp_test", nonce: "other", now: 1000))
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(jwt, jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 2000))
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(String(jwt.dropLast(8)) + "AAAAAAAA", jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
+        claims["iss"] = "https://example.com"
+        XCTAssertThrowsError(try ChatGPTProtocol.identity(signed(claims), jwks: jwks, client: "oaiapp_test", nonce: "nonce", now: 1000))
+    }
+    func testPlanTransportAndTerminalEventAreRequired() throws {
+        let body = OpenAIRequest.transform(source: "Synthetic", instruction: "Edit")
+        let plan = ChatGPTProtocol.planRequest(body)
+        XCTAssertEqual(plan["stream"] as? Bool, true); XCTAssertEqual(plan["store"] as? Bool, false)
+        XCTAssertEqual((plan["input"] as? [[String: String]])?.first?["content"], body["input"] as? String)
+        XCTAssertNil(body["stream"])
+        XCTAssertNil(try ChatGPTProtocol.completedEvent(#"{"type":"response.output_text.delta","delta":"partial"}"#))
+        XCTAssertThrowsError(try ChatGPTProtocol.completedEvent(#"{"type":"response.failed"}"#))
+        XCTAssertThrowsError(try ChatGPTProtocol.completedEvent(#"{"type":"response.incomplete"}"#))
+        XCTAssertEqual(try ChatGPTProtocol.completedEvent(#"{"type":"response.completed","response":{"status":"completed"}}"#)?["status"] as? String, "completed")
+    }
+}

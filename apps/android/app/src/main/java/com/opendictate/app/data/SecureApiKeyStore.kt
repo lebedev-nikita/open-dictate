@@ -11,8 +11,8 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class SecureApiKeyStore(context: Context) {
-    private val prefs = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
+class SecureApiKeyStore(context: Context, private val namespace: String = "") {
+    private val prefs = context.getSharedPreferences(FILE_NAME + namespace, Context.MODE_PRIVATE)
 
     fun save(apiKey: String) {
         val normalized = apiKey.trim()
@@ -29,7 +29,7 @@ class SecureApiKeyStore(context: Context) {
         }
     }
 
-    fun get(): String? {
+    fun get(strict: Boolean = false): String? {
         val ciphertext = prefs.getString(KEY_CIPHERTEXT, null) ?: return null
         val iv = prefs.getString(KEY_IV, null) ?: return null
         return runCatching {
@@ -44,6 +44,7 @@ class SecureApiKeyStore(context: Context) {
                 Charsets.UTF_8,
             )
         }.getOrElse {
+            if (strict) throw IllegalStateException("Credential storage unavailable")
             clear()
             null
         }
@@ -57,11 +58,11 @@ class SecureApiKeyStore(context: Context) {
 
     private fun getOrCreateKey(): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        (keyStore.getKey(KEY_ALIAS + namespace, null) as? SecretKey)?.let { return it }
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE).run {
             init(
                 KeyGenParameterSpec.Builder(
-                    KEY_ALIAS,
+                    KEY_ALIAS + namespace,
                     KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
                 )
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)

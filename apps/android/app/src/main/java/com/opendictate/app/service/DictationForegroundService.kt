@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 class DictationForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val apiClient by lazy { OpenAiTranscriptionClient(resources) }
+    private val apiClient by lazy { OpenAiTranscriptionClient(resources, (application as OpenDictateApplication).chatGPT) }
     private var activeJob: Job? = null
     private var activeSessionId = 0L
     private var stopSignal = CompletableDeferred<Unit>()
@@ -98,6 +98,7 @@ class DictationForegroundService : Service() {
         val model = settings.model
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
+        val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val postProcessing = settings.postProcessing.forMode(model)
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
@@ -253,11 +254,12 @@ class DictationForegroundService : Service() {
                         sourceText = requireNotNull(sourceText),
                         instruction = transcript.trim(),
                         modelId = textProcessingModel,
+                        chatGPTAccount = chatGPTAccount,
                     )
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, textProcessingModel) }
+                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, textProcessingModel, chatGPTAccount) }
                     if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
                     val processed = timed.value
                     ensureActive()
@@ -333,6 +335,7 @@ class DictationForegroundService : Service() {
         val languages = settings.languages
         val dictionary = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
+        val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val postProcessing = settings.postProcessing.forMode(model)
         activeOperation = DictationOperation.DICTATION
@@ -355,7 +358,7 @@ class DictationForegroundService : Service() {
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, textProcessingModel) }
+                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, textProcessingModel, chatGPTAccount) }
                 val processed = postProcessingAttempt.value
                 ensureActive()
                 val result = replacements.apply(processed.text)

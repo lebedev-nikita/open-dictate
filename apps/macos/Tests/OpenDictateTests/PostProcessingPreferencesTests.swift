@@ -65,7 +65,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
                 let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                 host.cacheDisplay(in: host.bounds, to: bitmap)
                 try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("text-model-macos-\(mode.rawValue)-\(language)-\(enabled).png"))
+                    .write(to: URL(fileURLWithPath: output).appendingPathComponent("chatgpt-macos-full-\(mode.rawValue)-\(language)-\(enabled).png"))
             }
             window.close()
         }

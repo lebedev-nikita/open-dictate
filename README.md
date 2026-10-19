@@ -28,6 +28,7 @@ no backend, analytics or account to create.
 - Configurable Accurate post-processing with punctuation/value presets, a transcription dictionary, local history with request durations, on-device search, and explicit AI search.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
+- Optional [ChatGPT plan usage](docs/chatgpt-plan.md) for Luna text processing; transcription still requires an API key.
 - Encrypted credentials: Android Keystore on Android, Keychain on macOS.
 - Optional Google Drive sync for the dictionary, post-processing, word replacements, dictation
   mode and selected recognition/text models. [Setup and conflict behavior](docs/google-drive-sync.md).

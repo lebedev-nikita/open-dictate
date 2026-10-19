@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T09:57:51Z",
+  "generatedAt": "2026-10-19T10:35:56Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -58,6 +58,15 @@
       "labels": "Transcr. / Post-proc. in English; Транскр. / Постобр. in Russian. Locale-aware seconds to one decimal; <0.1 / <0,1 below 100ms. Full localized accessibility names expand abbreviations. Live shows literal Live only. Unknown metadata and skipped post-processing are omitted.",
       "persistence": "Optional local-only metadata; Android SQLite v1→v2 migration and backward-compatible macOS JSON. Excluded from Drive synchronization and AI search.",
       "scope": "Existing native visual worlds, tokens, density and actions retained; no new token or shipping raster asset."
+    },
+    "chatGPTPlan": {
+      "scope": "Optional native Operate extension; incumbent worlds, tokens and website previews retained. Sole built-in text model GPT-6 Luna; no custom model ID.",
+      "placement": "Directly below Text model and before speech languages on Android and macOS; visible in Live and Accurate.",
+      "prerequisite": "Continue with ChatGPT is disabled until a transcription API key is saved; brief adjacent guidance explains transcription API use and text-only plan use.",
+      "interaction": "System-browser authorization, saved-account selection/addition, first-login confirmation, busy cancellation, usage management, reconnect and disconnect. Connect and account changes are disabled during active dictation or authorization; disconnect disables while active or busy.",
+      "routing": "Connected plan is used for eligible GPT-6 Luna transformation/voice-editing and Accurate post-processing. Audio transcription and explicit AI history search remain on the API path. A failed selected-plan request never automatically falls back to paid API text processing; failed post-processing preserves the original transcript.",
+      "storage": "Credentials stay device-only in Android Keystore-protected storage or non-synchronizing macOS Keychain; never included in Drive synchronization.",
+      "references": "docs/chatgpt-plan.md"
     },
     "androidSettings": {
       "scope": "Android settings; website tokens remain separate",
@@ -162,7 +171,7 @@
       },
       "dictationSettings": {
         "implementation": "SettingsScreen.kt",
-        "description": "Operate: native neutral Material 3 Dictation group with mode, recognition model, shared Text model / Текстовая модель selector, languages, word replacements and dictionary; one inset divider between adjacent rows. No transcription prompt control or editor. Existing native tokens and geometry retained."
+        "description": "Operate: native neutral Material 3 Dictation group with mode, recognition model, shared Text model / Текстовая модель selector, ChatGPT plan connection, languages, word replacements and dictionary; one inset divider between adjacent rows. No transcription prompt control or editor. Existing native tokens and geometry retained."
       },
       "historyTimings": {
         "implementation": "TranscriptHistoryScreen.kt HistoryTimings; HistoryTiming.kt; DictationForegroundService.kt; MeasuredRequest.kt; TranscriptHistoryStore.kt",
@@ -318,6 +327,27 @@
         "refreshIndicator": "Native Material 3 pull-to-refresh feedback belongs to a manual pull. Startup, lifecycle and other automatic sync checks stay silent. An active background request still blocks another pull. A queued manual request retains indicator ownership until completion or failure; later automatic requests do not inherit it.",
         "errors": "Background failures produce no toast or notification. Only failed user-initiated Google sign-in displays transient feedback."
       },
+      "chatGPTPlan": {
+        "implementation": "ChatGPTSettings.kt; SettingsScreen.kt; MainViewModel.kt; chatgpt/; OpenAiTranscriptionClient.kt; DictationForegroundService.kt",
+        "presentation": "Existing neutral Material 3 Dictation group between Text model and languages, inset dividers, full-width 16dp-padded column with 8dp spacing. Native outlined/text buttons, bodySmall guidance, connected account identity, account dropdown and native first-login AlertDialog. Existing appearance, font scaling and scrolling retained.",
+        "contract": "extensions.chatGPTPlan",
+        "review": {
+          "disposition": "ship",
+          "findings": "Final native UI/source review: no material fixes; supplied screenshot matrix viewed and valid.",
+          "screenshots": [
+            ".impeccable/review/chatgpt-android-en-phone-full.png",
+            ".impeccable/review/chatgpt-android-en-phone-ready.png",
+            ".impeccable/review/chatgpt-android-ru-dark-large-full.png",
+            ".impeccable/review/chatgpt-android-ru-dark-large-ready.png",
+            ".impeccable/review/chatgpt-android-tablet-full.png",
+            ".impeccable/review/chatgpt-android-tablet-ready.png",
+            ".impeccable/review/chatgpt-android-en-phone-connected-error.png"
+          ],
+          "captureScope": "English phone, Russian dark phone at 1.3 font scale and tablet emulation. Full captures show actual Settings; production-component fixtures use synthetic state.",
+          "validation": "Supplied: 171 JVM tests; required Debug/Release lint and assembly; four English phone, two Russian dark large-text and two tablet instrumentation tests, plus two final focused broker tests passed.",
+          "limits": "Ignored native review captures, not shipping assets. No HTML detector or new tokens. Actual ChatGPT login, eligibility, paid inference, OS insertion and physical-device smoke not verified."
+        }
+      },
       "surfaceBrief": ".impeccable/surfaces/android-settings.md"
     },
     "nativeSurfaces": {
@@ -360,12 +390,13 @@
           {
             "name": "Dictation Settings",
             "implementation": "SettingsView.swift; GoogleDriveSettingsView.swift",
-            "description": "Operate: native Dictation page places the shared Text model / Текстовая модель selector beside transcription models and retains speech languages, dictionary hints, separate Accurate-only post-processing section and shortcuts; synchronization controls remain native. No transcription prompt control or editor. Existing system type, semantic surfaces, rail and scrolling retained.",
+            "description": "Operate: native Dictation page places the shared Text model / Текстовая модель selector beside transcription models with an optional ChatGPT plan connection immediately below it, and retains speech languages, dictionary hints, separate Accurate-only post-processing section and shortcuts; synchronization controls remain native. No transcription prompt control or editor. Existing system type, semantic surfaces, rail and scrolling retained.",
             "evidence": {
               "screenshots": [".impeccable/review/text-model-macos-accurate-en-false.png", ".impeccable/review/text-model-macos-accurate-ru-false.png", ".impeccable/review/text-model-macos-accurate-ru-true.png", ".impeccable/review/text-model-macos-live-en-true.png"],
               "captureScope": "Full production Settings NSHostingView renders at 1000 × 900pt with an isolated localOnly harness: English/Russian Accurate expanded/off states and Live with shared text model visible and post-processing hidden. Test-runner footer version 16.0 is not installer evidence.",
-              "review": "Fresh UI/source finish review passed the shared text-model selector with disposition ship and no material fixes; all four captures viewed and valid. Verification and limits are recorded in Shared Text Model.",
-              "limits": "OS integration, TCC, insertion, physical devices and real Google sign-in are outside scope."
+              "review": "Earlier UI/source finish review passed the shared text-model selector with disposition ship and no material fixes; all four captures viewed and valid. Verification and limits are recorded in Shared Text Model.",
+              "limits": "OS integration, TCC, insertion, physical devices and real Google sign-in are outside scope.",
+              "currentChatGPTPlanReview": "extensions.nativeSurfaces.macos.review.chatGPTPlan"
             }
           },
           {
@@ -385,6 +416,13 @@
               "captureScope": "Isolated localOnly production NSHostingView renders at 1000 × 900pt; English/Russian Accurate off/expanded and Live. Runner footer version 16.0 is not installer-version evidence.",
               "limits": "Ignored native review evidence; no HTML detector, new tokens or shipping raster assets. TCC, hotkeys, insertion, physical devices, real Drive and paid OpenAI requests not verified."
             }
+          },
+          {
+            "name": "ChatGPT Plan Connection",
+            "implementation": "ChatGPTSettingsView.swift; ChatGPTConnection.swift; ChatGPTSession.swift; ChatGPTAuthorization.swift; SettingsView.swift; AppModel.swift; Network.swift; OpenDictateCore/ChatGPTProtocol.swift",
+            "description": "Optional connection directly below Text model and before Speech languages in both modes. Existing 8pt native stack, system buttons, caption guidance and semantic surfaces. Connected account identity, native account Menu, first-login alert, small busy progress/Cancel, usage/reconnect/disconnect and failure guidance. English/Russian wraps within the existing scrollable Dictation body.",
+            "contract": "extensions.chatGPTPlan",
+            "review": "extensions.nativeSurfaces.macos.review.chatGPTPlan"
           },
           {
             "name": "Post-processing Settings",
@@ -471,6 +509,21 @@
           "output": "Icon rasters and .icns are packaging build output; no generated shipping raster is committed."
         },
         "review": {
+          "chatGPTPlan": {
+            "disposition": "ship",
+            "findings": "Final native UI/source review: no material fixes; supplied screenshot matrix viewed and valid.",
+            "screenshots": [
+              ".impeccable/review/chatgpt-macos-en-locked.png",
+              ".impeccable/review/chatgpt-macos-en-ready.png",
+              ".impeccable/review/chatgpt-macos-ru-locked.png",
+              ".impeccable/review/chatgpt-macos-ru-ready.png",
+              ".impeccable/review/chatgpt-macos-full-accurate-en-false.png",
+              ".impeccable/review/chatgpt-macos-full-accurate-ru-false.png"
+            ],
+            "captureScope": "English/Russian production-component fixtures with synthetic locked/ready states; full actual Settings NSHostingView renders in an isolated localOnly harness.",
+            "validation": "Supplied: 200 Swift tests and successful universal packaging.",
+            "limits": "Ignored native review captures, not shipping assets. No HTML detector or new tokens. Actual ChatGPT login, eligibility, paid inference, TCC, hotkeys, OS insertion and physical-device smoke not verified."
+          },
           "driveSourceChoice": {
             "verdict": "ship",
             "scope": "Narrow first-connection source-choice addition",

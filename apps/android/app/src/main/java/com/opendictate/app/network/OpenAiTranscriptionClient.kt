@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class OpenAiTranscriptionClient(
     private val resources: Resources? = null,
+    private val chatGPT: com.opendictate.app.chatgpt.ChatGPTSession? = null,
 ) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
@@ -129,33 +130,13 @@ class OpenAiTranscriptionClient(
         sourceText: String,
         instruction: String,
         modelId: String = TextProcessingModel.ID,
+        chatGPTAccount: String? = null,
     ): TextTransformationResult = try {
         withTimeout(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
-                val request = authorizedRequest(apiKey, RESPONSES_URL)
-                    .header("Content-Type", "application/json")
-                    .post(
-                        textTransformationRequest(sourceText, instruction, modelId)
-                            .toString()
-                            .toRequestBody(JSON),
-                    )
-                    .build()
-                client.newCall(request).await().use { response ->
-                    val body = response.body.string()
-                    if (!response.isSuccessful) {
-                        throw OpenAiException(errorMessage(response.code, body))
-                    }
-                    runCatching { extractTransformationResult(JSONObject(body)) }
-                        .getOrElse { error ->
-                            throw OpenAiException(
-                                localized(
-                                    R.string.error_transformation_empty,
-                                    "OpenAI returned no transformed text",
-                                ),
-                                error,
-                            )
-                        }
-                }
+                val body = textResponse(apiKey, textTransformationRequest(sourceText, instruction, modelId), chatGPTAccount)
+                runCatching { extractTransformationResult(body) }
+                    .getOrElse { throw OpenAiException(localized(R.string.error_transformation_empty, "OpenAI returned no transformed text")) }
             }
         }
     } catch (error: TimeoutCancellationException) {
@@ -172,19 +153,27 @@ class OpenAiTranscriptionClient(
         throw OpenAiException(error.userMessage(), error)
     }
 
-    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID): PostProcessingResult =
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null): PostProcessingResult =
         PostProcessing.apply(source, settings) {
             withContext(Dispatchers.IO) {
-                val request = authorizedRequest(apiKey, RESPONSES_URL)
-                    .header("Content-Type", "application/json")
-                    .post(postProcessingRequest(source, settings, modelId).toString().toRequestBody(JSON)).build()
-                client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
-                    val body = response.body.string()
-                    if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body))
-                    extractPostProcessingResult(JSONObject(body))
-                }
+                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId), chatGPTAccount))
             }
         }
+
+    private suspend fun textResponse(apiKey: String, body: JSONObject, account: String?): JSONObject {
+        if (account != null) {
+            try { return requireNotNull(chatGPT).response(account, body) }
+            catch (error: kotlinx.coroutines.CancellationException) { throw error }
+            catch (_: Exception) { throw OpenAiException(localized(R.string.chatgpt_request_failed, "ChatGPT unavailable. Check plan usage. No API fallback was used.")) }
+        }
+        val request = authorizedRequest(apiKey, RESPONSES_URL).header("Content-Type", "application/json")
+            .post(body.toString().toRequestBody(JSON)).build()
+        return client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
+            val text = response.body.string()
+            if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, text))
+            JSONObject(text)
+        }
+    }
 
     suspend fun searchTranscriptHistory(
         apiKey: String,

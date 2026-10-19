@@ -96,6 +96,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     private val apiKeyStore = SecureApiKeyStore(application)
     val replacements = (application as OpenDictateApplication).replacementStore
+    val chatGPT = (application as OpenDictateApplication).chatGPT
+    private var chatGPTJob: Job? = null
     val driveSync = (application as OpenDictateApplication).driveSync
     private val historyStore = (application as OpenDictateApplication).transcriptHistoryStore
     private val apiClient = OpenAiTranscriptionClient(application.resources)
@@ -145,9 +147,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         refreshModelCatalog(force = true)
     }
 
+    fun connectChatGPT() { connectChatGPTAccount("__last__") }
+    fun connectChatGPTAccount(account: String?) {
+        if (!apiKeyStore.hasKey() || chatGPT.state.value.busy) return
+        chatGPTJob = viewModelScope.launch {
+            chatGPT.connect(apiKeyStore::hasKey, account) { url ->
+                getApplication<Application>().startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
+    fun cancelChatGPT() { chatGPT.cancel(); chatGPTJob?.cancel() }
+    fun disconnectChatGPT() { chatGPTJob = viewModelScope.launch { chatGPT.disconnect() } }
+    override fun onCleared() { cancelChatGPT(); super.onCleared() }
+
     fun getApiKey(): String = apiKeyStore.get().orEmpty()
 
     fun clearApiKey() {
+        cancelChatGPT()
         apiKeyStore.clear()
         modelLoadJob?.cancel()
         modelLoadJob = null

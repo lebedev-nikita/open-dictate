@@ -1,5 +1,6 @@
-# OpenDictate for macOS 0.5.0-rc.9
+# OpenDictate for macOS 0.5.0-rc.10
 
+- Connect an eligible ChatGPT plan for GPT-6 Luna text transformation and post-processing through official browser OAuth. Require a saved transcription API key first, explain the disabled button, protect tokens in Keychain and never silently fall back to API billing for text.
 - Show compact transcription and post-processing request durations in history for Accurate and retranscription, including network upload and the full response. Live shows only a Live label. Keep old records without fabricated timings.
 - Add a shared Text model selector beside recognition models, initially offering only GPT-6 Luna. Use its saved session-start selection for text transformation and post-processing; synchronize it through Google Drive.
 - Add an optional Post-processing section shared with Android. Edit the prompt, and append punctuation or value-formatting instructions using plus buttons on the right. Place prompt actions below the editor.

@@ -29,6 +29,7 @@ final class AppModel: ObservableObject {
     let preferences: Preferences
     let history: HistoryStore
     let replacements: ReplacementStore
+    let chatGPT: ChatGPTConnection
     let driveSync: GoogleDriveSync
     private let localOnly: Bool
     private let captureTarget: @MainActor ([String], Bool) throws -> TextTarget
@@ -61,6 +62,7 @@ final class AppModel: ObservableObject {
         let transform: Bool
         let key: String
         let context: TranscriptionContext
+        let chatGPTAccount: String?
         let textProcessingModel: String
         let postProcessing: PostProcessingSettings
         let timeout: Int
@@ -75,7 +77,8 @@ final class AppModel: ObservableObject {
         var pump: Task<Void, Never>?
         var setup: Task<Void, Never>?
         var completion: Task<Void, Never>?
-        init(target: TextTarget?, transform: Bool, key: String, preferences: Preferences, replacements: WordReplacementEngine, recorder: (any AudioRecording)?, replayAudio: Data? = nil) {
+        init(target: TextTarget?, transform: Bool, key: String, preferences: Preferences, replacements: WordReplacementEngine, recorder: (any AudioRecording)?, replayAudio: Data? = nil, chatGPTAccount: String? = nil) {
+            self.chatGPTAccount = chatGPTAccount
             self.recorder = recorder
             self.replayAudio = replayAudio
             self.replacements = replacements
@@ -108,6 +111,7 @@ final class AppModel: ObservableObject {
         self.notifyError = notifyError
         self.localOnly = localOnly
         let defaults = defaults ?? (localOnly ? UserDefaults(suiteName: "com.opendictate.mac.local-tests")! : .standard)
+        chatGPT = ChatGPTConnection(defaults: defaults, localOnly: localOnly)
         replacements = ReplacementStore(defaults: defaults)
         preferences = Preferences(defaults: defaults, replacements: replacements)
         history = HistoryStore(inMemory: localOnly)
@@ -186,7 +190,7 @@ final class AppModel: ObservableObject {
     func deleteKey() {
         guard !localOnly else { return }
         guard !isActive else { return }
-        do { try APIKeyStore.delete(); hasKey = false; message = "" }
+        do { try APIKeyStore.delete(); chatGPT.cancel(); hasKey = false; message = "" }
         catch { present(error) }
     }
 
@@ -222,7 +226,7 @@ final class AppModel: ObservableObject {
             guard let key = try APIKeyStore.load(), !key.isEmpty else { throw DictationError.missingKey }
             guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { throw DictationError.microphone }
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder())
+            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -238,7 +242,7 @@ final class AppModel: ObservableObject {
         do {
             preferences.mode = mode
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder())
+            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; audioLevels.reset(); message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -261,7 +265,7 @@ final class AppModel: ObservableObject {
             // A missing/secure/excluded field still permits recognition for explicit copying.
             let target = try? captureTarget(preferences.excludedApps, false)
             let session = Session(target: target, transform: false, key: key, preferences: preferences,
-                                  replacements: replacements.engine(), recorder: nil, replayAudio: audio)
+                                  replacements: replacements.engine(), recorder: nil, replayAudio: audio, chatGPTAccount: chatGPT.accountID)
             session.deliveryTarget = target
             current = session; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true)
@@ -365,7 +369,7 @@ final class AppModel: ObservableObject {
             if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
                 let started = requestClock()
                 if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel) }
-                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, model: session.textProcessingModel) }
+                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount) }
                 if session.postProcessing.shouldProcess { postProcessingMillis = requestMilliseconds(since: started) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
@@ -375,7 +379,7 @@ final class AppModel: ObservableObject {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
                 let (transformed, responseMessage) = try await client.transform(source: target.snapshot.selectedText,
-                    instruction: result, key: session.key, model: session.textProcessingModel)
+                    instruction: result, key: session.key, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount)
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
                 if let responseMessage, !responseMessage.isEmpty {
@@ -400,6 +404,7 @@ final class AppModel: ObservableObject {
             message = delivered ? preferences.t("Text inserted.", "Текст вставлен.") :
                 preferences.t("Your text is ready to copy from the menu.", "Текст готов. Скопируйте его из меню.")
             if processed.failed {
+                if session.chatGPTAccount != nil { chatGPT.markFailed() }
                 message += " " + preferences.t("Post-processing failed; the original transcript was kept.",
                     "Постобработка не удалась; сохранена исходная расшифровка.")
             }
@@ -577,7 +582,8 @@ final class AppModel: ObservableObject {
     func present(_ error: Error) {
         if case DictationError.noField = error { return }
         guard !(error is CancellationError) else { return }
-        message = (error as? DictationError)?.message(russian: preferences.isRussian) ?? error.localizedDescription
+        if error is ChatGPTError { chatGPT.markFailed() }
+        message = error is ChatGPTError ? preferences.t("ChatGPT unavailable. Check plan usage. No API fallback was used.", "ChatGPT недоступен. Проверьте лимиты подписки. Платный API не использован.") : (error as? DictationError)?.message(russian: preferences.isRussian) ?? error.localizedDescription
         if case DictationError.tooShort = error {
             onStateChange?()
             return

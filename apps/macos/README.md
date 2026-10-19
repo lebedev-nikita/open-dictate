@@ -101,6 +101,15 @@ save immediately and apply to the next Live or Accurate session; selection is
 disabled during dictation. Existing single-language and Russian + English
 preferences migrate automatically. Language hints remain local preferences.
 
+### ChatGPT plan usage
+
+Save the transcription API key first, then use **Continue with ChatGPT** beside
+the text model. Eligible plans can fund Luna text transformation and
+post-processing; transcription still uses the API key. Requests use the public
+Responses API directly, with no silent API billing fallback. Sign-in and token
+rotation use device-only Keychain storage, independent of Drive. See
+[setup and protocol references](../../docs/chatgpt-plan.md).
+
 ### Post-processing
 
 The shared **Text model** selector sits beside recognition models and defaults to

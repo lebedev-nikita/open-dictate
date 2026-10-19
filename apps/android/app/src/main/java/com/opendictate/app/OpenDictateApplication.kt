@@ -14,6 +14,7 @@ class OpenDictateApplication : Application() {
         super.onCreate()
         driveSync
     }
+    val chatGPT by lazy { com.opendictate.app.chatgpt.ChatGPTSession(this) }
     val transcriptHistoryStore by lazy { TranscriptHistoryStore(this) }
     val lastDictationAudioStore by lazy { LastDictationAudioStore(filesDir) }
 }

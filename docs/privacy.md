@@ -33,6 +33,27 @@ Buttons add editable punctuation or value-formatting instructions. Custom
 instructions may rewrite text. Post-processing settings synchronize through
 Google Drive when connected; transcripts are never included in synchronization.
 
+## Optional ChatGPT plan usage
+
+After saving the transcription API key, you can connect ChatGPT in Settings to
+use an eligible plan or credits for GPT-6 Luna text transformation and
+post-processing. Audio transcription and AI history search continue to use the
+API key. Text requests go directly to OpenAI; there is no OpenDictate backend.
+
+Sign-in opens your system browser and temporarily listens on IPv4 loopback for
+the OAuth callback. OpenDictate requests identity and ChatGPT plan-use scopes,
+validates the signed identity and grant, and stores account registrations,
+access/refresh/ID tokens in Android Keystore-protected storage or device-only
+macOS Keychain items. Credentials, account details and host IDs are not synced
+through Drive. This permission does not grant access to ChatGPT conversations.
+
+When ChatGPT is selected, errors or usage limits never silently fall back to
+API billing for text. Manage usage and disconnect the app in ChatGPT settings.
+Disconnect stops local plan usage and attempts to revoke its renewable session;
+if remote revocation cannot be confirmed, the app tells you. Returning sign-in
+retains the account/client registration and host ID. Explicitly disconnecting
+returns text processing to your API key.
+
 ## Optional Google Drive synchronization
 
 Replica versions and validated settings are cached only in process memory to avoid

@@ -227,6 +227,8 @@ internal fun SettingsScreen(
                             displayName = com.opendictate.app.model.TextProcessingModel::title,
                         )
                         SettingsDivider()
+                        ChatGPTSettings(viewModel, state.hasApiKey, dictation.isActive)
+                        SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
                         SettingsDivider()

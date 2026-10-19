@@ -113,6 +113,27 @@ Developer ID identities and notary profiles are supported for local packaging
 but their certificates, private keys and credentials must stay outside Git.
 Debug-only local smoke checks do not call OpenAI and are absent from release builds.
 
+## ChatGPT plan credentials
+
+Optional Sign in with ChatGPT uses the public-client OAuth code flow with PKCE,
+state and nonce, an IPv4 loopback callback, issued client IDs and verified RS256
+OIDC identity. Only official OpenAI authorization, token, JWKS, revocation and
+API endpoints receive these credentials. Credentials never come from another
+app or Codex installation. Redirects, cookies and persistent HTTP caches are
+disabled. The loopback listener is bounded and closes after completion,
+cancellation or timeout; Android still disables cleartext client traffic.
+
+Account registrations and rotating tokens stay in a separate encrypted Android
+credential namespace or non-synchronizing device-only macOS Keychain item.
+Refreshes are serialized per session, terminal refresh errors discard unusable
+tokens, and temporary errors retain credentials. A captured ChatGPT billing
+selection never silently falls back to the API key. Corrupt or locked credential
+storage fails closed. API-key transcription remains a prerequisite to sign-in.
+Plan inference requires `store: false`, `stream: true`, array input and the
+terminal `response.completed`; deltas, incomplete streams and usage errors are
+not successful results. OAuth and SSE responses are bounded and never logged.
+See [setup and protocol references](docs/chatgpt-plan.md).
+
 ## Android
 
 OpenDictate intentionally never logs authorization headers, API keys, audio,

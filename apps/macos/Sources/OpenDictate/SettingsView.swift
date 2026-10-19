@@ -170,6 +170,9 @@ struct SettingsView: View {
                     }
                 }.labelsHidden().fixedSize().disabled(model.isActive)
             }
+            ChatGPTSettingsView(connection: model.chatGPT, hasKey: model.hasKey, active: model.isActive, russian: preferences.isRussian,
+                connect: { model.chatGPT.connect(hasKey: { model.hasKey }) },
+                selectAccount: { model.chatGPT.connect(hasKey: { model.hasKey }, account: $0) })
             HStack {
                 Text(t("Speech languages", "Языки речи"))
                 Spacer()
