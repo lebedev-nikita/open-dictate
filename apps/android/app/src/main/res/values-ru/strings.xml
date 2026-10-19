@@ -227,7 +227,9 @@
     <string name="replacements_edit_rule">Изменить замену для %1$s</string>
     <string name="replacements_delete_rule">Удалить замену для %1$s</string>
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>
-    <string name="drive_sync_title">Синхронизация</string>
+    <string name="settings_integrations">Интеграции</string>
+    <string name="drive_sync_hint">Для синхронизации</string>
+    <string name="chatgpt_text_hint">Для работы с текстом</string>
     <string name="drive_sync_authorizing">Ожидание входа в Google…</string>
     <string name="drive_sync_sign_in_again">Войдите снова, чтобы возобновить синхронизацию.</string>
     <string name="drive_sync_off">Не подключено</string>
@@ -294,17 +296,11 @@
     <string name="settings_text_model">Текстовая модель</string>
     <string name="chatgpt_connect">Подключить ChatGPT</string>
     <string name="chatgpt_disconnect">Отключить</string>
-    <string name="chatgpt_using">Используется подписка ChatGPT</string>
     <string name="chatgpt_key_required">Сначала сохраните API-ключ для транскрипции. Подписка ChatGPT используется только для текста.</string>
-    <string name="chatgpt_billing_hint">Транскрипция использует API-ключ. Подключите ChatGPT для оплаты текста из подписки; иначе текст оплачивается через API.</string>
     <string name="chatgpt_request_failed">ChatGPT недоступен. Проверьте вход, доступ к Luna и лимиты подписки. Платный API не использован.</string>
-    <string name="chatgpt_usage">Управление расходом ChatGPT</string>
     <string name="chatgpt_welcome">Используется ваша подписка ChatGPT</string>
     <string name="chatgpt_welcome_body">Текстовые запросы используют лимиты подписки ChatGPT или кредиты. Управляйте лимитами в настройках ChatGPT. Для транскрипции по-прежнему нужен API-ключ.</string>
     <string name="chatgpt_reconnect">Войти в ChatGPT снова</string>
     <string name="chatgpt_revoke_failed">На этом устройстве выполнен выход. Отзыв доступа не подтверждён; отключите приложение в настройках ChatGPT.</string>
-    <string name="chatgpt_accounts">Аккаунты ChatGPT</string>
-    <string name="chatgpt_add_account">Добавить другой аккаунт</string>
-    <string name="chatgpt_connected_hint">Транскрипция использует API-ключ. Преобразование текста и постобработка — подписку ChatGPT.</string>
     <string name="chatgpt_waiting">Ожидание ChatGPT…</string>
 </resources>

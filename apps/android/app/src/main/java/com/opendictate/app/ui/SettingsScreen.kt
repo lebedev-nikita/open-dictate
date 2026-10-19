@@ -227,8 +227,6 @@ internal fun SettingsScreen(
                             displayName = com.opendictate.app.model.TextProcessingModel::title,
                         )
                         SettingsDivider()
-                        ChatGPTSettings(viewModel, state.hasApiKey, dictation.isActive)
-                        SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
                         SettingsDivider()
@@ -308,8 +306,12 @@ internal fun SettingsScreen(
                         }
                     }
 
-                    SectionTitle(stringResource(R.string.drive_sync_title))
-                    SettingsGroup { GoogleDriveSyncSettings() }
+                    SectionTitle(stringResource(R.string.settings_integrations))
+                    SettingsGroup {
+                        GoogleDriveSyncSettings()
+                        SettingsDivider()
+                        ChatGPTSettings(viewModel, state.hasApiKey, dictation.isActive)
+                    }
 
                     val testFieldLabel = stringResource(R.string.test_field_label)
                     SectionTitle(testFieldLabel)

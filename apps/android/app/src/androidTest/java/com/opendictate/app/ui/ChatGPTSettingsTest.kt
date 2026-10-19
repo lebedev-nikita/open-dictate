@@ -27,8 +27,9 @@ class ChatGPTSettingsTest {
             OpenDictateTheme {
                 Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.safeDrawingPadding().padding(20.dp)) {
-                        Text(context.getString(R.string.settings_text_model), style = MaterialTheme.typography.titleLarge)
-                        Text("GPT-6 Luna", Modifier.padding(vertical = 12.dp))
+                        Text(context.getString(R.string.settings_integrations), style = MaterialTheme.typography.titleLarge)
+                        GoogleDriveSyncSettings()
+                        HorizontalDivider()
                         ChatGPTSettingsPanel(state.value, hasKey.value, active.value, { connects++ }, { disconnects++ }, { cancels++ })
                     }
                 }
@@ -49,9 +50,14 @@ class ChatGPTSettingsTest {
         compose.onNodeWithText(context.getString(R.string.postprocessing_cancel)).performClick()
         assertEquals(1, cancels)
         capture("busy")
-        compose.runOnIdle { active.value = false; state.value = ChatGPTSession.State(connected = true, email = "synthetic@example.com", failed = true) }
-        compose.onNodeWithText(context.getString(R.string.chatgpt_using)).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.chatgpt_usage)).assertIsDisplayed()
+        compose.runOnIdle { active.value = false; state.value = ChatGPTSession.State(connected = true, email = "synthetic@example.com") }
+        compose.onNodeWithText(context.getString(R.string.chatgpt_text_hint)).assertIsDisplayed()
+        compose.onNodeWithText("synthetic@example.com").assertDoesNotExist()
+        capture("connected")
+        compose.runOnIdle { state.value = state.value.copy(failed = true) }
+        compose.onNodeWithText(context.getString(R.string.chatgpt_text_hint)).assertIsDisplayed()
+        compose.onNodeWithText("synthetic@example.com").assertDoesNotExist()
+        compose.onNodeWithText(context.getString(R.string.chatgpt_reconnect)).assertIsDisplayed()
         connection.assertIsOn().assertIsEnabled().performClick()
         assertEquals(1, disconnects)
         compose.runOnIdle { hasKey.value = false }

@@ -10,8 +10,9 @@ final class ChatGPTSettingsTests: XCTestCase {
         let model = AppModel(localOnly: true, defaults: defaults)
         let connection = model.chatGPT
         for (language, dark, hasKey, width) in [("en", true, false, 568.0), ("ru", false, false, 464.0), ("en", true, true, 568.0), ("ru", false, true, 464.0)] {
+            model.preferences.interfaceLanguage = language
             let host = NSHostingView(rootView: VStack(alignment: .leading, spacing: 14) {
-                HStack { Text(language == "ru" ? "Текстовая модель" : "Text model"); Spacer(); Text("GPT-6 Luna") }
+                Text(language == "ru" ? "Интеграции" : "Integrations").fontWeight(.medium)
                 GoogleDriveSettingsView(sync: model.driveSync, preferences: model.preferences)
                 Divider()
                 ChatGPTSettingsView(connection: connection, hasKey: hasKey, active: false, russian: language == "ru", connect: {})

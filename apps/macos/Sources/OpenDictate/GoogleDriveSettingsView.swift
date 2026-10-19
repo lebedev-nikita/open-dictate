@@ -17,7 +17,10 @@ struct GoogleDriveSettingsView: View {
             Toggle(isOn: connection) {
                 HStack(spacing: 12) {
                     GoogleDriveMark()
-                    Text("Google Drive").fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Google Drive").fontWeight(.medium)
+                        Text(t("For synchronization", "Для синхронизации")).font(.caption).foregroundStyle(.primary)
+                    }
                     Spacer(minLength: 12)
                 }
             }

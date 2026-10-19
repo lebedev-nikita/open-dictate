@@ -1,7 +1,7 @@
-# OpenDictate for macOS 0.5.0-rc.12
+# OpenDictate for macOS 0.5.0-rc.13
 
 - Fix ChatGPT sign-in for valid ID tokens whose single audience is encoded as an array without azp. Keep signature, issuer, nonce, expiry and authorized-party checks.
-- Match the Google Drive connection style with a ChatGPT icon, native switch and compact supporting controls. Keep the saved transcription API-key prerequisite.
+- Group Google Drive and ChatGPT in Integrations with short synchronization and text helper labels. Remove the ChatGPT account details, account menu and usage link from Settings; keep the transcription API-key prerequisite and recovery controls.
 - Connect an eligible ChatGPT plan for GPT-6 Luna text transformation and post-processing through official browser OAuth. Require a saved transcription API key first, explain the disabled button, protect tokens in Keychain and never silently fall back to API billing for text.
 - Show compact transcription and post-processing request durations in history for Accurate and retranscription, including network upload and the full response. Live shows only a Live label. Keep old records without fabricated timings.
 - Add a shared Text model selector beside recognition models, initially offering only GPT-6 Luna. Use its saved session-start selection for text transformation and post-processing; synchronize it through Google Drive.

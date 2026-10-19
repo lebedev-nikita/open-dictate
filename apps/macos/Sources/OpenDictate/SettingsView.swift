@@ -170,9 +170,6 @@ struct SettingsView: View {
                     }
                 }.labelsHidden().fixedSize().disabled(model.isActive)
             }
-            ChatGPTSettingsView(connection: model.chatGPT, hasKey: model.hasKey, active: model.isActive, russian: preferences.isRussian,
-                connect: { model.chatGPT.connect(hasKey: { model.hasKey }) },
-                selectAccount: { model.chatGPT.connect(hasKey: { model.hasKey }, account: $0) })
             HStack {
                 Text(t("Speech languages", "Языки речи"))
                 Spacer()
@@ -347,7 +344,12 @@ struct SettingsView: View {
                 Button(t("Add application…", "Добавить приложение…"), action: addExcludedApp)
             }
             Divider()
-            GoogleDriveSettingsView(sync: model.driveSync, preferences: preferences)
+            VStack(alignment: .leading, spacing: 16) {
+                Text(t("Integrations", "Интеграции")).fontWeight(.medium)
+                GoogleDriveSettingsView(sync: model.driveSync, preferences: preferences)
+                ChatGPTSettingsView(connection: model.chatGPT, hasKey: model.hasKey, active: model.isActive, russian: preferences.isRussian,
+                    connect: { model.chatGPT.connect(hasKey: { model.hasKey }) })
+            }
             Divider()
             VStack(alignment: .leading, spacing: 12) {
                 Text(t("Privacy", "Приватность")).fontWeight(.medium)

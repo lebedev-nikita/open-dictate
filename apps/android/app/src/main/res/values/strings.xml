@@ -230,7 +230,9 @@
     <string name="replacements_edit_rule">Edit replacement for %1$s</string>
     <string name="replacements_delete_rule">Delete replacement for %1$s</string>
     <string name="replacements_toggle_rule">Enable replacement for %1$s</string>
-    <string name="drive_sync_title">Synchronization</string>
+    <string name="settings_integrations">Integrations</string>
+    <string name="drive_sync_hint">For synchronization</string>
+    <string name="chatgpt_text_hint">For working with text</string>
     <string name="drive_sync_provider" translatable="false">Google Drive</string>
     <string name="drive_sync_authorizing">Waiting for Google sign-in…</string>
     <string name="drive_sync_sign_in_again">Sign in again to resume synchronization.</string>
@@ -298,17 +300,11 @@
     <string name="settings_text_model">Text model</string>
     <string name="chatgpt_connect">Continue with ChatGPT</string>
     <string name="chatgpt_disconnect">Disconnect</string>
-    <string name="chatgpt_using">Using ChatGPT plan</string>
     <string name="chatgpt_key_required">First save an API key for transcription. ChatGPT plan usage covers text requests only.</string>
-    <string name="chatgpt_billing_hint">Transcription uses your API key. Connect ChatGPT to use your plan for text; otherwise text uses API billing.</string>
     <string name="chatgpt_request_failed">ChatGPT unavailable. Check sign-in, Luna access and plan usage. No API fallback was used.</string>
-    <string name="chatgpt_usage">Manage ChatGPT usage</string>
     <string name="chatgpt_welcome">You are using your ChatGPT plan</string>
     <string name="chatgpt_welcome_body">Eligible text requests use your ChatGPT plan or credits. Manage limits in ChatGPT settings. Transcription still uses your API key.</string>
     <string name="chatgpt_reconnect">Reconnect ChatGPT</string>
     <string name="chatgpt_revoke_failed">Signed out on this device. Remote sign-out was not confirmed; disconnect the app in ChatGPT settings.</string>
-    <string name="chatgpt_accounts">ChatGPT accounts</string>
-    <string name="chatgpt_add_account">Add another account</string>
-    <string name="chatgpt_connected_hint">Transcription uses your API key. Text transformation and post-processing use your ChatGPT plan.</string>
     <string name="chatgpt_waiting">Waiting for ChatGPT…</string>
 </resources>

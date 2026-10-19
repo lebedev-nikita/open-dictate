@@ -1,15 +1,14 @@
 # Use a ChatGPT plan for Luna
 
-Save your OpenAI API key for transcription first. In Settings, beside Text model,
+Save your OpenAI API key for transcription first. In Settings → Integrations,
 turn on **ChatGPT** and authorize plan usage in your system browser.
 Eligible accounts can use their plan allowance or credits for GPT-6 Luna text
 transformation and Accurate post-processing. The model list remains Luna only.
 Audio transcription and explicit AI history search still use your API key.
 
-Use **Manage ChatGPT usage** to review allowance, credits and app limits in
-[ChatGPT settings](https://chatgpt.com/settings/usage). A connected account is
-shown in Settings; the account menu can reauthorize a saved registration or add
-another. Credentials stay on that device and are never synchronized by Drive.
+Review allowance, credits and app limits in
+[ChatGPT settings](https://chatgpt.com/settings/usage). Credentials stay on that
+device and are never synchronized by Drive.
 
 If sign-in, model access or plan usage fails, reconnect or check ChatGPT settings.
 Post-processing preserves the original transcript on failure. The app never
