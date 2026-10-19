@@ -1,5 +1,6 @@
 package com.opendictate.app.model
 
+import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -9,6 +10,25 @@ import java.util.Locale
 class ValueFormatRulesTest {
     private fun fixture(name: String) = generateSequence(File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
         .first { File(it, "shared/$name").isFile }.resolve("shared/$name").readText()
+
+    // CLDR releases differ in the spacing of native defaults (for example, 2:05 PM).
+    // User-defined examples and every other part of the shared prompt stay exact.
+    private fun normalizeAutomaticSpacing(prompt: String, formats: ValueFormatting): String =
+        prompt.split("\n\n").joinToString("\n\n") { paragraph ->
+            if (!paragraph.startsWith("[{\"example\":")) paragraph else {
+                val styles = JSONArray(paragraph)
+                for (index in 0 until styles.length()) {
+                    val style = styles.getJSONObject(index)
+                    val kind = style.getString("type")
+                    val language = style.getString("language")
+                    val custom = formats.rules.any { it.kind.id == kind && (it.language == null || it.language == language) }
+                    if (language != "*" && !custom) {
+                        style.put("example", style.getString("example").replace('\u00a0', ' ').replace('\u202f', ' '))
+                    }
+                }
+                styles.toString()
+            }
+        }
     @Test fun sharedEncodingScopesPrecedenceAndDisplayOrder() {
         val root = JSONObject(fixture("value-format-rules.json")); val cases = root.getJSONArray("cases")
         for (i in 0 until cases.length()) {
@@ -17,7 +37,9 @@ class ValueFormatRulesTest {
             assertEquals(encoded, settings.toJson())
             val languages = row.getJSONArray("languages").let { a -> List(a.length()) { a.getString(it) } }
             val prompt = settings.prompt(languages)
-            if (row.has("prompt")) assertEquals(row.getString("name"), row.getString("prompt"), prompt)
+            if (row.has("prompt")) assertEquals(row.getString("name"),
+                normalizeAutomaticSpacing(row.getString("prompt"), settings.formats!!),
+                normalizeAutomaticSpacing(prompt, settings.formats))
             if (row.getString("name") == "ru_en") {
                 val order = root.getJSONArray("orderEnglish").let { a -> List(a.length()) { a.getString(it) } }
                 assertEquals(order, settings.formats!!.sortedRules(false).map { it.id })
