@@ -283,7 +283,7 @@
     <string name="postprocessing_prompt">Промпт постобработки</string>
     <string name="postprocessing_add_instruction">Добавить инструкцию: %1$s</string>
     <string name="postprocessing_punctuation">Исправить пунктуацию</string>
-    <string name="postprocessing_numbers">Отформатировать числа</string>
+    <string name="postprocessing_values">Отформатировать значения</string>
     <string name="postprocessing_reset">Сбросить промпт</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
 </resources>

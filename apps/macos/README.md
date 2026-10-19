@@ -106,7 +106,7 @@ preferences migrate automatically. Language hints remain local preferences.
 In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
 Live hides the section and retains its saved settings. It is off by default and always uses `gpt-6-luna`. A punctuation
 instruction is prefilled. Edit the prompt, then choose **Save**.
-**Correct punctuation** and **Format numbers** have a plus button on the right
+**Correct punctuation** and **Format values** have a plus button on the right
 that appends an editable instruction block without duplicates. Prompt actions sit below
 the editor. **Reset prompt** stages the punctuation default; Save applies
 it. Clearing the prompt skips the additional request.
@@ -116,7 +116,10 @@ replacements. Voice-edit commands skip it. The transcript goes directly to OpenA
 Responses with `store: false`. Failure keeps the original transcript and shows a
 warning; cancellation and focus guards still apply. The punctuation-only default
 rejects changes to words and numbers; custom instructions can rewrite text.
-Number formatting through a model is not a deterministic numeric validator.
+The value preset includes examples for integers, decimals, dates, times and other
+quantities. It preserves ambiguous values and identifiers. Existing saved prompts
+are unchanged; use the plus button to append the new instruction. Model-based
+formatting is not deterministic validation.
 
 Both apps share [preset text](Sources/OpenDictateCore/Resources/postprocessing-presets.json)
 and synchronize enabled state and optional prompt override through Drive.

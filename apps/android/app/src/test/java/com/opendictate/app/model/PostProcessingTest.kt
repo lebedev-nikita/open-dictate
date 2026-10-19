@@ -48,10 +48,13 @@ class PostProcessingTest {
         assertEquals("{\"enabled\":false,\"model\":\"gpt-6-luna\",\"prompt\":null}", defaults.toJson())
         val custom = PostProcessingSettings(true, "Сохрани \"имя\" 📝\nhttps://example.test")
         assertEquals(custom, PostProcessingSettings.fromJson(custom.toJson()))
-        val both = PostProcessingPreset.NUMBERS.appendTo(defaults.effectivePrompt)
-        assertEquals(both, PostProcessingPreset.NUMBERS.appendTo(both))
+        val both = PostProcessingPreset.VALUES.appendTo(defaults.effectivePrompt)
+        val formatted = PostProcessingSettings(true, both)
+        assertTrue(formatted.isValid)
+        assertEquals(formatted, PostProcessingSettings.fromJson(formatted.toJson()))
+        assertEquals(both, PostProcessingPreset.VALUES.appendTo(both))
         assertEquals(both, PostProcessingPreset.PUNCTUATION.appendTo(both))
-        assertEquals(PostProcessingPreset.NUMBERS.text, PostProcessingPreset.NUMBERS.appendTo(" \n"))
+        assertEquals(PostProcessingPreset.VALUES.text, PostProcessingPreset.VALUES.appendTo(" \n"))
         assertTrue(PostProcessingSettings(prompt = "я".repeat(8192)).isValid)
         assertFalse(PostProcessingSettings(prompt = "я".repeat(8193)).isValid)
         assertTrue(runCatching { PostProcessingSettings.fromJson("{\"enabled\":\"true\"}") }.isFailure)
@@ -76,8 +79,8 @@ class PostProcessingTest {
         }
     }
 
-    @Test fun numberInstructionsPermitChangesAndFailuresPreserveSourceButCancellationDoesNotDeliver() = runTest {
-        val settings = PostProcessingSettings(true, prompt = PostProcessingPreset.NUMBERS.text)
+    @Test fun valueInstructionsPermitChangesAndFailuresPreserveSourceButCancellationDoesNotDeliver() = runTest {
+        val settings = PostProcessingSettings(true, prompt = PostProcessingPreset.VALUES.text)
         assertEquals(PostProcessingResult("123 000"), PostProcessing.apply("сто двадцать три тысячи", settings) { "123 000" })
         assertEquals(PostProcessingResult("source", true), PostProcessing.apply("source", settings) { " " })
         assertEquals(PostProcessingResult("source", true), PostProcessing.apply("source", settings) { throw IOException() })

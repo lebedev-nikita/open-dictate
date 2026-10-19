@@ -34,7 +34,7 @@ public struct PostProcessingSettings: Codable, Equatable, Sendable {
 }
 
 public enum PostProcessingPreset: String, CaseIterable, Sendable {
-    case punctuation, numbers
+    case punctuation, values
     private static let texts: [String: String] = {
         guard let url = Bundle.module.url(forResource: "postprocessing-presets", withExtension: "json"),
               let data = try? Data(contentsOf: url),

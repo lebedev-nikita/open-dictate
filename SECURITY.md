@@ -16,7 +16,7 @@ voice-edit commands skip it. Settings are captured at session start. Disabled
 post-processing or an empty prompt makes no additional request. Failures retain
 the original transcript and display a curated warning; cancellation still prevents
 delivery. The built-in punctuation-only preset rejects changes to words, numbers
-and address contents. Custom instructions, including number formatting, can
+and address contents. Custom instructions, including value formatting, can
 rewrite text and are not constrained by that punctuation-only validator.
 
 ## Optional Google Drive synchronization

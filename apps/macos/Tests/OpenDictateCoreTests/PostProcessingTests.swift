@@ -39,10 +39,13 @@ final class PostProcessingTests: XCTestCase {
         XCTAssertEqual(try PostProcessingSettings.decode(defaults.encoded()), defaults)
         let custom = PostProcessingSettings(enabled: true, prompt: "Сохрани \"имя\" 📝\nhttps://example.test")
         XCTAssertEqual(try PostProcessingSettings.decode(custom.encoded()), custom)
-        let both = PostProcessingPreset.numbers.append(to: defaults.effectivePrompt)
-        XCTAssertEqual(PostProcessingPreset.numbers.append(to: both), both)
+        let both = PostProcessingPreset.values.append(to: defaults.effectivePrompt)
+        let formatted = PostProcessingSettings(enabled: true, prompt: both)
+        XCTAssertTrue(formatted.isValid)
+        XCTAssertEqual(try PostProcessingSettings.decode(formatted.encoded()), formatted)
+        XCTAssertEqual(PostProcessingPreset.values.append(to: both), both)
         XCTAssertEqual(PostProcessingPreset.punctuation.append(to: both), both)
-        XCTAssertEqual(PostProcessingPreset.numbers.append(to: " \n"), PostProcessingPreset.numbers.text)
+        XCTAssertEqual(PostProcessingPreset.values.append(to: " \n"), PostProcessingPreset.values.text)
         XCTAssertTrue(PostProcessingSettings(prompt: String(repeating: "я", count: 8192)).isValid)
         XCTAssertFalse(PostProcessingSettings(prompt: String(repeating: "я", count: 8193)).isValid)
         XCTAssertThrowsError(try PostProcessingSettings.decode(#"{"enabled":"true","model":"gpt-6-luna","prompt":null}"#))
@@ -72,8 +75,8 @@ final class PostProcessingTests: XCTestCase {
         }
     }
 
-    func testCustomInstructionsPermitNumberRenderingAndFailureKeepsSource() async throws {
-        let settings = PostProcessingSettings(enabled: true, prompt: PostProcessingPreset.numbers.text)
+    func testCustomInstructionsPermitValueRenderingAndFailureKeepsSource() async throws {
+        let settings = PostProcessingSettings(enabled: true, prompt: PostProcessingPreset.values.text)
         let result = try await PostProcessing.apply(source: "сто двадцать три тысячи", settings: settings) { "123 000" }
         XCTAssertEqual(result, .init(text: "123 000"))
         let empty = try await PostProcessing.apply(source: "исходный текст", settings: settings) { " \n" }

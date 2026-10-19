@@ -63,10 +63,11 @@ final class PostProcessingPreferencesTests: XCTestCase {
         let suite = "postprocessing-layout-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let preferences = Preferences(defaults: defaults)
-        for (language, dark, enabled, width) in [("en", true, true, 568.0), ("ru", false, true, 464.0), ("ru", false, false, 464.0)] {
+        for (language, dark, enabled, width, values) in [("en", true, true, 568.0, false), ("ru", false, true, 464.0, false), ("ru", false, false, 464.0, false), ("en", true, true, 568.0, true), ("ru", false, true, 464.0, true)] {
             preferences.interfaceLanguage = language
             preferences.mode = .accurate
-            preferences.postProcessing.enabled = enabled
+            preferences.postProcessing = .init(enabled: enabled,
+                prompt: values ? PostProcessingPreset.values.append(to: PostProcessingPreset.punctuation.text) : nil)
             let host = NSHostingView(rootView: PostProcessingSettingsView(preferences: preferences).padding(28)
                 .frame(width: width, height: enabled ? 650 : 120, alignment: .topLeading)
                 .background(Color(nsColor: .windowBackgroundColor)))
@@ -83,7 +84,7 @@ final class PostProcessingPreferencesTests: XCTestCase {
                 let directory = URL(fileURLWithPath: output)
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
                 try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                    .write(to: directory.appendingPathComponent("postprocessing-macos-\(language)-\(enabled).png"))
+                    .write(to: directory.appendingPathComponent("postprocessing-macos-\(language)-\(enabled)\(values ? "-values" : "").png"))
             }
             window.close()
         }

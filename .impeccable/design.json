@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-19T08:42:31Z",
+  "generatedAt": "2026-10-19T09:09:20Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -41,6 +41,11 @@
       { "name": "stack", "value": "1040px" },
       { "name": "mobile", "value": "700px" }
     ],
+    "postProcessingPresets": {
+      "source": "apps/macos/Sources/OpenDictateCore/Resources/postprocessing-presets.json",
+      "values": "Shared values key; Format values / Отформатировать значения. Russian/English examples cover integers, decimals, dates, clock times, durations, percentages, money, measurements, ranges and fractions, with ambiguity, precision and identifier guards.",
+      "persistence": "Explicit plus appends an editable block and exact-block deduplication disables the action. Saved prompts remain plain strings; no automatic migration of existing prompt text. Punctuation remains the default."
+    },
     "androidSettings": {
       "scope": "Android settings; website tokens remain separate",
       "source": [
@@ -130,16 +135,16 @@
       "postProcessing": {
         "implementation": "PostProcessingSettings.kt; SettingsScreen.kt Accurate-only group after Dictation; model/PostProcessing.kt; DictationForegroundService.kt",
         "presentation": "Existing neutral Material 3 group; one full-row 48dp minimum switch semantic target, 16dp padding and 14dp spacing. Instruction rows have text left and accessible plus buttons right; the 160–280dp outlined prompt editor precedes wrapping Reset prompt/Cancel/Save actions. Keyboard-aware fields; auxiliary helper prose removed, localized validation retained.",
-        "interaction": "Visible only in Accurate; Live hides the group while retaining saved settings and saveable unsaved drafts across mode switching and Activity recreation. Off collapses controls; switch saves immediately. Prompt defaults to punctuation/capitalization correction. Plus buttons append editable punctuation/numbers blocks and disable for an existing exact block. Reset stages the prompt default only; Cancel reloads saved values; Save commits valid changed drafts. Empty prompt skips processing. Incoming sync preserves edited drafts. Localized validation retains the 16KiB UTF-8 prompt bound. Post-processing, text transformation and AI history search always use gpt-6-luna; no text-model field or editing-model picker. Recognition choices remain.",
+        "interaction": "Visible only in Accurate; Live hides the group while retaining saved settings and saveable unsaved drafts across mode switching and Activity recreation. Off collapses controls; switch saves immediately. Prompt defaults to punctuation/capitalization correction. Plus buttons append editable punctuation/value blocks and disable for an existing exact block. Reset stages the prompt default only; Cancel reloads saved values; Save commits valid changed drafts. Empty prompt skips processing. Incoming sync preserves edited drafts. Localized validation retains the 16KiB UTF-8 prompt bound. Post-processing, text transformation and AI history search always use gpt-6-luna; no text-model field or editing-model picker. Recognition choices remain.",
         "scope": "Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it without changing saved configuration, and voice editing remains separate. Drive syncs saved configuration with nullable prompt, without bundled default text. Legacy text-model choices are ignored; fixed post-processing model wire metadata preserves earlier RC compatibility without changing enabled state, prompt or source-choice behavior. No new tokens or shipping assets.",
         "review": {
           "verdict": "pass",
           "disposition": "ship",
-          "scope": "Narrow native Accurate-only post-processing action-row relocation; Reset prompt/Cancel/Save follow the prompt editor.",
-          "findings": "Fresh UI/source finish review passed the action-row relocation below the prompt editor, with disposition ship and no material fixes, rebuild or further recapture required.",
-          "screenshots": [".impeccable/review/accurate-post-android-en-phone-live.png", ".impeccable/review/accurate-post-android-en-phone-expanded.png", ".impeccable/review/accurate-post-android-en-phone-expanded-bottom.png", ".impeccable/review/accurate-post-android-en-phone-collapsed.png", ".impeccable/review/accurate-post-android-ru-dark-large-live.png", ".impeccable/review/accurate-post-android-ru-dark-large-expanded.png", ".impeccable/review/accurate-post-android-ru-dark-large-expanded-bottom.png", ".impeccable/review/accurate-post-android-ru-dark-large-collapsed.png", ".impeccable/review/accurate-post-android-tablet-live.png", ".impeccable/review/accurate-post-android-tablet-expanded.png", ".impeccable/review/accurate-post-android-tablet-expanded-bottom.png", ".impeccable/review/accurate-post-android-tablet-collapsed.png"],
-          "validation": "Supplied verification: 164 JVM tests; three focused English UI tests and one UI test each on Russian dark phone at 1.3 font scale and tablet, including mode switching and draft restoration across recreation. Required Android unit, Debug/Release lint and assembly checks passed. The 12 native captures were regenerated. Fresh finish review viewed and validated the six expanded/top and bottom captures: English light phone, Russian dark large-text phone and English light tablet at 1600 × 2560 px, density 240.",
-          "limits": "Native emulator review evidence; no HTML detector or physical-device, end-to-end insertion, real Google sign-in or live OpenAI request claim."
+          "scope": "Narrow native Accurate-only value-formatting preset addition; Reset prompt/Cancel/Save remain below the prompt editor.",
+          "findings": "Fresh UI/source finish review passed the value-formatting preset addition, with disposition ship and no material fixes.",
+          "screenshots": [".impeccable/review/accurate-post-android-en-phone-expanded.png", ".impeccable/review/accurate-post-android-en-phone-values.png", ".impeccable/review/accurate-post-android-ru-dark-large-expanded.png", ".impeccable/review/accurate-post-android-ru-dark-large-values.png", ".impeccable/review/accurate-post-android-tablet-expanded.png", ".impeccable/review/accurate-post-android-tablet-values.png"],
+          "validation": "Supplied verification: 164 JVM tests, focused long-resource round trips, three English UI tests and one each on Russian dark phone at 1.3 font scale and tablet, covering new-block Save, deduplication, recreation and reset. Required Android unit, Debug/Release lint and assembly checks passed. Fresh finish review viewed six valid expanded/value captures; values show saved long-prompt excerpts in the native scrollable editor. Other Live, bottom and collapsed captures were regenerated as supporting evidence.",
+          "limits": "Native emulator review evidence; no HTML detector. Physical-device behavior, end-to-end insertion, real Google sign-in, paid OpenAI requests and model-output quality remain outside scope."
         }
       },
       "wordReplacements": {
@@ -309,7 +314,7 @@
             "evidence": {
               "screenshots": [".impeccable/review/accurate-post-macos-full-accurate-en-false.png", ".impeccable/review/accurate-post-macos-full-accurate-ru-false.png", ".impeccable/review/accurate-post-macos-full-accurate-ru-true.png", ".impeccable/review/accurate-post-macos-full-live-en-true.png"],
               "captureScope": "Full native Settings captures using an isolated localOnly harness: Accurate expanded/off states and Live with post-processing hidden. Test-runner bundle footer version is not product-version evidence; captures are review evidence, not shipping assets.",
-              "review": "Fresh UI/source finish review passed the action-row relocation below the prompt editor, with disposition ship and no material fixes, rebuild or further recapture required. Current verification and limits are recorded in Post-processing Settings.",
+              "review": "Fresh UI/source finish review passed the value-formatting preset addition, with disposition ship and no material fixes. Current verification and limits are recorded in Post-processing Settings.",
               "limits": "OS integration, TCC, insertion, physical devices and real Google sign-in are outside scope."
             }
           },
@@ -317,15 +322,15 @@
             "name": "Post-processing Settings",
             "implementation": "PostProcessingSettingsView.swift; SettingsView.swift Dictation page; AppModel.swift; OpenDictateCore/PostProcessing.swift",
             "description": "Accurate-only native section between transcription and shortcuts; Live hides section/divider while retaining saved settings and unsaved draft. Immediate switch collapses controls while off. Existing system type, semantic surfaces, 14pt spacing and 150pt prompt editor with 8pt inset/corner. Instruction rows place wrapping text left and accessible plus buttons right; Reset prompt/Cancel/Save sit below the editor. Auxiliary helper prose removed; localized validation remains.",
-            "interaction": "Post-processing, voice editing and AI history search always use gpt-6-luna; no text-model field or General-page voice-editing model picker. Recognition choices remain. Prompt defaults to punctuation/capitalization correction. Plus buttons append editable punctuation/numbers blocks once and disable for an existing exact block; Reset stages prompt default only, Cancel reloads saved values, Save commits valid changed drafts. Empty prompt skips processing; incoming sync preserves edited drafts. An inline error covers the 16KiB UTF-8 prompt bound.",
+            "interaction": "Post-processing, voice editing and AI history search always use gpt-6-luna; no text-model field or General-page voice-editing model picker. Recognition choices remain. Prompt defaults to punctuation/capitalization correction. Plus buttons append editable punctuation/value blocks once and disable for an existing exact block; Reset stages prompt default only, Cancel reloads saved values, Save commits valid changed drafts. Empty prompt skips processing; incoming sync preserves edited drafts. An inline error covers the 16KiB UTF-8 prompt bound.",
             "scope": "Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it without changing saved configuration, and voice editing remains separate. Drive syncs saved configuration with nullable prompt, without bundled default text. Legacy text-model choices are ignored; fixed post-processing model wire metadata preserves earlier RC compatibility without changing enabled state, prompt or source-choice behavior. No new tokens or shipping assets.",
             "review": {
               "verdict": "pass",
               "disposition": "ship",
-              "screenshots": [".impeccable/review/accurate-post-macos-en-true.png", ".impeccable/review/accurate-post-macos-ru-true.png", ".impeccable/review/accurate-post-macos-ru-false.png", ".impeccable/review/accurate-post-macos-full-accurate-en-false.png", ".impeccable/review/accurate-post-macos-full-accurate-ru-false.png", ".impeccable/review/accurate-post-macos-full-accurate-ru-true.png", ".impeccable/review/accurate-post-macos-full-live-en-true.png"],
-              "validation": "Supplied verification: 187 Swift tests and successful universal native packaging. The seven native captures were regenerated: English/Russian expanded and collapsed components, full Accurate pages and full Live page with post-processing hidden. Fresh finish review viewed and validated the two English/Russian expanded component captures.",
-              "findings": "Fresh UI/source finish review passed the action-row relocation below the prompt editor, with disposition ship and no material fixes, rebuild or further recapture required.",
-              "limits": "Isolated localOnly NSHostingView captures are review evidence; test-runner footer version is not installer evidence. No HTML detector. OS integration, TCC, insertion, physical devices, real Google sign-in and live OpenAI requests remain outside scope."
+              "screenshots": [".impeccable/review/accurate-post-macos-en-true.png", ".impeccable/review/accurate-post-macos-en-true-values.png", ".impeccable/review/accurate-post-macos-ru-true.png", ".impeccable/review/accurate-post-macos-ru-true-values.png"],
+              "validation": "Supplied verification: 187 Swift tests, focused long-resource round trips and successful universal native packaging. Fresh finish review viewed four valid English/Russian expanded/value captures; values show saved long-prompt excerpts in the native scrollable editor. Other collapsed components and full Accurate/Live pages were regenerated as supporting evidence.",
+              "findings": "Fresh UI/source finish review passed the value-formatting preset addition, with disposition ship and no material fixes.",
+              "limits": "Isolated localOnly NSHostingView captures are review evidence; test-runner footer version is not installer evidence. No HTML detector. OS integration, TCC, insertion, physical devices, real Google sign-in, paid OpenAI requests and model-output quality remain outside scope."
             }
           },
           {

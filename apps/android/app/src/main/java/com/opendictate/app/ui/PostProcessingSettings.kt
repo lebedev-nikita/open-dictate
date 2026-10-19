@@ -42,7 +42,7 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, onCha
         if (settings.enabled) {
             for ((preset, label) in listOf(
                 PostProcessingPreset.PUNCTUATION to stringResource(R.string.postprocessing_punctuation),
-                PostProcessingPreset.NUMBERS to stringResource(R.string.postprocessing_numbers))) {
+                PostProcessingPreset.VALUES to stringResource(R.string.postprocessing_values))) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                     IconButton(onClick = { prompt = preset.appendTo(prompt) }, enabled = !prompt.contains(preset.text),

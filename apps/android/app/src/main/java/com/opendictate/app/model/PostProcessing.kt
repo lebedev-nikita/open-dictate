@@ -43,7 +43,7 @@ data class PostProcessingSettings(
 }
 
 enum class PostProcessingPreset(private val key: String) {
-    PUNCTUATION("punctuation"), NUMBERS("numbers");
+    PUNCTUATION("punctuation"), VALUES("values");
     val text: String get() = texts.getString(key)
     fun appendTo(prompt: String): String = when {
         prompt.contains(text) -> prompt

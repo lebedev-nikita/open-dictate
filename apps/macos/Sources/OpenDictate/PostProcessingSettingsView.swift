@@ -24,7 +24,7 @@ struct PostProcessingSettingsView: View {
                         .toggleStyle(.switch).fontWeight(.medium)
                     if preferences.postProcessing.enabled {
                         presetRow(t("Correct punctuation", "Исправить пунктуацию"), preset: .punctuation)
-                        presetRow(t("Format numbers", "Отформатировать числа"), preset: .numbers)
+                        presetRow(t("Format values", "Отформатировать значения"), preset: .values)
                         VStack(alignment: .leading, spacing: 6) {
                             Text(t("Post-processing prompt", "Промпт постобработки"))
                             TextEditor(text: $prompt).font(.body).scrollContentBackground(.hidden)
