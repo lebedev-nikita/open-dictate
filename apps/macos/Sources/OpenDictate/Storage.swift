@@ -245,10 +245,13 @@ final class HistoryStore: ObservableObject {
             }
         } catch { self.error = DictationError.storage.localizedDescription }
     }
-    func add(_ text: String, mode: String, transcriptionMillis: Int64? = nil, postProcessingMillis: Int64? = nil) {
+    func add(_ text: String, mode: String, transcriptionMillis: Int64? = nil, postProcessingMillis: Int64? = nil,
+             transcriptionModelID: String? = nil, postProcessingModelID: String? = nil, postProcessingServiceTier: String? = nil) {
         guard !text.isEmpty else { return }
         entries.insert(HistoryEntry(text: text, mode: mode,
-            transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis), at: 0)
+            transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis,
+            transcriptionModelID: transcriptionModelID, postProcessingModelID: postProcessingModelID,
+            postProcessingServiceTier: postProcessingServiceTier), at: 0)
         entries = Array(entries.prefix(500)); persist()
     }
     func delete(_ id: UUID) { entries.removeAll { $0.id == id }; persist() }

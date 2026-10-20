@@ -62,7 +62,11 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   menu state. Click the red button or waveform capsule to stop/submit without
   moving focus. Preparation already offers the finish action; processing shows
   a native spinner in a 27.5 × 27.5 pt circle for either style, restoring
-  the original vertical spacing around the spinner.
+  the original vertical spacing around the spinner. Sessions with post-processing
+  and voice edits show the current transcription, post-processing or editing icon
+  inside a progress ring. Stage changes preserve the processing HUD's size,
+  position and nonactivating behavior. Ordinary dictation without post-processing
+  keeps the native spinner.
 - The HUD never takes keyboard focus. Ordinary dictation continues while typing,
   moving the caret or switching fields/windows/apps. Stopping captures the active eligible field for delivery.
   Voice editing still requires the original text and selection to remain unchanged.
@@ -165,6 +169,12 @@ ambiguous values and identifiers by instruction. A bounded Russian/English parse
 rejects changed supported scaled integers; it is not a general validator for other
 languages or numeric expressions.
 
+The menu bar offers **Dictate with post-processing** or **Dictate without
+post-processing**, opposite to the main dictation setting. This starts one Accurate
+recording without changing saved preferences or synchronized settings. With a Live
+main mode, the alternate action offers post-processing and uses Accurate once.
+If all rules are off, the one-session processing action uses punctuation correction.
+
 ### Retranscribe the last recording
 
 Choose **Retranscribe last recording** in the menu bar to recognize the latest
@@ -239,9 +249,12 @@ See [Apple's function-key guide](https://support.apple.com/102439) and
 Credentials live in a device-only, non-synchronizing Keychain item. Preferences
 use the app's UserDefaults domain. The last 500 completed transcripts are saved
 in `~/Library/Application Support/OpenDictate/history.json` with owner-only
-permissions. Accurate history includes separate transcription and post-processing
-request durations, including upload and the full response; Live shows its mode
-without timings. Old entries and skipped stages have no invented durations.
+permissions. History places selectable text before compact processing details.
+Each new entry captures its actual transcription model and, when post-processing
+runs, its text model and service tier. Accurate includes separate request durations,
+including upload and the full response; Live shows its model without timings.
+Old entries and skipped stages have no invented models or durations. This metadata
+remains local and is excluded from Drive and AI history search.
 Disable history to stop saving future results; delete existing
 history separately. Audio is never persisted on macOS.
 

@@ -93,6 +93,64 @@ private actor PostLanguageCapture {
 }
 
 final class DictationFocusTests: XCTestCase {
+    @MainActor func testAlternateDictationUsesAccurateOnceAndPrimaryKeepsItsPolicy() async {
+        for mode in DictationMode.allCases {
+            for enabled in [false, true] {
+                let editor = FocusEditor("original ")
+                let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+                    captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
+                    processTranscript: { source, _, settings, _, _ in .init(text: settings.shouldProcess ? "processed" : source) })
+                model.preferences.mode = mode
+                model.preferences.postProcessing = .init(enabled: enabled)
+                model.preferences.saveHistory = true
+                let saved = model.preferences.postProcessing
+                let override = model.alternatePostProcessingEnabled
+                model.toggleLocalRecording(mode: mode, postProcessingOverride: override)
+                await waitFor(.recording, in: model)
+                XCTAssertEqual(model.showsProcessingStageIcon, override)
+                model.stop()
+                await waitFor(.idle, in: model)
+                XCTAssertEqual(model.history.entries.first?.mode, "accurate")
+                XCTAssertEqual(model.lastTranscript, override ? "processed" : "Локальная проверка 🙂")
+                XCTAssertEqual(model.preferences.mode, mode)
+                XCTAssertEqual(model.preferences.postProcessing, saved)
+                model.toggleLocalRecording(mode: mode)
+                await waitFor(.recording, in: model)
+                XCTAssertEqual(model.showsProcessingStageIcon, saved.forMode(mode).shouldProcess)
+                model.cancel()
+                await waitFor(.idle, in: model)
+                XCTAssertNil(model.processingStage)
+                model.shutdown()
+            }
+        }
+    }
+
+    @MainActor func testProcessingStageFollowsActualRequestsAndClearsAfterCancellation() async {
+        let editor = FocusEditor("original "), transcriber = ReplayTranscriber(), processor = HeldPostProcessor()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(), captureTarget: { _, _ in editor.target() },
+            makeRecorder: { FocusRecorder() }, transcribeAudio: { audio, _, context, timeout in
+                try await transcriber.transcribe(audio, context: context, timeout: timeout)
+            }, processTranscript: { _, _, settings, _, _ in await processor.process(settings) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        await transcriber.hold()
+        model.toggleLocalRecording()
+        await waitFor(.recording, in: model)
+        model.stop()
+        XCTAssertEqual(model.processingStage, .transcription)
+        let deadline = ContinuousClock.now + .seconds(2)
+        while await transcriber.calls.isEmpty && ContinuousClock.now < deadline { await Task.yield() }
+        await transcriber.release()
+        while await processor.settings.isEmpty && ContinuousClock.now < deadline { await Task.yield() }
+        XCTAssertEqual(model.processingStage, .postProcessing)
+        model.preferences.postProcessing.enabled = false
+        XCTAssertTrue(model.showsProcessingStageIcon, "The icon follows the captured session, not current preferences")
+        model.cancel()
+        await processor.release()
+        await waitFor(.idle, in: model)
+        XCTAssertNil(model.processingStage)
+        XCTAssertEqual(editor.sends, 0)
+    }
     private var defaultsDomains: [String] = []
     private func isolatedDefaults() -> UserDefaults {
         let domain = "com.opendictate.tests.retranscribe.\(UUID().uuidString)"
@@ -157,11 +215,13 @@ final class DictationFocusTests: XCTestCase {
                     return .init(text: source, failed: failed)
                 }, requestClock: { clock.value })
             model.preferences.textProcessingModel = "test-text-model"
+            model.preferences.accurateModel = "test-transcribe-model"
             model.preferences.saveHistory = true
             model.preferences.postProcessing = .init(enabled: true)
             model.toggleLocalRecording(mode: .accurate)
             await waitFor(.recording, in: model)
             model.preferences.textProcessingModel = TextProcessingModel.id
+            model.preferences.accurateModel = "changed-transcribe-model"
             clock.value += .seconds(40) // User recording time must not be included.
             model.preferences.mode = .live
             model.stop()
@@ -169,6 +229,8 @@ final class DictationFocusTests: XCTestCase {
             XCTAssertEqual(model.history.entries.first?.mode, "accurate")
             XCTAssertEqual(model.history.entries.first?.transcriptionMillis, 1250)
             XCTAssertEqual(model.history.entries.first?.postProcessingMillis, 450)
+            XCTAssertEqual(model.history.entries.first?.transcriptionModelID, "test-transcribe-model")
+            XCTAssertEqual(model.history.entries.first?.postProcessingModelID, "test-text-model")
             model.shutdown()
         }
     }

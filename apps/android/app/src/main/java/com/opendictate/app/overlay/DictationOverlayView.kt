@@ -153,9 +153,6 @@ class DictationOverlayMenuView(
         clipChildren = false
         clipToPadding = false
         addView(actions, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        actions.addView(alternateDictationButton,
-            LinearLayout.LayoutParams(OverlayMotion.widthPx(density, showMenu = true), OverlayMotion.actionHeightPx(density))
-                .apply { bottomMargin = OverlayMotion.gapPx(density) })
         actions.addView(
             lastDictationButton,
             LinearLayout.LayoutParams(
@@ -184,6 +181,8 @@ class DictationOverlayMenuView(
                 OverlayMotion.actionHeightPx(density),
             ),
         )
+        actions.addView(alternateDictationButton,
+            LinearLayout.LayoutParams(OverlayMotion.widthPx(density, showMenu = true), OverlayMotion.actionHeightPx(density)))
         setTransformationAvailable(false)
         setDictionaryAvailable(false)
     }
@@ -218,16 +217,16 @@ class DictationOverlayMenuView(
 
     private fun updateTrailingButtons() {
         (pasteLastButton.layoutParams as LinearLayout.LayoutParams).apply {
-            bottomMargin = if (transformationAvailable == true || dictionaryAvailable == true) {
-                OverlayMotion.gapPx(density)
-            } else 0
+            bottomMargin = OverlayMotion.gapPx(density)
             pasteLastButton.layoutParams = this
         }
         (transformationButton.layoutParams as LinearLayout.LayoutParams).apply {
-            bottomMargin = if (transformationAvailable == true && dictionaryAvailable == true) {
-                OverlayMotion.gapPx(density)
-            } else 0
+            bottomMargin = OverlayMotion.gapPx(density)
             transformationButton.layoutParams = this
+        }
+        (dictionaryButton.layoutParams as LinearLayout.LayoutParams).apply {
+            bottomMargin = OverlayMotion.gapPx(density)
+            dictionaryButton.layoutParams = this
         }
     }
 }

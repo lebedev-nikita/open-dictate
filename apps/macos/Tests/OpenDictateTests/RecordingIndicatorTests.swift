@@ -1,9 +1,60 @@
 import AppKit
 import SwiftUI
 import XCTest
+import OpenDictateCore
 @testable import OpenDictate
 
 final class RecordingIndicatorTests: XCTestCase {
+    @MainActor func testProcessingStagesKeepPanelBoundsAndNeverTakeFocus() throws {
+        let indicator = RecordingIndicator(), levels = RecordingAudioLevels()
+        let keyWindow = NSApplication.shared.keyWindow
+        let process = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        defer { indicator.hide() }
+        for style in RecordingIndicatorStyle.allCases {
+            var bounds: NSRect?
+            for stage in DictationProcessingStage.allCases {
+                indicator.show(phase: .processing, style: style, audioLevels: levels, isRussian: true,
+                    stage: stage, showsStageIcon: true, finish: {})
+                let panel = try XCTUnwrap(NSApplication.shared.windows.first {
+                    $0.title == "OpenDictate recording indicator" && $0.isVisible
+                })
+                if let bounds { XCTAssertEqual(panel.frame, bounds) } else { bounds = panel.frame }
+                XCTAssertFalse(panel.canBecomeKey); XCTAssertFalse(panel.canBecomeMain)
+                XCTAssertTrue(panel.ignoresMouseEvents)
+                XCTAssertTrue(NSApplication.shared.keyWindow === keyWindow)
+                XCTAssertEqual(NSWorkspace.shared.frontmostApplication?.processIdentifier, process)
+            }
+        }
+    }
+
+    @MainActor func testNativeProcessingStageLayouts() throws {
+        let host = NSHostingView(rootView: VStack(alignment: .leading, spacing: 20) {
+            ForEach([false, true], id: \.self) { russian in
+                HStack(spacing: 24) {
+                    ForEach(Array(DictationProcessingStage.allCases.enumerated()), id: \.offset) { _, stage in
+                        VStack(spacing: 8) {
+                            RecordingStatusView(phase: .processing, isRussian: russian, stage: stage, showsStageIcon: true, finish: {})
+                            Text(stage.label(russian: russian)).font(.caption)
+                        }
+                    }
+                    VStack(spacing: 8) {
+                        RecordingStatusView(phase: .processing, isRussian: russian, stage: .transcription, finish: {})
+                        Text(russian ? "Без постобработки" : "Without post-processing").font(.caption)
+                    }
+                }
+            }
+        }.padding(24).frame(width: 650, height: 200).background(Color(nsColor: .windowBackgroundColor)))
+        host.appearance = NSAppearance(named: .darkAqua)
+        host.frame = NSRect(x: 0, y: 0, width: 650, height: 200)
+        host.layoutSubtreeIfNeeded()
+        if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
+            let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                .write(to: URL(fileURLWithPath: output).appendingPathComponent("processing-stages-macos.png"))
+        }
+    }
+
     func testWaveformPanelNeverTakesFocusAndIgnoresProcessingClicks() async throws {
         try await MainActor.run {
             let application = NSApplication.shared

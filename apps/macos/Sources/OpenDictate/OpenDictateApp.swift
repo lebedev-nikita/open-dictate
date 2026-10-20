@@ -96,6 +96,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         add(menu, model.isActive ? p.t("Finish dictation", "Завершить диктовку") : p.t("Start dictation", "Начать диктовку"),
             #selector(dictate), key: p.shortcutLabel, enabled: model.phase != .processing)
+        add(menu, model.alternatePostProcessingEnabled ? p.t("Dictate with post-processing", "Диктовать с постобработкой") :
+            p.t("Dictate without post-processing", "Диктовать без постобработки"),
+            #selector(alternateDictation), enabled: !model.isActive)
         add(menu, p.t("Edit text by voice", "Изменить текст голосом"), #selector(transform), key: p.editShortcutLabel, enabled: !model.isActive)
         if model.isActive { add(menu, p.t("Cancel", "Отменить"), #selector(cancel), key: "Esc") }
         menu.addItem(.separator())
@@ -204,7 +207,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         #endif
         if model.isActive && model.preferences.showStatus {
             recordingIndicator.show(phase: model.phase, style: model.preferences.indicatorStyle,
-                                    audioLevels: model.audioLevels, isRussian: model.preferences.isRussian) { [weak model] in model?.stop() }
+                                    audioLevels: model.audioLevels, isRussian: model.preferences.isRussian,
+                                    stage: model.processingStage, showsStageIcon: model.showsProcessingStageIcon) { [weak model] in model?.stop() }
         } else { recordingIndicator.hide() }
     }
 
@@ -233,6 +237,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task { try? await Task.sleep(nanoseconds: 120_000_000); action() }
     }
     @objc private func dictate() { afterMenu { self.model.toggle(transform: false) } }
+    @objc private func alternateDictation() {
+        let enabled = model.alternatePostProcessingEnabled
+        afterMenu { self.model.toggle(transform: false, postProcessingOverride: enabled) }
+    }
     @objc private func transform() { afterMenu { self.model.toggle(transform: true) } }
     @objc private func cancel() { model.cancel() }
     @objc private func copyLast() { model.copyLast() }

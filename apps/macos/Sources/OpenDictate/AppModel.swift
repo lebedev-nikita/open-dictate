@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
         var showsFinishControl: Bool { self == .preparing || self == .recording }
     }
     @Published private(set) var phase = Phase.idle
+    @Published private(set) var processingStage: DictationProcessingStage?
     let audioLevels = RecordingAudioLevels()
     @Published private(set) var elapsed = 0
     @Published private(set) var partial = ""
@@ -78,18 +79,20 @@ final class AppModel: ObservableObject {
         var pump: Task<Void, Never>?
         var setup: Task<Void, Never>?
         var completion: Task<Void, Never>?
-        init(target: TextTarget?, transform: Bool, key: String, preferences: Preferences, replacements: WordReplacementEngine, recorder: (any AudioRecording)?, replayAudio: Data? = nil, chatGPTAccount: String? = nil) {
+        init(target: TextTarget?, transform: Bool, key: String, preferences: Preferences, replacements: WordReplacementEngine, recorder: (any AudioRecording)?, replayAudio: Data? = nil, chatGPTAccount: String? = nil, postProcessingOverride: Bool? = nil) {
             self.chatGPTAccount = chatGPTAccount
             self.recorder = recorder
             self.replayAudio = replayAudio
             self.replacements = replacements
             self.exclusions = preferences.excludedApps
             self.target = target; self.transform = transform; self.key = key
-            mode = transform || replayAudio != nil ? .accurate : preferences.mode
+            let options = DictationStartOptions(mode: transform || replayAudio != nil ? .accurate : preferences.mode,
+                postProcessing: preferences.postProcessing, postProcessingOverride: postProcessingOverride)
+            mode = options.mode
             context = preferences.context
             textProcessingModel = preferences.textProcessingModel
             textProcessingServiceTier = preferences.textProcessingServiceTier
-            postProcessing = preferences.postProcessing.forMode(mode)
+            postProcessing = options.postProcessing
             timeout = preferences.timeout
         }
     }
@@ -146,12 +149,14 @@ final class AppModel: ObservableObject {
 
     var isActive: Bool { phase != .idle }
     var canRetranscribe: Bool { !shuttingDown && !isActive && pasteTask == nil && lastDictationAudio != nil }
+    var alternatePostProcessingEnabled: Bool { !preferences.postProcessing.forMode(preferences.mode).enabled }
+    var showsProcessingStageIcon: Bool { current.map { $0.transform || $0.postProcessing.shouldProcess } ?? false }
     var stateLabel: String {
         switch phase {
         case .idle: return preferences.t("Ready", "Готово")
         case .preparing: return preferences.t("Starting…", "Запуск…")
         case .recording: return current?.transform == true ? preferences.t("Listening to your edit", "Слушаю команду") : preferences.t("Listening", "Слушаю")
-        case .processing: return preferences.t("Finishing…", "Обработка…")
+        case .processing: return processingStage?.label(russian: preferences.isRussian) ?? preferences.t("Finishing…", "Обработка…")
         }
     }
     var targetName: String { current?.target?.applicationName ?? "" }
@@ -219,7 +224,7 @@ final class AppModel: ObservableObject {
         } catch { present(error) }
     }
 
-    func toggle(transform: Bool) {
+    func toggle(transform: Bool, postProcessingOverride: Bool? = nil) {
         guard !localOnly else { return }
         if phase == .preparing { stop(); return }
         if phase == .recording { stop(); return }
@@ -228,7 +233,7 @@ final class AppModel: ObservableObject {
             guard let key = try APIKeyStore.load(), !key.isEmpty else { throw DictationError.missingKey }
             guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { throw DictationError.microphone }
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID)
+            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID, postProcessingOverride: postProcessingOverride)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -238,13 +243,13 @@ final class AppModel: ObservableObject {
 
     #if DEBUG
     /// Exercises production capture, focus monitoring, stop and delivery without credentials/network.
-    func toggleLocalRecording(autoStop: Bool = false, transform: Bool = false, mode: DictationMode = .accurate) {
+    func toggleLocalRecording(autoStop: Bool = false, transform: Bool = false, mode: DictationMode = .accurate, postProcessingOverride: Bool? = nil) {
         guard localOnly else { return }
         if isActive { stop(); return }
         do {
             preferences.mode = mode
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID)
+            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID, postProcessingOverride: postProcessingOverride)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; audioLevels.reset(); message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -324,6 +329,7 @@ final class AppModel: ObservableObject {
             try? captureTarget(session.exclusions, false)
         if phase == .preparing {
             session.stopRequested = true
+            processingStage = .transcription
             phase = .processing; onStateChange?()
             return
         }
@@ -332,6 +338,7 @@ final class AppModel: ObservableObject {
     }
 
     private func beginCompletion(_ session: Session) {
+        processingStage = .transcription
         phase = .processing; onStateChange?()
         session.completion = Task { await complete(session) }
     }
@@ -369,6 +376,9 @@ final class AppModel: ObservableObject {
             var postProcessingMillis: Int64?
             let processed: PostProcessingResult
             if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
+                if session.postProcessing.shouldProcess {
+                    processingStage = .postProcessing; onStateChange?()
+                }
                 let started = requestClock()
                 if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel, session.context.languages) }
                 else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, languages: session.context.languages, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount, serviceTier: session.textProcessingServiceTier) }
@@ -380,6 +390,7 @@ final class AppModel: ObservableObject {
             if session.transform && !localOnly {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
+                processingStage = .transformation; onStateChange?()
                 let (transformed, responseMessage) = try await client.transform(source: target.snapshot.selectedText,
                     instruction: result, key: session.key, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount, serviceTier: session.textProcessingServiceTier)
                 try Task.checkCancellation()
@@ -402,7 +413,10 @@ final class AppModel: ObservableObject {
             guard current?.id == session.id else { return }
             lastTranscript = result
             if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue,
-                transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis) }
+                transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis,
+                transcriptionModelID: session.mode == .live ? session.context.liveModel : session.context.accurateModel,
+                postProcessingModelID: postProcessingMillis == nil ? nil : session.textProcessingModel,
+                postProcessingServiceTier: postProcessingMillis == nil ? nil : session.textProcessingServiceTier.rawValue) }
             message = delivered ? preferences.t("Text inserted.", "Текст вставлен.") :
                 preferences.t("Your text is ready to copy from the menu.", "Текст готов. Скопируйте его из меню.")
             if processed.failed {
@@ -438,6 +452,7 @@ final class AppModel: ObservableObject {
         if error == nil && !session.transform && session.replayAudio == nil { lastDictationAudio = nil }
         session.setup?.cancel(); session.completion?.cancel()
         session.continuation?.finish(); session.pump?.cancel()
+        processingStage = nil
         phase = .processing; onStateChange?()
         Task {
             await session.setup?.value
@@ -460,7 +475,7 @@ final class AppModel: ObservableObject {
 
     private func finish(_ session: Session) {
         guard current?.id == session.id else { return }
-        current = nil; phase = .idle; audioLevels.reset(); partial = ""
+        current = nil; phase = .idle; processingStage = nil; audioLevels.reset(); partial = ""
         hotKeys.setCancelEnabled(false); onStateChange?()
         session.continuation?.finish(); session.pump?.cancel()
         Task {

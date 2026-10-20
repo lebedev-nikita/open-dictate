@@ -1,6 +1,10 @@
 import Foundation
 
 public enum HistoryTiming {
+    public struct Detail: Equatable, Sendable {
+        public let title: String
+        public let duration: String?
+    }
     public static func seconds(_ milliseconds: Int64, locale: Locale) -> String {
         precondition(milliseconds >= 0)
         let separator = locale.decimalSeparator ?? "."
@@ -10,14 +14,30 @@ public enum HistoryTiming {
     }
 
     public static func labels(for entry: HistoryEntry, russian: Bool, abbreviated: Bool = true) -> [String] {
-        if entry.mode == "live" { return [abbreviated ? "Live" : (russian ? "Диктовка Live" : "Live dictation")] }
+        details(for: entry, russian: russian, abbreviated: abbreviated).map {
+            [$0.title, $0.duration].compactMap { $0 }.joined(separator: " ")
+        }
+    }
+
+    public static func details(for entry: HistoryEntry, russian: Bool, abbreviated: Bool = true) -> [Detail] {
         let locale = Locale(identifier: russian ? "ru_RU" : "en_US")
         let unit = russian ? "с" : "s"
-        return [(entry.transcriptionMillis, russian ? "Транскр." : "Transcr.", russian ? "Транскрипция" : "Transcription"),
-                (entry.postProcessingMillis, russian ? "Постобр." : "Post-proc.", russian ? "Постобработка" : "Post-processing")]
-            .compactMap { milliseconds, short, full in
-                guard let milliseconds, milliseconds >= 0 else { return nil }
-                return "\(abbreviated ? short : full) \(seconds(milliseconds, locale: locale)) \(unit)"
+        let live = entry.mode == "live"
+        let transcription = live ? (abbreviated ? "Live" : (russian ? "Диктовка Live" : "Live dictation")) :
+            (abbreviated ? (russian ? "Транскр." : "Transcr.") : (russian ? "Транскрипция" : "Transcription"))
+        let postProcessing = abbreviated ? (russian ? "Постобр." : "Post-proc.") : (russian ? "Постобработка" : "Post-processing")
+        let processingModel = entry.postProcessingModelID.map {
+            TextProcessingModel.title(TextProcessingModel.selection(model: $0,
+                tier: TextProcessingServiceTier(rawValue: entry.postProcessingServiceTier ?? "") ?? .standard))
+        }
+        return [(transcription, entry.transcriptionModelID, live ? nil : entry.transcriptionMillis, live),
+                (postProcessing, live ? nil : processingModel, live ? nil : entry.postProcessingMillis, false)]
+            .compactMap { label, model, milliseconds, alwaysShow in
+                let model = model.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+                let milliseconds = milliseconds.flatMap { $0 >= 0 ? $0 : nil }
+                guard alwaysShow || model != nil || milliseconds != nil else { return nil }
+                return Detail(title: label + (model.map { ": \($0)" } ?? ""),
+                              duration: milliseconds.map { "\(seconds($0, locale: locale)) \(unit)" })
             }
     }
 }

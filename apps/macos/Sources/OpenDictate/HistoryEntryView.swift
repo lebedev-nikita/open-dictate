@@ -19,14 +19,22 @@ struct HistoryEntryView: View {
                     .help(russian ? "Удалить текст" : "Delete transcript")
                     .accessibilityLabel(russian ? "Удалить текст" : "Delete transcript")
             }.font(.caption).buttonStyle(.borderless)
-            let labels = HistoryTiming.labels(for: entry, russian: russian)
-            if !labels.isEmpty {
-                Text(labels.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+            Text(entry.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+            let details = HistoryTiming.details(for: entry, russian: russian, abbreviated: false)
+            if !details.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(details.enumerated()), id: \.offset) { _, detail in
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Text(detail.title).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                            if let duration = detail.duration { Text(duration).fixedSize() }
+                        }
+                    }
+                }
+                    .font(.caption).foregroundStyle(.primary).padding(.top, 4)
+                    .accessibilityElement(children: .ignore)
                     .accessibilityLabel(HistoryTiming.labels(for: entry, russian: russian, abbreviated: false).joined(separator: ", "))
             }
-            Text(entry.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
             Divider().padding(.top, 8)
         }
     }
