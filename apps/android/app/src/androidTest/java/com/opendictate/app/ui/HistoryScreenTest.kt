@@ -2,6 +2,7 @@ package com.opendictate.app.ui
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
@@ -10,6 +11,7 @@ import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TextProcessingServiceTier
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
@@ -93,13 +95,14 @@ class HistoryScreenTest {
         capture("history-timing-top")
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entries[1].text))
         compose.onNodeWithContentDescription(context.getString(R.string.history_live_description)).assertExists()
-        compose.onNodeWithText(context.getString(R.string.history_transcription_time, formatHistorySeconds(9000, locale))).assertDoesNotExist()
+        compose.onNodeWithContentDescription(context.getString(R.string.history_transcription_time_description,
+            formatHistorySeconds(9000, locale))).assertDoesNotExist()
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entries.last().text))
         compose.onNodeWithText(entries.last().text).assertIsDisplayed()
         capture("history-timing-bottom")
     }
 
-    @Test fun historyShowsCapturedModelsFastTierAndUnknownLegacyModels() {
+    @Test fun modelsAndTimingsFollowTheTranscriptAndMissingFieldsAreSkipped() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val entries = listOf(
             TranscriptHistoryItem(1, "Synthetic transcript with Fast post-processing.", 1_760_000_000_000,
@@ -112,6 +115,9 @@ class HistoryScreenTest {
                 TranscriptionModel.LIVE, transcriptionModelId = "gpt-live-transcribe"),
             TranscriptHistoryItem(5, "Synthetic legacy transcript with unknown models.", 1_760_000_000_000,
                 TranscriptionModel.ACCURATE, 1200, 300),
+            TranscriptHistoryItem(6, "Synthetic transcript with models but no timings.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, transcriptionModelId = "gpt-transcribe-model-only",
+                postProcessingModelId = "gpt-text-model-only"),
         )
         compose.setContent {
             OpenDictateTheme {
@@ -122,25 +128,53 @@ class HistoryScreenTest {
         fun show(entry: TranscriptHistoryItem) {
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entry.text))
         }
-        fun transcription(model: String) = context.getString(R.string.history_transcription_model, model)
-        fun postProcessing(model: String) = context.getString(R.string.history_postprocessing_model, model)
+        val transcriptionStage = context.getString(R.string.history_transcription_stage)
+        val postProcessingStage = context.getString(R.string.history_postprocessing_stage)
+        fun transcription(model: String) = context.getString(R.string.history_stage_model, transcriptionStage, model)
+        fun postProcessing(model: String) = context.getString(R.string.history_stage_model, postProcessingStage, model)
         show(entries[0])
         compose.onNodeWithText(postProcessing("GPT-6 Luna Fast")).assertIsDisplayed()
+        val transcriptBounds = compose.onNodeWithText(entries[0].text, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val metadataBounds = compose.onAllNodesWithText(transcription("gpt-transcribe"), useUnmergedTree = true)
+            .onFirst().fetchSemanticsNode().boundsInRoot
+        assertTrue("Transcript should precede processing details", transcriptBounds.bottom <= metadataBounds.top)
         capture("history-models-fast")
         show(entries[1])
         compose.onNodeWithText(postProcessing("GPT-6 Luna")).assertIsDisplayed()
         show(entries[2])
         compose.onNodeWithText(transcription(entries[2].transcriptionModelId!!)).assertIsDisplayed()
-        compose.onNode(hasText(transcription(entries[2].transcriptionModelId!!)) and
-            hasText(context.getString(R.string.history_postprocessing_off))).assertIsDisplayed()
+        compose.onNodeWithText(transcription(entries[2].transcriptionModelId!!))
+            .assert(hasText(postProcessingStage, substring = true).not())
         capture("history-models-long")
         show(entries[3])
-        compose.onNodeWithText(transcription("gpt-live-transcribe")).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.history_stage_model, "Live", "gpt-live-transcribe")).assertIsDisplayed()
         show(entries[4])
-        val unknown = context.getString(R.string.history_model_unknown)
-        compose.onNodeWithText(transcription(unknown)).assertIsDisplayed()
-        compose.onNodeWithText(postProcessing(unknown)).assertIsDisplayed()
+        compose.onNodeWithText(transcriptionStage).assertIsDisplayed()
+        compose.onNodeWithText(postProcessingStage).assertIsDisplayed()
+        compose.onNodeWithText("model unknown", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("модель неизвестна", substring = true).assertDoesNotExist()
         capture("history-models-legacy")
+        show(entries[5])
+        compose.onNodeWithText(transcription("gpt-transcribe-model-only")).assertIsDisplayed()
+        compose.onNodeWithText(postProcessing("gpt-text-model-only")).assertIsDisplayed()
+        compose.onNodeWithText(transcription("gpt-transcribe-model-only"))
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+    }
+
+    @Test fun historyWithoutMetadataShowsNoProcessingRowsOrPlaceholders() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val entry = TranscriptHistoryItem(1, "Synthetic legacy transcript without metadata.", 1_760_000_000_000,
+            transcriptionModelId = "  ", postProcessingModelId = "")
+        compose.setContent {
+            OpenDictateTheme {
+                TranscriptHistoryScreen(HistoryUiState(entries = listOf(entry), isLoading = false),
+                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {})
+            }
+        }
+        compose.onNodeWithText(entry.text).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.history_transcription_stage), substring = true).assertDoesNotExist()
+        compose.onNodeWithText(context.getString(R.string.history_postprocessing_stage), substring = true).assertDoesNotExist()
+        capture("history-without-metadata")
     }
 
     private fun capture(name: String) {

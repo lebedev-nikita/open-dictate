@@ -287,12 +287,10 @@
     <string name="postprocessing_punctuation">Correct punctuation</string>
     <string name="postprocessing_values">Format values</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>
-    <string name="history_transcription_time">Transcr. %1$s s</string>
-    <string name="history_transcription_model">Transcription: %1$s</string>
-    <string name="history_postprocessing_model">Post-processing: %1$s</string>
-    <string name="history_postprocessing_off">Post-processing: off</string>
-    <string name="history_model_unknown">model unknown</string>
-    <string name="history_postprocessing_time">Post-proc. %1$s s</string>
+    <string name="history_transcription_stage">Transcription</string>
+    <string name="history_postprocessing_stage">Post-processing</string>
+    <string name="history_stage_model">%1$s · %2$s</string>
+    <string name="history_duration">%1$s s</string>
     <string name="history_transcription_time_description">Transcription: %1$s s</string>
     <string name="history_postprocessing_time_description">Post-processing: %1$s s</string>
     <string name="history_live_description">Live dictation</string>
