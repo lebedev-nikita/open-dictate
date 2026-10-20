@@ -8,8 +8,8 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TextProcessingServiceTierTest {
-    @Test fun `both choices use the real model ID with the selected service tier`() {
-        assertEquals(listOf("GPT-6 Luna", "GPT-6 Luna Fast"), TextProcessingModel.defaults.map(TextProcessingModel::title))
+    @Test fun `only standard Luna is selectable and uses the real model ID`() {
+        assertEquals(listOf("GPT-6 Luna"), TextProcessingModel.defaults.map(TextProcessingModel::title))
         TextProcessingModel.defaults.forEach { choice ->
             val model = TextProcessingModel.model(choice)
             val tier = TextProcessingModel.tier(choice)
@@ -24,12 +24,18 @@ class TextProcessingServiceTierTest {
         }
     }
 
-    @Test fun `text operations default to fast and preserve postprocessing reasoning and history search`() {
-        assertEquals("fast", textTransformationRequest("Draft", "Shorten").getString("service_tier"))
+    @Test fun `text operations default to standard and preserve postprocessing reasoning and history search`() {
+        assertEquals("default", textTransformationRequest("Draft", "Shorten").getString("service_tier"))
         val post = postProcessingRequest("Draft", PostProcessingSettings(enabled = true))
-        assertEquals("fast", post.getString("service_tier"))
+        assertEquals("default", post.getString("service_tier"))
         assertEquals("none", post.getJSONObject("reasoning").getString("effort"))
         assertFalse(transcriptHistorySearchRequest("Draft", emptyList()).has("service_tier"))
+    }
+
+    @Test fun `legacy fast selection resolves to standard but history keeps its label`() {
+        assertEquals(TextProcessingModel.ID, TextProcessingModel.model(TextProcessingModel.FAST_CHOICE))
+        assertEquals(TextProcessingServiceTier.STANDARD, TextProcessingModel.tier(TextProcessingModel.FAST_CHOICE))
+        assertEquals("GPT-6 Luna Fast", TextProcessingModel.title(TextProcessingModel.selection(TextProcessingModel.ID, TextProcessingServiceTier.FAST)))
     }
 
     @Test fun `tier sync survives an older replica without changing the model`() {

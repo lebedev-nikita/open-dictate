@@ -77,16 +77,16 @@ class SettingsStore(context: Context) {
 
     var textProcessingModel: String
         get() = prefs.getString("text_processing_model", null)?.takeIf(com.opendictate.app.model.TextProcessingModel::isValid)
+            ?.let(com.opendictate.app.model.TextProcessingModel::model)
             ?: com.opendictate.app.model.TextProcessingModel.ID
         set(value) {
             require(com.opendictate.app.model.TextProcessingModel.isValid(value))
-            saveSynced { putString("text_processing_model", value) }
+            saveSynced { putString("text_processing_model", com.opendictate.app.model.TextProcessingModel.model(value)) }
         }
 
-    var textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier
-        get() = com.opendictate.app.model.TextProcessingServiceTier.fromValue(prefs.getString("text_processing_service_tier", null))
-            ?: com.opendictate.app.model.TextProcessingServiceTier.FAST
-        set(value) = saveSynced { putString("text_processing_service_tier", value.apiValue) }
+    // Retain the sync key and history tiers for compatibility, but never enable Fast.
+    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier
+        get() = com.opendictate.app.model.TextProcessingServiceTier.STANDARD
 
     var modelCatalog: ModelCatalog
         get() = ModelCatalog.fromCachedJson(prefs.getString(KEY_MODEL_CATALOG_V2, null))
@@ -240,7 +240,6 @@ class SettingsStore(context: Context) {
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
             values["textProcessingModel"]?.let { putString("text_processing_model", it.value) }
-            values["textProcessingServiceTier"]?.let { putString("text_processing_service_tier", it.value) }
             values["postprocessingOptions"]?.let { putString("postprocessingOptions", it.value) }
             putString("sync_document", merged.toJson())
         }

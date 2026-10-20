@@ -5,14 +5,15 @@ import OpenDictateCore
 @testable import OpenDictate
 
 final class TextProcessingPreferencesTests: XCTestCase {
-    @MainActor func testLegacyPreferencesDefaultToFastAndExplicitStandardPersistsAndSyncs() throws {
+    @MainActor func testLegacyAndSyncedFastPreferencesUseStandard() throws {
         let suite = "text-tier-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         let otherSuite = suite + "-other", otherDefaults = UserDefaults(suiteName: otherSuite)!
         defer { defaults.removePersistentDomain(forName: suite); otherDefaults.removePersistentDomain(forName: otherSuite) }
         defaults.set("gpt-6-luna", forKey: "textProcessingModel")
+        defaults.set("fast", forKey: "textProcessingServiceTier")
         let local = Preferences(defaults: defaults), other = Preferences(defaults: otherDefaults)
-        XCTAssertEqual(local.textProcessingSelection, TextProcessingModel.fastChoice)
-        XCTAssertEqual(other.textProcessingServiceTier, .fast)
+        XCTAssertEqual(local.textProcessingSelection, TextProcessingModel.id)
+        XCTAssertEqual(other.textProcessingServiceTier, .standard)
         local.textProcessingSelection = TextProcessingModel.id
         XCTAssertEqual(local.textProcessingModel, "gpt-6-luna")
         XCTAssertEqual(local.textProcessingServiceTier, .standard)
@@ -20,8 +21,12 @@ final class TextProcessingPreferencesTests: XCTestCase {
         _ = try other.mergeSync(local.syncDocument())
         XCTAssertEqual(other.textProcessingSelection, TextProcessingModel.id)
         local.textProcessingSelection = TextProcessingModel.fastChoice
-        _ = try other.mergeSync(local.syncDocument())
-        XCTAssertEqual(other.textProcessingServiceTier, .fast)
+        XCTAssertEqual(local.textProcessingSelection, TextProcessingModel.id)
+        var legacy = try local.syncDocument()
+        legacy.entries["textProcessingServiceTier"] = .init(value: "fast", modifiedAt: 8_000_000_000_000, deviceId: "legacy")
+        _ = try other.mergeSync(legacy)
+        XCTAssertEqual(Preferences(defaults: otherDefaults).textProcessingServiceTier, .standard)
+        XCTAssertEqual(other.textProcessingServiceTier, .standard)
         XCTAssertEqual(other.textProcessingModel, "gpt-6-luna")
         var invalid = try local.syncDocument()
         invalid.entries["textProcessingServiceTier"] = .init(value: "invalid", modifiedAt: 9_000_000_000_000, deviceId: "remote")
@@ -29,15 +34,14 @@ final class TextProcessingPreferencesTests: XCTestCase {
         let dictionary = local.dictionary
         XCTAssertThrowsError(try local.mergeSync(invalid))
         XCTAssertEqual(local.dictionary, dictionary)
-        XCTAssertEqual(local.textProcessingServiceTier, .fast)
+        XCTAssertEqual(local.textProcessingServiceTier, .standard)
     }
 
     @MainActor func testNativeModelPickerLayouts() throws {
         let suite = "text-tier-ui-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = AppModel(localOnly: true, defaults: defaults)
-        for (language, dark, choice) in [("en", true, TextProcessingModel.id), ("en", true, TextProcessingModel.fastChoice),
-                                          ("ru", false, TextProcessingModel.id), ("ru", false, TextProcessingModel.fastChoice)] {
+        for (language, dark, choice) in [("en", true, TextProcessingModel.id), ("ru", false, TextProcessingModel.id)] {
             model.preferences.interfaceLanguage = language
             model.preferences.theme = dark ? .dark : .light
             model.preferences.textProcessingSelection = choice

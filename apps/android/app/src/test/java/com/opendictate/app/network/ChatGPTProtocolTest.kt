@@ -14,8 +14,8 @@ import java.util.Base64
 class ChatGPTProtocolTest {
     @Test fun fastPlanRequestsUsePriorityWhileApiRequestsAndSavedChoicesKeepFast() {
         val requests = listOf(
-            textTransformationRequest("Synthetic", "Edit"),
-            postProcessingRequest("Synthetic", com.opendictate.app.model.PostProcessingSettings(enabled = true)),
+            textTransformationRequest("Synthetic", "Edit", serviceTier = com.opendictate.app.model.TextProcessingServiceTier.FAST),
+            postProcessingRequest("Synthetic", com.opendictate.app.model.PostProcessingSettings(enabled = true), serviceTier = com.opendictate.app.model.TextProcessingServiceTier.FAST),
         )
         requests.forEach { body ->
             val plan = ChatGPTProtocol.planRequest(body)

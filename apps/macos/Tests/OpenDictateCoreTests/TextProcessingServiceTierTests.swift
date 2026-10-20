@@ -3,7 +3,7 @@ import XCTest
 
 final class TextProcessingServiceTierTests: XCTestCase {
     func testChoicesKeepTheModelIDSeparateFromTheTier() {
-        XCTAssertEqual(TextProcessingModel.defaults.map(TextProcessingModel.title), ["GPT-6 Luna", "GPT-6 Luna Fast"])
+        XCTAssertEqual(TextProcessingModel.defaults.map(TextProcessingModel.title), ["GPT-6 Luna"])
         for choice in TextProcessingModel.defaults {
             let model = TextProcessingModel.model(for: choice), tier = TextProcessingModel.tier(for: choice)
             XCTAssertEqual(model, "gpt-6-luna")
@@ -18,13 +18,19 @@ final class TextProcessingServiceTierTests: XCTestCase {
         }
     }
 
-    func testBothTextOperationsDefaultToFastWithoutChangingTranscriptionOrSearch() {
-        XCTAssertEqual(OpenAIRequest.transform(source: "Draft", instruction: "Shorten")["service_tier"] as? String, "fast")
+    func testBothTextOperationsDefaultToStandardWithoutChangingTranscriptionOrSearch() {
+        XCTAssertEqual(OpenAIRequest.transform(source: "Draft", instruction: "Shorten")["service_tier"] as? String, "default")
         let postProcessing = OpenAIRequest.postProcessing(source: "Draft", settings: .init(enabled: true))
-        XCTAssertEqual(postProcessing["service_tier"] as? String, "fast")
+        XCTAssertEqual(postProcessing["service_tier"] as? String, "default")
         XCTAssertEqual((postProcessing["reasoning"] as? [String: String])?["effort"], "none")
         XCTAssertNil(OpenAIRequest.search(query: "Draft", entries: [])["service_tier"])
         XCTAssertFalse(String(decoding: OpenAIRequest.multipart(wav: Data(), context: .init(), boundary: "test"), as: UTF8.self).contains("service_tier"))
+    }
+
+    func testLegacyFastSelectionResolvesToStandardButHistoryKeepsItsLabel() {
+        XCTAssertEqual(TextProcessingModel.model(for: TextProcessingModel.fastChoice), TextProcessingModel.id)
+        XCTAssertEqual(TextProcessingModel.tier(for: TextProcessingModel.fastChoice), .standard)
+        XCTAssertEqual(TextProcessingModel.title(TextProcessingModel.selection(model: TextProcessingModel.id, tier: .fast)), "GPT-6 Luna Fast")
     }
 
     func testTierSyncSurvivesAnOlderReplicaAndDoesNotChangeTheModel() throws {

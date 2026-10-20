@@ -19,7 +19,6 @@ class TextModelSettingsTest {
 
     @Test fun sharedTextModelStaysBesideRecognitionAndSurvivesRecreation() {
         val store = SettingsStore(compose.activity)
-        val originalTier = store.textProcessingServiceTier
         val original = store.textProcessingModel
         val mode = store.model
         val label = compose.activity.getString(R.string.settings_text_model)
@@ -34,22 +33,15 @@ class TextModelSettingsTest {
             compose.onNodeWithText(label).performClick()
             compose.onAllNodesWithText("GPT-6 Luna").assertCountEquals(2)
             capture("open")
-            compose.onNodeWithText("GPT-6 Luna Fast").assertIsDisplayed().performClick()
+            compose.onNodeWithText("GPT-6 Luna Fast").assertDoesNotExist()
+            compose.onAllNodesWithText("GPT-6 Luna")[1].performClick()
             assertEquals(TextProcessingModel.ID, store.textProcessingModel)
-            assertEquals(com.opendictate.app.model.TextProcessingServiceTier.FAST, store.textProcessingServiceTier)
-            compose.activityRule.scenario.recreate()
-            compose.onNodeWithText(label).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("GPT-6 Luna Fast").assertIsDisplayed()
-            capture("fast")
-            compose.onNodeWithText(label).performClick()
-            compose.onNodeWithText("GPT-6 Luna").performClick()
             assertEquals(com.opendictate.app.model.TextProcessingServiceTier.STANDARD, store.textProcessingServiceTier)
             compose.activityRule.scenario.recreate()
             compose.onNodeWithText(label).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("GPT-6 Luna").assertIsDisplayed()
         } finally {
             store.textProcessingModel = original
-            store.textProcessingServiceTier = originalTier
             store.model = mode
         }
     }

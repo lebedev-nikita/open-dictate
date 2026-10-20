@@ -9,7 +9,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TextProcessingPreferencesTest {
-    @Test fun legacyDefaultsUseFastAndExplicitStandardPersistsAndSyncs() {
+    @Test fun legacyAndSyncedFastPreferencesUseStandard() {
         val actual = InstrumentationRegistry.getInstrumentation().targetContext
         val prefix = "text-tier-" + java.util.UUID.randomUUID()
         val names = mutableSetOf<String>()
@@ -21,25 +21,26 @@ class TextProcessingPreferencesTest {
             val context = isolated("local")
             val otherContext = isolated("remote")
             context.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE).edit()
-                .putString("text_processing_model", TextProcessingModel.ID).commit()
+                .putString("text_processing_model", TextProcessingModel.ID)
+                .putString("text_processing_service_tier", "fast").commit()
             val store = SettingsStore(context)
             val other = SettingsStore(otherContext)
-            assertEquals(TextProcessingServiceTier.FAST, store.textProcessingServiceTier)
-            assertEquals(TextProcessingServiceTier.FAST, other.textProcessingServiceTier)
-            store.textProcessingServiceTier = TextProcessingServiceTier.STANDARD
+            assertEquals(TextProcessingServiceTier.STANDARD, store.textProcessingServiceTier)
+            assertEquals(TextProcessingServiceTier.STANDARD, other.textProcessingServiceTier)
             assertEquals(TextProcessingServiceTier.STANDARD, SettingsStore(context).textProcessingServiceTier)
             other.mergeSyncDocument(store.syncDocument(), ReplacementStore(otherContext))
             assertEquals(TextProcessingServiceTier.STANDARD, other.textProcessingServiceTier)
-            store.textProcessingServiceTier = TextProcessingServiceTier.FAST
-            other.mergeSyncDocument(store.syncDocument(), ReplacementStore(otherContext))
-            assertEquals(TextProcessingServiceTier.FAST, other.textProcessingServiceTier)
+            val legacy = SettingsSyncDocument(mapOf("textProcessingServiceTier" to SettingsSyncEntry("fast", 8_000_000_000_000, "legacy")))
+            other.mergeSyncDocument(legacy, ReplacementStore(otherContext))
+            assertEquals(TextProcessingServiceTier.STANDARD, SettingsStore(otherContext).textProcessingServiceTier)
+            assertEquals(TextProcessingServiceTier.STANDARD, other.textProcessingServiceTier)
             assertEquals(TextProcessingModel.ID, other.textProcessingModel)
             val invalid = SettingsSyncDocument(mapOf("textProcessingServiceTier" to SettingsSyncEntry("invalid", 9_000_000_000_000, "remote"),
                 "dictionary" to SettingsSyncEntry("Must not apply", 9_000_000_000_000, "remote")))
             val dictionary = store.prompt
             assertThrows(IllegalArgumentException::class.java) { store.mergeSyncDocument(invalid, ReplacementStore(context)) }
             assertEquals(dictionary, store.prompt)
-            assertEquals(TextProcessingServiceTier.FAST, store.textProcessingServiceTier)
+            assertEquals(TextProcessingServiceTier.STANDARD, store.textProcessingServiceTier)
         } finally {
             names.forEach { actual.deleteSharedPreferences(it) }
         }

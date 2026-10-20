@@ -5,7 +5,7 @@ public enum TextProcessingServiceTier: String, Sendable {
 public enum TextProcessingModel {
     public static let id = "gpt-6-luna"
     public static let fastChoice = "gpt-6-luna:fast"
-    public static let defaults = [id, fastChoice]
+    public static let defaults = [id]
     public static func title(_ choice: String) -> String {
         choice == fastChoice ? "GPT-6 Luna Fast" : choice == id ? "GPT-6 Luna" : choice
     }
@@ -13,5 +13,5 @@ public enum TextProcessingModel {
         model == id && tier == .fast ? fastChoice : model
     }
     public static func model(for choice: String) -> String { choice == fastChoice ? id : choice }
-    public static func tier(for choice: String) -> TextProcessingServiceTier { choice == fastChoice ? .fast : .standard }
+    public static func tier(for choice: String) -> TextProcessingServiceTier { .standard }
 }

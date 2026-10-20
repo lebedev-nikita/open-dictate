@@ -132,7 +132,7 @@ class OpenAiTranscriptionClient(
         instruction: String,
         modelId: String = TextProcessingModel.ID,
         chatGPTAccount: String? = null,
-        serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST,
+        serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD,
     ): TextTransformationResult = try {
         withTimeout(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
@@ -155,7 +155,7 @@ class OpenAiTranscriptionClient(
         throw OpenAiException(error.userMessage(), error)
     }
 
-    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null, serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST): PostProcessingResult =
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null, serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD): PostProcessingResult =
         PostProcessing.apply(source, settings) {
             withContext(Dispatchers.IO) {
                 extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }, serviceTier), chatGPTAccount))
@@ -552,7 +552,7 @@ internal fun textTransformationRequest(
     sourceText: String,
     instruction: String,
     modelId: String = TextProcessingModel.ID,
-    serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST,
+    serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD,
 ): JSONObject = JSONObject()
     .put("model", modelId)
     .put("service_tier", serviceTier.apiValue)
@@ -644,7 +644,7 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 
 private const val MAX_USER_MESSAGE_CHARS = 1_000
 
-internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, languages: Collection<String> = emptyList(), serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.FAST): JSONObject {
+internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, languages: Collection<String> = emptyList(), serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD): JSONObject {
     val request = textTransformationRequest(source, settings.prompt(languages), modelId, serviceTier)
         .put("instructions", PostProcessing.INSTRUCTIONS)
     val format = request.getJSONObject("text").getJSONObject("format")

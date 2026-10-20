@@ -47,7 +47,7 @@ data class MainUiState(
     val accurateModelId: String = ModelCatalog.DEFAULT.accurate.first(),
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
     val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
-    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.FAST,
+    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.STANDARD,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
     val newModelCount: Int = 0,
@@ -213,7 +213,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val model = com.opendictate.app.model.TextProcessingModel.model(id)
         val tier = com.opendictate.app.model.TextProcessingModel.tier(id)
         settings.textProcessingModel = model
-        settings.textProcessingServiceTier = tier
         mutableState.update { it.copy(textProcessingModel = model, textProcessingServiceTier = tier) }
     }
 

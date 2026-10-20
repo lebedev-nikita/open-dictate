@@ -32,14 +32,12 @@ final class Preferences: ObservableObject {
     }
 
     @Published var textProcessingModel: String { didSet { defaults.set(textProcessingModel, forKey: "textProcessingModel"); recordSyncChange() } }
-    @Published var textProcessingServiceTier: TextProcessingServiceTier { didSet {
-        defaults.set(textProcessingServiceTier.rawValue, forKey: "textProcessingServiceTier"); recordSyncChange()
-    } }
+    // Retain the sync key and history tiers for compatibility, but never enable Fast.
+    let textProcessingServiceTier: TextProcessingServiceTier = .standard
     var textProcessingSelection: String {
         get { TextProcessingModel.selection(model: textProcessingModel, tier: textProcessingServiceTier) }
         set {
             textProcessingModel = TextProcessingModel.model(for: newValue)
-            textProcessingServiceTier = TextProcessingModel.tier(for: newValue)
         }
     }
     @Published var liveModel: String { didSet { defaults.set(liveModel, forKey: "liveModel"); recordSyncChange() } }
@@ -61,9 +59,7 @@ final class Preferences: ObservableObject {
         theme = AppTheme(rawValue: defaults.string(forKey: "theme") ?? "") ?? .dark
         syncDeviceID = defaults.string(forKey: "syncDeviceID") ?? UUID().uuidString.lowercased()
         defaults.set(syncDeviceID, forKey: "syncDeviceID")
-        textProcessingModel = defaults.string(forKey: "textProcessingModel") ?? TextProcessingModel.id
-        textProcessingServiceTier = defaults.string(forKey: "textProcessingServiceTier")
-            .flatMap(TextProcessingServiceTier.init(rawValue:)) ?? .fast
+        textProcessingModel = TextProcessingModel.model(for: defaults.string(forKey: "textProcessingModel") ?? TextProcessingModel.id)
         liveModel = defaults.string(forKey: "liveModel") ?? DictationMode.live.model
         accurateModel = defaults.string(forKey: "accurateModel") ?? DictationMode.accurate.model
         driveSyncEnabled = defaults.bool(forKey: "driveSyncEnabled")
@@ -155,9 +151,10 @@ final class Preferences: ObservableObject {
         if let value = merged.entries["mode"]?.value, let next = DictationMode(rawValue: value), mode != next { mode = next }
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
         if let value = merged.entries["accurateModel"]?.value, accurateModel != value { accurateModel = value }
-        if let value = merged.entries["textProcessingModel"]?.value, textProcessingModel != value { textProcessingModel = value }
-        if let value = merged.entries["textProcessingServiceTier"]?.value,
-           let tier = TextProcessingServiceTier(rawValue: value), textProcessingServiceTier != tier { textProcessingServiceTier = tier }
+        if let value = merged.entries["textProcessingModel"]?.value {
+            let model = TextProcessingModel.model(for: value)
+            if textProcessingModel != model { textProcessingModel = model }
+        }
         if let value = merged.entries["postprocessingOptions"]?.value {
             let next = try PostProcessingSettings.decode(value)
             if postProcessing != next { postProcessing = next }
