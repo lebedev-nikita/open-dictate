@@ -232,7 +232,7 @@ private class OverlayPrimaryActionView(
     private val idleIcon = icon(R.drawable.ic_mic_chatgpt_24)
     private val stopIcon = icon(R.drawable.ic_stop_rounded_24)
     private val closeIcon = icon(R.drawable.ic_close_rounded_24)
-    private val transcriptionIcon = icon(R.drawable.ic_description_rounded_24)
+    private val transcriptionIcon = icon(R.drawable.ic_speech_to_text_rounded_24)
     private val textProcessingIcon = icon(R.drawable.ic_auto_fix_high_rounded_24)
     private val dictationColor = Color.rgb(8, 8, 8)
     private val transformationColor = Color.rgb(8, 8, 8)
