@@ -17,6 +17,8 @@ On both platforms, local history may also include request durations for Accurate
 transcription and optional post-processing, or a Live mode label. This metadata
 stays on the device and is removed with its history entry; it is not sent through
 Drive or AI search.
+Android history also records the transcription and optional post-processing
+model IDs and the selected post-processing service tier under the same local-only rules.
 
 ## Optional post-processing
 

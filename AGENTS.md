@@ -111,6 +111,16 @@ product capability, stored locally with explicit deletion and an off switch.
 Read `apps/macos/README.md` for protocol references, native smoke checks and
 packaging before changing capture, delivery, permissions or release behavior.
 
+## Local API access
+
+For agent-run API calls and evaluation scripts, load credentials from the ignored
+root `.env` file. Text processing uses `OPENAI_API_KEY` and `OPENAI_BASE_URL`
+(`http://127.0.0.1:8317/v1`). Transcription uses only `TRANSCRIBE_KEY` with
+`https://api.openai.com/v1`, regardless of `OPENAI_BASE_URL`. Keep the two
+credentials separate; a missing credential must fail rather than use the other.
+These settings apply to development tools, not the apps' stored credentials or
+production endpoints. Keep secret values out of documentation and command output.
+
 ## Change workflow
 
 Before editing, trace the affected path end to end. Changes to transcription or

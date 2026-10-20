@@ -232,7 +232,7 @@
     <string name="replacements_toggle_rule">Enable replacement for %1$s</string>
     <string name="settings_integrations">Integrations</string>
     <string name="drive_sync_hint">For synchronization</string>
-    <string name="chatgpt_text_hint">For working with text</string>
+    <string name="chatgpt_text_hint">Use subscription limits. Only for working with text, not for transcription.</string>
     <string name="drive_sync_provider" translatable="false">Google Drive</string>
     <string name="drive_sync_authorizing">Waiting for Google sign-in…</string>
     <string name="drive_sync_sign_in_again">Sign in again to resume synchronization.</string>
@@ -288,6 +288,10 @@
     <string name="postprocessing_values">Format values</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>
     <string name="history_transcription_time">Transcr. %1$s s</string>
+    <string name="history_transcription_model">Transcription: %1$s</string>
+    <string name="history_postprocessing_model">Post-processing: %1$s</string>
+    <string name="history_postprocessing_off">Post-processing: off</string>
+    <string name="history_model_unknown">model unknown</string>
     <string name="history_postprocessing_time">Post-proc. %1$s s</string>
     <string name="history_transcription_time_description">Transcription: %1$s s</string>
     <string name="history_postprocessing_time_description">Post-processing: %1$s s</string>

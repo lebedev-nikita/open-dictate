@@ -229,7 +229,7 @@
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>
     <string name="settings_integrations">Интеграции</string>
     <string name="drive_sync_hint">Для синхронизации</string>
-    <string name="chatgpt_text_hint">Для работы с текстом</string>
+    <string name="chatgpt_text_hint">Использовать лимиты подписки. Только для работы с текстом, не для транскрипции.</string>
     <string name="drive_sync_authorizing">Ожидание входа в Google…</string>
     <string name="drive_sync_sign_in_again">Войдите снова, чтобы возобновить синхронизацию.</string>
     <string name="drive_sync_off">Не подключено</string>
@@ -284,6 +284,10 @@
     <string name="postprocessing_values">Отформатировать значения</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
     <string name="history_transcription_time">Транскр. %1$s с</string>
+    <string name="history_transcription_model">Транскрипция: %1$s</string>
+    <string name="history_postprocessing_model">Постобработка: %1$s</string>
+    <string name="history_postprocessing_off">Постобработка: выключена</string>
+    <string name="history_model_unknown">модель неизвестна</string>
     <string name="history_postprocessing_time">Постобр. %1$s с</string>
     <string name="history_transcription_time_description">Транскрипция: %1$s с</string>
     <string name="history_postprocessing_time_description">Постобработка: %1$s с</string>

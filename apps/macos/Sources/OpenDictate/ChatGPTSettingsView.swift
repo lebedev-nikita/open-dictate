@@ -16,7 +16,9 @@ struct ChatGPTSettingsView: View {
                     ChatGPTMark().fill(.primary).frame(width: 24, height: 24).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ChatGPT").fontWeight(.medium)
-                        Text(t("For working with text", "Для работы с текстом")).font(.caption).foregroundStyle(.primary)
+                        Text(t("Use subscription limits. Only for working with text, not for transcription.",
+                               "Использовать лимиты подписки. Только для работы с текстом, не для транскрипции."))
+                            .font(.caption).foregroundStyle(.primary)
                     }
                     Spacer(minLength: 12)
                 }

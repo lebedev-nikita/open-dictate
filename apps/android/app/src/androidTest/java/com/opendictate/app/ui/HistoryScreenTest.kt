@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.opendictate.app.R
 import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.model.TranscriptionModel
+import com.opendictate.app.model.TextProcessingServiceTier
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -96,6 +97,50 @@ class HistoryScreenTest {
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entries.last().text))
         compose.onNodeWithText(entries.last().text).assertIsDisplayed()
         capture("history-timing-bottom")
+    }
+
+    @Test fun historyShowsCapturedModelsFastTierAndUnknownLegacyModels() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val entries = listOf(
+            TranscriptHistoryItem(1, "Synthetic transcript with Fast post-processing.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, 1250, 450, "gpt-transcribe", "gpt-6-luna", TextProcessingServiceTier.FAST),
+            TranscriptHistoryItem(2, "Synthetic transcript with standard post-processing.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, 1250, 450, "gpt-transcribe", "gpt-6-luna", TextProcessingServiceTier.STANDARD),
+            TranscriptHistoryItem(3, "Synthetic transcript without post-processing.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, 800, transcriptionModelId = "gpt-transcribe-synthetic-long-model-version"),
+            TranscriptHistoryItem(4, "Synthetic Live transcript with its captured model.", 1_760_000_000_000,
+                TranscriptionModel.LIVE, transcriptionModelId = "gpt-live-transcribe"),
+            TranscriptHistoryItem(5, "Synthetic legacy transcript with unknown models.", 1_760_000_000_000,
+                TranscriptionModel.ACCURATE, 1200, 300),
+        )
+        compose.setContent {
+            OpenDictateTheme {
+                TranscriptHistoryScreen(HistoryUiState(entries = entries, isLoading = false),
+                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {})
+            }
+        }
+        fun show(entry: TranscriptHistoryItem) {
+            compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasText(entry.text))
+        }
+        fun transcription(model: String) = context.getString(R.string.history_transcription_model, model)
+        fun postProcessing(model: String) = context.getString(R.string.history_postprocessing_model, model)
+        show(entries[0])
+        compose.onNodeWithText(postProcessing("GPT-6 Luna Fast")).assertIsDisplayed()
+        capture("history-models-fast")
+        show(entries[1])
+        compose.onNodeWithText(postProcessing("GPT-6 Luna")).assertIsDisplayed()
+        show(entries[2])
+        compose.onNodeWithText(transcription(entries[2].transcriptionModelId!!)).assertIsDisplayed()
+        compose.onNode(hasText(transcription(entries[2].transcriptionModelId!!)) and
+            hasText(context.getString(R.string.history_postprocessing_off))).assertIsDisplayed()
+        capture("history-models-long")
+        show(entries[3])
+        compose.onNodeWithText(transcription("gpt-live-transcribe")).assertIsDisplayed()
+        show(entries[4])
+        val unknown = context.getString(R.string.history_model_unknown)
+        compose.onNodeWithText(transcription(unknown)).assertIsDisplayed()
+        compose.onNodeWithText(postProcessing(unknown)).assertIsDisplayed()
+        capture("history-models-legacy")
     }
 
     private fun capture(name: String) {

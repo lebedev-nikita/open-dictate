@@ -31,14 +31,14 @@ def load_key(env_file):
     if env_file.is_file():
         for line in env_file.read_text().splitlines():
             name, separator, value = line.strip().partition("=")
-            if separator and name.removeprefix("export ").strip() == "OPENAI_API_KEY":
+            if separator and name.removeprefix("export ").strip() == "TRANSCRIBE_KEY":
                 values = shlex.split(value, comments=True)
                 if len(values) == 1 and values[0]:
                     return values[0]
-        raise EvaluationError("OPENAI_API_KEY is missing from the supplied env file")
-    key = os.environ.get("OPENAI_API_KEY")
+        raise EvaluationError("TRANSCRIBE_KEY is missing from the supplied env file")
+    key = os.environ.get("TRANSCRIBE_KEY")
     if not key:
-        raise EvaluationError("Configure OPENAI_API_KEY in the env file or environment")
+        raise EvaluationError("Configure TRANSCRIBE_KEY in the env file or environment")
     return key
 
 

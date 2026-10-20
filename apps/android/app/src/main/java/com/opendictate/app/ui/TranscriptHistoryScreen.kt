@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.model.TranscriptionModel
+import com.opendictate.app.model.TextProcessingModel
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -411,6 +412,7 @@ private fun HistoryItem(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 HistoryTimings(item)
+                HistoryModels(item)
                 Spacer(Modifier.height(7.dp))
                 Text(
                     text = item.text,
@@ -431,6 +433,30 @@ private fun HistoryItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun HistoryModels(item: TranscriptHistoryItem) {
+    val unknownModel = stringResource(R.string.history_model_unknown)
+    val postProcessingModel = item.postProcessingModelId?.let { modelId ->
+        item.postProcessingServiceTier?.let { TextProcessingModel.selection(modelId, it) }
+            ?.let(TextProcessingModel::title) ?: modelId
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            stringResource(R.string.history_transcription_model, item.transcriptionModelId ?: unknownModel),
+            color = SettingsMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        val postProcessingLabel = when {
+            item.mode == TranscriptionModel.LIVE -> stringResource(R.string.history_postprocessing_off)
+            postProcessingModel != null -> stringResource(R.string.history_postprocessing_model, postProcessingModel)
+            item.postProcessingMillis != null -> stringResource(R.string.history_postprocessing_model, unknownModel)
+            item.transcriptionModelId != null -> stringResource(R.string.history_postprocessing_off)
+            else -> null
+        }
+        postProcessingLabel?.let { Text(it, color = SettingsMuted, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

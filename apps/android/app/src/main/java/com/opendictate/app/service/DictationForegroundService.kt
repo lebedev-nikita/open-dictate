@@ -285,7 +285,10 @@ class DictationForegroundService : Service() {
                     withContext(Dispatchers.IO) {
                         runCatching {
                             (application as OpenDictateApplication).transcriptHistoryStore.add(result,
-                                mode = model, transcriptionMillis = transcriptionMillis, postProcessingMillis = postProcessingMillis)
+                                mode = model, transcriptionMillis = transcriptionMillis, postProcessingMillis = postProcessingMillis,
+                                transcriptionModelId = if (model == TranscriptionModel.LIVE) liveModelId else accurateModelId,
+                                postProcessingModelId = textProcessingModel.takeIf { postProcessing.shouldProcess },
+                                postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                         }
                     }
                 }
@@ -378,7 +381,10 @@ class DictationForegroundService : Service() {
                     runCatching {
                         (application as OpenDictateApplication).transcriptHistoryStore.add(result, mode = model,
                             transcriptionMillis = transcription.milliseconds,
-                            postProcessingMillis = postProcessingAttempt.milliseconds.takeIf { postProcessing.shouldProcess })
+                            postProcessingMillis = postProcessingAttempt.milliseconds.takeIf { postProcessing.shouldProcess },
+                            transcriptionModelId = accurateModelId,
+                            postProcessingModelId = textProcessingModel.takeIf { postProcessing.shouldProcess },
+                            postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                     }
                 }
                 if (completed && processed.failed) showModelMessage(getString(R.string.postprocessing_failed))

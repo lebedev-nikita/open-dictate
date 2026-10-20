@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.opendictate.app.model.TranscriptionModel
+import com.opendictate.app.model.TextProcessingServiceTier
 
 data class TranscriptHistoryItem(
     val id: Long,
@@ -13,6 +14,9 @@ data class TranscriptHistoryItem(
     val mode: TranscriptionModel? = null,
     val transcriptionMillis: Long? = null,
     val postProcessingMillis: Long? = null,
+    val transcriptionModelId: String? = null,
+    val postProcessingModelId: String? = null,
+    val postProcessingServiceTier: TextProcessingServiceTier? = null,
 )
 
 class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_NAME) :
@@ -30,7 +34,10 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
                 $COLUMN_CREATED_AT INTEGER NOT NULL,
                 $COLUMN_MODE TEXT,
                 $COLUMN_TRANSCRIPTION_MILLIS INTEGER,
-                $COLUMN_POSTPROCESSING_MILLIS INTEGER
+                $COLUMN_POSTPROCESSING_MILLIS INTEGER,
+                $COLUMN_TRANSCRIPTION_MODEL TEXT,
+                $COLUMN_POSTPROCESSING_MODEL TEXT,
+                $COLUMN_POSTPROCESSING_SERVICE_TIER TEXT
             )
             """.trimIndent(),
         )
@@ -45,11 +52,18 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
             db.execSQL("ALTER TABLE $TABLE_HISTORY ADD COLUMN $COLUMN_TRANSCRIPTION_MILLIS INTEGER")
             db.execSQL("ALTER TABLE $TABLE_HISTORY ADD COLUMN $COLUMN_POSTPROCESSING_MILLIS INTEGER")
         }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE $TABLE_HISTORY ADD COLUMN $COLUMN_TRANSCRIPTION_MODEL TEXT")
+            db.execSQL("ALTER TABLE $TABLE_HISTORY ADD COLUMN $COLUMN_POSTPROCESSING_MODEL TEXT")
+            db.execSQL("ALTER TABLE $TABLE_HISTORY ADD COLUMN $COLUMN_POSTPROCESSING_SERVICE_TIER TEXT")
+        }
     }
 
     fun add(text: String, createdAtEpochMillis: Long = System.currentTimeMillis(),
             mode: TranscriptionModel? = null, transcriptionMillis: Long? = null,
-            postProcessingMillis: Long? = null): Long {
+            postProcessingMillis: Long? = null, transcriptionModelId: String? = null,
+            postProcessingModelId: String? = null,
+            postProcessingServiceTier: TextProcessingServiceTier? = null): Long {
         require(transcriptionMillis == null || transcriptionMillis >= 0)
         require(postProcessingMillis == null || postProcessingMillis >= 0)
         val normalized = text.trim()
@@ -63,13 +77,19 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
                 put(COLUMN_MODE, mode?.name)
                 put(COLUMN_TRANSCRIPTION_MILLIS, transcriptionMillis.takeUnless { mode == TranscriptionModel.LIVE })
                 put(COLUMN_POSTPROCESSING_MILLIS, postProcessingMillis.takeUnless { mode == TranscriptionModel.LIVE })
+                put(COLUMN_TRANSCRIPTION_MODEL, transcriptionModelId)
+                put(COLUMN_POSTPROCESSING_MODEL, postProcessingModelId.takeUnless { mode == TranscriptionModel.LIVE })
+                put(COLUMN_POSTPROCESSING_SERVICE_TIER, postProcessingServiceTier?.apiValue
+                    .takeIf { mode != TranscriptionModel.LIVE && postProcessingModelId != null })
             },
         )
     }
 
     fun getAll(): List<TranscriptHistoryItem> = readableDatabase.query(
         TABLE_HISTORY,
-        arrayOf(COLUMN_ID, COLUMN_TEXT, COLUMN_CREATED_AT, COLUMN_MODE, COLUMN_TRANSCRIPTION_MILLIS, COLUMN_POSTPROCESSING_MILLIS),
+        arrayOf(COLUMN_ID, COLUMN_TEXT, COLUMN_CREATED_AT, COLUMN_MODE, COLUMN_TRANSCRIPTION_MILLIS,
+            COLUMN_POSTPROCESSING_MILLIS, COLUMN_TRANSCRIPTION_MODEL, COLUMN_POSTPROCESSING_MODEL,
+            COLUMN_POSTPROCESSING_SERVICE_TIER),
         null,
         null,
         null,
@@ -82,6 +102,9 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
         val modeIndex = cursor.getColumnIndexOrThrow(COLUMN_MODE)
         val transcriptionIndex = cursor.getColumnIndexOrThrow(COLUMN_TRANSCRIPTION_MILLIS)
         val postProcessingIndex = cursor.getColumnIndexOrThrow(COLUMN_POSTPROCESSING_MILLIS)
+        val transcriptionModelIndex = cursor.getColumnIndexOrThrow(COLUMN_TRANSCRIPTION_MODEL)
+        val postProcessingModelIndex = cursor.getColumnIndexOrThrow(COLUMN_POSTPROCESSING_MODEL)
+        val postProcessingServiceTierIndex = cursor.getColumnIndexOrThrow(COLUMN_POSTPROCESSING_SERVICE_TIER)
         fun duration(index: Int) = if (cursor.isNull(index)) null else cursor.getLong(index).takeIf { it >= 0 }
         buildList {
             while (cursor.moveToNext()) {
@@ -93,6 +116,9 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
                         mode = TranscriptionModel.entries.firstOrNull { it.name == cursor.getString(modeIndex) },
                         transcriptionMillis = duration(transcriptionIndex),
                         postProcessingMillis = duration(postProcessingIndex),
+                        transcriptionModelId = cursor.getString(transcriptionModelIndex),
+                        postProcessingModelId = cursor.getString(postProcessingModelIndex),
+                        postProcessingServiceTier = TextProcessingServiceTier.fromValue(cursor.getString(postProcessingServiceTierIndex)),
                     ),
                 )
             }
@@ -120,7 +146,7 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
 
     private companion object {
         const val DATABASE_NAME = "transcript-history.db"
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
         const val TABLE_HISTORY = "transcript_history"
         const val COLUMN_ID = "id"
         const val COLUMN_TEXT = "text"
@@ -128,5 +154,8 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
         const val COLUMN_MODE = "mode"
         const val COLUMN_TRANSCRIPTION_MILLIS = "transcription_millis"
         const val COLUMN_POSTPROCESSING_MILLIS = "postprocessing_millis"
+        const val COLUMN_TRANSCRIPTION_MODEL = "transcription_model"
+        const val COLUMN_POSTPROCESSING_MODEL = "postprocessing_model"
+        const val COLUMN_POSTPROCESSING_SERVICE_TIER = "postprocessing_service_tier"
     }
 }

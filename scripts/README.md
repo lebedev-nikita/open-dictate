@@ -1,9 +1,11 @@
 # Transcription punctuation checks
 
 Run real file transcription requests without installing or changing either app.
-Requires Python 3.9+ and an `OPENAI_API_KEY` in the root `.env` file or environment.
+Requires Python 3.9+ and a `TRANSCRIBE_KEY` in the root `.env` file or environment.
 An existing env file takes precedence. The runner uses only the Python standard
-library and sends audio directly to OpenAI.
+library and sends audio directly to `https://api.openai.com/v1`, ignoring
+`OPENAI_BASE_URL`. `OPENAI_API_KEY` and `OPENAI_BASE_URL` are reserved for text
+processing through the local endpoint; this runner never uses the text key.
 
 For Android-like audio, convert a supplied recording to mono PCM16 WAV at 24 kHz:
 
