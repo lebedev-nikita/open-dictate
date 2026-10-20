@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="overlay_with_postprocessing">With post-processing</string>
+    <string name="overlay_without_postprocessing">Without post-processing</string>
     <string name="app_name" translatable="false">OpenDictate</string>
 
     <string name="language_switcher_description">Change app language</string>
