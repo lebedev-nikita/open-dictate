@@ -6,7 +6,7 @@ enum PostProcessingLanguages {
     private struct Definition: Decodable { let language: String; let name: String; let scales: [Example]; let examples: [Example] }
     private struct Root: Decodable { let heading: String; let languages: [Definition] }
     private static let root: Root = {
-        guard let url = Bundle.module.url(forResource: "postprocessing-languages", withExtension: "json"),
+        guard let url = CoreResources.url(forResource: "postprocessing-languages", withExtension: "json"),
               let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(Root.self, from: data) else {
             preconditionFailure("Missing post-processing language examples")
         }
