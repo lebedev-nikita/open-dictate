@@ -57,14 +57,30 @@ final class HTTPTests: XCTestCase {
             MockHTTP.handler = { request in
                 XCTAssertEqual(request.url, OpenAIRequest.responsesURL)
                 XCTAssertEqual(request.timeoutInterval, 10)
+                let bodyData = request.httpBody ?? request.httpBodyStream.map { stream -> Data in
+                    stream.open(); defer { stream.close() }
+                    var data = Data(), buffer = [UInt8](repeating: 0, count: 4096)
+                    while stream.hasBytesAvailable {
+                        let count = stream.read(&buffer, maxLength: buffer.count)
+                        if count <= 0 { break }
+                        data.append(contentsOf: buffer.prefix(count))
+                    }
+                    return data
+                }
+                let payload = try JSONSerialization.jsonObject(with: XCTUnwrap(bodyData)) as! [String: Any]
+                let input = try JSONSerialization.jsonObject(with: Data((payload["input"] as! String).utf8)) as! [String: String]
+                XCTAssertEqual(input["instruction"], "Use exclamation marks.")
+                XCTAssertEqual(input["source_text"], "привет мир")
                 return (status, Data(body.utf8))
             }
-            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: true, mode: .accurate)
+            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: true, mode: .accurate,
+                formattingRules: "Use exclamation marks.")
             XCTAssertEqual(result, expected)
         }
         MockHTTP.handler = { _ in XCTFail("Disabled/Live must not request punctuation"); return (500, Data()) }
         for (enabled, mode) in [(false, DictationMode.accurate), (true, .live)] {
-            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: enabled, mode: mode)
+            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: enabled, mode: mode,
+                formattingRules: "Use exclamation marks.")
             XCTAssertEqual(result, "привет мир")
         }
     }

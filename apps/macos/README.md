@@ -63,6 +63,9 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   moving focus. Preparation already offers the finish action; processing shows
   a native spinner in a 27.5 × 27.5 pt circle for either style, restoring
   the original vertical spacing around the spinner.
+- The menu bar replaces the microphone with a native spinner while awaiting a
+  result without AI post-processing. The menu item keeps its size and remains clickable.
+  Sessions using AI post-processing retain the microphone.
 - The HUD never takes keyboard focus. Ordinary dictation continues while typing,
   moving the caret or switching fields/windows/apps. Stopping captures the active eligible field for delivery.
   Voice editing still requires the original text and selection to remain unchanged.
@@ -110,23 +113,31 @@ are preserved; the prompt does not add a processing step.
 Selecting Russian also includes a Russian punctuation prompt with examples of
 sentence boundaries, commas, colons, dashes, quotations and parenthetical text.
 
-### Optional punctuation correction
+### Optional AI post-processing
 
-Settings → Dictation → **Correct punctuation** appears only in Accurate mode
+Settings → Dictation → **AI post-processing** appears only in Accurate mode
 and is off by default.
 When enabled, only ordinary Accurate dictation sends its recognized text to
-`gpt-6-luna` for punctuation/capitalization through Responses (`store: false`,
+`gpt-6-luna` for formatting through Responses (`store: false`,
 `reasoning.effort: none`). Live and voice editing skip this step. Local word
 replacements apply afterward. No separate final-period override is applied. Invalid edits or
 request failures retain the original transcription; cancellation prevents delivery.
 The switch is saved only on this Mac and does not sync through Google Drive.
+
+Enter instructions in **Formatting rules**, then choose **Save rules**. For example,
+“Do not add a final period. Separate paragraphs with a blank line.” Empty rules
+use the default punctuation correction. Rules can change punctuation,
+capitalization and paragraph breaks, but cannot rewrite words or numbers.
+Saved rules sync through Google Drive even while post-processing is disabled;
+Android preserves and relays them without running this extra AI step.
+Changes apply to the next dictation or explicit Accurate retranscription.
 
 ### Retranscribe the last recording
 
 Choose **Retranscribe last recording** in the menu bar to recognize the latest
 ordinary Live or Accurate recording again through Accurate, without recording
 new audio. The command uses the current Accurate model, speech languages,
-dictionary, timeout, punctuation option and word replacements. The selected
+dictionary, timeout, post-processing option, formatting rules and word replacements. The selected
 dictation mode stays unchanged. Results are inserted into the eligible field
 focused when you invoke the command; switching fields during processing prevents
 insertion. With no eligible field (including secure or excluded fields), the
@@ -252,7 +263,7 @@ cached only in memory.
 Turn on the native Google Drive switch in Settings, then choose a Google account
 in your browser. Official builds supply the Desktop OAuth client configuration;
 users do not enter client IDs or secrets. Sync includes the dictionary, word
-replacements, dictation mode and selected models, excluding API keys, audio and
+replacements, AI formatting rules, dictation mode and selected models, excluding API keys, audio and
 history. Browser sign-in uses PKCE and a temporary loopback callback listener.
 User refresh tokens stay in device-only Keychain storage.
 

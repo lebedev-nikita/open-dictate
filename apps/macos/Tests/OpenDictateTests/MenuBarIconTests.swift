@@ -3,6 +3,27 @@ import XCTest
 @testable import OpenDictate
 
 final class MenuBarIconTests: XCTestCase {
+    @MainActor func testProcessingWithoutPostProcessingShowsSpinnerAndRestoresIconAtTheSameSize() throws {
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: 28, height: 24))
+        let indicator = MenuBarStatusIndicator(button: button)
+        let spinner = try XCTUnwrap(button.subviews.compactMap { $0 as? NSProgressIndicator }.first)
+        XCTAssertNil(spinner.hitTest(.zero), "Progress must not intercept the menu button's clicks")
+        for postProcessing in [false, true] {
+            for phase in [AppModel.Phase.idle, .preparing, .recording, .processing] {
+                indicator.update(phase: phase, usesPostProcessing: postProcessing)
+                let showsSpinner = phase == .processing && !postProcessing
+                XCTAssertEqual(spinner.isHidden, !showsSpinner)
+                XCTAssertEqual(button.image?.size, NSSize(width: 20, height: 20))
+                if !showsSpinner { XCTAssertTrue(button.image === MenuBarIcon.image(for: phase)) }
+                else { XCTAssertFalse(button.image === MenuBarIcon.image(for: phase)) }
+            }
+        }
+        indicator.update(phase: .processing, usesPostProcessing: false)
+        indicator.update(phase: .idle, usesPostProcessing: false)
+        XCTAssertTrue(spinner.isHidden)
+        XCTAssertTrue(button.image === MenuBarIcon.image(for: .idle))
+    }
+
     func testOnlyRecordingUsesAColoredCircleWithoutResizingTheMenuItem() async throws {
         try await MainActor.run {
             let recording = try XCTUnwrap(MenuBarIcon.image(for: .recording))

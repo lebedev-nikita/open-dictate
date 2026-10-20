@@ -131,8 +131,10 @@ public enum OpenAIRequest {
             properties: ["transformed_text": ["type": "string"], "message": ["type": ["string", "null"]]])
     }
 
-    public static func punctuation(source: String) -> [String: Any] {
-        var request = transform(model: PunctuationCorrection.model, source: source, instruction: "Correct punctuation only.")
+    public static func punctuation(source: String, formattingRules: String = "") -> [String: Any] {
+        let rules = formattingRules.trimmingCharacters(in: .whitespacesAndNewlines)
+        var request = transform(model: PunctuationCorrection.model, source: source,
+            instruction: rules.isEmpty ? "Correct punctuation only." : rules)
         request["instructions"] = PunctuationCorrection.instructions
         request["reasoning"] = ["effort": "none"]
         return request

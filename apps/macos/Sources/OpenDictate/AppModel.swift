@@ -60,9 +60,11 @@ final class AppModel: ObservableObject {
         let context: TranscriptionContext
         let textModel: String
         let accuratePunctuationEnabled: Bool
+        let formattingRules: String
         let timeout: Int
         let replacements: WordReplacementEngine
         let started = Date()
+        var usesPostProcessing: Bool { !transform && mode == .accurate && accuratePunctuationEnabled }
         var acceptsPartials = true
         var cancelling = false
         var detached = false
@@ -81,6 +83,7 @@ final class AppModel: ObservableObject {
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
             context = preferences.context; textModel = preferences.textModel
             accuratePunctuationEnabled = preferences.accuratePunctuationEnabled
+            formattingRules = preferences.formattingRules
             timeout = preferences.timeout
         }
     }
@@ -130,6 +133,7 @@ final class AppModel: ObservableObject {
     }
 
     var isActive: Bool { phase != .idle }
+    var usesPostProcessing: Bool { current?.usesPostProcessing ?? false }
     var canRetranscribe: Bool { !shuttingDown && !isActive && pasteTask == nil && lastDictationAudio != nil }
     var stateLabel: String {
         switch phase {
@@ -349,9 +353,9 @@ final class AppModel: ObservableObject {
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
             let corrected: String
-            if !session.transform && session.mode == .accurate && session.accuratePunctuationEnabled && !localOnly {
+            if session.usesPostProcessing && !localOnly {
                 corrected = try await client.correctPunctuation(source: transcript, key: session.key,
-                    enabled: session.accuratePunctuationEnabled, mode: session.mode)
+                    enabled: session.accuratePunctuationEnabled, mode: session.mode, formattingRules: session.formattingRules)
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
             } else { corrected = transcript }

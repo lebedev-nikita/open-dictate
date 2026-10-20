@@ -3,7 +3,9 @@
 Connect Google Drive in Settings on Android and macOS, using the same Google
 account. Sync transfers the dictionary, word replacement rules and enabled
 states, Live/Accurate mode and selected Live, Accurate and text model IDs.
-The Accurate punctuation switch is saved only on each device and never synced.
+AI formatting instructions also sync, including when post-processing is disabled.
+The Accurate AI post-processing switch is saved only on each device and never synced.
+Android preserves the instructions without applying an extra AI formatting step.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
 OpenAI API key and local model catalogue.
 
@@ -200,9 +202,9 @@ Delete hidden app data.
 
 ## Extending the format
 
-Version 1 has an `entries` map whose keys currently are `dictionary`, `mode`,
-`liveModel`, `accurateModel`, `textModel`, `wordReplacements` and
-`wordReplacementsEnabled`:
+Version 1 has an `entries` map. The authoritative key lists live in
+[`SettingsSync.swift`](../apps/macos/Sources/OpenDictateCore/SettingsSync.swift)
+and [`SettingsSyncDocument.kt`](../apps/android/app/src/main/java/com/opendictate/app/data/SettingsSyncDocument.kt):
 
 ```json
 {
@@ -231,6 +233,10 @@ from local journals and incoming replicas, and excluded from uploads. Its
 existing local value is preserved. Older app versions may still sync that field
 among themselves until updated. Imported replacement JSON is preserved verbatim
 to avoid platform-specific encoding creating a new edit. Remote rules are validated before any settings are applied.
+
+`formattingRules` contains user-authored AI formatting instructions. An empty string
+restores default punctuation correction. Rules are limited to 4,000 UTF-16 units;
+oversized rules reject the whole import. Android relays the field without applying it.
 
 Clearing needs an explicit value, because removing a key leaves older replicas intact.
 
