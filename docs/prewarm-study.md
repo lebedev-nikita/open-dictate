@@ -10,8 +10,10 @@ The completed primary series does not support adding cache prewarm to every
 dictation. Its estimated median TTFT saving is -13 ms, with a 95% interval from
 -58 to +32 ms. This excludes the predefined useful improvement of at least
 200 ms and 10% under the tested conditions. It does not establish that prewarm is
-useless for every model, prompt, account, or network. The independent transport
-supplement remains pending.
+useless for every model, prompt, account, or network. The separate API transport
+supplement and independent concurrency replication also did not establish a
+reliable speedup. No production prewarm change is justified by this study; both
+applications are unchanged.
 
 The earlier exploratory series is a pilot, not evidence pooled into this study.
 A useful outcome must improve both the typical delay and the user's wait for a
@@ -135,26 +137,26 @@ from the primary cache-only effect and from a measured phone benefit.
 After the original overlap series revealed an unexpected zero-lead improvement,
 a separate fixed replication was specified before its own data collection. This
 is a response to that observation, not part of the original confirmatory plan.
-Its results will not be pooled into the original primary endpoint, and the
-sample will not be extended according to its outcome.
+Its results were not pooled into the original primary endpoint, and the sample
+was not extended according to its outcome.
 
-There are 48 four-arm blocks with the same synthetic source within each block:
+The replication used 48 four-arm blocks with the same synthetic source within each block:
 cold inference; completed same-prefix prewarm then inference; simultaneous
 same-prefix prewarm and inference; and simultaneous unrelated-prefix prewarm and
-inference. Every arm uses a fresh prefix, with the unrelated preparation using a
-different fresh prefix from its inference. All 24 arm-order permutations occur
-exactly twice, then are shuffled with seed 20261022. Both transports are warmed;
-preparation uses its separate connection and the real inference uses the main
-connection. Concurrent inference starts immediately without awaiting preparation.
-The plan makes 336 Responses calls, comprising 192 inferences and 144
+inference. Every arm used a fresh prefix, with the unrelated preparation using a
+different fresh prefix from its inference. All 24 arm-order permutations occurred
+exactly twice, then were shuffled with seed 20261022. Both transports were warmed;
+preparation used its separate connection and the real inference used the main
+connection. Concurrent inference started immediately without awaiting preparation.
+The study made 336 Responses calls, comprising 192 inferences and 144
 preparations, plus two GET transport warmups, after the independent transport
 study finishes.
 
-The replication's primary contrast is simultaneous same-prefix preparation
+The replication's primary contrast was simultaneous same-prefix preparation
 versus cold inference. Completed preparation and unrelated simultaneous
-preparation are mechanism controls. The unrelated arm distinguishes a
+preparation were mechanism controls. The unrelated arm distinguished a
 same-prefix interaction from the effect of merely issuing another request.
-Record cache reads and writes in both members of every concurrent pair: the
+Cache reads and writes were recorded in both members of every concurrent pair: the
 original zero-lead data usually showed inference writing a prefix that the
 preparation subsequently read. A reproducible speedup without inference cache
 reads would still require a different mechanism explanation; it must not be
@@ -325,9 +327,8 @@ inference mechanism.
 The anomaly was not explained by a simple order imbalance: seven pairs ran cold
 first and five concurrent first, with positive subgroup median savings in both.
 Its small sample, multiple secondary comparisons, temporal variation, and
-unverified concurrency mechanism require an independent bounded replication
-before any production decision based on simultaneous requests. The four other
-lead-time groups do not show a reliable typical improvement.
+unverified concurrency mechanism motivated the independent bounded replication
+below. The four other lead-time groups do not show a reliable typical improvement.
 
 As a separate blocking-policy simulation, adding unhidden preparation duration
 to the primary prewarmed response gives a median completion saving of -789 ms
@@ -337,11 +338,101 @@ concurrent effect. It reinforces that inference must not wait for preparation.
 
 ### Transport supplement
 
-Transport results remain pending. The recommendation against adding cache
-prewarm on every dictation is based on the completed primary comparison; it does
-not discard the separate possibility of useful first-session transport
-preparation on the phone.
+All 72 transport-series inference requests passed JSON validation and read the
+seeded cache prefix. The 24 redundant preparation calls also read the prefix and
+generated zero output. Each comparison has 24 pairs; savings exclude setup and
+show paired medians in milliseconds [exploratory 95% bootstrap interval].
 
-Only aggregate metrics and synthetic-case identifiers are retained. No keys,
+| Comparison | TTFT saving | Completion saving |
+| --- | ---: | ---: |
+| Fresh connection → GET-prepared | +57 [-102, +202] | +65 [-90, +180] |
+| Fresh connection → prewarm-prepared | +84 [-57, +159] | +80 [-237, +178] |
+| GET-prepared → prewarm-prepared | +1 [-103, +201] | -8 [-266, +52] |
+
+The median setup duration was 655 ms for GET and 990 ms for prewarm. Those
+durations are additional work: the table models setup finishing before the
+source becomes ready, not a measured end-to-end saving when setup blocks
+generation. Preparation before an otherwise fresh API connection did not show a
+reliable improvement in this sample, and Responses prewarm did not demonstrate
+an advantage over the simpler GET preparation. Estimated Responses usage cost
+was $0.0047 for this supplement, including its seed.
+
+These 24 blocks do not settle all first-session transport effects. The study
+uses new HTTP/1.1 connections on the Mac, not the phone's connection pool,
+Android HTTP/2, OAuth token renewal, or mobile radio startup. These effects on
+the connected ChatGPT route are unmeasured, so the results establish neither a
+useful transport benefit nor its absence on the phone.
+
+### Independent concurrency replication
+
+All 48 four-arm blocks completed, with all 24 arm-order permutations represented
+twice. The initial approximately 500 ms zero-lead gain was not established
+independently. The replication's predefined same-prefix concurrent contrast
+estimated a TTFT saving of +73 ms [-464, +255] and a completion saving of -12 ms
+[-562, +453]. Both intervals include substantial uncertainty and zero.
+
+| Comparison | TTFT saving, ms [95% interval] | Completion saving, ms [95% interval] |
+| --- | ---: | ---: |
+| Cold → same-prefix concurrent preparation | +73 [-464, +255] | -12 [-562, +453] |
+| Cold → completed preparation | +142 [-182, +218] | +142 [-47, +293] |
+| Cold → unrelated-prefix concurrent preparation | -81 [-543, +183] | -109 [-553, +245] |
+| Unrelated → same-prefix concurrent preparation | +98 [-142, +260] | +137 [-237, +363] |
+
+Cache checks distinguished the controls: cold read 0/48 prefixes, completed
+prewarm read 48/48, same-prefix concurrency read 23/48, and unrelated-prefix
+concurrency read 0/48. All 144 preparation requests generated zero output.
+JSON validation passed for 47/48 cold, 48/48 completed, 47/48 same-prefix, and
+45/48 unrelated-prefix inference outputs; these small counts do not establish a
+causal quality difference.
+
+The later replication's cold median TTFT was 1,219 ms, versus 845 ms in the main
+series. This temporal variation is one reason the studies remain separate.
+Completed preparation and concurrent cache availability did not guarantee a
+typical speedup. The replication does not prove that every possible concurrency
+effect is absent; it provides no reproducible benefit on which to base an app
+change, and the same-prefix versus unrelated control leaves the mechanism
+unresolved.
+
+## Artifacts and reproduction
+
+The main, transport, and replication studies together made 1,464 Responses
+requests: 1,036 generations and 428 preparations, plus 31 model GET checks.
+Every Responses request reached `completed`. Across inference outputs, 23 failed
+JSON/schema validation and 32 failed the limited content probes, including
+invalid outputs. Estimated total API cost was $0.3195. These totals exclude the
+earlier 131-call pilot and 36-call smoke validation.
+
+The [final analysis](prewarm-study-data/final-analysis.json) contains the combined
+accounting and separate estimates. Each study retains its fixed plan, environment,
+per-request metrics and summaries, without source or response text:
+
+| Study | Plan | Environment | Measurements | Summary |
+| --- | --- | --- | --- | --- |
+| Main | [plan](prewarm-study-data/main/plan.json) | [environment](prewarm-study-data/main/environment.json) | [metrics](prewarm-study-data/main/measurements.jsonl) | [summary](prewarm-study-data/main/summary.json) |
+| Transport | [plan](prewarm-study-data/transport/plan.json) | [environment](prewarm-study-data/transport/environment.json) | [metrics](prewarm-study-data/transport/measurements.jsonl) | [summary](prewarm-study-data/transport/summary.json) |
+| Replication | [plan](prewarm-study-data/replication/plan.json) | [environment](prewarm-study-data/replication/environment.json) | [metrics](prewarm-study-data/replication/measurements.jsonl) | [summary](prewarm-study-data/replication/summary.json) |
+
+Recalculate the analysis without credentials or API calls, choosing an unused
+output file:
+
+```bash
+python3 scripts/analyze-prewarm-study.py \
+  --study docs/prewarm-study-data/main \
+  --transport docs/prewarm-study-data/transport \
+  --replication docs/prewarm-study-data/replication \
+  --output /tmp/opendictate-prewarm-analysis-new.json
+```
+
+The collectors are [main](../scripts/evaluate-prewarm.py),
+[transport](../scripts/evaluate-prewarm-transport.py), and
+[replication](../scripts/evaluate-prewarm-race.py). They generate prompt settings
+from the [application template helper](../scripts/prewarm-template.swift) and
+bundle synthetic sources. A new paid run needs an explicitly selected authorized
+API credential; no credential fallback is permitted. The transcription-key
+exception used here was authorized only for this study. The
+[offline tests](../scripts/test_evaluate_prewarm.py) exercise timing, stream
+handling, accounting, cache controls, and the balanced replication design.
+
+Only per-request metrics, summaries and synthetic-case identifiers are retained. No keys,
 request or response payloads, user transcripts, or focused-field content belong
 in the study artifacts.

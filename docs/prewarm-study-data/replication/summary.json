@@ -1,0 +1,253 @@
+{
+  "cold/same_concurrent": {
+    "ttft_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1218.908,
+      "b_median_ms": 1339.342,
+      "a_p90_ms": 3729.8754000000017,
+      "b_p90_ms": 2472.6204000000002,
+      "paired_median_saving_ms": 73.29399999999987,
+      "ci95_ms": [
+        -463.91999999999985,
+        255.1529999999999
+      ],
+      "sign_median_ci95_ms": [
+        -502.9770000000001,
+        277.36199999999985
+      ],
+      "paired_median_fraction": 0.05806720363602579,
+      "fraction_ci95": [
+        -0.36978934725989504,
+        0.15811777238837527
+      ],
+      "win_fraction": 0.5208333333333334,
+      "practical_win_fraction": 0.3958333333333333
+    },
+    "completion_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1617.2455,
+      "b_median_ms": 1710.1775,
+      "a_p90_ms": 4062.8150000000023,
+      "b_p90_ms": 2909.1636000000008,
+      "paired_median_saving_ms": -11.652999999999906,
+      "ci95_ms": [
+        -562.0929999999998,
+        452.8420000000001
+      ],
+      "sign_median_ci95_ms": [
+        -591.0840000000001,
+        458.8330000000001
+      ],
+      "paired_median_fraction": -0.002842091274821515,
+      "fraction_ci95": [
+        -0.3389931361847333,
+        0.224720858872579
+      ],
+      "win_fraction": 0.5,
+      "practical_win_fraction": 0.4375
+    }
+  },
+  "cold/completed": {
+    "ttft_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1218.908,
+      "b_median_ms": 1343.848,
+      "a_p90_ms": 3729.8754000000017,
+      "b_p90_ms": 3532.0539000000017,
+      "paired_median_saving_ms": 142.176,
+      "ci95_ms": [
+        -181.56899999999996,
+        217.88199999999995
+      ],
+      "sign_median_ci95_ms": [
+        -185.586,
+        238.59699999999998
+      ],
+      "paired_median_fraction": 0.07154477971402831,
+      "fraction_ci95": [
+        -0.13947052068410598,
+        0.17791774374659233
+      ],
+      "win_fraction": 0.5416666666666666,
+      "practical_win_fraction": 0.3541666666666667
+    },
+    "completion_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1617.2455,
+      "b_median_ms": 1629.641,
+      "a_p90_ms": 4062.8150000000023,
+      "b_p90_ms": 4216.334200000001,
+      "paired_median_saving_ms": 142.3114999999999,
+      "ci95_ms": [
+        -46.57399999999984,
+        293.2656499999947
+      ],
+      "sign_median_ci95_ms": [
+        -59.99400000000014,
+        335.0189999999998
+      ],
+      "paired_median_fraction": 0.081409992238072,
+      "fraction_ci95": [
+        -0.029317985231933706,
+        0.19184091521026092
+      ],
+      "win_fraction": 0.5833333333333334,
+      "practical_win_fraction": 0.4166666666666667
+    }
+  },
+  "cold/unrelated_concurrent": {
+    "ttft_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1218.908,
+      "b_median_ms": 1514.7585,
+      "a_p90_ms": 3729.8754000000017,
+      "b_p90_ms": 3034.8729000000003,
+      "paired_median_saving_ms": -81.18300000000005,
+      "ci95_ms": [
+        -543.057,
+        183.22449999999998
+      ],
+      "sign_median_ci95_ms": [
+        -587.615,
+        243.428
+      ],
+      "paired_median_fraction": -0.08679691641918222,
+      "fraction_ci95": [
+        -0.4420730874034094,
+        0.13411134847831355
+      ],
+      "win_fraction": 0.4375,
+      "practical_win_fraction": 0.3541666666666667
+    },
+    "completion_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1617.2455,
+      "b_median_ms": 1846.4924999999998,
+      "a_p90_ms": 4062.8150000000023,
+      "b_p90_ms": 3892.3639000000007,
+      "paired_median_saving_ms": -109.36350000000004,
+      "ci95_ms": [
+        -552.5819999999999,
+        244.9755
+      ],
+      "sign_median_ci95_ms": [
+        -564.0329999999999,
+        263.15599999999995
+      ],
+      "paired_median_fraction": -0.06566823962093345,
+      "fraction_ci95": [
+        -0.3813373339859859,
+        0.14129948240850107
+      ],
+      "win_fraction": 0.4375,
+      "practical_win_fraction": 0.3958333333333333
+    }
+  },
+  "unrelated_concurrent/same_concurrent": {
+    "ttft_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1514.7585,
+      "b_median_ms": 1339.342,
+      "a_p90_ms": 3034.8729000000003,
+      "b_p90_ms": 2472.6204000000002,
+      "paired_median_saving_ms": 97.92349999999999,
+      "ci95_ms": [
+        -142.159,
+        260.3410000000001
+      ],
+      "sign_median_ci95_ms": [
+        -149.62599999999975,
+        268.81899999999996
+      ],
+      "paired_median_fraction": 0.0622711158018975,
+      "fraction_ci95": [
+        -0.13729842769907488,
+        0.1891122715377047
+      ],
+      "win_fraction": 0.5416666666666666,
+      "practical_win_fraction": 0.4166666666666667
+    },
+    "completion_ms": {
+      "n": 48,
+      "attempted_pairs": 48,
+      "a_median_ms": 1846.4924999999998,
+      "b_median_ms": 1710.1775,
+      "a_p90_ms": 3892.3639000000007,
+      "b_p90_ms": 2909.1636000000008,
+      "paired_median_saving_ms": 137.36850000000004,
+      "ci95_ms": [
+        -237.06600000000003,
+        363.07589999999686
+      ],
+      "sign_median_ci95_ms": [
+        -240.6060000000001,
+        411.039
+      ],
+      "paired_median_fraction": 0.0856074035706666,
+      "fraction_ci95": [
+        -0.15301462220862658,
+        0.16285017147791148
+      ],
+      "win_fraction": 0.5416666666666666,
+      "practical_win_fraction": 0.4583333333333333
+    }
+  },
+  "checks": {
+    "cold": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 0,
+      "valid_json": 47,
+      "zero_output": 0
+    },
+    "completed": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 48,
+      "valid_json": 48,
+      "zero_output": 0
+    },
+    "same_concurrent": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 23,
+      "valid_json": 47,
+      "zero_output": 0
+    },
+    "unrelated_concurrent": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 0,
+      "valid_json": 45,
+      "zero_output": 0
+    },
+    "preparation_completed": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 0,
+      "valid_json": 0,
+      "zero_output": 48
+    },
+    "preparation_same_concurrent": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 24,
+      "valid_json": 0,
+      "zero_output": 48
+    },
+    "preparation_unrelated_concurrent": {
+      "n": 48,
+      "completed": 48,
+      "cache_hits": 0,
+      "valid_json": 0,
+      "zero_output": 48
+    }
+  }
+}

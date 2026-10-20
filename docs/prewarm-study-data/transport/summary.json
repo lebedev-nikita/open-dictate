@@ -1,0 +1,169 @@
+{
+  "fresh/get_warmed": {
+    "ttft_ms": {
+      "n": 24,
+      "attempted_pairs": 24,
+      "a_median_ms": 911.85,
+      "b_median_ms": 902.7429999999999,
+      "a_p90_ms": 2544.132699999999,
+      "b_p90_ms": 2162.584,
+      "paired_median_saving_ms": 56.5745,
+      "ci95_ms": [
+        -101.976,
+        202.471
+      ],
+      "sign_median_ci95_ms": [
+        -135.789,
+        226.88599999999997
+      ],
+      "paired_median_fraction": 0.07885035045463622,
+      "fraction_ci95": [
+        -0.12308901381337094,
+        0.19582616070754735
+      ],
+      "win_fraction": 0.5833333333333334,
+      "practical_win_fraction": 0.3333333333333333
+    },
+    "completion_ms": {
+      "n": 24,
+      "attempted_pairs": 24,
+      "a_median_ms": 1231.175,
+      "b_median_ms": 1211.339,
+      "a_p90_ms": 2907.2330999999995,
+      "b_p90_ms": 2977.4475999999995,
+      "paired_median_saving_ms": 65.17199999999997,
+      "ci95_ms": [
+        -90.35799999999995,
+        180.12999999999988
+      ],
+      "sign_median_ci95_ms": [
+        -104.84500000000003,
+        192.9469999999999
+      ],
+      "paired_median_fraction": 0.04821269382308918,
+      "fraction_ci95": [
+        -0.03924762789872811,
+        0.13606341417724419
+      ],
+      "win_fraction": 0.625,
+      "practical_win_fraction": 0.25
+    }
+  },
+  "fresh/prewarm_warmed": {
+    "ttft_ms": {
+      "n": 24,
+      "attempted_pairs": 24,
+      "a_median_ms": 911.85,
+      "b_median_ms": 865.7950000000001,
+      "a_p90_ms": 2544.132699999999,
+      "b_p90_ms": 2579.1582,
+      "paired_median_saving_ms": 83.89450000000011,
+      "ci95_ms": [
+        -56.98500000000013,
+        159.27749999999997
+      ],
+      "sign_median_ci95_ms": [
+        -105.59300000000007,
+        221.56399999999996
+      ],
+      "paired_median_fraction": 0.08662908974033766,
+      "fraction_ci95": [
+        -0.04409873287241906,
+        0.1593306352286284
+      ],
+      "win_fraction": 0.625,
+      "practical_win_fraction": 0.2916666666666667
+    },
+    "completion_ms": {
+      "n": 24,
+      "attempted_pairs": 24,
+      "a_median_ms": 1231.175,
+      "b_median_ms": 1207.496,
+      "a_p90_ms": 2907.2330999999995,
+      "b_p90_ms": 3101.8846999999996,
+      "paired_median_saving_ms": 79.76099999999997,
+      "ci95_ms": [
+        -236.82549999999998,
+        178.43499999999995
+      ],
+      "sign_median_ci95_ms": [
+        -476.91999999999996,
+        189.02099999999996
+      ],
+      "paired_median_fraction": 0.0686468710068269,
+      "fraction_ci95": [
+        -0.1640871447570608,
+        0.14154485901129188
+      ],
+      "win_fraction": 0.625,
+      "practical_win_fraction": 0.25
+    }
+  },
+  "get_warmed/prewarm_warmed": {
+    "ttft_ms": {
+      "n": 24,
+      "attempted_pairs": 24,
+      "a_median_ms": 902.7429999999999,
+      "b_median_ms": 865.7950000000001,
+      "a_p90_ms": 2162.584,
+      "b_p90_ms": 2579.1582,
+      "paired_median_saving_ms": 1.47300000000007,
+      "ci95_ms": [
+        -102.70000000000005,
+        201.40499999999997
+      ],
+      "sign_median_ci95_ms": [
+        -206.81100000000015,
+        257.903
+      ],
+      "paired_median_fraction": 0.002133512104240026,
+      "fraction_ci95": [
+        -0.11145325354742076,
+        0.15592374891778457
+      ],
+      "win_fraction": 0.5416666666666666,
+      "practical_win_fraction": 0.2916666666666667
+    },
+    "completion_ms": {
+      "n": 24,
+      "attempted_pairs": 24,
+      "a_median_ms": 1211.339,
+      "b_median_ms": 1207.496,
+      "a_p90_ms": 2977.4475999999995,
+      "b_p90_ms": 3101.8846999999996,
+      "paired_median_saving_ms": -8.245000000000005,
+      "ci95_ms": [
+        -266.2985,
+        52.33499999999992
+      ],
+      "sign_median_ci95_ms": [
+        -489.26199999999994,
+        67.02700000000004
+      ],
+      "paired_median_fraction": -0.00668608130891147,
+      "fraction_ci95": [
+        -0.22376508719048965,
+        0.02603201911120942
+      ],
+      "win_fraction": 0.4166666666666667,
+      "practical_win_fraction": 0.25
+    }
+  },
+  "checks": {
+    "fresh": {
+      "n": 24,
+      "cache_hits": 24,
+      "valid_json": 24
+    },
+    "get_warmed": {
+      "n": 24,
+      "cache_hits": 24,
+      "valid_json": 24
+    },
+    "prewarm_warmed": {
+      "n": 24,
+      "cache_hits": 24,
+      "valid_json": 24
+    }
+  }
+}

@@ -61,7 +61,7 @@ def decision(result):
     return "inconclusive"
 
 
-def analyze(study, transport=None):
+def analyze(study, transport=None, replication=None):
     rows = read_rows(study)
     primary = [r for r in rows if r["phase"]=="paired" and r["scope"]=="ru_en"]
     result = {"primary": {metric: paired(primary,metric=metric) for metric in ("ttft_ms","completion_ms")},
@@ -126,6 +126,25 @@ def analyze(study, transport=None):
             result["transport"][a+"/"+b]={metric:paired(transport_rows,"transport",a,b,metric) for metric in ("ttft_ms","completion_ms")}
         result["transport_setup"]={arm:{"n":len(values),"median_ms":statistics.median(values)} for arm in ("get_warmed","prewarm_warmed")
             if (values:=[r["completion_ms"] for r in transport_rows if r["phase"]=="setup" and r["arm"]==arm and r.get("completion_ms") is not None])}
+    if replication:
+        replication_rows=read_rows(replication)
+        result["replication"]={a+"/"+b:{metric:paired(replication_rows,"race",a,b,metric) for metric in ("ttft_ms","completion_ms")}
+            for a,b in [("cold","same_concurrent"),("cold","completed"),("cold","unrelated_concurrent"),("unrelated_concurrent","same_concurrent")]}
+    response_rows=rows.copy()
+    inference_rows=[r for r in rows if r["arm"]!="preparation"]
+    if transport:
+        response_rows.extend(r for r in transport_rows if not (r["phase"]=="setup" and r["arm"]=="get_warmed"))
+        inference_rows.extend(r for r in transport_rows if r["phase"] in ("seed","transport"))
+    if replication:
+        response_rows.extend(replication_rows)
+        inference_rows.extend(r for r in replication_rows if not r["arm"].startswith("preparation"))
+    result["totals"]={"responses_requests":len(response_rows),"generation_requests":len(inference_rows),
+        "preparation_requests":len(response_rows)-len(inference_rows),
+        "status_counts":dict(Counter(r["status"] for r in response_rows)),
+        "invalid_json":sum(not r.get("valid_json",False) for r in inference_rows),
+        "failed_content_check":sum(not r.get("content_check",False) for r in inference_rows),
+        "estimated_usd":sum((max(0,r.get("input_tokens",0)-r.get("cache_read_tokens",0)-r.get("cache_write_tokens",0))*.1
+            +r.get("cache_read_tokens",0)*.01+r.get("cache_write_tokens",0)*.125+r.get("output_tokens",0)*.5)/1e6 for r in response_rows)}
     return result
 
 
@@ -133,7 +152,8 @@ if __name__ == "__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--study",type=Path,required=True)
     parser.add_argument("--transport",type=Path)
+    parser.add_argument("--replication",type=Path)
     parser.add_argument("--output",type=Path,required=True)
     args=parser.parse_args()
-    prewarm.write_json(args.output,analyze(args.study,args.transport))
+    prewarm.write_json(args.output,analyze(args.study,args.transport,args.replication))
     print(json.dumps({"analysis_written":True}))

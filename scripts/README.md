@@ -107,3 +107,16 @@ The final analysis includes valid-output and request-order sensitivity, p90
 intervals, measured overlap readiness, and a clearly labeled simulation of a
 blocking preparation policy. It makes no network requests. All reported secondary
 intervals are exploratory and do not adjust for multiple comparisons.
+
+`evaluate-prewarm-race.py` is an independent, fixed 48-block replication of the
+exploratory simultaneous-request anomaly. It compares a cold request, completed
+prewarm, simultaneous same-prefix prewarm, and simultaneous unrelated-prefix
+prewarm. All 24 arm orders run twice in shuffled order. Its 336 Responses calls
+are analyzed separately; do not pool them into the original primary endpoint.
+
+```bash
+python3 scripts/evaluate-prewarm-race.py --output /tmp/prewarm-replication
+```
+
+Pass `--replication /tmp/prewarm-replication` to the offline analyzer to include
+its separate estimates and the combined request accounting.

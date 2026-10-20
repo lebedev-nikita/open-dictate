@@ -1,0 +1,6 @@
+{
+  "utc": "2026-10-20T11:58:22.302921+00:00",
+  "model": "gpt-6-luna",
+  "transport": "New HTTP/1.1 HTTPS connection per arm; same cached split prefix in all arms",
+  "runner_sha256": "2470f737d87bf9d6b59bbdc3532275f95f7a01e04b15ed9b00001262474c3dd0"
+}

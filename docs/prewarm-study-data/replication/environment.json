@@ -1,0 +1,6 @@
+{
+  "utc": "2026-10-20T12:01:54.514020+00:00",
+  "model": "gpt-6-luna",
+  "runner_sha256": "0dfa0d70c71bf317d37d9ba51a716095250045a3d3ee0c5353cd2c90ff4f7c7c",
+  "transport": "Two reused, authenticated HTTP/1.1 TLS connections; same inference transport in all arms"
+}
