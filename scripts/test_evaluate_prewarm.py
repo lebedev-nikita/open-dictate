@@ -10,6 +10,12 @@ from unittest.mock import patch
 spec = importlib.util.spec_from_file_location("prewarm", Path(__file__).with_name("evaluate-prewarm.py"))
 prewarm = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prewarm)
+analysis_spec = importlib.util.spec_from_file_location("prewarm_analysis", Path(__file__).with_name("analyze-prewarm-study.py"))
+analysis = importlib.util.module_from_spec(analysis_spec)
+analysis_spec.loader.exec_module(analysis)
+transport_spec = importlib.util.spec_from_file_location("prewarm_transport", Path(__file__).with_name("evaluate-prewarm-transport.py"))
+transport = importlib.util.module_from_spec(transport_spec)
+transport_spec.loader.exec_module(transport)
 
 
 def stream(events):
@@ -65,6 +71,14 @@ class StreamTests(unittest.TestCase):
         self.assertIsNone(result["ttft_ms"])
         self.assertFalse(result["valid_json"])
 
+    def test_stream_cut_off_after_first_text_is_not_success(self):
+        result = prewarm.consume(stream([{"type": "response.output_text.delta", "delta": "{"}]),
+                                 0, clock=lambda: 1)
+        self.assertEqual(result["ttft_ms"], 1000)
+        self.assertIsNone(result["completion_ms"])
+        self.assertEqual(result["status"], "missing_terminal")
+        self.assertFalse(result["valid_json"])
+
     def test_multiline_sse_and_comments(self):
         raw = io.BytesIO(b': ping\n\ndata: {"type":\ndata: "example"}\n\ndata: [DONE]\n\n')
         self.assertEqual(list(prewarm.sse_events(raw)), ['{"type":\n"example"}', '[DONE]'])
@@ -93,6 +107,22 @@ class CredentialTests(unittest.TestCase):
             self.assertEqual(prewarm.load_key(path, "TRANSCRIBE_KEY", True), "private-value")
             self.assertNotIn("private-value", path.name)
 
+    def test_http_error_never_retains_body_or_credentials(self):
+        connection = prewarm.Connection("private-key")
+        class FakeResponse:
+            status = 401
+            def read(self):
+                return b"private response body"
+        class FakeConnection:
+            def request(self, *args, **kwargs):
+                pass
+            def getresponse(self):
+                return FakeResponse()
+        connection.connection = FakeConnection()
+        result = connection.request({"synthetic": "private source"})
+        self.assertEqual(result["http_status"], 401)
+        self.assertNotIn("private", json.dumps(result))
+
 
 class RequestTests(unittest.TestCase):
     def test_prewarm_has_exact_inference_prefix_but_no_source(self):
@@ -114,6 +144,62 @@ class RequestTests(unittest.TestCase):
         self.assertEqual(result["n"], 2)
         self.assertEqual(result["paired_median_saving_ms"], 400)
         self.assertEqual(result["ci95_ms"], [400, 400])
+
+    def test_exact_median_interval_and_missing_pair_accounting(self):
+        rows = []
+        for block in range(20):
+            rows.extend([dict(phase="paired", scope="ru_en", block=block, arm="cold", ttft_ms=1000+block+1),
+                         dict(phase="paired", scope="ru_en", block=block, arm="prewarmed", ttft_ms=1000)])
+        rows.append(dict(phase="paired", scope="ru_en", block=20, arm="cold", ttft_ms=None))
+        result = prewarm.paired_summary(rows, "paired", "ru_en", "cold", "prewarmed", "ttft_ms", 100)
+        self.assertEqual(result["attempted_pairs"], 21)
+        self.assertEqual(result["n"], 20)
+        self.assertEqual(result["sign_median_ci95_ms"], [6, 15])
+
+
+class DecisionTests(unittest.TestCase):
+    def test_practical_benefit_requires_both_lower_bounds(self):
+        self.assertEqual(analysis.decision({"n":128,"ci95_ms":[201,400],"fraction_ci95":[.101,.3]}),
+                         "practical_threshold_supported")
+        self.assertEqual(analysis.decision({"n":128,"ci95_ms":[50,400],"fraction_ci95":[.05,.3]}),
+                         "benefit_supported_magnitude_uncertain")
+        self.assertEqual(analysis.decision({"n":128,"ci95_ms":[-50,400],"fraction_ci95":[-.05,.3]}),
+                         "inconclusive")
+
+    def test_upper_bound_can_exclude_only_the_specified_threshold(self):
+        self.assertEqual(analysis.decision({"n":128,"ci95_ms":[-50,150],"fraction_ci95":[-.05,.3]}),
+                         "specified_practical_threshold_not_supported_within_interval")
+
+
+class TransportProtocolTests(unittest.TestCase):
+    def test_each_block_uses_three_fresh_connections_and_balanced_preparation(self):
+        instances=[]
+        class FakeConnection:
+            def __init__(self, key):
+                self.calls=[]
+                instances.append(self)
+            def warm_transport(self):
+                self.calls.append("get")
+            def request(self, body, checks=()):
+                prep=body.get("prompt_cache_options",{}).get("prewarm",False)
+                self.calls.append("prep" if prep else "infer")
+                return {"status":"completed","ttft_ms":None if prep else 10,"completion_ms":20,
+                        "valid_json":not prep,"cache_read_tokens":2000,"output_tokens":0 if prep else 20}
+            def close(self):
+                self.calls.append("close")
+        template={"model":"gpt-6-luna","input":json.dumps({"instruction":"stable rules"})}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(transport.prewarm,"Connection",FakeConnection), patch.object(transport.prewarm,"paired_summary",return_value={"n":24}), patch("builtins.print"):
+                transport.run(Path(directory)/"run","unused-private-key",{"ru_en":template})
+            rows=[json.loads(line) for line in (Path(directory)/"run/measurements.jsonl").read_text().splitlines()]
+        self.assertEqual(len(instances),73)
+        self.assertEqual(sum(c.calls.count("get") for c in instances),25)
+        self.assertEqual(sum(c.calls.count("prep") for c in instances),24)
+        self.assertEqual(sum(c.calls.count("infer") for c in instances),73)
+        self.assertEqual(len(rows),121)
+        self.assertEqual(sum(r["phase"]=="transport" for r in rows),72)
+        for connection in instances[1:]:
+            self.assertIn(connection.calls,[["infer","close"],["get","infer","close"],["prep","infer","close"]])
 
 
 if __name__ == "__main__":

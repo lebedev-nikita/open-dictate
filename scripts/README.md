@@ -91,3 +91,19 @@ python3 scripts/evaluate-prewarm.py --analyze /tmp/prewarm-study-copy
 Timing includes networking from this computer. Cache hits alone do not establish
 speedup, and direct API results do not establish connected ChatGPT performance.
 See [the study](../docs/prewarm-study.md) for controls, uncertainty and findings.
+
+The independent connection control uses a shared, already cached prefix and a
+fresh connection for each of three arms: no setup, an authenticated model GET,
+or an extra prewarm. Its 24 blocks make 97 Responses requests and 25 model GETs:
+
+```bash
+python3 scripts/evaluate-prewarm-transport.py --output /tmp/prewarm-transport
+python3 scripts/analyze-prewarm-study.py \
+  --study /tmp/prewarm-study --transport /tmp/prewarm-transport \
+  --output /tmp/prewarm-analysis.json
+```
+
+The final analysis includes valid-output and request-order sensitivity, p90
+intervals, measured overlap readiness, and a clearly labeled simulation of a
+blocking preparation policy. It makes no network requests. All reported secondary
+intervals are exploratory and do not adjust for multiple comparisons.

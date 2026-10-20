@@ -90,6 +90,39 @@ state and preparation success must be distinguished from merely finishing a
 background task. The metric-only plan and environment artifacts are authoritative
 for the executed settings.
 
+### Supplement: transport preparation
+
+This independent supplement was specified before analysis of the new timing
+outcomes; it does not change the primary sample or pool observations with it.
+The primary comparison keeps transport warm in both arms. A first phone session
+may instead have a cold connection on the separate ChatGPT client, so absence of
+a cache-only benefit would not exclude a transport-preparation benefit.
+
+There are 24 randomized three-arm blocks. A single stable split prefix is first
+seeded by ordinary inference. Each arm then creates a fresh HTTP/1.1 HTTPS
+connection and uses the same varied synthetic source within its block:
+
+1. Send generation directly on the fresh connection.
+2. GET `/v1/models/gpt-6-luna`, then generate on that connection.
+3. Send a redundant cache-read prewarm, then generate on that connection.
+
+All inference arms should read the already-seeded prefix. The protocol makes
+97 Responses calls: one seed, 72 generations, and 24 preparations. It also makes
+25 model GET checks: one seed transport check and 24 GET-arm checks. Setup and
+generation durations are measured separately. Compare fresh versus GET-prepared,
+fresh versus prewarm-prepared, and GET-prepared versus prewarm-prepared using
+paired estimates and exploratory intervals; count every attempt and verify cache
+reads and zero-output preparations.
+
+Preparation finishes before generation in this supplement, so post-setup TTFT
+alone does not establish an end-to-end improvement. The measured setup duration
+must be added when it cannot occur before the source is ready. This supplement
+does not execute concurrent recording or source arrival. It isolates API
+transport-related effects from a cold-prefix cache write, but does not measure
+OAuth token renewal, Android HTTP/2, mobile radio startup, or persistent phone
+connection reuse. A benefit after GET or prewarm must therefore remain distinct
+from the primary cache-only effect and from a measured phone benefit.
+
 ## Analysis rules
 
 TTFT starts immediately before sending the POST and ends at the first nonempty
@@ -118,10 +151,11 @@ study. The pilot-based calculation is noisy and cannot guarantee resolution of a
 200 ms effect. The fixed sample and analysis must be recorded before collecting
 new outcomes; do not extend the study only until significance appears.
 
-Chronological waves expose changing service conditions. With few waves, report
-their estimates and use within-wave stratified resampling as sensitivity analysis;
-do not claim reliable between-day uncertainty from four adjacent time blocks.
-The earlier pilot is excluded from the primary estimate.
+Chronological waves expose changing service conditions. The paired bootstrap
+resamples blocks within each observed wave; report wave estimates and a
+distribution-free sign interval for the median as a sensitivity check. These
+intervals do not establish between-day uncertainty from four adjacent time
+blocks. The earlier pilot is excluded from the primary estimate.
 
 ## Costs and limits
 
