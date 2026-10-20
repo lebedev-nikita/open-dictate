@@ -10,8 +10,8 @@ val keyAliasValue = providers.environmentVariable("KEY_ALIAS")
 val keyPasswordValue = providers.environmentVariable("KEY_PASSWORD")
 val storePasswordValue = providers.environmentVariable("STORE_PASSWORD")
 val releaseStore = layout.buildDirectory.file("keystore/opendictate-release.jks")
-val appVersionName = providers.gradleProperty("appVersionName").orElse("0.14.0-rc.27")
-val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(123)
+val appVersionName = providers.gradleProperty("appVersionName").orElse("0.14.0-rc.28")
+val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(124)
 val previewVersionSuffix = providers.gradleProperty("previewVersionSuffix").orElse("-preview")
 
 if (signingKey.isPresent) {
@@ -80,6 +80,9 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // SwiftPM requires resources inside its target; Android bundles the same source file.
+    sourceSets["main"].resources.srcDir("../../macos/Sources/OpenDictateCore/Resources")
 
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     testOptions.unitTests.isIncludeAndroidResources = true

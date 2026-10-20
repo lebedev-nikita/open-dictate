@@ -87,7 +87,10 @@ internal fun GoogleDriveSyncSettings() {
     ) {
         Icon(painterResource(R.drawable.ic_google_drive_24), null, Modifier.size(24.dp), tint = Color.Unspecified)
         Spacer(Modifier.width(14.dp))
-        Text(stringResource(R.string.drive_sync_provider), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.drive_sync_provider), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.drive_sync_hint), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+        }
         Spacer(Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = null, enabled = !authorizing)
     }

@@ -51,7 +51,7 @@ final class GoogleDriveTests: XCTestCase {
             case 3:
                 XCTAssertTrue(request.url!.absoluteString.contains("pageToken=page2"))
                 response = #"{"files":[{"id":"own-file","name":"opendictate-settings-v1-mac.json","size":"150"}]}"#
-            case 4: response = #"{"schemaVersion":1,"entries":{"textModel":{"value":"gpt-6-sol","modifiedAt":30,"deviceId":"mac"}}}"#
+            case 4: response = #"{"schemaVersion":1,"entries":{"accurateModel":{"value":"gpt-transcribe","modifiedAt":30,"deviceId":"mac"}}}"#
             default:
                 XCTAssertEqual(request.httpMethod, "PATCH")
                 XCTAssertEqual(request.url?.path, "/upload/drive/v3/files/own-file")
@@ -62,7 +62,7 @@ final class GoogleDriveTests: XCTestCase {
         let client = client(), remote = try await client.download(token: "synthetic-drive-token", deviceID: "mac")
         XCTAssertEqual(remote.ownFileID, "own-file")
         XCTAssertEqual(remote.document.entries["dictionary"]?.value, "Никита")
-        XCTAssertEqual(remote.document.entries["textModel"]?.value, "gpt-6-sol")
+        XCTAssertEqual(remote.document.entries["accurateModel"]?.value, "gpt-transcribe")
         try await client.upload(token: "synthetic-drive-token", deviceID: "mac", fileID: remote.ownFileID, document: remote.document)
         XCTAssertEqual(calls, 5)
     }
@@ -410,12 +410,12 @@ final class GoogleDriveTests: XCTestCase {
         let preferences = Preferences(defaults: defaults)
         var remote = SettingsSyncDocument()
         remote.entries["dictionary"] = .init(value: "Remote", modifiedAt: 100, deviceId: "android")
-        remote.entries["textModel"] = .init(value: "gpt-6-sol", modifiedAt: 100, deviceId: "android")
+        remote.entries["accurateModel"] = .init(value: "gpt-transcribe", modifiedAt: 100, deviceId: "android")
         preferences.dictionary = "Local edit made during download"
         let merged = try preferences.mergeSync(remote)
         XCTAssertEqual(preferences.dictionary, "Local edit made during download")
-        XCTAssertEqual(preferences.textModel, "gpt-6-sol")
-        XCTAssertEqual(merged.entries["textModel"]?.modifiedAt, 100)
+        XCTAssertEqual(preferences.accurateModel, "gpt-transcribe")
+        XCTAssertEqual(merged.entries["accurateModel"]?.modifiedAt, 100)
         XCTAssertEqual(merged, try preferences.syncDocument())
         let context = preferences.context
         preferences.liveModel = "changed-later"

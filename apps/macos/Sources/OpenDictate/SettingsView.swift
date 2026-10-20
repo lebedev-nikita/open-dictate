@@ -162,13 +162,13 @@ struct SettingsView: View {
             }
             modelField(t("Live model", "Модель Live"), $preferences.liveModel)
             modelField(t("Accurate model", "Модель Accurate"), $preferences.accurateModel)
-            if preferences.mode == .accurate {
-                VStack(alignment: .leading, spacing: 6) {
-                    settingToggle(t("AI post-processing", "AI-постобработка"), $preferences.accuratePunctuationEnabled)
-                    Text(t("Via OpenAI in Accurate mode. This switch is saved only on this Mac.", "Через OpenAI в режиме Accurate. Переключатель сохраняется только на этом Mac."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }.disabled(model.isActive)
-                FormattingRulesEditor(preferences: preferences).disabled(model.isActive)
+            HStack {
+                Text(t("Text model", "Текстовая модель")); Spacer()
+                Picker(t("Text model", "Текстовая модель"), selection: $preferences.textProcessingSelection) {
+                    ForEach(TextProcessingModel.defaults, id: \.self) { id in
+                        Text(TextProcessingModel.title(id)).tag(id)
+                    }
+                }.labelsHidden().fixedSize().disabled(model.isActive)
             }
             HStack {
                 Text(t("Speech languages", "Языки речи"))
@@ -176,6 +176,8 @@ struct SettingsView: View {
                 SpeechLanguagePicker(preferences: preferences).disabled(model.isActive)
             }
             Divider()
+            PostProcessingSettingsView(preferences: preferences)
+            if preferences.mode == .accurate { Divider() }
             VStack(alignment: .leading, spacing: 10) {
                 shortcutRow(t("Start / finish dictation", "Начать / завершить диктовку"), preferences.shortcutLabel)
                 shortcutRow(t("Edit selected text by voice", "Изменить выделение голосом"), preferences.editShortcutLabel)
@@ -264,18 +266,9 @@ struct SettingsView: View {
             } else {
                 LazyVStack(alignment: .leading, spacing: 18) {
                     ForEach(displayedHistory) { entry in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(entry.date, format: .dateTime.day().month().hour().minute()).foregroundStyle(.secondary)
-                                Spacer()
-                                Button { model.copy(entry.text) } label: { Image(systemName: "doc.on.doc") }
-                                    .help(t("Copy transcript", "Скопировать текст"))
-                                Button { model.cancelSearch(); history.delete(entry.id) } label: { Image(systemName: "trash") }
-                                    .help(t("Delete transcript", "Удалить текст"))
-                            }.font(.caption).buttonStyle(.borderless)
-                            Text(entry.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-                            Divider().padding(.top, 8)
-                        }
+                        HistoryEntryView(entry: entry, russian: preferences.isRussian,
+                            onCopy: { model.copy(entry.text) },
+                            onDelete: { model.cancelSearch(); history.delete(entry.id) })
                     }
                 }
             }
@@ -330,12 +323,6 @@ struct SettingsView: View {
                     }.labelsHidden().frame(width: 180)
                 }
                 HStack {
-                    Text(t("Voice editing model", "Модель голосовой правки")); Spacer()
-                    Picker(t("Voice editing model", "Модель голосовой правки"), selection: $preferences.textModel) {
-                        ForEach(Array(Set(["gpt-6-luna", "gpt-6-sol", preferences.textModel])).sorted(), id: \.self) { id in Text(id).tag(id) }
-                    }.labelsHidden().frame(width: 180)
-                }
-                HStack {
                     Text(t("Response timeout", "Ожидание ответа")); Spacer()
                     Picker(t("Response timeout", "Ожидание ответа"), selection: $preferences.timeout) {
                         ForEach([30, 60, 120], id: \.self) { seconds in Text(t("\(seconds) seconds", "\(seconds) секунд")).tag(seconds) }
@@ -357,7 +344,12 @@ struct SettingsView: View {
                 Button(t("Add application…", "Добавить приложение…"), action: addExcludedApp)
             }
             Divider()
-            GoogleDriveSettingsView(sync: model.driveSync, preferences: preferences)
+            VStack(alignment: .leading, spacing: 16) {
+                Text(t("Integrations", "Интеграции")).fontWeight(.medium)
+                GoogleDriveSettingsView(sync: model.driveSync, preferences: preferences)
+                ChatGPTSettingsView(connection: model.chatGPT, hasKey: model.hasKey, active: model.isActive, russian: preferences.isRussian,
+                    connect: { model.chatGPT.connect(hasKey: { model.hasKey }) })
+            }
             Divider()
             VStack(alignment: .leading, spacing: 12) {
                 Text(t("Privacy", "Приватность")).fontWeight(.medium)

@@ -1,43 +1,5 @@
 import AppKit
 
-/// Keeps the status item's click target and width stable while showing native progress.
-@MainActor
-final class MenuBarStatusIndicator {
-    private let button: NSButton
-    private let spinner = StatusProgressIndicator()
-    private let emptyImage = NSImage(size: NSSize(width: 20, height: 20))
-
-    init(button: NSButton) {
-        self.button = button
-        spinner.style = .spinning
-        spinner.isIndeterminate = true
-        spinner.isHidden = true
-        spinner.controlSize = .small
-        spinner.isDisplayedWhenStopped = false
-        spinner.translatesAutoresizingMaskIntoConstraints = false
-        spinner.setAccessibilityElement(false)
-        button.addSubview(spinner)
-        NSLayoutConstraint.activate([
-            spinner.centerXAnchor.constraint(equalTo: button.centerXAnchor),
-            spinner.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-            spinner.widthAnchor.constraint(equalToConstant: 16),
-            spinner.heightAnchor.constraint(equalToConstant: 16),
-        ])
-    }
-
-    func update(phase: AppModel.Phase, usesPostProcessing: Bool) {
-        let processing = phase == .processing && !usesPostProcessing
-        button.image = processing ? emptyImage : MenuBarIcon.image(for: phase)
-        spinner.isHidden = !processing
-        if processing { spinner.startAnimation(nil) }
-        else { spinner.stopAnimation(nil) }
-    }
-}
-
-private final class StatusProgressIndicator: NSProgressIndicator {
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
-}
-
 @MainActor
 enum MenuBarIcon {
     private static let size = NSSize(width: 20, height: 20)

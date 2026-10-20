@@ -1,0 +1,578 @@
+[
+  {
+    "settingsCase": 2,
+    "languages": [
+      "af"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[af] Afrikaans. Scales: \"duisend\" = 1000; \"een miljoen\" = 1000000. Examples: \"vyf miljoen vierhonderd twee-en-dertig\" = 5000432; \"vyfduisend vierhonderd twee-en-dertig\" = 5432; \"twee miljoen sewentien\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ar"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ar] Arabic. Scales: \"ألف\" = 1000; \"مليون\" = 1000000. Examples: \"خمسة ملايين وأربعمائة واثنان وثلاثون\" = 5000432; \"خمسة آلاف وأربعمائة واثنان وثلاثون\" = 5432; \"مليونان وسبعة عشر\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "az"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[az] Azerbaijani. Scales: \"bir min\" = 1000; \"bir milyon\" = 1000000. Examples: \"beş milyon dörd yüz otuz iki\" = 5000432; \"beş min dörd yüz otuz iki\" = 5432; \"iki milyon on yeddi\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "be"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[be] Belarusian. Scales: \"адна тысяча\" = 1000; \"адзiн мільён\" = 1000000. Examples: \"пяць мільёнаў чатырыста трыццаць два\" = 5000432; \"пяць тысяч чатырыста трыццаць два\" = 5432; \"два мільёны сямнаццаць\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "bg"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[bg] Bulgarian. Scales: \"хиляда\" = 1000; \"един милион\" = 1000000. Examples: \"пет милиона четиристотин тридесет и два\" = 5000432; \"пет хиляди четиристотин тридесет и два\" = 5432; \"два милиона и седемнадесет\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "bn"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[bn] Bangla. Scales: \"এক হাজার\" = 1000; \"দশ লাখ\" = 1000000; \"এক লাখ\" = 100000; \"এক কোটি\" = 10000000. Examples: \"পঞ্চাশ লাখ চারশো বত্রিশ\" = 5000432; \"পাঁচ হাজার চারশো বত্রিশ\" = 5432; \"কুড়ি লাখ সতেরো\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "bs"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[bs] Bosnian. Scales: \"jedinica hiljada\" = 1000; \"jedan milion\" = 1000000. Examples: \"pet miliona četiristo trideset i dva\" = 5000432; \"pet hiljada četiristo trideset i dva\" = 5432; \"dva miliona sedamnaest\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ca"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ca] Catalan. Scales: \"mil\" = 1000; \"un milió\" = 1000000. Examples: \"cinc milions quatre-cents trenta-dos\" = 5000432; \"cinc mil quatre-cents trenta-dos\" = 5432; \"dos milions disset\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "cs"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[cs] Czech. Scales: \"tisíc\" = 1000; \"jeden milión\" = 1000000. Examples: \"pět miliónů čtyři sta třicet dva\" = 5000432; \"pět tisíc čtyři sta třicet dva\" = 5432; \"dva milióny sedmnáct\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "cy"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[cy] Welsh. Scales: \"un mil\" = 1000; \"un miliwn\" = 1000000. Examples: \"pum miliwn pedwar cant tri deg dau\" = 5000432; \"pum mil pedwar cant tri deg dau\" = 5432; \"dau miliwn un deg saith\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "da"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[da] Danish. Scales: \"tusind\" = 1000; \"en million\" = 1000000. Examples: \"fem millioner firehundrede og toogtredive\" = 5000432; \"fem tusind firehundrede og toogtredive\" = 5432; \"to millioner sytten\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "de"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[de] German. Scales: \"eintausend\" = 1000; \"eine Million\" = 1000000. Examples: \"fünf Millionen vierhundertzweiunddreißig\" = 5000432; \"fünftausendvierhundertzweiunddreißig\" = 5432; \"zwei Millionen siebzehn\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "el"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[el] Greek. Scales: \"χίλια\" = 1000; \"ένα εκατομμύριο\" = 1000000. Examples: \"πέντε εκατομμύρια τετρακόσια τριάντα δύο\" = 5000432; \"πέντε χιλιάδες τετρακόσια τριάντα δύο\" = 5432; \"δύο εκατομμύρια δεκαεπτά\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "en"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[en] English. Scales: \"one thousand\" = 1000; \"one million\" = 1000000. Examples: \"five million four hundred thirty-two\" = 5000432; \"five thousand four hundred thirty-two\" = 5432; \"two million seventeen\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "es"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[es] Spanish. Scales: \"mil\" = 1000; \"un millón\" = 1000000. Examples: \"cinco millones cuatrocientos treinta y dos\" = 5000432; \"cinco mil cuatrocientos treinta y dos\" = 5432; \"dos millones diecisiete\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "et"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[et] Estonian. Scales: \"üks tuhat\" = 1000; \"üks miljon\" = 1000000. Examples: \"viis miljonit nelisada kolmkümmend kaks\" = 5000432; \"viis tuhat nelisada kolmkümmend kaks\" = 5432; \"kaks miljonit seitseteist\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "eu"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[eu] Basque. Scales: \"mila\" = 1000; \"milioi bat\" = 1000000. Examples: \"bost milioi laurehun eta hogeita hamabi\" = 5000432; \"bost mila laurehun eta hogeita hamabi\" = 5432; \"bi milioi eta hamazazpi\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "fa"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[fa] Persian. Scales: \"یک هزار\" = 1000; \"یک میلیون\" = 1000000. Examples: \"پنج میلیون و چهارصد و سی و دو\" = 5000432; \"پنج هزار و چهارصد و سی و دو\" = 5432; \"دو میلیون و هفده\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "fi"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[fi] Finnish. Scales: \"tuhat\" = 1000; \"yksi miljoona\" = 1000000. Examples: \"viisi miljoonaa neljäsataakolmekymmentäkaksi\" = 5000432; \"viisituhattaneljäsataakolmekymmentäkaksi\" = 5432; \"kaksi miljoonaa seitsemäntoista\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "fr"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[fr] French. Scales: \"mille\" = 1000; \"un million\" = 1000000. Examples: \"cinq millions quatre cent trente-deux\" = 5000432; \"cinq mille quatre cent trente-deux\" = 5432; \"deux millions dix-sept\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "gl"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[gl] Galician. Scales: \"mil\" = 1000; \"un millón\" = 1000000. Examples: \"cinco millóns catrocentos trinta e dous\" = 5000432; \"cinco mil catrocentos trinta e dous\" = 5432; \"dous millóns dezasete\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "gu"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[gu] Gujarati. Scales: \"એક હજાર\" = 1000; \"દસ લાખ\" = 1000000; \"એક લાખ\" = 100000; \"એક કરોડ\" = 10000000. Examples: \"પચાસ લાખ ચાર સો બત્રીસ\" = 5000432; \"પાંચ હજાર ચાર સો બત્રીસ\" = 5432; \"વીસ લાખ સત્તર\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "he"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[he] Hebrew. Scales: \"אלף\" = 1000; \"מיליון\" = 1000000. Examples: \"חמישה מיליון ארבע מאות שלושים ושתיים\" = 5000432; \"חמשת אלפים ארבע מאות שלושים ושתיים\" = 5432; \"שני מיליון ושבע עשרה\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "hi"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[hi] Hindi. Scales: \"एक हज़ार\" = 1000; \"दस लाख\" = 1000000; \"एक लाख\" = 100000; \"एक करोड़\" = 10000000. Examples: \"पचास लाख चार सौ बत्तीस\" = 5000432; \"पाँच हज़ार चार सौ बत्तीस\" = 5432; \"बीस लाख सत्रह\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "hr"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[hr] Croatian. Scales: \"tisuća\" = 1000; \"milijun\" = 1000000. Examples: \"pet milijuna četiristo trideset i dva\" = 5000432; \"pet tisuća četiristo trideset i dva\" = 5432; \"dva milijuna sedamnaest\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "hu"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[hu] Hungarian. Scales: \"ezer\" = 1000; \"egymillió\" = 1000000. Examples: \"ötmilliónégyszázharminckettő\" = 5000432; \"ötezernégyszázharminckettő\" = 5432; \"kétmilliótizenhét\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "hy"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[hy] Armenian. Scales: \"մեկ հազար\" = 1000; \"մեկ միլիօն\" = 1000000. Examples: \"հինգ միլիոն չորսհարյուր երեսուներկու\" = 5000432; \"հինգ հազար չորսհարյուր երեսուներկու\" = 5432; \"երկու միլիոն տասնյոթ\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "id"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[id] Indonesian. Scales: \"seribu\" = 1000; \"satu juta\" = 1000000. Examples: \"lima juta empat ratus tiga puluh dua\" = 5000432; \"lima ribu empat ratus tiga puluh dua\" = 5432; \"dua juta tujuh belas\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "is"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[is] Icelandic. Scales: \"eitt þúsund\" = 1000; \"ein millión\" = 1000000. Examples: \"fimm milljónir fjögur hundruð þrjátíu og tveir\" = 5000432; \"fimm þúsund fjögur hundruð þrjátíu og tveir\" = 5432; \"tvær milljónir og sautján\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "it"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[it] Italian. Scales: \"mille\" = 1000; \"un milione\" = 1000000. Examples: \"cinque milioni quattrocentotrentadue\" = 5000432; \"cinquemilaquattrocentotrentadue\" = 5432; \"due milioni diciassette\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ja"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ja] Japanese. Scales: \"千\" = 1000; \"百万\" = 1000000; \"一万\" = 10000; \"一億\" = 100000000. Examples: \"五百万四百三十二\" = 5000432; \"五千四百三十二\" = 5432; \"二百万十七\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ka"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ka] Georgian. Scales: \"ათასი\" = 1000; \"ერთი მილიონი\" = 1000000. Examples: \"ხუთი მილიონ ოთხასოცდათორმეტი\" = 5000432; \"ხუთი ათას ოთხასოცდათორმეტი\" = 5432; \"ორი მილიონ ჩვიდმეტი\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "kk"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[kk] Kazakh. Scales: \"мың\" = 1000; \"миллион\" = 1000000. Examples: \"бес миллион төрт жүз отыз екі\" = 5000432; \"бес мың төрт жүз отыз екі\" = 5432; \"екі миллион он жеті\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "kn"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[kn] Kannada. Scales: \"ಸಾವಿರ\" = 1000; \"ಹತ್ತು ಲಕ್ಷ\" = 1000000; \"ಒಂದು ಲಕ್ಷ\" = 100000; \"ಒಂದು ಕೋಟಿ\" = 10000000. Examples: \"ಐವತ್ತು ಲಕ್ಷದ ನಾನೂರ ಮೂವತ್ತೆರಡು\" = 5000432; \"ಐದು ಸಾವಿರದ ನಾನೂರ ಮೂವತ್ತೆರಡು\" = 5432; \"ಇಪ್ಪತ್ತು ಲಕ್ಷದ ಹದಿನೇಳು\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ko"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ko] Korean. Scales: \"천\" = 1000; \"백만\" = 1000000; \"만\" = 10000; \"일억\" = 100000000. Examples: \"오백만 사백삼십이\" = 5000432; \"오천사백삼십이\" = 5432; \"이백만 십칠\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "lt"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[lt] Lithuanian. Scales: \"tūkstantis\" = 1000; \"vienas milijonas\" = 1000000. Examples: \"penki milijonai keturi šimtai trisdešimt du\" = 5000432; \"penki tūkstančiai keturi šimtai trisdešimt du\" = 5432; \"du milijonai septyniolika\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "lv"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[lv] Latvian. Scales: \"tūkstoš\" = 1000; \"viens miljons\" = 1000000. Examples: \"pieci miljoni četrsimt trīsdesmit divi\" = 5000432; \"piectūkstoš četrsimt trīsdesmit divi\" = 5432; \"divi miljoni septiņpadsmit\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "mk"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[mk] Macedonian. Scales: \"една илјада\" = 1000; \"еден милион\" = 1000000. Examples: \"пет милиони четиристотини триесет и два\" = 5000432; \"пет илјади четиристотини триесет и два\" = 5432; \"два милиони седумнаесет\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ml"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ml] Malayalam. Scales: \"ആയിരം\" = 1000; \"പത്ത് ലക്ഷം\" = 1000000; \"ഒരു ലക്ഷം\" = 100000; \"ഒരു കോടി\" = 10000000. Examples: \"അൻപത് ലക്ഷത്തിനാന്നൂറ്റിമുപ്പത്തിരണ്ട്\" = 5000432; \"അഞ്ചായിരത്തിനാന്നൂറ്റിമുപ്പത്തിരണ്ട്\" = 5432; \"ഇരുപത് ലക്ഷത്തിപതിനേഴ്\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "mr"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[mr] Marathi. Scales: \"एक हजार\" = 1000; \"दहा लाख\" = 1000000; \"एक लाख\" = 100000; \"एक कोटी\" = 10000000. Examples: \"पन्नास लाख चारशे बत्तीस\" = 5000432; \"पाच हजार चारशे बत्तीस\" = 5432; \"वीस लाख सतरा\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ms"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ms] Malay. Scales: \"seribu\" = 1000; \"sejuta\" = 1000000. Examples: \"lima juta empat ratus tiga puluh dua\" = 5000432; \"lima ribu empat ratus tiga puluh dua\" = 5432; \"dua juta tujuh belas\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ne"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ne] Nepali. Scales: \"एक हजार\" = 1000; \"दस लाख\" = 1000000; \"एक लाख\" = 100000; \"एक करोड\" = 10000000. Examples: \"पचास लाख चार सय बत्तिस\" = 5000432; \"पाँच हजार चार सय बत्तिस\" = 5432; \"बिस लाख सत्र\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "nl"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[nl] Dutch. Scales: \"duizend\" = 1000; \"een miljoen\" = 1000000. Examples: \"vijf miljoen vierhonderdtweeëndertig\" = 5000432; \"vijfduizendvierhonderdtweeëndertig\" = 5432; \"twee miljoen zeventien\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "no"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[no] Norwegian. Scales: \"tusen\" = 1000; \"én million\" = 1000000. Examples: \"fem millioner fire hundre og trettito\" = 5000432; \"fem tusen fire hundre og trettito\" = 5432; \"to millioner sytten\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "pa"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[pa] Punjabi. Scales: \"ਇੱਕ ਹਜ਼ਾਰ\" = 1000; \"ਦਸ ਲੱਖ\" = 1000000; \"ਇੱਕ ਲੱਖ\" = 100000; \"ਇੱਕ ਕਰੋੜ\" = 10000000. Examples: \"ਪੰਜਾਹ ਲੱਖ ਚਾਰ ਸੌ ਬੱਤੀ\" = 5000432; \"ਪੰਜ ਹਜ਼ਾਰ ਚਾਰ ਸੌ ਬੱਤੀ\" = 5432; \"ਵੀਹ ਲੱਖ ਸਤਾਰਾਂ\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "pl"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[pl] Polish. Scales: \"tysiąc\" = 1000; \"milion\" = 1000000. Examples: \"pięć milionów czterysta trzydzieści dwa\" = 5000432; \"pięć tysięcy czterysta trzydzieści dwa\" = 5432; \"dwa miliony siedemnaście\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "pt"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[pt] Portuguese. Scales: \"mil\" = 1000; \"um milhão\" = 1000000. Examples: \"cinco milhões quatrocentos e trinta e dois\" = 5000432; \"cinco mil quatrocentos e trinta e dois\" = 5432; \"dois milhões e dezessete\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ro"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ro] Romanian. Scales: \"o mie\" = 1000; \"un milion\" = 1000000. Examples: \"cinci milioane patru sute treizeci și doi\" = 5000432; \"cinci mii patru sute treizeci și doi\" = 5432; \"două milioane șaptesprezece\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ru"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ru] Russian. Scales: \"одна тысяча\" = 1000; \"один миллион\" = 1000000. Examples: \"пять миллионов четыреста тридцать два\" = 5000432; \"пять тысяч четыреста тридцать два\" = 5432; \"два миллиона семнадцать\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "sk"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[sk] Slovak. Scales: \"tisíc\" = 1000; \"jeden milión\" = 1000000. Examples: \"päť miliónov štyristo tridsaťdva\" = 5000432; \"päť tisíc štyristo tridsaťdva\" = 5432; \"dva milióny sedemnásť\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "sl"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[sl] Slovenian. Scales: \"tisoč\" = 1000; \"en milijon\" = 1000000. Examples: \"pet milijonov štiristo dvaintrideset\" = 5000432; \"pet tisoč štiristo dvaintrideset\" = 5432; \"dva milijona sedemnajst\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "sq"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[sq] Albanian. Scales: \"një mijë\" = 1000; \"një milion\" = 1000000. Examples: \"pesë milionë e katërqind e tridhjetë e dy\" = 5000432; \"pesë mijë e katërqind e tridhjetë e dy\" = 5432; \"dy milionë e shtatëmbëdhjetë\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "sr"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[sr] Serbian. Scales: \"хиљада\" = 1000; \"милион\" = 1000000. Examples: \"пет милиона четириста тридесет два\" = 5000432; \"пет хиљада четириста тридесет два\" = 5432; \"два милиона седамнаест\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "sv"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[sv] Swedish. Scales: \"ettusen\" = 1000; \"en miljon\" = 1000000. Examples: \"fem miljoner fyrahundratrettiotvå\" = 5000432; \"femtusen fyrahundratrettiotvå\" = 5432; \"två miljoner sjutton\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "sw"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[sw] Swahili. Scales: \"elfu moja\" = 1000; \"milioni moja\" = 1000000. Examples: \"milioni tano na mia nne na thelathini na mbili\" = 5000432; \"elfu tano na mia nne na thelathini na mbili\" = 5432; \"milioni mbili na kumi na saba\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ta"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ta] Tamil. Scales: \"ஆயிரம்\" = 1000; \"பத்து லட்சம்\" = 1000000; \"ஒரு லட்சம்\" = 100000; \"ஒரு கோடி\" = 10000000. Examples: \"ஐம்பது லட்சத்து நானூற்று முப்பத்து இரண்டு\" = 5000432; \"ஐந்தாயிரத்து நானூற்று முப்பத்து இரண்டு\" = 5432; \"இருபது லட்சத்து பதினேழு\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "te"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[te] Telugu. Scales: \"వెయ్యి\" = 1000; \"పది లక్షల\" = 1000000; \"ఒక లక్ష\" = 100000; \"ఒక కోటి\" = 10000000. Examples: \"యాభై లక్షల నాలుగు వందల ముప్పై రెండు\" = 5000432; \"ఐదు వేల నాలుగు వందల ముప్పై రెండు\" = 5432; \"ఇరవై లక్షల పదిహేడు\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "th"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[th] Thai. Scales: \"หนึ่งพัน\" = 1000; \"หนึ่งล้าน\" = 1000000. Examples: \"ห้าล้านสี่ร้อยสามสิบสอง\" = 5000432; \"ห้าพันสี่ร้อยสามสิบสอง\" = 5432; \"สองล้านสิบเจ็ด\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "tr"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[tr] Turkish. Scales: \"bin\" = 1000; \"bir milyon\" = 1000000. Examples: \"beş milyon dört yüz otuz iki\" = 5000432; \"beş bin dört yüz otuz iki\" = 5432; \"iki milyon on yedi\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "uk"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[uk] Ukrainian. Scales: \"одна тисяча\" = 1000; \"один мільйон\" = 1000000. Examples: \"пʼять мільйонів чотириста тридцять два\" = 5000432; \"пʼять тисяч чотириста тридцять два\" = 5432; \"два мільйони сімнадцять\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ur"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[ur] Urdu. Scales: \"ایک ہزار\" = 1000; \"دس لاکھ\" = 1000000; \"ایک لاکھ\" = 100000; \"ایک کروڑ\" = 10000000. Examples: \"پچاس لاکھ چار سو بتیس\" = 5000432; \"پانچ ہزار چار سو بتیس\" = 5432; \"بیس لاکھ سترہ\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "uz"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[uz] Uzbek. Scales: \"bir ming\" = 1000; \"bir million\" = 1000000. Examples: \"besh million to‘rt yuz o‘ttiz ikki\" = 5000432; \"besh ming to‘rt yuz o‘ttiz ikki\" = 5432; \"ikki million o‘n yetti\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "vi"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[vi] Vietnamese. Scales: \"một nghìn\" = 1000; \"một triệu\" = 1000000. Examples: \"năm triệu bốn trăm ba mươi hai\" = 5000432; \"năm nghìn bốn trăm ba mươi hai\" = 5432; \"hai triệu mười bảy\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "zh"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[zh] Chinese. Scales: \"一千\" = 1000; \"一百万\" = 1000000; \"一万\" = 10000; \"一亿\" = 100000000. Examples: \"五百万零四百三十二\" = 5000432; \"五千四百三十二\" = 5432; \"两百万零一十七\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ru",
+      "en"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[en] English. Scales: \"one thousand\" = 1000; \"one million\" = 1000000. Examples: \"five million four hundred thirty-two\" = 5000432; \"five thousand four hundred thirty-two\" = 5432; \"two million seventeen\" = 2000017\n[ru] Russian. Scales: \"одна тысяча\" = 1000; \"один миллион\" = 1000000. Examples: \"пять миллионов четыреста тридцать два\" = 5000432; \"пять тысяч четыреста тридцать два\" = 5432; \"два миллиона семнадцать\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "ru",
+      "en",
+      "ru",
+      "unknown"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[en] English. Scales: \"one thousand\" = 1000; \"one million\" = 1000000. Examples: \"five million four hundred thirty-two\" = 5000432; \"five thousand four hundred thirty-two\" = 5432; \"two million seventeen\" = 2000017\n[ru] Russian. Scales: \"одна тысяча\" = 1000; \"один миллион\" = 1000000. Examples: \"пять миллионов четыреста тридцать два\" = 5000432; \"пять тысяч четыреста тридцать два\" = 5432; \"два миллиона семнадцать\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "en",
+      "ru"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[en] English. Scales: \"one thousand\" = 1000; \"one million\" = 1000000. Examples: \"five million four hundred thirty-two\" = 5000432; \"five thousand four hundred thirty-two\" = 5432; \"two million seventeen\" = 2000017\n[ru] Russian. Scales: \"одна тысяча\" = 1000; \"один миллион\" = 1000000. Examples: \"пять миллионов четыреста тридцать два\" = 5000432; \"пять тысяч четыреста тридцать два\" = 5432; \"два миллиона семнадцать\" = 2000017"
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "unknown"
+    ],
+    "expectedSnippet": ""
+  },
+  {
+    "settingsCase": 2,
+    "languages": [],
+    "expectedSnippet": ""
+  },
+  {
+    "settingsCase": 1,
+    "languages": [
+      "ru",
+      "en",
+      "ja"
+    ],
+    "expectedSnippet": ""
+  },
+  {
+    "settingsCase": 5,
+    "languages": [
+      "ru",
+      "en",
+      "ja"
+    ],
+    "expectedSnippet": ""
+  },
+  {
+    "settingsCase": 2,
+    "languages": [
+      "zh",
+      "vi",
+      "uz",
+      "ur",
+      "uk",
+      "tr",
+      "th",
+      "te",
+      "ta",
+      "sw",
+      "sv",
+      "sr",
+      "sq",
+      "sl",
+      "sk",
+      "ru",
+      "ro",
+      "pt",
+      "pl",
+      "pa",
+      "no",
+      "nl",
+      "ne",
+      "ms",
+      "mr",
+      "ml",
+      "mk",
+      "lv",
+      "lt",
+      "ko",
+      "kn",
+      "kk",
+      "ka",
+      "ja",
+      "it",
+      "is",
+      "id",
+      "hy",
+      "hu",
+      "hr",
+      "hi",
+      "he",
+      "gu",
+      "gl",
+      "fr",
+      "fi",
+      "fa",
+      "eu",
+      "et",
+      "es",
+      "en",
+      "el",
+      "de",
+      "da",
+      "cy",
+      "cs",
+      "ca",
+      "bs",
+      "bn",
+      "bg",
+      "be",
+      "az",
+      "ar",
+      "af",
+      "unknown",
+      "ru"
+    ],
+    "expectedSnippet": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.\n[af] Afrikaans. Scales: \"duisend\" = 1000; \"een miljoen\" = 1000000. Examples: \"vyf miljoen vierhonderd twee-en-dertig\" = 5000432; \"vyfduisend vierhonderd twee-en-dertig\" = 5432; \"twee miljoen sewentien\" = 2000017\n[ar] Arabic. Scales: \"ألف\" = 1000; \"مليون\" = 1000000. Examples: \"خمسة ملايين وأربعمائة واثنان وثلاثون\" = 5000432; \"خمسة آلاف وأربعمائة واثنان وثلاثون\" = 5432; \"مليونان وسبعة عشر\" = 2000017\n[az] Azerbaijani. Scales: \"bir min\" = 1000; \"bir milyon\" = 1000000. Examples: \"beş milyon dörd yüz otuz iki\" = 5000432; \"beş min dörd yüz otuz iki\" = 5432; \"iki milyon on yeddi\" = 2000017\n[be] Belarusian. Scales: \"адна тысяча\" = 1000; \"адзiн мільён\" = 1000000. Examples: \"пяць мільёнаў чатырыста трыццаць два\" = 5000432; \"пяць тысяч чатырыста трыццаць два\" = 5432; \"два мільёны сямнаццаць\" = 2000017\n[bg] Bulgarian. Scales: \"хиляда\" = 1000; \"един милион\" = 1000000. Examples: \"пет милиона четиристотин тридесет и два\" = 5000432; \"пет хиляди четиристотин тридесет и два\" = 5432; \"два милиона и седемнадесет\" = 2000017\n[bn] Bangla. Scales: \"এক হাজার\" = 1000; \"দশ লাখ\" = 1000000; \"এক লাখ\" = 100000; \"এক কোটি\" = 10000000. Examples: \"পঞ্চাশ লাখ চারশো বত্রিশ\" = 5000432; \"পাঁচ হাজার চারশো বত্রিশ\" = 5432; \"কুড়ি লাখ সতেরো\" = 2000017\n[bs] Bosnian. Scales: \"jedinica hiljada\" = 1000; \"jedan milion\" = 1000000. Examples: \"pet miliona četiristo trideset i dva\" = 5000432; \"pet hiljada četiristo trideset i dva\" = 5432; \"dva miliona sedamnaest\" = 2000017\n[ca] Catalan. Scales: \"mil\" = 1000; \"un milió\" = 1000000. Examples: \"cinc milions quatre-cents trenta-dos\" = 5000432; \"cinc mil quatre-cents trenta-dos\" = 5432; \"dos milions disset\" = 2000017\n[cs] Czech. Scales: \"tisíc\" = 1000; \"jeden milión\" = 1000000. Examples: \"pět miliónů čtyři sta třicet dva\" = 5000432; \"pět tisíc čtyři sta třicet dva\" = 5432; \"dva milióny sedmnáct\" = 2000017\n[cy] Welsh. Scales: \"un mil\" = 1000; \"un miliwn\" = 1000000. Examples: \"pum miliwn pedwar cant tri deg dau\" = 5000432; \"pum mil pedwar cant tri deg dau\" = 5432; \"dau miliwn un deg saith\" = 2000017\n[da] Danish. Scales: \"tusind\" = 1000; \"en million\" = 1000000. Examples: \"fem millioner firehundrede og toogtredive\" = 5000432; \"fem tusind firehundrede og toogtredive\" = 5432; \"to millioner sytten\" = 2000017\n[de] German. Scales: \"eintausend\" = 1000; \"eine Million\" = 1000000. Examples: \"fünf Millionen vierhundertzweiunddreißig\" = 5000432; \"fünftausendvierhundertzweiunddreißig\" = 5432; \"zwei Millionen siebzehn\" = 2000017\n[el] Greek. Scales: \"χίλια\" = 1000; \"ένα εκατομμύριο\" = 1000000. Examples: \"πέντε εκατομμύρια τετρακόσια τριάντα δύο\" = 5000432; \"πέντε χιλιάδες τετρακόσια τριάντα δύο\" = 5432; \"δύο εκατομμύρια δεκαεπτά\" = 2000017\n[en] English. Scales: \"one thousand\" = 1000; \"one million\" = 1000000. Examples: \"five million four hundred thirty-two\" = 5000432; \"five thousand four hundred thirty-two\" = 5432; \"two million seventeen\" = 2000017\n[es] Spanish. Scales: \"mil\" = 1000; \"un millón\" = 1000000. Examples: \"cinco millones cuatrocientos treinta y dos\" = 5000432; \"cinco mil cuatrocientos treinta y dos\" = 5432; \"dos millones diecisiete\" = 2000017\n[et] Estonian. Scales: \"üks tuhat\" = 1000; \"üks miljon\" = 1000000. Examples: \"viis miljonit nelisada kolmkümmend kaks\" = 5000432; \"viis tuhat nelisada kolmkümmend kaks\" = 5432; \"kaks miljonit seitseteist\" = 2000017\n[eu] Basque. Scales: \"mila\" = 1000; \"milioi bat\" = 1000000. Examples: \"bost milioi laurehun eta hogeita hamabi\" = 5000432; \"bost mila laurehun eta hogeita hamabi\" = 5432; \"bi milioi eta hamazazpi\" = 2000017\n[fa] Persian. Scales: \"یک هزار\" = 1000; \"یک میلیون\" = 1000000. Examples: \"پنج میلیون و چهارصد و سی و دو\" = 5000432; \"پنج هزار و چهارصد و سی و دو\" = 5432; \"دو میلیون و هفده\" = 2000017\n[fi] Finnish. Scales: \"tuhat\" = 1000; \"yksi miljoona\" = 1000000. Examples: \"viisi miljoonaa neljäsataakolmekymmentäkaksi\" = 5000432; \"viisituhattaneljäsataakolmekymmentäkaksi\" = 5432; \"kaksi miljoonaa seitsemäntoista\" = 2000017\n[fr] French. Scales: \"mille\" = 1000; \"un million\" = 1000000. Examples: \"cinq millions quatre cent trente-deux\" = 5000432; \"cinq mille quatre cent trente-deux\" = 5432; \"deux millions dix-sept\" = 2000017\n[gl] Galician. Scales: \"mil\" = 1000; \"un millón\" = 1000000. Examples: \"cinco millóns catrocentos trinta e dous\" = 5000432; \"cinco mil catrocentos trinta e dous\" = 5432; \"dous millóns dezasete\" = 2000017\n[gu] Gujarati. Scales: \"એક હજાર\" = 1000; \"દસ લાખ\" = 1000000; \"એક લાખ\" = 100000; \"એક કરોડ\" = 10000000. Examples: \"પચાસ લાખ ચાર સો બત્રીસ\" = 5000432; \"પાંચ હજાર ચાર સો બત્રીસ\" = 5432; \"વીસ લાખ સત્તર\" = 2000017\n[he] Hebrew. Scales: \"אלף\" = 1000; \"מיליון\" = 1000000. Examples: \"חמישה מיליון ארבע מאות שלושים ושתיים\" = 5000432; \"חמשת אלפים ארבע מאות שלושים ושתיים\" = 5432; \"שני מיליון ושבע עשרה\" = 2000017\n[hi] Hindi. Scales: \"एक हज़ार\" = 1000; \"दस लाख\" = 1000000; \"एक लाख\" = 100000; \"एक करोड़\" = 10000000. Examples: \"पचास लाख चार सौ बत्तीस\" = 5000432; \"पाँच हज़ार चार सौ बत्तीस\" = 5432; \"बीस लाख सत्रह\" = 2000017\n[hr] Croatian. Scales: \"tisuća\" = 1000; \"milijun\" = 1000000. Examples: \"pet milijuna četiristo trideset i dva\" = 5000432; \"pet tisuća četiristo trideset i dva\" = 5432; \"dva milijuna sedamnaest\" = 2000017\n[hu] Hungarian. Scales: \"ezer\" = 1000; \"egymillió\" = 1000000. Examples: \"ötmilliónégyszázharminckettő\" = 5000432; \"ötezernégyszázharminckettő\" = 5432; \"kétmilliótizenhét\" = 2000017\n[hy] Armenian. Scales: \"մեկ հազար\" = 1000; \"մեկ միլիօն\" = 1000000. Examples: \"հինգ միլիոն չորսհարյուր երեսուներկու\" = 5000432; \"հինգ հազար չորսհարյուր երեսուներկու\" = 5432; \"երկու միլիոն տասնյոթ\" = 2000017\n[id] Indonesian. Scales: \"seribu\" = 1000; \"satu juta\" = 1000000. Examples: \"lima juta empat ratus tiga puluh dua\" = 5000432; \"lima ribu empat ratus tiga puluh dua\" = 5432; \"dua juta tujuh belas\" = 2000017\n[is] Icelandic. Scales: \"eitt þúsund\" = 1000; \"ein millión\" = 1000000. Examples: \"fimm milljónir fjögur hundruð þrjátíu og tveir\" = 5000432; \"fimm þúsund fjögur hundruð þrjátíu og tveir\" = 5432; \"tvær milljónir og sautján\" = 2000017\n[it] Italian. Scales: \"mille\" = 1000; \"un milione\" = 1000000. Examples: \"cinque milioni quattrocentotrentadue\" = 5000432; \"cinquemilaquattrocentotrentadue\" = 5432; \"due milioni diciassette\" = 2000017\n[ja] Japanese. Scales: \"千\" = 1000; \"百万\" = 1000000; \"一万\" = 10000; \"一億\" = 100000000. Examples: \"五百万四百三十二\" = 5000432; \"五千四百三十二\" = 5432; \"二百万十七\" = 2000017\n[ka] Georgian. Scales: \"ათასი\" = 1000; \"ერთი მილიონი\" = 1000000. Examples: \"ხუთი მილიონ ოთხასოცდათორმეტი\" = 5000432; \"ხუთი ათას ოთხასოცდათორმეტი\" = 5432; \"ორი მილიონ ჩვიდმეტი\" = 2000017\n[kk] Kazakh. Scales: \"мың\" = 1000; \"миллион\" = 1000000. Examples: \"бес миллион төрт жүз отыз екі\" = 5000432; \"бес мың төрт жүз отыз екі\" = 5432; \"екі миллион он жеті\" = 2000017\n[kn] Kannada. Scales: \"ಸಾವಿರ\" = 1000; \"ಹತ್ತು ಲಕ್ಷ\" = 1000000; \"ಒಂದು ಲಕ್ಷ\" = 100000; \"ಒಂದು ಕೋಟಿ\" = 10000000. Examples: \"ಐವತ್ತು ಲಕ್ಷದ ನಾನೂರ ಮೂವತ್ತೆರಡು\" = 5000432; \"ಐದು ಸಾವಿರದ ನಾನೂರ ಮೂವತ್ತೆರಡು\" = 5432; \"ಇಪ್ಪತ್ತು ಲಕ್ಷದ ಹದಿನೇಳು\" = 2000017\n[ko] Korean. Scales: \"천\" = 1000; \"백만\" = 1000000; \"만\" = 10000; \"일억\" = 100000000. Examples: \"오백만 사백삼십이\" = 5000432; \"오천사백삼십이\" = 5432; \"이백만 십칠\" = 2000017\n[lt] Lithuanian. Scales: \"tūkstantis\" = 1000; \"vienas milijonas\" = 1000000. Examples: \"penki milijonai keturi šimtai trisdešimt du\" = 5000432; \"penki tūkstančiai keturi šimtai trisdešimt du\" = 5432; \"du milijonai septyniolika\" = 2000017\n[lv] Latvian. Scales: \"tūkstoš\" = 1000; \"viens miljons\" = 1000000. Examples: \"pieci miljoni četrsimt trīsdesmit divi\" = 5000432; \"piectūkstoš četrsimt trīsdesmit divi\" = 5432; \"divi miljoni septiņpadsmit\" = 2000017\n[mk] Macedonian. Scales: \"една илјада\" = 1000; \"еден милион\" = 1000000. Examples: \"пет милиони четиристотини триесет и два\" = 5000432; \"пет илјади четиристотини триесет и два\" = 5432; \"два милиони седумнаесет\" = 2000017\n[ml] Malayalam. Scales: \"ആയിരം\" = 1000; \"പത്ത് ലക്ഷം\" = 1000000; \"ഒരു ലക്ഷം\" = 100000; \"ഒരു കോടി\" = 10000000. Examples: \"അൻപത് ലക്ഷത്തിനാന്നൂറ്റിമുപ്പത്തിരണ്ട്\" = 5000432; \"അഞ്ചായിരത്തിനാന്നൂറ്റിമുപ്പത്തിരണ്ട്\" = 5432; \"ഇരുപത് ലക്ഷത്തിപതിനേഴ്\" = 2000017\n[mr] Marathi. Scales: \"एक हजार\" = 1000; \"दहा लाख\" = 1000000; \"एक लाख\" = 100000; \"एक कोटी\" = 10000000. Examples: \"पन्नास लाख चारशे बत्तीस\" = 5000432; \"पाच हजार चारशे बत्तीस\" = 5432; \"वीस लाख सतरा\" = 2000017\n[ms] Malay. Scales: \"seribu\" = 1000; \"sejuta\" = 1000000. Examples: \"lima juta empat ratus tiga puluh dua\" = 5000432; \"lima ribu empat ratus tiga puluh dua\" = 5432; \"dua juta tujuh belas\" = 2000017\n[ne] Nepali. Scales: \"एक हजार\" = 1000; \"दस लाख\" = 1000000; \"एक लाख\" = 100000; \"एक करोड\" = 10000000. Examples: \"पचास लाख चार सय बत्तिस\" = 5000432; \"पाँच हजार चार सय बत्तिस\" = 5432; \"बिस लाख सत्र\" = 2000017\n[nl] Dutch. Scales: \"duizend\" = 1000; \"een miljoen\" = 1000000. Examples: \"vijf miljoen vierhonderdtweeëndertig\" = 5000432; \"vijfduizendvierhonderdtweeëndertig\" = 5432; \"twee miljoen zeventien\" = 2000017\n[no] Norwegian. Scales: \"tusen\" = 1000; \"én million\" = 1000000. Examples: \"fem millioner fire hundre og trettito\" = 5000432; \"fem tusen fire hundre og trettito\" = 5432; \"to millioner sytten\" = 2000017\n[pa] Punjabi. Scales: \"ਇੱਕ ਹਜ਼ਾਰ\" = 1000; \"ਦਸ ਲੱਖ\" = 1000000; \"ਇੱਕ ਲੱਖ\" = 100000; \"ਇੱਕ ਕਰੋੜ\" = 10000000. Examples: \"ਪੰਜਾਹ ਲੱਖ ਚਾਰ ਸੌ ਬੱਤੀ\" = 5000432; \"ਪੰਜ ਹਜ਼ਾਰ ਚਾਰ ਸੌ ਬੱਤੀ\" = 5432; \"ਵੀਹ ਲੱਖ ਸਤਾਰਾਂ\" = 2000017\n[pl] Polish. Scales: \"tysiąc\" = 1000; \"milion\" = 1000000. Examples: \"pięć milionów czterysta trzydzieści dwa\" = 5000432; \"pięć tysięcy czterysta trzydzieści dwa\" = 5432; \"dwa miliony siedemnaście\" = 2000017\n[pt] Portuguese. Scales: \"mil\" = 1000; \"um milhão\" = 1000000. Examples: \"cinco milhões quatrocentos e trinta e dois\" = 5000432; \"cinco mil quatrocentos e trinta e dois\" = 5432; \"dois milhões e dezessete\" = 2000017\n[ro] Romanian. Scales: \"o mie\" = 1000; \"un milion\" = 1000000. Examples: \"cinci milioane patru sute treizeci și doi\" = 5000432; \"cinci mii patru sute treizeci și doi\" = 5432; \"două milioane șaptesprezece\" = 2000017\n[ru] Russian. Scales: \"одна тысяча\" = 1000; \"один миллион\" = 1000000. Examples: \"пять миллионов четыреста тридцать два\" = 5000432; \"пять тысяч четыреста тридцать два\" = 5432; \"два миллиона семнадцать\" = 2000017\n[sk] Slovak. Scales: \"tisíc\" = 1000; \"jeden milión\" = 1000000. Examples: \"päť miliónov štyristo tridsaťdva\" = 5000432; \"päť tisíc štyristo tridsaťdva\" = 5432; \"dva milióny sedemnásť\" = 2000017\n[sl] Slovenian. Scales: \"tisoč\" = 1000; \"en milijon\" = 1000000. Examples: \"pet milijonov štiristo dvaintrideset\" = 5000432; \"pet tisoč štiristo dvaintrideset\" = 5432; \"dva milijona sedemnajst\" = 2000017\n[sq] Albanian. Scales: \"një mijë\" = 1000; \"një milion\" = 1000000. Examples: \"pesë milionë e katërqind e tridhjetë e dy\" = 5000432; \"pesë mijë e katërqind e tridhjetë e dy\" = 5432; \"dy milionë e shtatëmbëdhjetë\" = 2000017\n[sr] Serbian. Scales: \"хиљада\" = 1000; \"милион\" = 1000000. Examples: \"пет милиона четириста тридесет два\" = 5000432; \"пет хиљада четириста тридесет два\" = 5432; \"два милиона седамнаест\" = 2000017\n[sv] Swedish. Scales: \"ettusen\" = 1000; \"en miljon\" = 1000000. Examples: \"fem miljoner fyrahundratrettiotvå\" = 5000432; \"femtusen fyrahundratrettiotvå\" = 5432; \"två miljoner sjutton\" = 2000017\n[sw] Swahili. Scales: \"elfu moja\" = 1000; \"milioni moja\" = 1000000. Examples: \"milioni tano na mia nne na thelathini na mbili\" = 5000432; \"elfu tano na mia nne na thelathini na mbili\" = 5432; \"milioni mbili na kumi na saba\" = 2000017\n[ta] Tamil. Scales: \"ஆயிரம்\" = 1000; \"பத்து லட்சம்\" = 1000000; \"ஒரு லட்சம்\" = 100000; \"ஒரு கோடி\" = 10000000. Examples: \"ஐம்பது லட்சத்து நானூற்று முப்பத்து இரண்டு\" = 5000432; \"ஐந்தாயிரத்து நானூற்று முப்பத்து இரண்டு\" = 5432; \"இருபது லட்சத்து பதினேழு\" = 2000017\n[te] Telugu. Scales: \"వెయ్యి\" = 1000; \"పది లక్షల\" = 1000000; \"ఒక లక్ష\" = 100000; \"ఒక కోటి\" = 10000000. Examples: \"యాభై లక్షల నాలుగు వందల ముప్పై రెండు\" = 5000432; \"ఐదు వేల నాలుగు వందల ముప్పై రెండు\" = 5432; \"ఇరవై లక్షల పదిహేడు\" = 2000017\n[th] Thai. Scales: \"หนึ่งพัน\" = 1000; \"หนึ่งล้าน\" = 1000000. Examples: \"ห้าล้านสี่ร้อยสามสิบสอง\" = 5000432; \"ห้าพันสี่ร้อยสามสิบสอง\" = 5432; \"สองล้านสิบเจ็ด\" = 2000017\n[tr] Turkish. Scales: \"bin\" = 1000; \"bir milyon\" = 1000000. Examples: \"beş milyon dört yüz otuz iki\" = 5000432; \"beş bin dört yüz otuz iki\" = 5432; \"iki milyon on yedi\" = 2000017\n[uk] Ukrainian. Scales: \"одна тисяча\" = 1000; \"один мільйон\" = 1000000. Examples: \"пʼять мільйонів чотириста тридцять два\" = 5000432; \"пʼять тисяч чотириста тридцять два\" = 5432; \"два мільйони сімнадцять\" = 2000017\n[ur] Urdu. Scales: \"ایک ہزار\" = 1000; \"دس لاکھ\" = 1000000; \"ایک لاکھ\" = 100000; \"ایک کروڑ\" = 10000000. Examples: \"پچاس لاکھ چار سو بتیس\" = 5000432; \"پانچ ہزار چار سو بتیس\" = 5432; \"بیس لاکھ سترہ\" = 2000017\n[uz] Uzbek. Scales: \"bir ming\" = 1000; \"bir million\" = 1000000. Examples: \"besh million to‘rt yuz o‘ttiz ikki\" = 5000432; \"besh ming to‘rt yuz o‘ttiz ikki\" = 5432; \"ikki million o‘n yetti\" = 2000017\n[vi] Vietnamese. Scales: \"một nghìn\" = 1000; \"một triệu\" = 1000000. Examples: \"năm triệu bốn trăm ba mươi hai\" = 5000432; \"năm nghìn bốn trăm ba mươi hai\" = 5432; \"hai triệu mười bảy\" = 2000017\n[zh] Chinese. Scales: \"一千\" = 1000; \"一百万\" = 1000000; \"一万\" = 10000; \"一亿\" = 100000000. Examples: \"五百万零四百三十二\" = 5000432; \"五千四百三十二\" = 5432; \"两百万零一十七\" = 2000017"
+  }
+]

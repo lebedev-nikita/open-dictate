@@ -9,22 +9,6 @@ import org.junit.Test
 import java.util.UUID
 
 class ReplacementSyncTest {
-    @Test fun formattingRulesAreRelayedWithoutApplyingPostprocessingAndOversizedImportsAreAtomic() = scoped { _, settings, store ->
-        val rules = SettingsSyncEntry("Без точки в конце.\nАбзацы 📝", 42, "mac")
-        val remote = SettingsSyncDocument(mapOf("formattingRules" to rules,
-            "accuratePunctuationEnabled" to SettingsSyncEntry("true", 42, "mac")))
-        settings.mergeSyncDocument(remote, store)
-        settings.recordReplacementChange()
-        assertEquals(rules, settings.syncDocument().entries["formattingRules"])
-        assertNull(settings.syncDocument().entries["accuratePunctuationEnabled"])
-        val before = settings.syncDocument()
-        val invalid = SettingsSyncDocument(mapOf(
-            "dictionary" to SettingsSyncEntry("Must not apply", 100, "mac"),
-            "formattingRules" to SettingsSyncEntry("📝".repeat(2_001), 100, "mac")))
-        assertThrows(IllegalArgumentException::class.java) { settings.mergeSyncDocument(invalid, store) }
-        assertEquals(before, settings.syncDocument())
-    }
-
     private fun scoped(block: (Context, SettingsStore, ReplacementStore) -> Unit) {
         val base = InstrumentationRegistry.getInstrumentation().targetContext
         val prefix = "sync-test-${UUID.randomUUID()}"

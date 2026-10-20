@@ -53,7 +53,6 @@ final class SpeechLanguagePreferencesTests: XCTestCase {
             defaults.set(["unknown", "ru", "uk", "ru"], forKey: "speechLanguages")
             let preferences = Preferences(defaults: defaults)
             XCTAssertEqual(preferences.context.languages, ["ru", "uk"])
-            XCTAssertFalse(preferences.context.prompt.contains("Russian orthography"), "Ukrainian selection must not force Russian spelling")
             preferences.speechLanguages = []
             let data = try JSONSerialization.data(withJSONObject: OpenAIRequest.sessionUpdate(context: preferences.context))
             XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("languages"))

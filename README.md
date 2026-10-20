@@ -24,13 +24,14 @@ no backend, analytics or account to create.
 - **Live** (`gpt-live-transcribe`) inserts text as you speak.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
 - Voice-directed editing of the selection, or the whole field without a selection,
-  using GPT-6 Luna or GPT-6 Sol.
-- A transcription dictionary, local history, on-device search, and explicit AI search.
+  using the shared text model (GPT-6 Luna by default).
+- Configurable Accurate post-processing with punctuation and editable value-format examples, a transcription dictionary, local history with request durations, on-device search, and explicit AI search.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
+- Optional [ChatGPT plan usage](docs/chatgpt-plan.md) for Luna text processing; transcription still requires an API key.
 - Encrypted credentials: Android Keystore on Android, Keychain on macOS.
-- Optional Google Drive sync for the dictionary, word replacements, dictation
-  mode and selected models. [Setup and conflict behavior](docs/google-drive-sync.md).
+- Optional Google Drive sync for the dictionary, post-processing, word replacements, dictation
+  mode and selected recognition/text models. [Setup and conflict behavior](docs/google-drive-sync.md).
 
 ## Install on macOS
 

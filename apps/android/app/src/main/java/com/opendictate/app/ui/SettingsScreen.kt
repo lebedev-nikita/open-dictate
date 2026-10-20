@@ -72,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -218,6 +219,14 @@ internal fun SettingsScreen(
                             onSelect = if (live) viewModel::selectLiveModel else viewModel::selectAccurateModel,
                         )
                         SettingsDivider()
+                        ModelPicker(
+                            label = stringResource(R.string.settings_text_model),
+                            selected = com.opendictate.app.model.TextProcessingModel.selection(state.textProcessingModel, state.textProcessingServiceTier),
+                            options = com.opendictate.app.model.TextProcessingModel.defaults,
+                            onSelect = viewModel::selectTextProcessingModel,
+                            displayName = com.opendictate.app.model.TextProcessingModel::title,
+                        )
+                        SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
                         SettingsDivider()
@@ -228,6 +237,14 @@ internal fun SettingsScreen(
                             if (state.prompt.isBlank()) stringResource(R.string.settings_dictionary_empty)
                             else stringResource(R.string.settings_dictionary_count, state.prompt.lineSequence().count { it.isNotBlank() }),
                             { dictionaryOpen = true })
+                    }
+
+                    val postProcessingState = rememberSaveableStateHolder()
+                    if (state.model == TranscriptionModel.ACCURATE) {
+                        Spacer(Modifier.height(28.dp))
+                        postProcessingState.SaveableStateProvider("postprocessing") {
+                            SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, state.languages.map { it.code }.toSet(), viewModel::savePostProcessing) }
+                        }
                     }
 
                     SectionTitle(stringResource(R.string.dictation_button_title))
@@ -245,11 +262,6 @@ internal fun SettingsScreen(
                         ToggleRow(Icons.Outlined.AutoFixHigh, stringResource(R.string.transformation_model_title),
                             stringResource(R.string.settings_transformation_hint), state.transformationButtonEnabled,
                             viewModel::setTransformationButtonEnabled, enabled = !dictation.isActive)
-                        AnimatedVisibility(state.transformationButtonEnabled) {
-                            ModelPicker(stringResource(R.string.settings_editing_model), state.transformationModelId,
-                                modelOptions(state.modelCatalog.text, ModelCatalog.DEFAULT.text),
-                                viewModel::selectTransformationModel, enabled = !dictation.isActive)
-                        }
                         SettingsDivider()
                         ToggleRow(Icons.Outlined.BookmarkAdd, stringResource(R.string.settings_selection_dictionary),
                             stringResource(R.string.dictionary_selection_action_subtitle), state.selectionDictionaryActionEnabled,
@@ -294,8 +306,12 @@ internal fun SettingsScreen(
                         }
                     }
 
-                    SectionTitle(stringResource(R.string.drive_sync_title))
-                    SettingsGroup { GoogleDriveSyncSettings() }
+                    SectionTitle(stringResource(R.string.settings_integrations))
+                    SettingsGroup {
+                        GoogleDriveSyncSettings()
+                        SettingsDivider()
+                        ChatGPTSettings(viewModel, state.hasApiKey, dictation.isActive)
+                    }
 
                     val testFieldLabel = stringResource(R.string.test_field_label)
                     SectionTitle(testFieldLabel)
@@ -433,21 +449,21 @@ private fun ModeSelector(selected: TranscriptionModel, onSelect: (TranscriptionM
 }
 
 @Composable
-private fun ModelPicker(label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true) {
+private fun ModelPicker(label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true, displayName: (String) -> String = { it }) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         Surface(onClick = { expanded = true }, enabled = enabled, color = SettingsSurface) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(label, style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
-                    Text(selected, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                    Text(displayName(selected), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
                 }
                 Icon(Icons.Outlined.UnfoldMore, null, Modifier.size(20.dp), tint = SettingsMuted)
             }
         }
         DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
             options.forEach { id ->
-                DropdownMenuItem(text = { Text(id, fontFamily = FontFamily.Monospace) },
+                DropdownMenuItem(text = { Text(displayName(id), fontFamily = FontFamily.Monospace) },
                     onClick = { onSelect(id); expanded = false },
                     leadingIcon = { if (id == selected) Icon(Icons.Outlined.Check, null) else Spacer(Modifier.size(24.dp)) })
             }

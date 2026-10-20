@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.opendictate.app.MainActivity
@@ -34,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 class DictationForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val apiClient by lazy { OpenAiTranscriptionClient(resources) }
+    private val apiClient by lazy { OpenAiTranscriptionClient(resources, (application as OpenDictateApplication).chatGPT) }
     private var activeJob: Job? = null
     private var activeSessionId = 0L
     private var stopSignal = CompletableDeferred<Unit>()
@@ -97,7 +98,11 @@ class DictationForegroundService : Service() {
         val model = settings.model
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
-        val transformationModelId = settings.transformationModelId
+        val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
+        val textProcessingModel = settings.textProcessingModel
+        val textProcessingServiceTier = settings.textProcessingServiceTier
+        val postProcessing = settings.postProcessing.forMode(model)
+        activePostProcessingEnabled = operation == DictationOperation.DICTATION && postProcessing.shouldProcess
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
         val dictionary = settings.prompt
@@ -114,6 +119,7 @@ class DictationForegroundService : Service() {
                 phase = DictationPhase.CONNECTING,
                 operation = operation,
                 model = model,
+                postProcessingEnabled = activePostProcessingEnabled,
             ),
         )
         previousJob?.cancel()
@@ -124,6 +130,9 @@ class DictationForegroundService : Service() {
             var wavFile: WavFile? = null
             var savedRecording: LastDictationAudioStore.Recording? = null
             var modelMessage: String? = null
+            var postProcessingFailed = false
+            var transcriptionMillis: Long? = null
+            var postProcessingMillis: Long? = null
             try {
                 // The idle button can be tapped while the previous session is still cleaning up.
                 // Publish ownership first, then wait before opening another microphone or file.
@@ -156,8 +165,9 @@ class DictationForegroundService : Service() {
                                 )
                             },
                             onPartial = { text ->
+                                val currentState = DictationStateBus.state.value
                                 val phase = if (
-                                    DictationStateBus.state.value.phase == DictationPhase.PROCESSING
+                                    currentState.phase == DictationPhase.PROCESSING
                                 ) {
                                     DictationPhase.PROCESSING
                                 } else {
@@ -175,6 +185,7 @@ class DictationForegroundService : Service() {
                                         } else {
                                             ""
                                         },
+                                        processingStage = currentState.activeProcessingStage,
                                     ),
                                 )
                             },
@@ -212,50 +223,41 @@ class DictationForegroundService : Service() {
                             savedRecording?.finish()
                             wavFile?.close()
                         }
-                        publishWhileActive(
-                            sessionId,
-                            DictationState(
-                                sessionId = sessionId,
-                                phase = DictationPhase.PROCESSING,
-                                operation = operation,
-                                model = model,
-                            ),
-                        )
+                        publishProcessingStage(sessionId, operation, model, DictationProcessingStage.TRANSCRIPTION)
                         updateNotification(true, operation)
-                        apiClient.transcribeFile(
-                            apiKey,
-                            accurateModelId,
-                            file,
-                            languages,
-                            dictionary,
-                            responseTimeoutSeconds,
-                        )
+                        val timed = measureRequest(SystemClock::elapsedRealtime) {
+                            apiClient.transcribeFile(apiKey, accurateModelId, file, languages, dictionary, responseTimeoutSeconds)
+                        }
+                        transcriptionMillis = timed.milliseconds
+                        timed.value
                     }
                 }
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
                 val result = if (operation == DictationOperation.TRANSFORMATION) {
-                    publishWhileActive(
-                        sessionId,
-                        DictationState(
-                            sessionId = sessionId,
-                            phase = DictationPhase.PROCESSING,
-                            operation = operation,
-                            model = model,
-                        ),
-                    )
+                    publishProcessingStage(sessionId, operation, model, DictationProcessingStage.TRANSFORMATION)
                     updateNotification(true, operation)
                     val transformation = apiClient.transformText(
                         apiKey = apiKey,
-                        model = transformationModelId,
                         sourceText = requireNotNull(sourceText),
                         instruction = transcript.trim(),
+                        modelId = textProcessingModel,
+                        serviceTier = textProcessingServiceTier,
+                        chatGPTAccount = chatGPTAccount,
                     )
                     modelMessage = transformation.message
                     transformation.text
                 } else {
-                    replacements.apply(transcript)
+                    if (postProcessing.shouldProcess) {
+                        publishProcessingStage(sessionId, operation, model, DictationProcessingStage.POST_PROCESSING)
+                    }
+                    val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
+                    if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
+                    val processed = timed.value
+                    ensureActive()
+                    postProcessingFailed = processed.failed
+                    replacements.apply(processed.text)
                 }
                 if (result.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_transformation_empty))
@@ -273,11 +275,16 @@ class DictationForegroundService : Service() {
                 if (completed && operation == DictationOperation.DICTATION) {
                     withContext(Dispatchers.IO) {
                         runCatching {
-                            (application as OpenDictateApplication).transcriptHistoryStore.add(result)
+                            (application as OpenDictateApplication).transcriptHistoryStore.add(result,
+                                mode = model, transcriptionMillis = transcriptionMillis, postProcessingMillis = postProcessingMillis,
+                                transcriptionModelId = if (model == TranscriptionModel.LIVE) liveModelId else accurateModelId,
+                                postProcessingModelId = textProcessingModel.takeIf { postProcessing.shouldProcess },
+                                postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                         }
                     }
                 }
                 modelMessage?.let(::showModelMessage)
+                if (completed && postProcessingFailed) showModelMessage(getString(R.string.postprocessing_failed))
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {
@@ -307,6 +314,8 @@ class DictationForegroundService : Service() {
         }
     }
 
+    private var activePostProcessingEnabled = false
+
     private fun retryLastDictation() {
         val apiKey = SecureApiKeyStore(this).get()
         if (apiKey.isNullOrBlank()) {
@@ -324,10 +333,16 @@ class DictationForegroundService : Service() {
         val languages = settings.languages
         val dictionary = settings.prompt
         val responseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds
+        val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
+        val textProcessingModel = settings.textProcessingModel
+        val textProcessingServiceTier = settings.textProcessingServiceTier
+        val postProcessing = settings.postProcessing.forMode(model)
+        activePostProcessingEnabled = postProcessing.shouldProcess
         activeOperation = DictationOperation.DICTATION
         startForeground(NOTIFICATION_ID, notification(true, DictationOperation.DICTATION))
         DictationStateBus.set(
-            DictationState(sessionId = sessionId, phase = DictationPhase.PROCESSING, model = model),
+            DictationState(sessionId = sessionId, phase = DictationPhase.PROCESSING, model = model,
+                processingStage = DictationProcessingStage.TRANSCRIPTION, postProcessingEnabled = activePostProcessingEnabled),
         )
         previousJob?.cancel()
         activeJob = scope.launch {
@@ -337,18 +352,20 @@ class DictationForegroundService : Service() {
                 val file = withContext(Dispatchers.IO) {
                     (application as OpenDictateApplication).lastDictationAudioStore.latestFile()
                 } ?: throw IllegalStateException(getString(R.string.error_no_last_dictation))
-                val transcript = apiClient.transcribeFile(
-                    apiKey,
-                    accurateModelId,
-                    file,
-                    languages,
-                    dictionary,
-                    responseTimeoutSeconds,
-                )
+                val transcription = measureRequest(SystemClock::elapsedRealtime) {
+                    apiClient.transcribeFile(apiKey, accurateModelId, file, languages, dictionary, responseTimeoutSeconds)
+                }
+                val transcript = transcription.value
                 if (transcript.isBlank()) {
                     throw IllegalStateException(getString(R.string.error_speech_not_recognized))
                 }
-                val result = replacements.apply(transcript)
+                if (postProcessing.shouldProcess) {
+                    publishProcessingStage(sessionId, DictationOperation.DICTATION, model, DictationProcessingStage.POST_PROCESSING)
+                }
+                val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
+                val processed = postProcessingAttempt.value
+                ensureActive()
+                val result = replacements.apply(processed.text)
                 val completed = publishWhileActive(
                     sessionId,
                     DictationState(
@@ -360,9 +377,15 @@ class DictationForegroundService : Service() {
                 )
                 if (completed) withContext(Dispatchers.IO) {
                     runCatching {
-                        (application as OpenDictateApplication).transcriptHistoryStore.add(result)
+                        (application as OpenDictateApplication).transcriptHistoryStore.add(result, mode = model,
+                            transcriptionMillis = transcription.milliseconds,
+                            postProcessingMillis = postProcessingAttempt.milliseconds.takeIf { postProcessing.shouldProcess },
+                            transcriptionModelId = accurateModelId,
+                            postProcessingModelId = textProcessingModel.takeIf { postProcessing.shouldProcess },
+                            postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                     }
                 }
+                if (completed && processed.failed) showModelMessage(getString(R.string.postprocessing_failed))
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {
@@ -389,7 +412,8 @@ class DictationForegroundService : Service() {
         stopSignal.complete(Unit)
         val state = DictationStateBus.state.value
         if (state.isActive && !state.phase.isProcessing) {
-            DictationStateBus.set(state.copy(phase = DictationPhase.PROCESSING))
+            DictationStateBus.set(state.copy(phase = DictationPhase.PROCESSING,
+                processingStage = DictationProcessingStage.TRANSCRIPTION))
             updateNotification(true, activeOperation)
         }
     }
@@ -404,21 +428,34 @@ class DictationForegroundService : Service() {
         val state = DictationStateBus.state.value
         if (!state.acceptsCancellation(sessionId)) return
         activeJob?.cancel()
-        DictationStateBus.set(state.copy(phase = DictationPhase.IDLE, transcript = ""))
+        DictationStateBus.set(state.copy(phase = DictationPhase.IDLE, transcript = "", processingStage = null))
     }
 
     private fun publishWhileActive(sessionId: Long, state: DictationState): Boolean {
         if (DictationStateBus.state.value.acceptsActiveUpdate(sessionId)) {
-            DictationStateBus.set(state)
+            DictationStateBus.set(state.copy(postProcessingEnabled = activePostProcessingEnabled))
             return true
         }
         return false
     }
 
+    private fun publishProcessingStage(
+        sessionId: Long,
+        operation: DictationOperation,
+        model: TranscriptionModel,
+        stage: DictationProcessingStage,
+    ) = publishWhileActive(sessionId, DictationState(
+        sessionId = sessionId,
+        phase = DictationPhase.PROCESSING,
+        operation = operation,
+        model = model,
+        processingStage = stage,
+    ))
+
     private fun clearSessionIfCurrent(sessionId: Long) {
         val state = DictationStateBus.state.value
         if (state.sessionId == sessionId) {
-            DictationStateBus.set(state.copy(phase = DictationPhase.IDLE, transcript = ""))
+            DictationStateBus.set(state.copy(phase = DictationPhase.IDLE, transcript = "", processingStage = null))
         }
     }
 

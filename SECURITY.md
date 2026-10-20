@@ -9,17 +9,34 @@ text, and never alter the captured original field or voice-edit instructions.
 Rules are applied on-device. Optional Drive sync uses the same app-data scope
 for the rule list and enabled states.
 
-Android punctuation is requested in the original transcription; there is no
-separate punctuation correction request.
+Post-processing rules and regional examples synchronize through Google Drive. All
+post-processing enable switches remain device-local, including individual value types.
 
-On macOS, optional Accurate AI post-processing sends recognized text and saved formatting instructions
-directly to OpenAI with Responses storage disabled. It is off by default, never runs on Live
-or voice-edit instructions, and rejects output that changes word boundaries,
-spelling, order, numbers or address contents beyond allowed capitalization.
-Failures retain the original transcript; cancellation still prevents delivery.
-The enabled switch stays on the current device and is excluded from Drive sync.
-Formatting instructions are synchronized independently, including while the switch is off.
-Instructions are separate from transcript content and cannot relax the word/number validation.
+Optional post-processing sends recognized dictation text and generated
+instructions plus configured value-format examples directly to OpenAI through Responses with storage disabled.
+Only the session’s selected speech languages contribute bundled language-specific
+examples; automatic detection sends no such examples. Generated prompts remain
+request-only and never enter synchronization or history. It is
+available after ordinary Accurate dictation and Accurate retranscription on both platforms;
+voice-edit commands skip it. Settings are captured at session start. Disabled
+post-processing or no enabled rules makes no additional request. Failures retain
+the original transcript and display a curated warning; cancellation still prevents
+delivery. The punctuation-only configuration rejects changes to words, numbers
+and address contents. Value formatting changes notation and is not constrained by that punctuation-only
+validator. A bounded Russian/English cardinal parser checks supported scaled integer
+values before accepting formatted output; changed values retain the source with the
+existing failure warning. This is not a general semantic validator for all languages
+or numeric types. Fractional expressions and convertible durations are excluded
+from that integer check. Examples are bounded data, not a free-form instruction editor. Custom rules pair
+a value type and language/all-language scope with the desired rendering of a
+bundled fixed reference value; no model is called to configure or reconstruct it.
+Version-2 settings synchronize those examples and captured regional locale tags.
+Specific language styles override general styles; unknown/mixed-language input
+uses the general style. Invalid or oversized remote settings are rejected atomically.
+
+ChatGPT text streams retain finished output items only in request memory. A successful
+terminal event is required before returning assembled output; deltas, interruption,
+incomplete responses and errors cannot deliver a partial result.
 
 ## Optional Google Drive synchronization
 
@@ -29,9 +46,12 @@ persistent storage or credentials, audio or history. Android's normal
 sync offline and resume queued work when connectivity returns.
 
 Sync uses Google's HTTPS endpoints without a backend, requests only
-`drive.appdata` and exports an allowlist of dictionary, replacement, AI formatting, mode and
-model settings. Legacy Accurate punctuation sync entries are discarded.
-API keys, audio and history are excluded. Tokens, dictionary/replacement contents, formatting instructions and raw
+`drive.appdata` and exports an allowlist of dictionary, replacement, mode and
+model settings and post-processing
+rules (enabled value types, scoped format examples and regional locale tags). A shared text-processing
+model defaults to GPT-6 Luna and is captured at session start for transformation
+and post-processing. Legacy Accurate punctuation and transcription-prompt/text-model sync entries are discarded.
+API keys, audio and history are excluded. Tokens, formatting examples, dictionary/replacement contents and raw
 provider payloads are never logged. Drive clients disable redirects, cookies and
 persistent caches. Remote data is bounded and validated before application;
 unknown keys survive, while unsupported versions stop sync.
@@ -112,14 +132,38 @@ Developer ID identities and notary profiles are supported for local packaging
 but their certificates, private keys and credentials must stay outside Git.
 Debug-only local smoke checks do not call OpenAI and are absent from release builds.
 
+## ChatGPT plan credentials
+
+Optional Sign in with ChatGPT uses the public-client OAuth code flow with PKCE,
+state and nonce, an IPv4 loopback callback, issued client IDs and verified RS256
+OIDC identity. Only official OpenAI authorization, token, JWKS, revocation and
+API endpoints receive these credentials. Credentials never come from another
+app or Codex installation. Redirects, cookies and persistent HTTP caches are
+disabled. The loopback listener is bounded and closes after completion,
+cancellation or timeout; Android still disables cleartext client traffic.
+
+Account registrations and rotating tokens stay in a separate encrypted Android
+credential namespace or non-synchronizing device-only macOS Keychain item.
+Refreshes are serialized per session, terminal refresh errors discard unusable
+tokens, and temporary errors retain credentials. A captured ChatGPT billing
+selection never silently falls back to the API key. Corrupt or locked credential
+storage fails closed. API-key transcription remains a prerequisite to sign-in.
+Plan inference requires `store: false`, `stream: true`, array input and the
+terminal `response.completed`; deltas, incomplete streams and usage errors are
+not successful results. OAuth and SSE responses are bounded and never logged.
+See [setup and protocol references](docs/chatgpt-plan.md).
+
 ## Android
 
 OpenDictate intentionally never logs authorization headers, API keys, audio,
 transcript contents, transformation instructions, or focused-field text.
 Model discovery calls OpenAI directly and stores only model IDs in app-private
 preferences. The model list API does not supply endpoint capabilities or prices,
-so the picker keeps the transcription aliases and up to five recent general GPT
-text models, excluding Astra and specialized models.
+so recognition pickers keep only the transcription aliases. Text model offers
+GPT-6 Luna using the standard service tier for post-processing and voice editing.
+Saved and synchronized Fast selections resolve to standard mode; history keeps
+the model and tier captured for each earlier request. AI history
+search remains fixed to GPT-6 Luna; retired legacy selections cannot override it.
 The app picker queries launchable apps only. The filter mode and separate allowed
 and excluded package lists stay in app-private preferences, outside Drive sync.
 The accessibility service checks the filter before showing the overlay, starting
@@ -143,3 +187,9 @@ history. The floating menu's Paste last action inserts text directly without
 changing the clipboard. The fallback clipboard item is marked sensitive so
 Android can conceal its preview; users should still treat the system clipboard
 as shared device state.
+
+History request durations, model IDs, post-processing service tier and the Live
+mode label remain local history metadata.
+They are excluded from Drive synchronization and AI history-search payloads.
+Accurate timings use monotonic elapsed time around each full request, including
+upload and response. Recording and text delivery are excluded.

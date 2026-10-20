@@ -19,14 +19,6 @@ import org.json.JSONObject
 
 class OpenAiTranscriptionClientTest {
     @Test
-    fun `transcription prompt matches the configured benchmark`() {
-        val root = listOf(".", "..", "../..", "../../..")
-            .first { java.io.File(it, "scripts/transcription-prompts.json").isFile }
-        val prompts = JSONObject(java.io.File(root, "scripts/transcription-prompts.json").readText())
-        assertEquals(prompts.getString("punctuation_examples"), transcriptionPrompt(
-            setOf(DictationLanguage.RUSSIAN, DictationLanguage.ENGLISH)))
-    }
-    @Test
     fun `file transcription uses configured overall timeout or none`() {
         val base = OkHttpClient.Builder()
             .callTimeout(60, TimeUnit.SECONDS)
@@ -91,15 +83,10 @@ class OpenAiTranscriptionClientTest {
         assertEquals("audio/pcm", input.getJSONObject("format").getString("type"))
         assertEquals(24_000, input.getJSONObject("format").getInt("rate"))
         assertEquals("gpt-live-transcribe", transcription.getString("model"))
-        assertEquals(
-            transcriptionPrompt(setOf(DictationLanguage.ENGLISH, DictationLanguage.RUSSIAN)),
-            transcription.getString("prompt"),
-        )
+        assertFalse(transcription.has("prompt"))
         assertEquals(listOf("OpenDictate", "WebSocket"), transcription.getJSONArray("keywords").let { keywords ->
             List(keywords.length()) { index -> keywords.getString(index) }
         })
-        assertFalse(transcription.getString("prompt").contains("OpenDictate"))
-        assertFalse(transcription.getString("prompt").contains("WebSocket"))
         assertEquals(listOf("en", "ru"), transcription.getJSONArray("languages").let { languages ->
             List(languages.length()) { index -> languages.getString(index) }
         })
@@ -120,28 +107,30 @@ class OpenAiTranscriptionClientTest {
             .getJSONObject("input")
             .getJSONObject("transcription")
 
-        assertTrue(transcription.getString("prompt").contains("Ниже — образцы пунктуационного оформления"))
+        assertFalse(transcription.has("prompt"))
         assertEquals("OpenDictate", transcription.getJSONArray("keywords").getString(0))
-        assertFalse(transcription.getString("prompt").contains("Russian orthography"))
     }
 
     @Test
-    fun `punctuation context covers every configured language and automatic detection`() {
+    fun `transcription omits prompt for every language and automatic detection`() {
         val languageSelections = listOf(emptySet<DictationLanguage>()) + DictationLanguage.entries.map { setOf(it) } +
             listOf(DictationLanguage.entries.toSet())
 
         languageSelections.forEach { languages ->
-            val context = transcriptionPrompt(languages)
-            assertTrue(context.startsWith("Multilingual dictation for written text."))
-            assertTrue(context.contains("STRICTLY follow the punctuation rules of each spoken language"))
-            assertTrue(context.contains("all grammatically required commas"))
-            assertTrue(context.contains("Preserve the original words, their order, and language switches."))
-            assertEquals(DictationLanguage.RUSSIAN in languages, context.contains("Ниже — образцы пунктуационного оформления"))
+            val transcription = realtimeTranscriptionSessionUpdate("gpt-live-transcribe", languages, "")
+                .getJSONObject("session").getJSONObject("audio").getJSONObject("input").getJSONObject("transcription")
+            assertFalse(transcription.has("prompt"))
+            val file = java.io.File.createTempFile("transcription-test", ".wav")
+            try {
+                val buffer = okio.Buffer()
+                transcriptionMultipartBody("gpt-transcribe", file, languages, "").writeTo(buffer)
+                assertFalse(buffer.readUtf8().contains("name=\"prompt\""))
+            } finally { file.delete() }
         }
     }
 
     @Test
-    fun `live transcription includes punctuation context without a dictionary or language hint`() {
+    fun `live transcription omits default prompt without a dictionary or language hint`() {
         val input = realtimeTranscriptionSessionUpdate(
             modelId = "gpt-live-transcribe",
             languages = emptySet(),
@@ -149,7 +138,7 @@ class OpenAiTranscriptionClientTest {
         ).getJSONObject("session").getJSONObject("audio").getJSONObject("input")
         val transcription = input.getJSONObject("transcription")
 
-        assertEquals(transcriptionPrompt(emptySet()), transcription.getString("prompt"))
+        assertFalse(transcription.has("prompt"))
         assertFalse(transcription.has("keywords"))
         assertFalse(transcription.has("languages"))
         assertFalse(transcription.has("delay"))
@@ -175,7 +164,7 @@ class OpenAiTranscriptionClientTest {
             assertEquals(listOf("gpt-transcribe"), values("model"))
             assertEquals(listOf("ru", "en"), values("languages[]"))
             assertEquals(listOf("OpenDictate", "Jetpack Compose"), values("keywords[]"))
-            assertEquals(listOf(transcriptionPrompt(languages)), values("prompt"))
+            assertTrue(values("prompt").isEmpty())
             val audio = body.parts.single { it.headers?.get("Content-Disposition")?.contains("filename=") == true }
             assertEquals("audio/wav", audio.body.contentType().toString())
             val buffer = okio.Buffer()
@@ -194,14 +183,14 @@ class OpenAiTranscriptionClientTest {
     }
 
     @Test
-    fun `text transformation request uses selected model without storage`() {
+    fun `text transformation request always uses Luna without storage`() {
         val request = textTransformationRequest(
-            model = "gpt-6-sol",
+
             sourceText = "Черновик",
             instruction = "Сделай вежливее",
         )
 
-        assertEquals("gpt-6-sol", request.getString("model"))
+        assertEquals("gpt-6-luna", request.getString("model"))
         assertFalse(request.getBoolean("store"))
         assertEquals("low", request.getJSONObject("reasoning").getString("effort"))
         val format = request.getJSONObject("text").getJSONObject("format")
@@ -275,7 +264,7 @@ class OpenAiTranscriptionClientTest {
     @Test
     fun `history search request uses structured output without storage`() {
         val request = transcriptHistorySearchRequest(
-            model = "gpt-6-luna",
+
             query = "project planning",
             documents = listOf(
                 TranscriptSearchDocument(7, "Discuss the roadmap"),

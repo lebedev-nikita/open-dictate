@@ -63,9 +63,6 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   moving focus. Preparation already offers the finish action; processing shows
   a native spinner in a 27.5 × 27.5 pt circle for either style, restoring
   the original vertical spacing around the spinner.
-- The menu bar replaces the microphone with a native spinner while awaiting a
-  result without AI post-processing. The menu item keeps its size and remains clickable.
-  Sessions using AI post-processing retain the microphone.
 - The HUD never takes keyboard focus. Ordinary dictation continues while typing,
   moving the caret or switching fields/windows/apps. Stopping captures the active eligible field for delivery.
   Voice editing still requires the original text and selection to remain unchanged.
@@ -104,40 +101,76 @@ save immediately and apply to the next Live or Accurate session; selection is
 disabled during dictation. Existing single-language and Russian + English
 preferences migrate automatically. Language hints remain local preferences.
 
-### Transcription punctuation
+### ChatGPT plan usage
 
-Live and Accurate include strict punctuation guidance for each spoken language
-in their original transcription request. The same guidance applies when
-retranscribing the last recording. Selected language hints and dictionary terms
-are preserved; the prompt does not add a processing step.
-Selecting Russian also includes a Russian punctuation prompt with examples of
-sentence boundaries, commas, colons, dashes, quotations and parenthetical text.
+Save the transcription API key first, then use **Continue with ChatGPT** beside
+the text model. Eligible plans can fund Luna text transformation and
+post-processing; transcription still uses the API key. Requests use the public
+Responses API directly, with no silent API billing fallback. Sign-in and token
+rotation use device-only Keychain storage, independent of Drive. See
+[setup and protocol references](../../docs/chatgpt-plan.md).
 
-### Optional AI post-processing
+### Post-processing
 
-Settings → Dictation → **AI post-processing** appears only in Accurate mode
-and is off by default.
-When enabled, only ordinary Accurate dictation sends its recognized text to
-`gpt-6-luna` for formatting through Responses (`store: false`,
-`reasoning.effort: none`). Live and voice editing skip this step. Local word
-replacements apply afterward. No separate final-period override is applied. Invalid edits or
-request failures retain the original transcription; cancellation prevents delivery.
-The switch is saved only on this Mac and does not sync through Google Drive.
+Post-processing rules and regional examples synchronize through Google Drive. All
+post-processing enable switches remain device-local, including individual value types.
 
-Enter instructions in **Formatting rules**, then choose **Save rules**. For example,
-“Do not add a final period. Separate paragraphs with a blank line.” Empty rules
-use the default punctuation correction. Rules can change punctuation,
-capitalization and paragraph breaks, but cannot rewrite words or numbers.
-Saved rules sync through Google Drive even while post-processing is disabled;
-Android preserves and relays them without running this extra AI step.
-Changes apply to the next dictation or explicit Accurate retranscription.
+The shared **Text model** selector sits beside recognition models and offers
+**GPT-6 Luna**. Voice editing and post-processing use the standard service tier.
+Saved or synchronized Fast preferences no longer enable Fast; existing history
+keeps the tier used for each request.
+
+In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
+Live hides the section and retains its saved settings. Post-processing is off by
+default; punctuation is the initial rule. The shared Text model selection controls
+both post-processing and voice editing.
+
+Enable **Format values** for automatic language/regional styles. The native
+popover lists only custom rules, grouped by value type; **All languages** comes
+first, followed by languages alphabetically. **Add rule** asks for a type,
+language or All languages, and the desired result for a fixed source value.
+The language picker offers only selected dictation languages; automatic detection
+offers only All languages. Existing rules survive language deselection. Editing
+such a rule requires choosing an available language before saving.
+Dates show a named month so the source is unambiguous. Source values are bundled
+with the app; configuring a rule never calls a model. Ten value types can be
+individually enabled under **Value types**.
+
+A language-specific rule overrides a general rule; general rules override
+automatic language defaults. Unknown or mixed-language text uses the general
+style. Explicit language rules also work with automatic detection. **Save rule**
+returns to the popover draft; **Done** saves it and **Cancel** discards it.
+**System defaults** clears custom rules and captures current regional preferences.
+**Reset settings** restores punctuation only. The final prompt stays hidden.
+
+Rules and captured regional preferences synchronize through Google Drive in
+version-2 post-processing settings. Version-1 fixed examples remain readable and
+appear as All languages rules, preserving existing styles and enabled types.
+Earlier arbitrary prompts retain the existing punctuation-only migration.
+Both apps share the [instruction rules and fixed source values](Sources/OpenDictateCore/Resources/postprocessing-rules.json).
+
+Value formatting adds only the [language examples](Sources/OpenDictateCore/Resources/postprocessing-languages.json)
+for the speech languages captured at session start. Automatic detection adds no
+language-specific examples. These reference phrases preserve omitted place-value
+groups; your saved notation examples still control the output style. Both platforms
+use the same bundled data, independent of OS spellout support or interface language.
+
+Post-processing runs once after ordinary Accurate dictation or Accurate
+retranscription, before local replacements. Live and voice editing skip it.
+No enabled rules means no extra request. Text and generated instructions go
+directly to OpenAI Responses with `store: false`. Failure preserves the original
+transcript; cancellation and focus guards still apply. Punctuation-only processing
+rejects changes to words and numbers. Model-based value formatting preserves
+ambiguous values and identifiers by instruction. A bounded Russian/English parser
+rejects changed supported scaled integers; it is not a general validator for other
+languages or numeric expressions.
 
 ### Retranscribe the last recording
 
 Choose **Retranscribe last recording** in the menu bar to recognize the latest
 ordinary Live or Accurate recording again through Accurate, without recording
 new audio. The command uses the current Accurate model, speech languages,
-dictionary, timeout, post-processing option, formatting rules and word replacements. The selected
+dictionary, timeout, post-processing and word replacements. The selected
 dictation mode stays unchanged. Results are inserted into the eligible field
 focused when you invoke the command; switching fields during processing prevents
 insertion. With no eligible field (including secure or excluded fields), the
@@ -206,7 +239,10 @@ See [Apple's function-key guide](https://support.apple.com/102439) and
 Credentials live in a device-only, non-synchronizing Keychain item. Preferences
 use the app's UserDefaults domain. The last 500 completed transcripts are saved
 in `~/Library/Application Support/OpenDictate/history.json` with owner-only
-permissions. Disable history to stop saving future results; delete existing
+permissions. Accurate history includes separate transcription and post-processing
+request durations, including upload and the full response; Live shows its mode
+without timings. Old entries and skipped stages have no invented durations.
+Disable history to stop saving future results; delete existing
 history separately. Audio is never persisted on macOS.
 
 Errors use native macOS notifications without opening Settings or taking focus.
@@ -263,7 +299,7 @@ cached only in memory.
 Turn on the native Google Drive switch in Settings, then choose a Google account
 in your browser. Official builds supply the Desktop OAuth client configuration;
 users do not enter client IDs or secrets. Sync includes the dictionary, word
-replacements, AI formatting rules, dictation mode and selected models, excluding API keys, audio and
+replacements, post-processing, dictation mode and selected models, excluding API keys, audio and
 history. Browser sign-in uses PKCE and a temporary loopback callback listener.
 User refresh tokens stay in device-only Keychain storage.
 

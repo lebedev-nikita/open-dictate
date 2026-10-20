@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T08:42:45.128Z",
+  "generatedAt": "2026-10-19T14:10:17Z",
   "title": "Design System: OpenDictate",
   "extensions": {
     "colorMeta": {
@@ -41,6 +41,34 @@
       { "name": "stack", "value": "1040px" },
       { "name": "mobile", "value": "700px" }
     ],
+    "postProcessingOptions": {
+      "source": "apps/macos/Sources/OpenDictateCore/Resources/postprocessing-rules.json",
+      "values": "Ten shared type definitions, suggestions and rules; native menus edit examples instead of exposing the generated prompt.",
+      "persistence": "System-region examples are stored on first enable or menu save, then synchronized unchanged. Legacy arbitrary prompts are replaced by menu settings; punctuation starts on.",
+      "synchronization": "Atomic version-1 postprocessingOptions contains enabled, punctuation, valuesEnabled and formats; generated instructions never enter Drive."
+    },
+    "textProcessingModel": {
+      "label": "Text model / Текстовая модель",
+      "defaults": "TextProcessingModel.defaults on each platform owns the sole built-in GPT-6 Luna option (gpt-6-luna), selected by default.",
+      "behavior": "Saved independently of post-processing options. Transformation/voice editing and post-processing use an immutable session-start snapshot; Accurate retry captures the choice at invocation. Selector stays visible in Live for transformation; post-processing remains Accurate-only. AI history search stays fixed to gpt-6-luna.",
+      "synchronization": "Drive syncs textProcessingModel and validates model ID syntax before atomic import. Retired textModel remains discarded; postprocessingOptions stores structured post-processing choices independently.",
+      "scope": "Existing native worlds, controls and tokens retained; no new shipping raster asset."
+    },
+    "historyTimings": {
+      "semantics": "Accurate history shows separate transcription and post-processing durations around complete monotonic network awaits, including upload/server/response and excluding recording, local replacements and delivery. Accurate retry uses the same boundaries; failed post-processing attempts retain elapsed time.",
+      "labels": "Transcr. / Post-proc. in English; Транскр. / Постобр. in Russian. Locale-aware seconds to one decimal; <0.1 / <0,1 below 100ms. Full localized accessibility names expand abbreviations. Live shows literal Live only. Unknown metadata and skipped post-processing are omitted.",
+      "persistence": "Optional local-only metadata; Android SQLite v1→v2 migration and backward-compatible macOS JSON. Excluded from Drive synchronization and AI search.",
+      "scope": "Existing native visual worlds, tokens, density and actions retained; no new token or shipping raster asset."
+    },
+    "chatGPTPlan": {
+      "scope": "Optional native Operate extension; incumbent worlds, tokens and website previews retained. Sole built-in text model GPT-6 Luna; no custom model ID.",
+      "placement": "Alongside Google Drive under localized Integrations / Интеграции: one Android rounded SettingsGroup at the former synchronization location; a shared macOS generalPage subsection. Outside Dictation and independent of mode.",
+      "prerequisite": "Connection switch requires a saved transcription API key unless already connected; sign-out remains available after key deletion. Conditional missing-key guidance explains the prerequisite and text-only plan use.",
+      "interaction": "Provider name and localized helper in a leading stack with 4dp/pt spacing, vector mark left and native switch right. ChatGPT helper: For working with text / Для работы с текстом. Drive helper: For synchronization / Для синхронизации. On starts system-browser sign-in; off disconnects. Disabled during active dictation or authorization. Busy keeps the switch checked and disabled with Waiting for ChatGPT guidance, progress and Cancel. First-login confirmation, reconnect and error/revocation guidance remain. Normal settings omit plan status, account identity, account menu and usage link. Reconnect requires the API key and disables while active or busy.",
+      "routing": "Connected plan is used for eligible GPT-6 Luna transformation/voice-editing and Accurate post-processing. Audio transcription and explicit AI history search remain on the API path. A failed selected-plan request never automatically falls back to paid API text processing; failed post-processing preserves the original transcript.",
+      "storage": "Credentials stay device-only in Android Keystore-protected storage or non-synchronizing macOS Keychain; never included in Drive synchronization.",
+      "references": "docs/chatgpt-plan.md"
+    },
     "androidSettings": {
       "scope": "Android settings; website tokens remain separate",
       "source": [
@@ -123,6 +151,70 @@
         "Native Appearance, language, word-replacement and dictionary sheets, model menus, and timeout dialog",
         "Status/navigation/IME insets and scrollable content"
       ],
+      "sharedTextModel": {
+        "implementation": "SettingsScreen.kt ModelPicker; model/TextProcessingModel.kt; SettingsStore.kt; SettingsSyncDocument.kt; DictationForegroundService.kt",
+        "presentation": "Existing full-width ModelPicker row after recognition model and before languages, existing padding/dividers and monospace display name, native dropdown and selected check. Localized Text model / Текстовая модель; sole built-in option GPT-6 Luna. Visible in Live and Accurate.",
+        "review": {
+          "disposition": "ship",
+          "findings": "Fresh finish review: no material fixes; all six captures viewed and valid.",
+          "screenshots": [
+            ".impeccable/review/text-model-android-en-phone-closed.png",
+            ".impeccable/review/text-model-android-en-phone-open.png",
+            ".impeccable/review/text-model-android-ru-dark-large-closed.png",
+            ".impeccable/review/text-model-android-ru-dark-large-open.png",
+            ".impeccable/review/text-model-android-tablet-closed.png",
+            ".impeccable/review/text-model-android-tablet-open.png"
+          ],
+          "validation": "Supplied: 168 JVM tests; required Android Debug/Release unit, lint and assembly checks; two English instrumentation tests (UI/preferences), one Russian and one tablet test. One-option menu, both modes, recreation, persistence/sync and invalid remote data covered. Five shared configuration tests passed.",
+          "captureScope": "English light phone 1080 × 2340px density 420; Russian dark phone font scale 1.3; tablet 1600 × 2560px density 240. Closed and open states.",
+          "limits": "Ignored native emulator evidence; no HTML detector, new tokens or shipping raster assets. Physical devices, real Drive, paid OpenAI requests and end-to-end insertion not verified."
+        }
+      },
+      "dictationSettings": {
+        "implementation": "SettingsScreen.kt",
+        "description": "Operate: native neutral Material 3 Dictation group with mode, recognition model, shared Text model / Текстовая модель selector, languages, word replacements and dictionary; one inset divider between adjacent rows. No transcription prompt control or editor. Existing native tokens and geometry retained."
+      },
+      "historyTimings": {
+        "implementation": "TranscriptHistoryScreen.kt HistoryTimings; HistoryTiming.kt; DictationForegroundService.kt; MeasuredRequest.kt; TranscriptHistoryStore.kt",
+        "presentation": "Between date and transcript: SettingsMuted bodySmall FlowRow, 4dp top padding, 12dp horizontal gaps and 2dp vertical gaps; wraps with localized full accessibility names. Existing copy/delete/expand actions retained.",
+        "review": {
+          "verdict": "ship",
+          "findings": "No material Android findings.",
+          "screenshots": [
+            ".impeccable/review/history-timing-android-en-phone-top.png",
+            ".impeccable/review/history-timing-android-en-phone-bottom.png",
+            ".impeccable/review/history-timing-android-ru-dark-large-top.png",
+            ".impeccable/review/history-timing-android-ru-dark-large-bottom.png",
+            ".impeccable/review/history-timing-android-tablet-top.png",
+            ".impeccable/review/history-timing-android-tablet-bottom.png"
+          ],
+          "validation": "Supplied: 167 JVM tests, SQLite v1→v2 migration instrumentation and deterministic request-boundary tests; four English history UI tests and one each on Russian dark phone at 1.3 font scale and tablet passed.",
+          "limits": "Native emulator captures are ignored review evidence. No HTML detector, physical phone, real OpenAI request or end-to-end insertion verification."
+        }
+      },
+      "postProcessing": {
+        "implementation": "PostProcessingSettings.kt; SettingsScreen.kt Accurate-only group; model/PostProcessing.kt; model/ValueFormatting.kt; shared postprocessing-rules.json",
+        "presentation": "Neutral Material 3 group with 16dp horizontal/8dp vertical insets, 56dp toggle/value rows and a header divider padded 8dp vertically. BodyMedium option labels share a leading edge; Reset settings has zero content padding. No prompt editor or plus/Save actions. Full-height non-draggable native sheet without a drag handle; outlined fields, type checkboxes, suggestion menus and wrapping 48dp footer actions.",
+        "interaction": "Off/collapsed initially; punctuation initially on. Ordinary switches save immediately and values off retains examples. Menu edits a saveable draft: System defaults resets it, Cancel discards, Done saves valid examples and enables values. Reset settings restores punctuation only while retaining global enabled. Region defaults use system locale independently of app language and honor Settings.System.TIME_12_24. The sheet owns native keyboard insets without redundant inner IME padding; content owns scrolling with edge stretch disabled. At viewport height >=360dp, title/hint/footer stay pinned around the value list; below360dp the complete form scrolls with titleMedium and no hint. Fields bring their complete bounds into view.",
+        "scope": "Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it while preserving saved configuration, and voice editing remains separate. Cancellation and failures preserve the existing delivery and transcript safeguards. Drive synchronizes the atomic version-1 postprocessingOptions configuration, including enabled state, punctuation, value-formatting state and stored examples. The generated prompt is assembled from shared postprocessing-rules.json rules at request time and never synchronized. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared textProcessingModel key remains independent; retired textModel and postprocessing entries do not restore prompt editing. No new tokens or shipping assets.",
+        "review": {
+          "disposition": "ship",
+          "findings": "Fresh narrow Android UI/source review found no material fixes; all nine required native captures were viewed and valid.",
+          "screenshots": [
+            ".impeccable/review/layout-fix-phone-en-expanded.png",
+            ".impeccable/review/layout-fix-phone-en-formats.png",
+            ".impeccable/review/layout-fix-phone-en-keyboard-fraction.png",
+            ".impeccable/review/layout-fix-phone-ru-large-expanded.png",
+            ".impeccable/review/layout-fix-phone-ru-large-keyboard-fraction.png",
+            ".impeccable/review/layout-fix-tablet-en-expanded.png",
+            ".impeccable/review/layout-fix-tablet-en-keyboard-date.png",
+            ".impeccable/review/layout-fix-tablet-landscape-en-formats-bottom.png",
+            ".impeccable/review/layout-fix-phone-landscape-en-keyboard-fraction.png"
+          ],
+          "validation": "Supplied: 172 JVM tests; Debug/Release lint and assemblies; seven instrumentation tests in five configurations (English phone portrait/landscape, Russian dark phone at 1.3 font scale, tablet portrait/landscape), plus three focused full-panel capture runs. Geometric regressions check label alignment, inertial edge scrolling and field-to-field keyboard stability.",
+          "limits": "Native emulator review evidence only; no HTML detector, hardware frame-rate claim, fresh physical-device smoke, real Drive/API requests, insertion or model-output verification. No new tokens or shipping assets."
+        }
+      },
       "wordReplacements": {
         "implementation": "ReplacementSheet.kt; SettingsScreen.kt Dictation entry",
         "presentation": "Native keyboard-aware modal bottom sheet with lazy scrolling, 24dp horizontal padding and 12dp spacing.",
@@ -240,9 +332,27 @@
       },
       "synchronization": {
         "implementation": "GoogleDriveSyncSettings.kt; SettingsSyncRefresh.kt; GoogleDriveSync.kt",
-        "providerRow": "One rounded provider group: 24dp color Google Drive vector logo, name and trailing native switch in an 80dp minimum full-row target. Enabling requests Google authorization when needed; disabling disconnects. No descriptions or action buttons in the group.",
+        "providerRow": "Google Drive shares the rounded Integrations group with ChatGPT and an inset divider. Its 24dp color vector mark, provider name/bodySmall SettingsMuted helper at 4dp spacing and trailing native switch form an 80dp minimum full-row target. Helper: For synchronization / Для синхронизации. Enabling requests Google authorization when needed; disabling disconnects. No persistent sync status or manual sync button.",
         "refreshIndicator": "Native Material 3 pull-to-refresh feedback belongs to a manual pull. Startup, lifecycle and other automatic sync checks stay silent. An active background request still blocks another pull. A queued manual request retains indicator ownership until completion or failure; later automatic requests do not inherit it.",
         "errors": "Background failures produce no toast or notification. Only failed user-initiated Google sign-in displays transient feedback."
+      },
+      "chatGPTPlan": {
+        "implementation": "ChatGPTSettings.kt; SettingsScreen.kt; MainViewModel.kt; chatgpt/; OpenAiTranscriptionClient.kt; DictationForegroundService.kt; GoogleDriveSyncSettings.kt; ic_chatgpt_24.xml",
+        "presentation": "Neutral Material 3 Integrations group beside Google Drive, outside Dictation, separated by an inset divider. 80dp minimum whole-row Switch target: 24dp official OpenaiLogoRegular vector, leading name/helper Column at 4dp spacing and trailing native switch; 16dp leading, 12dp trailing/vertical insets and 14dp icon gap. Helper is bodySmall SettingsMuted: For working with text / Для работы с текстом. Conditional guidance/actions retain 54dp leading, 16dp trailing/bottom padding and 8dp spacing. First-login AlertDialog remains; plan status, email, account menu and usage link are removed. Existing appearance, font scaling and scrolling preserved. Original vector geometry shared with macOS, with provenance comments and third-party notices.",
+        "contract": "extensions.chatGPTPlan",
+        "review": {
+          "disposition": "ship",
+          "findings": "Fresh native UI/source finish review: ship after the macOS helper-contrast finding was resolved; other inspected sections passed.",
+          "screenshots": [
+            ".impeccable/review/integrations-android-phone-en-connected.png",
+            ".impeccable/review/integrations-android-phone-ru-large-connected.png",
+            ".impeccable/review/integrations-android-tablet-en-connected.png",
+            ".impeccable/review/integrations-android-phone-en-locked.png"
+          ],
+          "captureScope": "Isolated production provider components with synthetic connection state: English phone/tablet, Russian large text and locked prerequisite. Source verifies shared Integrations placement; these are not full Settings pages.",
+          "validation": "Supplied: 171 JVM tests, required Debug/Release lint and assemblies, and three Android instrumentation configurations passed. Swift 200-test suite and universal packaging passed.",
+          "limits": "Ignored native component captures, not shipping assets. No HTML detector or new tokens. This UI change does not claim real sign-in, eligibility, paid inference, OS insertion or physical-device verification."
+        }
       },
       "surfaceBrief": ".impeccable/surfaces/android-settings.md"
     },
@@ -284,6 +394,61 @@
           { "name": "Sidebar Navigation", "implementation": "SettingsView.navigation(_:_:_:)", "description": "SF Symbol plus sentence-case label; tonal selection, selected medium weight and separate native keyboard focus." },
           { "name": "Setup and Preferences Controls", "implementation": "SettingsView", "description": "Native secure/search fields, buttons, segmented mode picker, pop-up pickers, switches and confirmation alerts." },
           {
+            "name": "Dictation Settings",
+            "implementation": "SettingsView.swift; GoogleDriveSettingsView.swift",
+            "description": "Operate: native Dictation page places shared Text model / Текстовая модель beside transcription models and retains speech languages, dictionary hints, separate Accurate-only post-processing and shortcuts. Google Drive and ChatGPT share localized Integrations in generalPage. No transcription prompt editor. Existing system type, semantic surfaces, rail and scrolling retained.",
+            "evidence": {
+              "screenshots": [".impeccable/review/text-model-macos-accurate-en-false.png", ".impeccable/review/text-model-macos-accurate-ru-false.png", ".impeccable/review/text-model-macos-accurate-ru-true.png", ".impeccable/review/text-model-macos-live-en-true.png"],
+              "captureScope": "Full production Settings NSHostingView renders at 1000 × 900pt with an isolated localOnly harness: English/Russian Accurate expanded/off states and Live with shared text model visible and post-processing hidden. Test-runner footer version 16.0 is not installer evidence.",
+              "review": "Earlier UI/source finish review passed the shared text-model selector with disposition ship and no material fixes; all four captures viewed and valid. Verification and limits are recorded in Shared Text Model.",
+              "limits": "OS integration, TCC, insertion, physical devices and real Google sign-in are outside scope.",
+              "currentChatGPTPlanReview": "extensions.nativeSurfaces.macos.review.chatGPTPlan"
+            }
+          },
+          {
+            "name": "Shared Text Model",
+            "implementation": "SettingsView.swift; OpenDictateCore/TextProcessingModel.swift; Storage.swift; AppModel.swift; OpenDictateCore/SettingsSync.swift",
+            "description": "Localized Text model / Текстовая модель row after transcription models and before speech languages. HStack with right-aligned native Picker, labelsHidden and fixedSize; disabled while model.isActive. Sole built-in option GPT-6 Luna. Visible in both modes. Existing native type, semantic colors, theme, rail and scrolling retained.",
+            "review": {
+              "disposition": "ship",
+              "findings": "Fresh finish review: no material fixes; all four full Settings captures viewed and valid.",
+              "screenshots": [
+                ".impeccable/review/text-model-macos-accurate-en-false.png",
+                ".impeccable/review/text-model-macos-accurate-ru-false.png",
+                ".impeccable/review/text-model-macos-accurate-ru-true.png",
+                ".impeccable/review/text-model-macos-live-en-true.png"
+              ],
+              "validation": "Supplied: 194 Swift tests, successful universal packaging and version checks, core request-builder/merge tests and recording-session selection-change coverage proving model snapshot behavior. Five shared configuration tests passed.",
+              "captureScope": "Isolated localOnly production NSHostingView renders at 1000 × 900pt; English/Russian Accurate off/expanded and Live. Runner footer version 16.0 is not installer-version evidence.",
+              "limits": "Ignored native review evidence; no HTML detector, new tokens or shipping raster assets. TCC, hotkeys, insertion, physical devices, real Drive and paid OpenAI requests not verified."
+            }
+          },
+          {
+            "name": "ChatGPT Plan Connection",
+            "implementation": "ChatGPTSettingsView.swift; ChatGPTConnection.swift; ChatGPTSession.swift; ChatGPTAuthorization.swift; SettingsView.swift; AppModel.swift; Network.swift; OpenDictateCore/ChatGPTProtocol.swift; GoogleDriveSettingsView.swift; ChatGPTMark.swift",
+            "description": "Optional connection beside Google Drive under Integrations / Интеграции in generalPage, outside Dictation. Native regular Toggle: 24pt official OpenaiLogoRegular vector, 12pt icon gap, leading name/helper VStack at 4pt spacing and trailing switch. Helpers use system caption type and primary foreground: For working with text / Для работы с текстом and Drive For synchronization / Для синхронизации. ChatGPT retains 12pt outer spacing and 8pt conditional supporting stack indented 36pt. First-login alert, missing-key prerequisite, progress/Cancel, reconnect and error/revocation guidance remain. Normal connected settings omit status, identity, account menu and usage link. Existing native appearance, scrolling and English/Russian wrapping preserved; original shared vector and provenance unchanged.",
+            "contract": "extensions.chatGPTPlan",
+            "review": "extensions.nativeSurfaces.macos.review.chatGPTPlan"
+          },
+          {
+            "name": "Post-processing Settings",
+            "implementation": "PostProcessingSettingsView.swift; OpenDictateCore/PostProcessing.swift; OpenDictateCore/ValueFormatting.swift; shared postprocessing-rules.json",
+            "description": "Accurate-only section with native system type, semantic surfaces and 14pt spacing. Off/collapsed by default; punctuation initially on. Format values has a switch and a separate native-popover action with ten checkboxes, editable examples and suggestion menus. No final-prompt editor or plus/Save prompt controls.",
+            "interaction": "Ordinary switches save immediately; values off retains examples. Popover uses 420pt width, 20pt padding and 370pt scroll viewport. System defaults resets draft; Cancel/Escape discards; Done/Enter saves valid draft and enables values. Reset settings restores punctuation only while preserving global enabled. Stored defaults derive from system region independently of app-language override.",
+            "scope": "Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it while preserving saved configuration, and voice editing remains separate. Cancellation and failures preserve the existing delivery and transcript safeguards. Drive synchronizes the atomic version-1 postprocessingOptions configuration, including enabled state, punctuation, value-formatting state and stored examples. The generated prompt is assembled from shared postprocessing-rules.json rules at request time and never synchronized. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared textProcessingModel key remains independent; retired textModel and postprocessing entries do not restore prompt editing. No new tokens or shipping assets.",
+            "review": {
+              "disposition": "ship",
+              "findings": "Documentation-fix verification resolved the sole stale-documentation finding; prior UI/source inspection passed with all nine required captures viewed and valid. Ship covers this scored fix scope.",
+              "screenshots": [
+                ".impeccable/review/value-formats-macos-ru-top.png",
+                ".impeccable/review/value-formats-macos-en-bottom.png",
+                ".impeccable/review/postprocessing-macos-ru-true.png"
+              ],
+              "validation": "Supplied: 203 Swift tests and successful universal packaging.",
+              "limits": "Isolated native production-component captures, not full OS flow or installer evidence. No HTML detector, fresh TCC/hotkey/insertion smoke, real Drive/API requests or model-output verification."
+            }
+          },
+          {
             "name": "Speech Language Picker",
             "implementation": "SpeechLanguagePicker.swift; SettingsView dictation page; OpenDictateCore/SpeechLanguage.swift; Storage.swift",
             "description": "Scoped Operate refinement: summary button and 340pt SwiftUI/AppKit popover with 64 ISO language choices, native multi-selection checkboxes, localized/native names and stable alphabetical ordering in the interface language.",
@@ -301,7 +466,22 @@
             "states": "Blank-input disabled saving, localized validation, empty example and storage-error guidance preserving saved data.",
             "scope": "Rules apply to the next Live or Accurate dictation; recognition hints remain separate. Google Drive synchronizes the replacement list and its global enabled state when connected."
           },
-          { "name": "History", "implementation": "SettingsView.historyPage", "description": "Native empty-state view or ruled transcript rows with copy/delete actions, local search and explicit AI search." },
+          {
+            "name": "History",
+            "implementation": "SettingsView.historyPage; HistoryEntryView.swift; OpenDictateCore/HistoryTiming.swift; AppModel.swift; Storage.swift",
+            "description": "Native empty state or ruled transcript rows with copy/delete actions, local search and explicit AI search. Timing captions sit between date/actions and transcript in the existing 8pt stack. System caption wraps vertically in semantic primary foreground; date remains secondary. Localized full accessibility names expand compact labels.",
+            "review": {
+              "verdict": "ship",
+              "findings": "Sole material fix resolved: new timing caption changed from secondary to primary foreground; both final recaptures confirmed.",
+              "screenshots": [
+                ".impeccable/review/history-timing-macos-en.png",
+                ".impeccable/review/history-timing-macos-ru.png"
+              ],
+              "captureScope": "Isolated production NSHostingView component rows: English dark at 568pt width, Russian light at 464pt width. Ignored review evidence, not shipping artwork.",
+              "validation": "Supplied: 193 Swift tests, JSON compatibility/persistence and deterministic request-boundary coverage.",
+              "limits": "No HTML detector; component captures do not establish full Settings, TCC, hotkey, insertion or real OpenAI behavior."
+            }
+          },
           {
             "name": "Recording Indicator",
             "implementation": "RecordingIndicator, RecordingStatusView, WaveformGeometry and AppDelegate.updateState()",
@@ -338,6 +518,17 @@
           "output": "Icon rasters and .icns are packaging build output; no generated shipping raster is committed."
         },
         "review": {
+          "chatGPTPlan": {
+            "disposition": "ship",
+            "findings": "Fresh native UI/source finish review: ship at helper-contrast fix scope. Initial macOS helper contrast finding resolved with primary foreground; other inspected sections passed.",
+            "screenshots": [
+              ".impeccable/review/integrations-macos-en-ready.png",
+              ".impeccable/review/integrations-macos-ru-locked.png"
+            ],
+            "captureScope": "Isolated production provider components with synthetic English ready and Russian locked states. Source verifies shared Integrations placement; these are not full Settings pages.",
+            "validation": "Supplied: 200 Swift tests and successful universal packaging, alongside green Android suites and three Android instrumentation configurations.",
+            "limits": "Ignored native component captures, not shipping assets. No HTML detector or new tokens. This UI change does not claim real ChatGPT login, eligibility, paid inference, TCC, hotkeys, insertion or physical-device verification."
+          },
           "driveSourceChoice": {
             "verdict": "ship",
             "scope": "Narrow first-connection source-choice addition",

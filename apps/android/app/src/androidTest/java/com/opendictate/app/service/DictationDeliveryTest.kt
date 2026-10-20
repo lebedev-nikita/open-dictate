@@ -276,6 +276,84 @@ class DictationDeliveryTest {
         }
     }
 
+    @Test fun processingStagesChangeIconsWithoutMovingResizingOrInvertingTheButton() = withAccessibility { settings ->
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            val session = captureTargetWithoutNetwork()
+            val density = context.resources.displayMetrics.density
+            for (position in DictationButtonPosition.entries) {
+                for (diameter in listOf(24, 52, 96)) {
+                    val appearance = DictationButtonAppearance(diameter, position)
+                    instrumentation.runOnMainSync { settings.dictationButtonAppearance = appearance }
+                    var transcriptionIcon: Bitmap? = null
+                    var initialBounds: Rect? = null
+                    for (stage in DictationProcessingStage.entries) {
+                        val description = context.getString(when (stage) {
+                            DictationProcessingStage.TRANSCRIPTION -> if (position == DictationButtonPosition.LEFT)
+                                R.string.overlay_processing_description_left else R.string.overlay_processing_description
+                            DictationProcessingStage.POST_PROCESSING -> if (position == DictationButtonPosition.LEFT)
+                                R.string.overlay_postprocessing_description_left else R.string.overlay_postprocessing_description
+                            DictationProcessingStage.TRANSFORMATION -> if (position == DictationButtonPosition.LEFT)
+                                R.string.overlay_transforming_description_left else R.string.overlay_transforming_description
+                        })
+                        instrumentation.runOnMainSync {
+                            DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING, processingStage = stage,
+                                operation = if (stage == DictationProcessingStage.TRANSFORMATION)
+                                    DictationOperation.TRANSFORMATION else DictationOperation.DICTATION))
+                        }
+                        val bounds = Rect()
+                        await {
+                            overlay(description)?.getBoundsInScreen(bounds)
+                            bounds.width() == appearance.touchDiameterPx(density) && overlay(description) != null
+                        }
+                        // Let anchor resizing and the screenshot compositor settle before comparing pixels.
+                        SystemClock.sleep(if (initialBounds == null) 600 else 120)
+                        overlay(description)!!.getBoundsInScreen(bounds)
+                        if (initialBounds == null) initialBounds = Rect(bounds) else assertEquals(initialBounds, bounds)
+                        val frame = spinnerFrame(bounds)
+                        val visibleDiameter = appearance.diameterPx(density)
+                        assertEquals("Processing must retain its white background", android.graphics.Color.WHITE,
+                            frame.getPixel(frame.width / 2, frame.height / 2 + (visibleDiameter * 0.43f).toInt()))
+                        val iconSize = (visibleDiameter * 0.3f).toInt().coerceAtLeast(1)
+                        val icon = Bitmap.createBitmap(frame, (frame.width - iconSize) / 2,
+                            (frame.height - iconSize) / 2, iconSize, iconSize)
+                        if (stage == DictationProcessingStage.TRANSCRIPTION) transcriptionIcon = icon
+                        else {
+                            assertFalse("Text processing needs a different central icon", transcriptionIcon!!.sameAs(icon))
+                            icon.recycle()
+                        }
+                        if (position == DictationButtonPosition.RIGHT && diameter == 52 &&
+                            InstrumentationRegistry.getArguments().getString("captureOverlay") == "true") {
+                            java.io.File(context.cacheDir, "processing-${stage.name.lowercase()}.png").outputStream().use {
+                                frame.compress(Bitmap.CompressFormat.PNG, 100, it)
+                            }
+                        }
+                        frame.recycle()
+                        activity.onActivity {
+                            assertTrue(it.editor.hasFocus())
+                            assertTrue(it.window.decorView.hasWindowFocus())
+                            assertEquals("before after", it.editor.text.toString())
+                        }
+                    }
+                    transcriptionIcon!!.recycle()
+                }
+            }
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.PROCESSING,
+                    processingStage = DictationProcessingStage.POST_PROCESSING))
+            }
+            val description = context.getString(R.string.overlay_postprocessing_description)
+            await { overlay(description) != null }
+            assertTrue(overlay(description)!!.performAction(R.id.accessibility_action_cancel_dictation))
+            await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+            assertNull(DictationStateBus.state.value.activeProcessingStage)
+            instrumentation.runOnMainSync {
+                DictationStateBus.set(session.copy(phase = DictationPhase.COMPLETED, transcript = "late result "))
+            }
+            instrumentation.waitForIdleSync()
+            awaitEditor(activity, "before after")
+        }
+    }
+
     @Test fun appFilterChangesImmediatelyHideTheOverlayAndKeepTheOtherModeSelection() = withAccessibility { settings ->
         ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
             await { startButton() != null }

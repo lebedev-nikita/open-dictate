@@ -40,14 +40,14 @@ class GoogleDriveSettingsClientTest {
                 }
                 2 -> 200 to """{"schemaVersion":1,"entries":{"dictionary":{"value":"Никита","modifiedAt":20,"deviceId":"mac"}}}"""
                 3 -> { assertEquals("page2", request.url.queryParameter("pageToken")); 200 to """{"files":[{"id":"own-file","name":"opendictate-settings-v1-android.json","size":"150"}]}""" }
-                4 -> 200 to """{"schemaVersion":1,"entries":{"textModel":{"value":"gpt-6-sol","modifiedAt":30,"deviceId":"android"}}}"""
+                4 -> 200 to """{"schemaVersion":1,"entries":{"accurateModel":{"value":"gpt-transcribe","modifiedAt":30,"deviceId":"android"}}}"""
                 else -> {
                     assertEquals("PATCH", request.method)
                     assertEquals("/upload/drive/v3/files/own-file", request.url.encodedPath)
                     val buffer = okio.Buffer(); request.body!!.writeTo(buffer)
                     val document = SettingsSyncDocument.fromJson(buffer.readUtf8())
                     assertEquals("Никита", document.entries["dictionary"]?.value)
-                    assertEquals("gpt-6-sol", document.entries["textModel"]?.value)
+                    assertEquals("gpt-transcribe", document.entries["accurateModel"]?.value)
                     200 to "{}"
                 }
             }

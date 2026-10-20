@@ -29,6 +29,7 @@ import com.opendictate.app.R
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.service.DictationOperation
 import com.opendictate.app.service.DictationPhase
+import com.opendictate.app.service.DictationProcessingStage
 import com.opendictate.app.service.DictationState
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -231,6 +232,8 @@ private class OverlayPrimaryActionView(
     private val idleIcon = icon(R.drawable.ic_mic_chatgpt_24)
     private val stopIcon = icon(R.drawable.ic_stop_rounded_24)
     private val closeIcon = icon(R.drawable.ic_close_rounded_24)
+    private val transcriptionIcon = icon(R.drawable.ic_speech_to_text_rounded_24)
+    private val textProcessingIcon = icon(R.drawable.ic_auto_fix_high_rounded_24)
     private val dictationColor = Color.rgb(8, 8, 8)
     private val transformationColor = Color.rgb(8, 8, 8)
     private val idleBackgroundColor = Color.WHITE
@@ -244,6 +247,8 @@ private class OverlayPrimaryActionView(
     private val bounds = RectF()
     private var phase = DictationPhase.IDLE
     private var operation = DictationOperation.DICTATION
+    private var processingStage = DictationProcessingStage.TRANSCRIPTION
+    private var showProcessingIcon = false
     private var menuAvailable = false
     private var menuExpanded = false
     private var downX = 0f
@@ -279,6 +284,8 @@ private class OverlayPrimaryActionView(
     }
 
     fun render(state: DictationState) {
+        processingStage = state.activeProcessingStage ?: DictationProcessingStage.TRANSCRIPTION
+        showProcessingIcon = state.showsProcessingIcon
         if (state.isActive) {
             phase = state.phase
             operation = state.operation
@@ -302,10 +309,17 @@ private class OverlayPrimaryActionView(
     private fun updateContentDescription() {
         contentDescription = context.getString(
             when {
-                phase.isProcessing &&
-                    operation == DictationOperation.TRANSFORMATION ->
-                    R.string.overlay_transforming_description
-                phase.isProcessing -> R.string.overlay_processing_description
+                phase.isProcessing -> when (processingStage) {
+                    DictationProcessingStage.TRANSCRIPTION ->
+                        if (gestureDirection == -1) R.string.overlay_processing_description_left
+                        else R.string.overlay_processing_description
+                    DictationProcessingStage.POST_PROCESSING ->
+                        if (gestureDirection == -1) R.string.overlay_postprocessing_description_left
+                        else R.string.overlay_postprocessing_description
+                    DictationProcessingStage.TRANSFORMATION ->
+                        if (gestureDirection == -1) R.string.overlay_transforming_description_left
+                        else R.string.overlay_transforming_description
+                }
                 isActionActive() && operation == DictationOperation.TRANSFORMATION ->
                     if (gestureDirection == -1) R.string.overlay_active_transformation_description_left
                     else R.string.overlay_active_transformation_description
@@ -342,7 +356,12 @@ private class OverlayPrimaryActionView(
                 closeIcon,
                 if (cancelArmed) Color.WHITE else Color.rgb(8, 8, 8),
             )
-            phase.isProcessing -> drawSpinner(canvas)
+            phase.isProcessing -> {
+                drawSpinner(canvas)
+                if (showProcessingIcon) drawIcon(canvas, if (processingStage == DictationProcessingStage.TRANSCRIPTION) {
+                    transcriptionIcon
+                } else textProcessingIcon, activeColor())
+            }
             active -> drawIcon(canvas, stopIcon, activeColor())
             menuExpanded -> drawIcon(canvas, closeIcon, dictationColor)
             else -> drawIcon(canvas, idleIcon, dictationColor)
@@ -363,7 +382,7 @@ private class OverlayPrimaryActionView(
     private fun drawSpinner(canvas: Canvas) {
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = visibleDiameterPx * 10f / DictationButtonAppearance.DEFAULT_DIAMETER_DP
+        val radius = visibleDiameterPx * 18f / DictationButtonAppearance.DEFAULT_DIAMETER_DP
         val rotation = SystemClock.uptimeMillis() % SPINNER_PERIOD_MS *
             360f / SPINNER_PERIOD_MS
         spinner.color = activeColor()

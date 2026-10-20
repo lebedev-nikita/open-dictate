@@ -7,6 +7,7 @@ import OpenDictateCore
 @MainActor
 final class AppModel: ObservableObject {
     typealias AudioTranscriber = @Sendable (Data, String, TranscriptionContext, Int) async throws -> String
+    typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings, String, [String]) async throws -> PostProcessingResult
     enum Phase {
         case idle, preparing, recording, processing
         var showsFinishControl: Bool { self == .preparing || self == .recording }
@@ -28,13 +29,16 @@ final class AppModel: ObservableObject {
     let preferences: Preferences
     let history: HistoryStore
     let replacements: ReplacementStore
+    let chatGPT: ChatGPTConnection
     let driveSync: GoogleDriveSync
     private let localOnly: Bool
     private let captureTarget: @MainActor ([String], Bool) throws -> TextTarget
     private let makeRecorder: () -> any AudioRecording
     private let accessibilityTrust: () -> Bool
     private let transcribeAudio: AudioTranscriber?
+    private let processTranscript: TextPostProcessor?
     private let notifyError: (String) -> Void
+    private let requestClock: () -> Duration
     let hotKeys = HotKeys()
     private let client = OpenAIClient()
     private var current: Session?
@@ -58,13 +62,13 @@ final class AppModel: ObservableObject {
         let transform: Bool
         let key: String
         let context: TranscriptionContext
-        let textModel: String
-        let accuratePunctuationEnabled: Bool
-        let formattingRules: String
+        let chatGPTAccount: String?
+        let textProcessingModel: String
+        let textProcessingServiceTier: TextProcessingServiceTier
+        let postProcessing: PostProcessingSettings
         let timeout: Int
         let replacements: WordReplacementEngine
         let started = Date()
-        var usesPostProcessing: Bool { !transform && mode == .accurate && accuratePunctuationEnabled }
         var acceptsPartials = true
         var cancelling = false
         var detached = false
@@ -74,16 +78,18 @@ final class AppModel: ObservableObject {
         var pump: Task<Void, Never>?
         var setup: Task<Void, Never>?
         var completion: Task<Void, Never>?
-        init(target: TextTarget?, transform: Bool, key: String, preferences: Preferences, replacements: WordReplacementEngine, recorder: (any AudioRecording)?, replayAudio: Data? = nil) {
+        init(target: TextTarget?, transform: Bool, key: String, preferences: Preferences, replacements: WordReplacementEngine, recorder: (any AudioRecording)?, replayAudio: Data? = nil, chatGPTAccount: String? = nil) {
+            self.chatGPTAccount = chatGPTAccount
             self.recorder = recorder
             self.replayAudio = replayAudio
             self.replacements = replacements
             self.exclusions = preferences.excludedApps
             self.target = target; self.transform = transform; self.key = key
             mode = transform || replayAudio != nil ? .accurate : preferences.mode
-            context = preferences.context; textModel = preferences.textModel
-            accuratePunctuationEnabled = preferences.accuratePunctuationEnabled
-            formattingRules = preferences.formattingRules
+            context = preferences.context
+            textProcessingModel = preferences.textProcessingModel
+            textProcessingServiceTier = preferences.textProcessingServiceTier
+            postProcessing = preferences.postProcessing.forMode(mode)
             timeout = preferences.timeout
         }
     }
@@ -94,14 +100,20 @@ final class AppModel: ObservableObject {
          makeRecorder: @escaping () -> any AudioRecording = { AudioRecorder() },
          accessibilityTrust: @escaping () -> Bool = { AXIsProcessTrusted() },
          transcribeAudio: AudioTranscriber? = nil,
-         notifyError: @escaping (String) -> Void = { _ in }) {
+         processTranscript: TextPostProcessor? = nil,
+         notifyError: @escaping (String) -> Void = { _ in },
+         requestClock: (() -> Duration)? = nil) {
+        let clockOrigin = ContinuousClock.now
+        self.requestClock = requestClock ?? { clockOrigin.duration(to: .now) }
         self.captureTarget = captureTarget
         self.makeRecorder = makeRecorder
         self.accessibilityTrust = accessibilityTrust
         self.transcribeAudio = transcribeAudio
+        self.processTranscript = processTranscript
         self.notifyError = notifyError
         self.localOnly = localOnly
         let defaults = defaults ?? (localOnly ? UserDefaults(suiteName: "com.opendictate.mac.local-tests")! : .standard)
+        chatGPT = ChatGPTConnection(defaults: defaults, localOnly: localOnly)
         replacements = ReplacementStore(defaults: defaults)
         preferences = Preferences(defaults: defaults, replacements: replacements)
         history = HistoryStore(inMemory: localOnly)
@@ -133,7 +145,6 @@ final class AppModel: ObservableObject {
     }
 
     var isActive: Bool { phase != .idle }
-    var usesPostProcessing: Bool { current?.usesPostProcessing ?? false }
     var canRetranscribe: Bool { !shuttingDown && !isActive && pasteTask == nil && lastDictationAudio != nil }
     var stateLabel: String {
         switch phase {
@@ -181,7 +192,7 @@ final class AppModel: ObservableObject {
     func deleteKey() {
         guard !localOnly else { return }
         guard !isActive else { return }
-        do { try APIKeyStore.delete(); hasKey = false; message = "" }
+        do { try APIKeyStore.delete(); chatGPT.cancel(); hasKey = false; message = "" }
         catch { present(error) }
     }
 
@@ -217,7 +228,7 @@ final class AppModel: ObservableObject {
             guard let key = try APIKeyStore.load(), !key.isEmpty else { throw DictationError.missingKey }
             guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { throw DictationError.microphone }
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder())
+            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -233,7 +244,7 @@ final class AppModel: ObservableObject {
         do {
             preferences.mode = mode
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder())
+            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; audioLevels.reset(); message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -256,7 +267,7 @@ final class AppModel: ObservableObject {
             // A missing/secure/excluded field still permits recognition for explicit copying.
             let target = try? captureTarget(preferences.excludedApps, false)
             let session = Session(target: target, transform: false, key: key, preferences: preferences,
-                                  replacements: replacements.engine(), recorder: nil, replayAudio: audio)
+                                  replacements: replacements.engine(), recorder: nil, replayAudio: audio, chatGPTAccount: chatGPT.accountID)
             session.deliveryTarget = target
             current = session; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true)
@@ -340,6 +351,7 @@ final class AppModel: ObservableObject {
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
             guard bytes >= 4_800 else { throw DictationError.tooShort }
+            let transcriptionStarted = requestClock()
             let transcript: String
             if let transcribeAudio {
                 transcript = try await transcribeAudio(pcm, session.key, session.context, session.timeout)
@@ -352,19 +364,24 @@ final class AppModel: ObservableObject {
             }
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
-            let corrected: String
-            if session.usesPostProcessing && !localOnly {
-                corrected = try await client.correctPunctuation(source: transcript, key: session.key,
-                    enabled: session.accuratePunctuationEnabled, mode: session.mode, formattingRules: session.formattingRules)
+            let transcriptionMillis = session.mode == .accurate && (!localOnly || transcribeAudio != nil)
+                ? requestMilliseconds(since: transcriptionStarted) : nil
+            var postProcessingMillis: Int64?
+            let processed: PostProcessingResult
+            if session.mode == .accurate && !session.transform && (!localOnly || processTranscript != nil) {
+                let started = requestClock()
+                if let processTranscript { processed = try await processTranscript(transcript, session.key, session.postProcessing, session.textProcessingModel, session.context.languages) }
+                else { processed = try await client.postProcess(source: transcript, key: session.key, settings: session.postProcessing, languages: session.context.languages, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount, serviceTier: session.textProcessingServiceTier) }
+                if session.postProcessing.shouldProcess { postProcessingMillis = requestMilliseconds(since: started) }
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
-            } else { corrected = transcript }
-            var result = TranscriptFormatter.format(corrected)
+            } else { processed = PostProcessingResult(text: transcript) }
+            var result = TranscriptFormatter.format(processed.text)
             if session.transform && !localOnly {
                 guard !result.isEmpty else { throw DictationError.tooShort }
                 guard let target = session.target else { throw DictationError.noField }
                 let (transformed, responseMessage) = try await client.transform(source: target.snapshot.selectedText,
-                    instruction: result, key: session.key, model: session.textModel)
+                    instruction: result, key: session.key, model: session.textProcessingModel, chatGPTAccount: session.chatGPTAccount, serviceTier: session.textProcessingServiceTier)
                 try Task.checkCancellation()
                 guard current?.id == session.id else { return }
                 if let responseMessage, !responseMessage.isEmpty {
@@ -384,11 +401,22 @@ final class AppModel: ObservableObject {
             try Task.checkCancellation()
             guard current?.id == session.id else { return }
             lastTranscript = result
-            if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue) }
+            if preferences.saveHistory { history.add(result, mode: session.transform ? "edit" : session.mode.rawValue,
+                transcriptionMillis: transcriptionMillis, postProcessingMillis: postProcessingMillis) }
             message = delivered ? preferences.t("Text inserted.", "Текст вставлен.") :
                 preferences.t("Your text is ready to copy from the menu.", "Текст готов. Скопируйте его из меню.")
+            if processed.failed {
+                if session.chatGPTAccount != nil { chatGPT.markFailed() }
+                message += " " + preferences.t("Post-processing failed; the original transcript was kept.",
+                    "Постобработка не удалась; сохранена исходная расшифровка.")
+            }
             finish(session)
         } catch { if current?.id == session.id { fail(error, session: session) } }
+    }
+
+    private func requestMilliseconds(since start: Duration) -> Int64 {
+        let elapsed = (requestClock() - start).components
+        return max(0, elapsed.seconds * 1_000 + elapsed.attoseconds / 1_000_000_000_000_000)
     }
 
     private func receive(_ text: String, id: UUID) {
@@ -527,13 +555,13 @@ final class AppModel: ObservableObject {
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         do {
             guard let key = try APIKeyStore.load(), !key.isEmpty else { throw DictationError.missingKey }
-            let entries = history.entries, model = preferences.textModel
+            let entries = history.entries
             let id = UUID(); searchID = id
             isSearching = true
             searchTask = Task {
                 defer { if searchID == id { isSearching = false } }
                 do {
-                    let matches = try await client.search(query: query, entries: entries, key: key, model: model)
+                    let matches = try await client.search(query: query, entries: entries, key: key)
                     try Task.checkCancellation()
                     if searchID == id { searchMatches = matches }
                 } catch { if !Task.isCancelled && searchID == id { present(error) } }
@@ -556,7 +584,8 @@ final class AppModel: ObservableObject {
     func present(_ error: Error) {
         if case DictationError.noField = error { return }
         guard !(error is CancellationError) else { return }
-        message = (error as? DictationError)?.message(russian: preferences.isRussian) ?? error.localizedDescription
+        if error is ChatGPTError { chatGPT.markFailed() }
+        message = error is ChatGPTError ? preferences.t("ChatGPT unavailable. Check plan usage. No API fallback was used.", "ChatGPT недоступен. Проверьте лимиты подписки. Платный API не использован.") : (error as? DictationError)?.message(russian: preferences.isRussian) ?? error.localizedDescription
         if case DictationError.tooShort = error {
             onStateChange?()
             return

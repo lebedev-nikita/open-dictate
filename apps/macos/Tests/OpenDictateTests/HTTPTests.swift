@@ -46,7 +46,7 @@ final class HTTPTests: XCTestCase {
         }
     }
 
-    func testPunctuationUsesDirectLunaRequestAndRejectsRewriteOrFailedResponse() async throws {
+    func testPostProcessingUsesDirectRequestAndRejectsDefaultRewriteOrFailedResponse() async throws {
         let client = client()
         for (status, body, expected) in [
             (200, #"{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"{\"transformed_text\":\"Привет, мир!\",\"message\":null}"}]}]}"#, "Привет, мир!"),
@@ -56,32 +56,17 @@ final class HTTPTests: XCTestCase {
         ] {
             MockHTTP.handler = { request in
                 XCTAssertEqual(request.url, OpenAIRequest.responsesURL)
-                XCTAssertEqual(request.timeoutInterval, 10)
-                let bodyData = request.httpBody ?? request.httpBodyStream.map { stream -> Data in
-                    stream.open(); defer { stream.close() }
-                    var data = Data(), buffer = [UInt8](repeating: 0, count: 4096)
-                    while stream.hasBytesAvailable {
-                        let count = stream.read(&buffer, maxLength: buffer.count)
-                        if count <= 0 { break }
-                        data.append(contentsOf: buffer.prefix(count))
-                    }
-                    return data
-                }
-                let payload = try JSONSerialization.jsonObject(with: XCTUnwrap(bodyData)) as! [String: Any]
-                let input = try JSONSerialization.jsonObject(with: Data((payload["input"] as! String).utf8)) as! [String: String]
-                XCTAssertEqual(input["instruction"], "Use exclamation marks.")
-                XCTAssertEqual(input["source_text"], "привет мир")
+                XCTAssertEqual(request.timeoutInterval, 30)
                 return (status, Data(body.utf8))
             }
-            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: true, mode: .accurate,
-                formattingRules: "Use exclamation marks.")
-            XCTAssertEqual(result, expected)
+            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: .init(enabled: true), languages: ["ru"])
+            XCTAssertEqual(result.text, expected)
+            XCTAssertEqual(result.failed, expected == "привет мир")
         }
-        MockHTTP.handler = { _ in XCTFail("Disabled/Live must not request punctuation"); return (500, Data()) }
-        for (enabled, mode) in [(false, DictationMode.accurate), (true, .live)] {
-            let result = try await client.correctPunctuation(source: "привет мир", key: "synthetic-test-key", enabled: enabled, mode: mode,
-                formattingRules: "Use exclamation marks.")
-            XCTAssertEqual(result, "привет мир")
+        MockHTTP.handler = { _ in XCTFail("Disabled/empty rules must not make a request"); return (500, Data()) }
+        for settings in [PostProcessingSettings(), PostProcessingSettings(enabled: true, punctuation: false)] {
+            let result = try await client.postProcess(source: "привет мир", key: "synthetic-test-key", settings: settings, languages: ["ru"])
+            XCTAssertEqual(result, .init(text: "привет мир"))
         }
     }
 
@@ -92,7 +77,30 @@ final class HTTPTests: XCTestCase {
                 ["type": "message", "content": [["type": "output_text", "text": "{\"transformed_text\":\"Short text\",\"message\":null}"]]]
             ]]))
         }
-        let (text, message) = try await client().transform(source: "Long synthetic text", instruction: "Shorten", key: "synthetic-test-key", model: "gpt-6-luna")
+        let (text, message) = try await client().transform(source: "Long synthetic text", instruction: "Shorten", key: "synthetic-test-key")
         XCTAssertEqual(text, "Short text"); XCTAssertNil(message)
+    }
+
+    func testPostProcessingSendsOnlyCapturedInputLanguageExamples() async throws {
+        MockHTTP.handler = { request in
+            var data = request.httpBody ?? Data()
+            if let stream = request.httpBodyStream {
+                stream.open(); defer { stream.close() }
+                var buffer = [UInt8](repeating: 0, count: 4096)
+                while stream.hasBytesAvailable {
+                    let count = stream.read(&buffer, maxLength: buffer.count)
+                    guard count > 0 else { break }
+                    data.append(contentsOf: buffer.prefix(count))
+                }
+            }
+            let body = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            let input = try JSONSerialization.jsonObject(with: Data((body["input"] as! String).utf8)) as! [String: String]
+            XCTAssertTrue(input["instruction"]!.contains("[ru] Russian."))
+            XCTAssertFalse(input["instruction"]!.contains("[en] English."))
+            return (200, Data(#"{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"{\"transformed_text\":\"123\"}"}]}]}"#.utf8))
+        }
+        let settings = PostProcessingSettings(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
+        let result = try await client().postProcess(source: "сто двадцать три", key: "synthetic-test-key", settings: settings, languages: ["ru"])
+        XCTAssertEqual(result, .init(text: "123"))
     }
 }

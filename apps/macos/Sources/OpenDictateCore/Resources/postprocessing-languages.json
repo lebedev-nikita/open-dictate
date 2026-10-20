@@ -1,0 +1,1909 @@
+{
+  "heading": "Selected input-language references. Expand each scale before adding the remaining quantity; omitted groups stay zero. These are exact numeric meanings, not output styles; apply the requested notation.",
+  "languages": [
+    {
+      "examples": [
+        {
+          "spoken": "vyf miljoen vierhonderd twee-en-dertig",
+          "value": "5000432"
+        },
+        {
+          "spoken": "vyfduisend vierhonderd twee-en-dertig",
+          "value": "5432"
+        },
+        {
+          "spoken": "twee miljoen sewentien",
+          "value": "2000017"
+        }
+      ],
+      "language": "af",
+      "name": "Afrikaans",
+      "scales": [
+        {
+          "spoken": "duisend",
+          "value": "1000"
+        },
+        {
+          "spoken": "een miljoen",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "خمسة ملايين وأربعمائة واثنان وثلاثون",
+          "value": "5000432"
+        },
+        {
+          "spoken": "خمسة آلاف وأربعمائة واثنان وثلاثون",
+          "value": "5432"
+        },
+        {
+          "spoken": "مليونان وسبعة عشر",
+          "value": "2000017"
+        }
+      ],
+      "language": "ar",
+      "name": "Arabic",
+      "scales": [
+        {
+          "spoken": "ألف",
+          "value": "1000"
+        },
+        {
+          "spoken": "مليون",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "beş milyon dörd yüz otuz iki",
+          "value": "5000432"
+        },
+        {
+          "spoken": "beş min dörd yüz otuz iki",
+          "value": "5432"
+        },
+        {
+          "spoken": "iki milyon on yeddi",
+          "value": "2000017"
+        }
+      ],
+      "language": "az",
+      "name": "Azerbaijani",
+      "scales": [
+        {
+          "spoken": "bir min",
+          "value": "1000"
+        },
+        {
+          "spoken": "bir milyon",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "пяць мільёнаў чатырыста трыццаць два",
+          "value": "5000432"
+        },
+        {
+          "spoken": "пяць тысяч чатырыста трыццаць два",
+          "value": "5432"
+        },
+        {
+          "spoken": "два мільёны сямнаццаць",
+          "value": "2000017"
+        }
+      ],
+      "language": "be",
+      "name": "Belarusian",
+      "scales": [
+        {
+          "spoken": "адна тысяча",
+          "value": "1000"
+        },
+        {
+          "spoken": "адзiн мільён",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "пет милиона четиристотин тридесет и два",
+          "value": "5000432"
+        },
+        {
+          "spoken": "пет хиляди четиристотин тридесет и два",
+          "value": "5432"
+        },
+        {
+          "spoken": "два милиона и седемнадесет",
+          "value": "2000017"
+        }
+      ],
+      "language": "bg",
+      "name": "Bulgarian",
+      "scales": [
+        {
+          "spoken": "хиляда",
+          "value": "1000"
+        },
+        {
+          "spoken": "един милион",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "পঞ্চাশ লাখ চারশো বত্রিশ",
+          "value": "5000432"
+        },
+        {
+          "spoken": "পাঁচ হাজার চারশো বত্রিশ",
+          "value": "5432"
+        },
+        {
+          "spoken": "কুড়ি লাখ সতেরো",
+          "value": "2000017"
+        }
+      ],
+      "language": "bn",
+      "name": "Bangla",
+      "scales": [
+        {
+          "spoken": "এক হাজার",
+          "value": "1000"
+        },
+        {
+          "spoken": "দশ লাখ",
+          "value": "1000000"
+        },
+        {
+          "spoken": "এক লাখ",
+          "value": "100000"
+        },
+        {
+          "spoken": "এক কোটি",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pet miliona četiristo trideset i dva",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pet hiljada četiristo trideset i dva",
+          "value": "5432"
+        },
+        {
+          "spoken": "dva miliona sedamnaest",
+          "value": "2000017"
+        }
+      ],
+      "language": "bs",
+      "name": "Bosnian",
+      "scales": [
+        {
+          "spoken": "jedinica hiljada",
+          "value": "1000"
+        },
+        {
+          "spoken": "jedan milion",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinc milions quatre-cents trenta-dos",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinc mil quatre-cents trenta-dos",
+          "value": "5432"
+        },
+        {
+          "spoken": "dos milions disset",
+          "value": "2000017"
+        }
+      ],
+      "language": "ca",
+      "name": "Catalan",
+      "scales": [
+        {
+          "spoken": "mil",
+          "value": "1000"
+        },
+        {
+          "spoken": "un milió",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pět miliónů čtyři sta třicet dva",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pět tisíc čtyři sta třicet dva",
+          "value": "5432"
+        },
+        {
+          "spoken": "dva milióny sedmnáct",
+          "value": "2000017"
+        }
+      ],
+      "language": "cs",
+      "name": "Czech",
+      "scales": [
+        {
+          "spoken": "tisíc",
+          "value": "1000"
+        },
+        {
+          "spoken": "jeden milión",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pum miliwn pedwar cant tri deg dau",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pum mil pedwar cant tri deg dau",
+          "value": "5432"
+        },
+        {
+          "spoken": "dau miliwn un deg saith",
+          "value": "2000017"
+        }
+      ],
+      "language": "cy",
+      "name": "Welsh",
+      "scales": [
+        {
+          "spoken": "un mil",
+          "value": "1000"
+        },
+        {
+          "spoken": "un miliwn",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "fem millioner firehundrede og toogtredive",
+          "value": "5000432"
+        },
+        {
+          "spoken": "fem tusind firehundrede og toogtredive",
+          "value": "5432"
+        },
+        {
+          "spoken": "to millioner sytten",
+          "value": "2000017"
+        }
+      ],
+      "language": "da",
+      "name": "Danish",
+      "scales": [
+        {
+          "spoken": "tusind",
+          "value": "1000"
+        },
+        {
+          "spoken": "en million",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "fünf Millionen vierhundertzweiunddreißig",
+          "value": "5000432"
+        },
+        {
+          "spoken": "fünftausendvierhundertzweiunddreißig",
+          "value": "5432"
+        },
+        {
+          "spoken": "zwei Millionen siebzehn",
+          "value": "2000017"
+        }
+      ],
+      "language": "de",
+      "name": "German",
+      "scales": [
+        {
+          "spoken": "eintausend",
+          "value": "1000"
+        },
+        {
+          "spoken": "eine Million",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "πέντε εκατομμύρια τετρακόσια τριάντα δύο",
+          "value": "5000432"
+        },
+        {
+          "spoken": "πέντε χιλιάδες τετρακόσια τριάντα δύο",
+          "value": "5432"
+        },
+        {
+          "spoken": "δύο εκατομμύρια δεκαεπτά",
+          "value": "2000017"
+        }
+      ],
+      "language": "el",
+      "name": "Greek",
+      "scales": [
+        {
+          "spoken": "χίλια",
+          "value": "1000"
+        },
+        {
+          "spoken": "ένα εκατομμύριο",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "five million four hundred thirty-two",
+          "value": "5000432"
+        },
+        {
+          "spoken": "five thousand four hundred thirty-two",
+          "value": "5432"
+        },
+        {
+          "spoken": "two million seventeen",
+          "value": "2000017"
+        }
+      ],
+      "language": "en",
+      "name": "English",
+      "scales": [
+        {
+          "spoken": "one thousand",
+          "value": "1000"
+        },
+        {
+          "spoken": "one million",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinco millones cuatrocientos treinta y dos",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinco mil cuatrocientos treinta y dos",
+          "value": "5432"
+        },
+        {
+          "spoken": "dos millones diecisiete",
+          "value": "2000017"
+        }
+      ],
+      "language": "es",
+      "name": "Spanish",
+      "scales": [
+        {
+          "spoken": "mil",
+          "value": "1000"
+        },
+        {
+          "spoken": "un millón",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "viis miljonit nelisada kolmkümmend kaks",
+          "value": "5000432"
+        },
+        {
+          "spoken": "viis tuhat nelisada kolmkümmend kaks",
+          "value": "5432"
+        },
+        {
+          "spoken": "kaks miljonit seitseteist",
+          "value": "2000017"
+        }
+      ],
+      "language": "et",
+      "name": "Estonian",
+      "scales": [
+        {
+          "spoken": "üks tuhat",
+          "value": "1000"
+        },
+        {
+          "spoken": "üks miljon",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "bost milioi laurehun eta hogeita hamabi",
+          "value": "5000432"
+        },
+        {
+          "spoken": "bost mila laurehun eta hogeita hamabi",
+          "value": "5432"
+        },
+        {
+          "spoken": "bi milioi eta hamazazpi",
+          "value": "2000017"
+        }
+      ],
+      "language": "eu",
+      "name": "Basque",
+      "scales": [
+        {
+          "spoken": "mila",
+          "value": "1000"
+        },
+        {
+          "spoken": "milioi bat",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "پنج میلیون و چهارصد و سی و دو",
+          "value": "5000432"
+        },
+        {
+          "spoken": "پنج هزار و چهارصد و سی و دو",
+          "value": "5432"
+        },
+        {
+          "spoken": "دو میلیون و هفده",
+          "value": "2000017"
+        }
+      ],
+      "language": "fa",
+      "name": "Persian",
+      "scales": [
+        {
+          "spoken": "یک هزار",
+          "value": "1000"
+        },
+        {
+          "spoken": "یک میلیون",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "viisi miljoonaa neljäsataakolmekymmentäkaksi",
+          "value": "5000432"
+        },
+        {
+          "spoken": "viisituhattaneljäsataakolmekymmentäkaksi",
+          "value": "5432"
+        },
+        {
+          "spoken": "kaksi miljoonaa seitsemäntoista",
+          "value": "2000017"
+        }
+      ],
+      "language": "fi",
+      "name": "Finnish",
+      "scales": [
+        {
+          "spoken": "tuhat",
+          "value": "1000"
+        },
+        {
+          "spoken": "yksi miljoona",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinq millions quatre cent trente-deux",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinq mille quatre cent trente-deux",
+          "value": "5432"
+        },
+        {
+          "spoken": "deux millions dix-sept",
+          "value": "2000017"
+        }
+      ],
+      "language": "fr",
+      "name": "French",
+      "scales": [
+        {
+          "spoken": "mille",
+          "value": "1000"
+        },
+        {
+          "spoken": "un million",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinco millóns catrocentos trinta e dous",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinco mil catrocentos trinta e dous",
+          "value": "5432"
+        },
+        {
+          "spoken": "dous millóns dezasete",
+          "value": "2000017"
+        }
+      ],
+      "language": "gl",
+      "name": "Galician",
+      "scales": [
+        {
+          "spoken": "mil",
+          "value": "1000"
+        },
+        {
+          "spoken": "un millón",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "પચાસ લાખ ચાર સો બત્રીસ",
+          "value": "5000432"
+        },
+        {
+          "spoken": "પાંચ હજાર ચાર સો બત્રીસ",
+          "value": "5432"
+        },
+        {
+          "spoken": "વીસ લાખ સત્તર",
+          "value": "2000017"
+        }
+      ],
+      "language": "gu",
+      "name": "Gujarati",
+      "scales": [
+        {
+          "spoken": "એક હજાર",
+          "value": "1000"
+        },
+        {
+          "spoken": "દસ લાખ",
+          "value": "1000000"
+        },
+        {
+          "spoken": "એક લાખ",
+          "value": "100000"
+        },
+        {
+          "spoken": "એક કરોડ",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "חמישה מיליון ארבע מאות שלושים ושתיים",
+          "value": "5000432"
+        },
+        {
+          "spoken": "חמשת אלפים ארבע מאות שלושים ושתיים",
+          "value": "5432"
+        },
+        {
+          "spoken": "שני מיליון ושבע עשרה",
+          "value": "2000017"
+        }
+      ],
+      "language": "he",
+      "name": "Hebrew",
+      "scales": [
+        {
+          "spoken": "אלף",
+          "value": "1000"
+        },
+        {
+          "spoken": "מיליון",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "पचास लाख चार सौ बत्तीस",
+          "value": "5000432"
+        },
+        {
+          "spoken": "पाँच हज़ार चार सौ बत्तीस",
+          "value": "5432"
+        },
+        {
+          "spoken": "बीस लाख सत्रह",
+          "value": "2000017"
+        }
+      ],
+      "language": "hi",
+      "name": "Hindi",
+      "scales": [
+        {
+          "spoken": "एक हज़ार",
+          "value": "1000"
+        },
+        {
+          "spoken": "दस लाख",
+          "value": "1000000"
+        },
+        {
+          "spoken": "एक लाख",
+          "value": "100000"
+        },
+        {
+          "spoken": "एक करोड़",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pet milijuna četiristo trideset i dva",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pet tisuća četiristo trideset i dva",
+          "value": "5432"
+        },
+        {
+          "spoken": "dva milijuna sedamnaest",
+          "value": "2000017"
+        }
+      ],
+      "language": "hr",
+      "name": "Croatian",
+      "scales": [
+        {
+          "spoken": "tisuća",
+          "value": "1000"
+        },
+        {
+          "spoken": "milijun",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "ötmilliónégyszázharminckettő",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ötezernégyszázharminckettő",
+          "value": "5432"
+        },
+        {
+          "spoken": "kétmilliótizenhét",
+          "value": "2000017"
+        }
+      ],
+      "language": "hu",
+      "name": "Hungarian",
+      "scales": [
+        {
+          "spoken": "ezer",
+          "value": "1000"
+        },
+        {
+          "spoken": "egymillió",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "հինգ միլիոն չորսհարյուր երեսուներկու",
+          "value": "5000432"
+        },
+        {
+          "spoken": "հինգ հազար չորսհարյուր երեսուներկու",
+          "value": "5432"
+        },
+        {
+          "spoken": "երկու միլիոն տասնյոթ",
+          "value": "2000017"
+        }
+      ],
+      "language": "hy",
+      "name": "Armenian",
+      "scales": [
+        {
+          "spoken": "մեկ հազար",
+          "value": "1000"
+        },
+        {
+          "spoken": "մեկ միլիօն",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "lima juta empat ratus tiga puluh dua",
+          "value": "5000432"
+        },
+        {
+          "spoken": "lima ribu empat ratus tiga puluh dua",
+          "value": "5432"
+        },
+        {
+          "spoken": "dua juta tujuh belas",
+          "value": "2000017"
+        }
+      ],
+      "language": "id",
+      "name": "Indonesian",
+      "scales": [
+        {
+          "spoken": "seribu",
+          "value": "1000"
+        },
+        {
+          "spoken": "satu juta",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "fimm milljónir fjögur hundruð þrjátíu og tveir",
+          "value": "5000432"
+        },
+        {
+          "spoken": "fimm þúsund fjögur hundruð þrjátíu og tveir",
+          "value": "5432"
+        },
+        {
+          "spoken": "tvær milljónir og sautján",
+          "value": "2000017"
+        }
+      ],
+      "language": "is",
+      "name": "Icelandic",
+      "scales": [
+        {
+          "spoken": "eitt þúsund",
+          "value": "1000"
+        },
+        {
+          "spoken": "ein millión",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinque milioni quattrocentotrentadue",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinquemilaquattrocentotrentadue",
+          "value": "5432"
+        },
+        {
+          "spoken": "due milioni diciassette",
+          "value": "2000017"
+        }
+      ],
+      "language": "it",
+      "name": "Italian",
+      "scales": [
+        {
+          "spoken": "mille",
+          "value": "1000"
+        },
+        {
+          "spoken": "un milione",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "五百万四百三十二",
+          "value": "5000432"
+        },
+        {
+          "spoken": "五千四百三十二",
+          "value": "5432"
+        },
+        {
+          "spoken": "二百万十七",
+          "value": "2000017"
+        }
+      ],
+      "language": "ja",
+      "name": "Japanese",
+      "scales": [
+        {
+          "spoken": "千",
+          "value": "1000"
+        },
+        {
+          "spoken": "百万",
+          "value": "1000000"
+        },
+        {
+          "spoken": "一万",
+          "value": "10000"
+        },
+        {
+          "spoken": "一億",
+          "value": "100000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "ხუთი მილიონ ოთხასოცდათორმეტი",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ხუთი ათას ოთხასოცდათორმეტი",
+          "value": "5432"
+        },
+        {
+          "spoken": "ორი მილიონ ჩვიდმეტი",
+          "value": "2000017"
+        }
+      ],
+      "language": "ka",
+      "name": "Georgian",
+      "scales": [
+        {
+          "spoken": "ათასი",
+          "value": "1000"
+        },
+        {
+          "spoken": "ერთი მილიონი",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "бес миллион төрт жүз отыз екі",
+          "value": "5000432"
+        },
+        {
+          "spoken": "бес мың төрт жүз отыз екі",
+          "value": "5432"
+        },
+        {
+          "spoken": "екі миллион он жеті",
+          "value": "2000017"
+        }
+      ],
+      "language": "kk",
+      "name": "Kazakh",
+      "scales": [
+        {
+          "spoken": "мың",
+          "value": "1000"
+        },
+        {
+          "spoken": "миллион",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "ಐವತ್ತು ಲಕ್ಷದ ನಾನೂರ ಮೂವತ್ತೆರಡು",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ಐದು ಸಾವಿರದ ನಾನೂರ ಮೂವತ್ತೆರಡು",
+          "value": "5432"
+        },
+        {
+          "spoken": "ಇಪ್ಪತ್ತು ಲಕ್ಷದ ಹದಿನೇಳು",
+          "value": "2000017"
+        }
+      ],
+      "language": "kn",
+      "name": "Kannada",
+      "scales": [
+        {
+          "spoken": "ಸಾವಿರ",
+          "value": "1000"
+        },
+        {
+          "spoken": "ಹತ್ತು ಲಕ್ಷ",
+          "value": "1000000"
+        },
+        {
+          "spoken": "ಒಂದು ಲಕ್ಷ",
+          "value": "100000"
+        },
+        {
+          "spoken": "ಒಂದು ಕೋಟಿ",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "오백만 사백삼십이",
+          "value": "5000432"
+        },
+        {
+          "spoken": "오천사백삼십이",
+          "value": "5432"
+        },
+        {
+          "spoken": "이백만 십칠",
+          "value": "2000017"
+        }
+      ],
+      "language": "ko",
+      "name": "Korean",
+      "scales": [
+        {
+          "spoken": "천",
+          "value": "1000"
+        },
+        {
+          "spoken": "백만",
+          "value": "1000000"
+        },
+        {
+          "spoken": "만",
+          "value": "10000"
+        },
+        {
+          "spoken": "일억",
+          "value": "100000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "penki milijonai keturi šimtai trisdešimt du",
+          "value": "5000432"
+        },
+        {
+          "spoken": "penki tūkstančiai keturi šimtai trisdešimt du",
+          "value": "5432"
+        },
+        {
+          "spoken": "du milijonai septyniolika",
+          "value": "2000017"
+        }
+      ],
+      "language": "lt",
+      "name": "Lithuanian",
+      "scales": [
+        {
+          "spoken": "tūkstantis",
+          "value": "1000"
+        },
+        {
+          "spoken": "vienas milijonas",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pieci miljoni četrsimt trīsdesmit divi",
+          "value": "5000432"
+        },
+        {
+          "spoken": "piectūkstoš četrsimt trīsdesmit divi",
+          "value": "5432"
+        },
+        {
+          "spoken": "divi miljoni septiņpadsmit",
+          "value": "2000017"
+        }
+      ],
+      "language": "lv",
+      "name": "Latvian",
+      "scales": [
+        {
+          "spoken": "tūkstoš",
+          "value": "1000"
+        },
+        {
+          "spoken": "viens miljons",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "пет милиони четиристотини триесет и два",
+          "value": "5000432"
+        },
+        {
+          "spoken": "пет илјади четиристотини триесет и два",
+          "value": "5432"
+        },
+        {
+          "spoken": "два милиони седумнаесет",
+          "value": "2000017"
+        }
+      ],
+      "language": "mk",
+      "name": "Macedonian",
+      "scales": [
+        {
+          "spoken": "една илјада",
+          "value": "1000"
+        },
+        {
+          "spoken": "еден милион",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "അൻപത് ലക്ഷത്തിനാന്നൂറ്റിമുപ്പത്തിരണ്ട്",
+          "value": "5000432"
+        },
+        {
+          "spoken": "അഞ്ചായിരത്തിനാന്നൂറ്റിമുപ്പത്തിരണ്ട്",
+          "value": "5432"
+        },
+        {
+          "spoken": "ഇരുപത് ലക്ഷത്തിപതിനേഴ്",
+          "value": "2000017"
+        }
+      ],
+      "language": "ml",
+      "name": "Malayalam",
+      "scales": [
+        {
+          "spoken": "ആയിരം",
+          "value": "1000"
+        },
+        {
+          "spoken": "പത്ത് ലക്ഷം",
+          "value": "1000000"
+        },
+        {
+          "spoken": "ഒരു ലക്ഷം",
+          "value": "100000"
+        },
+        {
+          "spoken": "ഒരു കോടി",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "पन्नास लाख चारशे बत्तीस",
+          "value": "5000432"
+        },
+        {
+          "spoken": "पाच हजार चारशे बत्तीस",
+          "value": "5432"
+        },
+        {
+          "spoken": "वीस लाख सतरा",
+          "value": "2000017"
+        }
+      ],
+      "language": "mr",
+      "name": "Marathi",
+      "scales": [
+        {
+          "spoken": "एक हजार",
+          "value": "1000"
+        },
+        {
+          "spoken": "दहा लाख",
+          "value": "1000000"
+        },
+        {
+          "spoken": "एक लाख",
+          "value": "100000"
+        },
+        {
+          "spoken": "एक कोटी",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "lima juta empat ratus tiga puluh dua",
+          "value": "5000432"
+        },
+        {
+          "spoken": "lima ribu empat ratus tiga puluh dua",
+          "value": "5432"
+        },
+        {
+          "spoken": "dua juta tujuh belas",
+          "value": "2000017"
+        }
+      ],
+      "language": "ms",
+      "name": "Malay",
+      "scales": [
+        {
+          "spoken": "seribu",
+          "value": "1000"
+        },
+        {
+          "spoken": "sejuta",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "पचास लाख चार सय बत्तिस",
+          "value": "5000432"
+        },
+        {
+          "spoken": "पाँच हजार चार सय बत्तिस",
+          "value": "5432"
+        },
+        {
+          "spoken": "बिस लाख सत्र",
+          "value": "2000017"
+        }
+      ],
+      "language": "ne",
+      "name": "Nepali",
+      "scales": [
+        {
+          "spoken": "एक हजार",
+          "value": "1000"
+        },
+        {
+          "spoken": "दस लाख",
+          "value": "1000000"
+        },
+        {
+          "spoken": "एक लाख",
+          "value": "100000"
+        },
+        {
+          "spoken": "एक करोड",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "vijf miljoen vierhonderdtweeëndertig",
+          "value": "5000432"
+        },
+        {
+          "spoken": "vijfduizendvierhonderdtweeëndertig",
+          "value": "5432"
+        },
+        {
+          "spoken": "twee miljoen zeventien",
+          "value": "2000017"
+        }
+      ],
+      "language": "nl",
+      "name": "Dutch",
+      "scales": [
+        {
+          "spoken": "duizend",
+          "value": "1000"
+        },
+        {
+          "spoken": "een miljoen",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "fem millioner fire hundre og trettito",
+          "value": "5000432"
+        },
+        {
+          "spoken": "fem tusen fire hundre og trettito",
+          "value": "5432"
+        },
+        {
+          "spoken": "to millioner sytten",
+          "value": "2000017"
+        }
+      ],
+      "language": "no",
+      "name": "Norwegian",
+      "scales": [
+        {
+          "spoken": "tusen",
+          "value": "1000"
+        },
+        {
+          "spoken": "én million",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "ਪੰਜਾਹ ਲੱਖ ਚਾਰ ਸੌ ਬੱਤੀ",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ਪੰਜ ਹਜ਼ਾਰ ਚਾਰ ਸੌ ਬੱਤੀ",
+          "value": "5432"
+        },
+        {
+          "spoken": "ਵੀਹ ਲੱਖ ਸਤਾਰਾਂ",
+          "value": "2000017"
+        }
+      ],
+      "language": "pa",
+      "name": "Punjabi",
+      "scales": [
+        {
+          "spoken": "ਇੱਕ ਹਜ਼ਾਰ",
+          "value": "1000"
+        },
+        {
+          "spoken": "ਦਸ ਲੱਖ",
+          "value": "1000000"
+        },
+        {
+          "spoken": "ਇੱਕ ਲੱਖ",
+          "value": "100000"
+        },
+        {
+          "spoken": "ਇੱਕ ਕਰੋੜ",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pięć milionów czterysta trzydzieści dwa",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pięć tysięcy czterysta trzydzieści dwa",
+          "value": "5432"
+        },
+        {
+          "spoken": "dwa miliony siedemnaście",
+          "value": "2000017"
+        }
+      ],
+      "language": "pl",
+      "name": "Polish",
+      "scales": [
+        {
+          "spoken": "tysiąc",
+          "value": "1000"
+        },
+        {
+          "spoken": "milion",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinco milhões quatrocentos e trinta e dois",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinco mil quatrocentos e trinta e dois",
+          "value": "5432"
+        },
+        {
+          "spoken": "dois milhões e dezessete",
+          "value": "2000017"
+        }
+      ],
+      "language": "pt",
+      "name": "Portuguese",
+      "scales": [
+        {
+          "spoken": "mil",
+          "value": "1000"
+        },
+        {
+          "spoken": "um milhão",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "cinci milioane patru sute treizeci și doi",
+          "value": "5000432"
+        },
+        {
+          "spoken": "cinci mii patru sute treizeci și doi",
+          "value": "5432"
+        },
+        {
+          "spoken": "două milioane șaptesprezece",
+          "value": "2000017"
+        }
+      ],
+      "language": "ro",
+      "name": "Romanian",
+      "scales": [
+        {
+          "spoken": "o mie",
+          "value": "1000"
+        },
+        {
+          "spoken": "un milion",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "пять миллионов четыреста тридцать два",
+          "value": "5000432"
+        },
+        {
+          "spoken": "пять тысяч четыреста тридцать два",
+          "value": "5432"
+        },
+        {
+          "spoken": "два миллиона семнадцать",
+          "value": "2000017"
+        }
+      ],
+      "language": "ru",
+      "name": "Russian",
+      "scales": [
+        {
+          "spoken": "одна тысяча",
+          "value": "1000"
+        },
+        {
+          "spoken": "один миллион",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "päť miliónov štyristo tridsaťdva",
+          "value": "5000432"
+        },
+        {
+          "spoken": "päť tisíc štyristo tridsaťdva",
+          "value": "5432"
+        },
+        {
+          "spoken": "dva milióny sedemnásť",
+          "value": "2000017"
+        }
+      ],
+      "language": "sk",
+      "name": "Slovak",
+      "scales": [
+        {
+          "spoken": "tisíc",
+          "value": "1000"
+        },
+        {
+          "spoken": "jeden milión",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pet milijonov štiristo dvaintrideset",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pet tisoč štiristo dvaintrideset",
+          "value": "5432"
+        },
+        {
+          "spoken": "dva milijona sedemnajst",
+          "value": "2000017"
+        }
+      ],
+      "language": "sl",
+      "name": "Slovenian",
+      "scales": [
+        {
+          "spoken": "tisoč",
+          "value": "1000"
+        },
+        {
+          "spoken": "en milijon",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "pesë milionë e katërqind e tridhjetë e dy",
+          "value": "5000432"
+        },
+        {
+          "spoken": "pesë mijë e katërqind e tridhjetë e dy",
+          "value": "5432"
+        },
+        {
+          "spoken": "dy milionë e shtatëmbëdhjetë",
+          "value": "2000017"
+        }
+      ],
+      "language": "sq",
+      "name": "Albanian",
+      "scales": [
+        {
+          "spoken": "një mijë",
+          "value": "1000"
+        },
+        {
+          "spoken": "një milion",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "пет милиона четириста тридесет два",
+          "value": "5000432"
+        },
+        {
+          "spoken": "пет хиљада четириста тридесет два",
+          "value": "5432"
+        },
+        {
+          "spoken": "два милиона седамнаест",
+          "value": "2000017"
+        }
+      ],
+      "language": "sr",
+      "name": "Serbian",
+      "scales": [
+        {
+          "spoken": "хиљада",
+          "value": "1000"
+        },
+        {
+          "spoken": "милион",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "fem miljoner fyrahundratrettiotvå",
+          "value": "5000432"
+        },
+        {
+          "spoken": "femtusen fyrahundratrettiotvå",
+          "value": "5432"
+        },
+        {
+          "spoken": "två miljoner sjutton",
+          "value": "2000017"
+        }
+      ],
+      "language": "sv",
+      "name": "Swedish",
+      "scales": [
+        {
+          "spoken": "ettusen",
+          "value": "1000"
+        },
+        {
+          "spoken": "en miljon",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "milioni tano na mia nne na thelathini na mbili",
+          "value": "5000432"
+        },
+        {
+          "spoken": "elfu tano na mia nne na thelathini na mbili",
+          "value": "5432"
+        },
+        {
+          "spoken": "milioni mbili na kumi na saba",
+          "value": "2000017"
+        }
+      ],
+      "language": "sw",
+      "name": "Swahili",
+      "scales": [
+        {
+          "spoken": "elfu moja",
+          "value": "1000"
+        },
+        {
+          "spoken": "milioni moja",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "ஐம்பது லட்சத்து நானூற்று முப்பத்து இரண்டு",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ஐந்தாயிரத்து நானூற்று முப்பத்து இரண்டு",
+          "value": "5432"
+        },
+        {
+          "spoken": "இருபது லட்சத்து பதினேழு",
+          "value": "2000017"
+        }
+      ],
+      "language": "ta",
+      "name": "Tamil",
+      "scales": [
+        {
+          "spoken": "ஆயிரம்",
+          "value": "1000"
+        },
+        {
+          "spoken": "பத்து லட்சம்",
+          "value": "1000000"
+        },
+        {
+          "spoken": "ஒரு லட்சம்",
+          "value": "100000"
+        },
+        {
+          "spoken": "ஒரு கோடி",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "యాభై లక్షల నాలుగు వందల ముప్పై రెండు",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ఐదు వేల నాలుగు వందల ముప్పై రెండు",
+          "value": "5432"
+        },
+        {
+          "spoken": "ఇరవై లక్షల పదిహేడు",
+          "value": "2000017"
+        }
+      ],
+      "language": "te",
+      "name": "Telugu",
+      "scales": [
+        {
+          "spoken": "వెయ్యి",
+          "value": "1000"
+        },
+        {
+          "spoken": "పది లక్షల",
+          "value": "1000000"
+        },
+        {
+          "spoken": "ఒక లక్ష",
+          "value": "100000"
+        },
+        {
+          "spoken": "ఒక కోటి",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "ห้าล้านสี่ร้อยสามสิบสอง",
+          "value": "5000432"
+        },
+        {
+          "spoken": "ห้าพันสี่ร้อยสามสิบสอง",
+          "value": "5432"
+        },
+        {
+          "spoken": "สองล้านสิบเจ็ด",
+          "value": "2000017"
+        }
+      ],
+      "language": "th",
+      "name": "Thai",
+      "scales": [
+        {
+          "spoken": "หนึ่งพัน",
+          "value": "1000"
+        },
+        {
+          "spoken": "หนึ่งล้าน",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "beş milyon dört yüz otuz iki",
+          "value": "5000432"
+        },
+        {
+          "spoken": "beş bin dört yüz otuz iki",
+          "value": "5432"
+        },
+        {
+          "spoken": "iki milyon on yedi",
+          "value": "2000017"
+        }
+      ],
+      "language": "tr",
+      "name": "Turkish",
+      "scales": [
+        {
+          "spoken": "bin",
+          "value": "1000"
+        },
+        {
+          "spoken": "bir milyon",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "пʼять мільйонів чотириста тридцять два",
+          "value": "5000432"
+        },
+        {
+          "spoken": "пʼять тисяч чотириста тридцять два",
+          "value": "5432"
+        },
+        {
+          "spoken": "два мільйони сімнадцять",
+          "value": "2000017"
+        }
+      ],
+      "language": "uk",
+      "name": "Ukrainian",
+      "scales": [
+        {
+          "spoken": "одна тисяча",
+          "value": "1000"
+        },
+        {
+          "spoken": "один мільйон",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "پچاس لاکھ چار سو بتیس",
+          "value": "5000432"
+        },
+        {
+          "spoken": "پانچ ہزار چار سو بتیس",
+          "value": "5432"
+        },
+        {
+          "spoken": "بیس لاکھ سترہ",
+          "value": "2000017"
+        }
+      ],
+      "language": "ur",
+      "name": "Urdu",
+      "scales": [
+        {
+          "spoken": "ایک ہزار",
+          "value": "1000"
+        },
+        {
+          "spoken": "دس لاکھ",
+          "value": "1000000"
+        },
+        {
+          "spoken": "ایک لاکھ",
+          "value": "100000"
+        },
+        {
+          "spoken": "ایک کروڑ",
+          "value": "10000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "besh million to‘rt yuz o‘ttiz ikki",
+          "value": "5000432"
+        },
+        {
+          "spoken": "besh ming to‘rt yuz o‘ttiz ikki",
+          "value": "5432"
+        },
+        {
+          "spoken": "ikki million o‘n yetti",
+          "value": "2000017"
+        }
+      ],
+      "language": "uz",
+      "name": "Uzbek",
+      "scales": [
+        {
+          "spoken": "bir ming",
+          "value": "1000"
+        },
+        {
+          "spoken": "bir million",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "năm triệu bốn trăm ba mươi hai",
+          "value": "5000432"
+        },
+        {
+          "spoken": "năm nghìn bốn trăm ba mươi hai",
+          "value": "5432"
+        },
+        {
+          "spoken": "hai triệu mười bảy",
+          "value": "2000017"
+        }
+      ],
+      "language": "vi",
+      "name": "Vietnamese",
+      "scales": [
+        {
+          "spoken": "một nghìn",
+          "value": "1000"
+        },
+        {
+          "spoken": "một triệu",
+          "value": "1000000"
+        }
+      ]
+    },
+    {
+      "examples": [
+        {
+          "spoken": "五百万零四百三十二",
+          "value": "5000432"
+        },
+        {
+          "spoken": "五千四百三十二",
+          "value": "5432"
+        },
+        {
+          "spoken": "两百万零一十七",
+          "value": "2000017"
+        }
+      ],
+      "language": "zh",
+      "name": "Chinese",
+      "scales": [
+        {
+          "spoken": "一千",
+          "value": "1000"
+        },
+        {
+          "spoken": "一百万",
+          "value": "1000000"
+        },
+        {
+          "spoken": "一万",
+          "value": "10000"
+        },
+        {
+          "spoken": "一亿",
+          "value": "100000000"
+        }
+      ]
+    }
+  ]
+}

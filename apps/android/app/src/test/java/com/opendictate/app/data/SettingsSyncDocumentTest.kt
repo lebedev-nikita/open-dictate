@@ -4,18 +4,83 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSyncDocumentTest {
-    @Test fun `formatting rules survive Android relay and clearing without syncing postprocessing switch`() {
+    @Test fun selectedTextModelSyncsAndFeedsBothTextRequests() {
+        val seed = SettingsSyncDocument().record(mapOf("textProcessingModel" to "gpt-6-luna"), "new", 0, seed = true)
+        val remote = document("textProcessingModel", "test-text-model", 500, "other")
+        val merged = seed.merge(remote)
+        assertEquals(merged, remote.merge(seed))
+        assertTrue(seed.needsConnectionChoice(remote))
+        assertEquals("test-text-model", SettingsSyncDocument.fromJson(merged.toJson()).entries["textProcessingModel"]?.value)
+        val selected = merged.entries.getValue("textProcessingModel").value!!
+        assertEquals(selected, com.opendictate.app.network.textTransformationRequest("Text", "Edit", selected).getString("model"))
+        assertEquals(selected, com.opendictate.app.network.postProcessingRequest("Text", com.opendictate.app.model.PostProcessingSettings(true), selected).getString("model"))
+        assertEquals("gpt-6-luna", com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()).getString("model"))
+    }
+
+    @Test fun legacyPostProcessingCannotOverwriteStructuredOptionsAndSourceChoiceUsesMigratedValues() {
+        val chosen = com.opendictate.app.model.PostProcessingSettings(enabled = false, punctuation = false)
+        val modern = document("postprocessingOptions", chosen.toJson(), 1, "new")
+        val old = document("postprocessing", "{\"enabled\":true,\"prompt\":\"Old instruction\"}", 500, "old")
+        val merged = modern.merge(old)
+        assertEquals(chosen.rulesJson(), merged.entries.getValue("postprocessingRules").value)
+        assertNull(merged.entries["postprocessing"])
+        val disabled = document("postprocessing", "{\"enabled\":false,\"prompt\":null}", 10, "other")
+        for (source in SettingsSyncDocument.ConnectionSource.entries) {
+            val result = old.resolvingConnection(disabled, source, "new", 1000)
+            assertEquals(chosen.rulesJson(), result.entries.getValue("postprocessingRules").value)
+        }
+    }
+
+    @Test fun fixedModelIgnoresLegacyChoicesWithoutSourceChoice() {
+        val old = """{"enabled":true,"model":"gpt-6-sol","prompt":"Keep text"}"""
+        val other = """{"enabled":true,"model":"gpt-4o-mini","prompt":"Keep text"}"""
+        val local = document("postprocessing", old, 10, "mac")
+        val remote = document("postprocessing", other, 20, "android")
+            .copy(entries = document("postprocessing", other, 20, "android").entries +
+                ("textModel" to SettingsSyncEntry("gpt-6-sol", 30, "old")))
+        assertTrue(local.hasSameSettings(remote))
+        assertFalse(local.needsConnectionChoice(remote))
+        val merged = local.merge(remote)
+        assertNull(merged.entries["textModel"])
+        val settings = com.opendictate.app.model.PostProcessingSettings().applyingRules(merged.entries.getValue("postprocessingRules").value!!)
+        val requests = listOf(
+            com.opendictate.app.network.textTransformationRequest("Text", "Edit"),
+            com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()),
+            com.opendictate.app.network.postProcessingRequest("Text", settings))
+        requests.forEach { assertEquals("gpt-6-luna", it.getString("model")) }
+        assertFalse(settings.enabled)
+        assertTrue(settings.punctuation)
+        assertFalse(settings.formatValues)
+        assertNull(merged.entries["postprocessing"])
+        assertEquals(0L, merged.entries.getValue("postprocessingRules").modifiedAt)
+    }
+
+    @Test fun `retired prompt is dropped without a connection choice`() {
         val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
-            .first { java.io.File(it, "shared/settings-sync-formatting.json").isFile }
-        val remote = SettingsSyncDocument.fromJson(java.io.File(root, "shared/settings-sync-formatting.json").readText())
-        assertNull(remote.entries["accuratePunctuationEnabled"])
-        assertTrue(SettingsSyncDocument().needsConnectionChoice(remote))
-        val relayed = remote.record(mapOf("dictionary" to "Android edit"), "android", 100)
-        assertEquals(remote.entries["formattingRules"], relayed.entries["formattingRules"])
-        assertEquals(relayed, SettingsSyncDocument.fromJson(relayed.toJson()))
-        val cleared = relayed.record(mapOf("formattingRules" to ""), "mac", 200).merge(remote)
-        assertEquals("", cleared.entries["formattingRules"]?.value)
-        assertNull(cleared.entries["accuratePunctuationEnabled"])
+            .first { java.io.File(it, "shared/settings-sync-prompts.json").isFile }
+        val remote = SettingsSyncDocument.fromJson(java.io.File(root, "shared/settings-sync-prompts.json").readText())
+        assertNull(remote.entries["transcriptionPrompt"])
+        assertEquals("preserved", remote.entries["future.preference"]?.value)
+        val legacy = document("transcriptionPrompt", "Ignored", 500, "old")
+        val local = SettingsSyncDocument()
+        assertFalse(local.needsConnectionChoice(legacy))
+        assertTrue(local.hasSameSettings(legacy))
+        SettingsSyncDocument.ConnectionSource.entries.forEach { source ->
+            assertNull(local.resolvingConnection(legacy, source, "a", 1).entries["transcriptionPrompt"])
+        }
+        val edited = legacy.record(mapOf("dictionary" to "Updated", "transcriptionPrompt" to "Ignored"), "a", 1)
+        assertNull(edited.entries["transcriptionPrompt"])
+        assertEquals("Updated", edited.entries["dictionary"]?.value)
+        assertFalse(legacy.toJson().contains("transcriptionPrompt"))
+        assertEquals(1, org.json.JSONObject(remote.toJson()).getInt("schemaVersion"))
+    }
+
+    @Test fun `null is accepted only for the prompt in version two and never a missing value`() {
+        listOf(
+            """{"schemaVersion":1,"entries":{"transcriptionPrompt":{"value":null,"modifiedAt":1,"deviceId":"a"}}}""",
+            """{"schemaVersion":2,"entries":{"mode":{"value":null,"modifiedAt":1,"deviceId":"a"}}}""",
+            """{"schemaVersion":2,"entries":{"transcriptionPrompt":{"modifiedAt":1,"deviceId":"a"}}}"""
+        ).forEach { assertThrows(Exception::class.java) { SettingsSyncDocument.fromJson(it) } }
     }
 
     @Test fun `punctuation is excluded from seeds legacy journals merges and exports`() {
@@ -43,13 +108,13 @@ class SettingsSyncDocumentTest {
         val seed = SettingsSyncDocument().record(mapOf("wordReplacements" to ReplacementDocument().toJson(),
             "wordReplacementsEnabled" to "true"), "mac", 0, seed = true)
         val merged = seed.merge(remote)
-        val rules = ReplacementDocument.fromJson(merged.entries.getValue("wordReplacements").value).rules
+        val rules = ReplacementDocument.fromJson(requireNotNull(merged.entries.getValue("wordReplacements").value)).rules
         assertEquals("00000000-0000-0000-0000-000000000001", rules.first().id)
         assertFalse(rules.last().enabled)
         assertEquals("OpenDictate 📝 cat", WordReplacementEngine(rules).apply("опен диктейт cat"))
         val cleared = merged.record(mapOf("wordReplacements" to ReplacementDocument().toJson(),
             "wordReplacementsEnabled" to "false"), "mac", 50).merge(remote)
-        assertTrue(ReplacementDocument.fromJson(cleared.entries.getValue("wordReplacements").value).rules.isEmpty())
+        assertTrue(ReplacementDocument.fromJson(requireNotNull(cleared.entries.getValue("wordReplacements").value)).rules.isEmpty())
         assertEquals("false", cleared.entries["wordReplacementsEnabled"]?.value)
         assertEquals("preserved", cleared.entries["future.preference"]?.value)
     }
@@ -65,14 +130,14 @@ class SettingsSyncDocumentTest {
 
     @Test fun `separate preferences merge and concurrent conflicts converge regardless of order`() {
         val android = document("dictionary", "Android\nНикита", 100, "android")
-            .merge(document("textModel", "gpt-6-sol", 120, "android"))
+            .merge(document("accurateModel", "gpt-transcribe", 120, "android"))
         val mac = document("dictionary", "Mac", 100, "mac")
             .merge(document("mode", "live", 130, "mac"))
         val merged = android.merge(mac)
         assertEquals(merged, mac.merge(android))
         assertEquals(merged, merged.merge(android).merge(mac))
         assertEquals("Mac", merged.entries["dictionary"]?.value)
-        assertEquals("gpt-6-sol", merged.entries["textModel"]?.value)
+        assertEquals("gpt-transcribe", merged.entries["accurateModel"]?.value)
         assertEquals("live", merged.entries["mode"]?.value)
     }
 
@@ -97,13 +162,13 @@ class SettingsSyncDocumentTest {
         val fixture = """{"schemaVersion":1,"entries":{"dictionary":{"value":"Никита\nOpenDictate 📝","modifiedAt":1760000000000,"deviceId":"mac"},"future.color":{"value":"dark","modifiedAt":2,"deviceId":"mac"}}}"""
         val parsed = SettingsSyncDocument.fromJson(fixture)
         assertEquals(parsed, SettingsSyncDocument.fromJson(parsed.toJson()))
-        val updated = parsed.record(mapOf("textModel" to "gpt-6-sol", "apiKey" to "private-test-key", "history" to "private-test-history"), "android", 1)
+        val updated = parsed.record(mapOf("accurateModel" to "gpt-transcribe", "apiKey" to "private-test-key", "history" to "private-test-history"), "android", 1)
         assertEquals("dark", updated.entries["future.color"]?.value)
         assertFalse(updated.toJson().contains("private-test"))
     }
 
     @Test fun `future versions malformed entries and oversized data fail closed`() {
-        listOf("{\"schemaVersion\":2,\"entries\":{}}", "{\"schemaVersion\":1.5,\"entries\":{}}", "{\"schemaVersion\":\"1\",\"entries\":{}}", "{\"schemaVersion\":1,\"entries\":{\"mode\":{\"value\":false,\"modifiedAt\":1,\"deviceId\":\"a\"}}}",
+        listOf("{\"schemaVersion\":3,\"entries\":{}}", "{\"schemaVersion\":1.5,\"entries\":{}}", "{\"schemaVersion\":\"1\",\"entries\":{}}", "{\"schemaVersion\":1,\"entries\":{\"mode\":{\"value\":false,\"modifiedAt\":1,\"deviceId\":\"a\"}}}",
             "{\"schemaVersion\":1,\"entries\":{\"mode\":{\"value\":\"live\",\"modifiedAt\":-1,\"deviceId\":\"a\"}}}", "x".repeat(1_048_577)).forEach { value ->
             assertThrows(Exception::class.java) { SettingsSyncDocument.fromJson(value) }
         }

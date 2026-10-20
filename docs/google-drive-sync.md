@@ -2,10 +2,7 @@
 
 Connect Google Drive in Settings on Android and macOS, using the same Google
 account. Sync transfers the dictionary, word replacement rules and enabled
-states, Live/Accurate mode and selected Live, Accurate and text model IDs.
-AI formatting instructions also sync, including when post-processing is disabled.
-The Accurate AI post-processing switch is saved only on each device and never synced.
-Android preserves the instructions without applying an extra AI formatting step.
+states, post-processing rules, Live/Accurate mode and selected Live and Accurate model IDs.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
 OpenAI API key and local model catalogue.
 
@@ -39,6 +36,40 @@ invalidates the own-file cache. Connecting or choosing a connection source force
 a fresh download. Restarting the process clears the cache. Uploads remain conditional
 on actual merged changes or a missing own replica. API keys, audio and history
 never enter the cache or synchronization payload.
+
+## Retired transcription prompts
+
+Transcription requests no longer accept an application prompt. Legacy local
+prompt preferences are removed. Both platforms read schema versions 1 and 2,
+including old nullable prompt resets, then discard the retired
+transcriptionPrompt entry from journals, merges and exports. It does not
+trigger a source choice or change post-processing settings. String-only exports
+use schema version 1; unknown future settings remain preserved.
+
+## Post-processing
+
+The `postprocessingRules` entry synchronizes value-format examples, scoped custom
+rules and captured regional locales. Global post-processing, punctuation, value
+formatting and individual type switches stay local. Editing only a switch does
+not enqueue synchronization. Rules synchronize even while processing is disabled.
+Resetting rules is an explicit synchronized value, so stale replicas cannot restore them.
+
+Existing `postprocessingOptions` journals migrate rule content once, preserving
+its timestamp while discarding enable flags from synchronization. Local switches
+are preserved. The older `postprocessing` prompt field seeds empty rules at time
+zero; arbitrary legacy prompts remain retired. Older app versions preserve the
+new key without applying it; update both apps to share rules with this behavior.
+
+The separate `textProcessingModel` entry selects one shared model for text
+transformation and post-processing, defaulting to GPT-6 Luna. It appears beside
+recognition models and uses the same conflict rules. The retired `textModel` entry stays discarded,
+so old RC preferences cannot unexpectedly restore an earlier choice.
+
+Punctuation and enable switches save immediately. Value-format drafts save with
+Done and are discarded with Cancel; incoming sync does not overwrite a draft.
+Turning formatting off preserves saved examples. Active sessions use an immutable
+snapshot; retry captures current settings. The former macOS local Accurate
+punctuation switch migrates to this section.
 
 ## Google Cloud setup
 
@@ -202,9 +233,9 @@ Delete hidden app data.
 
 ## Extending the format
 
-Version 1 has an `entries` map. The authoritative key lists live in
-[`SettingsSync.swift`](../apps/macos/Sources/OpenDictateCore/SettingsSync.swift)
-and [`SettingsSyncDocument.kt`](../apps/android/app/src/main/java/com/opendictate/app/data/SettingsSyncDocument.kt):
+Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
+`liveModel`, `accurateModel`, `wordReplacements` and
+`wordReplacementsEnabled`, `postprocessingRules` and `textProcessingModel`:
 
 ```json
 {
@@ -222,7 +253,7 @@ and [`SettingsSyncDocument.kt`](../apps/android/app/src/main/java/com/opendictat
 Add namespaced keys to the explicit export allowlists and storage adapters on both
 platforms for new settings. Unknown entries survive merges and round trips.
 Unsupported schema versions fail closed rather than being overwritten. Values
-are strings; structured future sections can encode JSON inside their value.
+are strings, except an explicit prompt reset, which uses JSON null and schema version 2. Structured future sections can encode JSON inside their value.
 The `wordReplacements` value contains the shared version-1 replacement JSON
 (`schemaVersion` and `rules` with `id`, `source`, `replacement`, `enabled`).
 `wordReplacementsEnabled` is the string `true` or `false`. Invalid boolean
@@ -230,19 +261,15 @@ values reject the import before any setting is applied. Existing five-field
 journals seed replacement settings at timestamp zero so new defaults yield to
 cloud values. The former `accuratePunctuationEnabled` sync field is discarded
 from local journals and incoming replicas, and excluded from uploads. Its
-existing local value is preserved. Older app versions may still sync that field
+existing macOS local value migrates to post-processing. Older app versions may still sync that field
 among themselves until updated. Imported replacement JSON is preserved verbatim
 to avoid platform-specific encoding creating a new edit. Remote rules are validated before any settings are applied.
-
-`formattingRules` contains user-authored AI formatting instructions. An empty string
-restores default punctuation correction. Rules are limited to 4,000 UTF-16 units;
-oversized rules reject the whole import. Android relays the field without applying it.
 
 Clearing needs an explicit value, because removing a key leaves older replicas intact.
 
 Limits: 1 MiB per file, 100 replicas, 1,024 entries and 256 KiB per value.
 Malformed or oversized data stops synchronization without uploading a partial
-merge. Credentials, provider payloads, dictionary contents and replacement rules are
+merge. Credentials, provider payloads, custom prompts, dictionary contents and replacement rules are
 never logged.
 Network work runs separately from audio and away from the main thread/actor.
 

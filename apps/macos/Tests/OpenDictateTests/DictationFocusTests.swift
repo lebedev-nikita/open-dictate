@@ -46,6 +46,17 @@ private actor ReplayTranscriber {
     }
 }
 
+private actor HeldPostProcessor {
+    private(set) var settings: [PostProcessingSettings] = []
+    private(set) var languages: [[String]] = []
+    private var pending: CheckedContinuation<PostProcessingResult, Never>?
+    func process(_ value: PostProcessingSettings, languages: [String] = []) async -> PostProcessingResult {
+        settings.append(value); self.languages.append(languages)
+        return await withCheckedContinuation { pending = $0 }
+    }
+    func release() { pending?.resume(returning: .init(text: "processed transcript")); pending = nil }
+}
+
 @MainActor private final class FocusEditor: TextAccessibility, TextPasting {
     var text: String
     var range: NSRange
@@ -71,6 +82,16 @@ private actor ReplayTranscriber {
     }
 }
 
+@MainActor private final class HistoryRequestClock { var value = Duration.zero }
+
+private actor PostLanguageCapture {
+    private(set) var calls: [[String]] = []
+    func process(source: String, languages: [String]) -> PostProcessingResult {
+        calls.append(languages)
+        return .init(text: source)
+    }
+}
+
 final class DictationFocusTests: XCTestCase {
     private var defaultsDomains: [String] = []
     private func isolatedDefaults() -> UserDefaults {
@@ -86,6 +107,127 @@ final class DictationFocusTests: XCTestCase {
         let deadline = ContinuousClock.now + .seconds(2)
         while model.phase != phase && ContinuousClock.now < deadline { await Task.yield() }
         XCTAssertEqual(model.phase, phase)
+    }
+
+    @MainActor func testPostProcessingUsesCapturedSettingsAndLateResultCannotDeliverAfterCancelOrFocusChange() async {
+        for cancel in [true, false] {
+            let first = FocusEditor("first "), second = FocusEditor("second "), processor = HeldPostProcessor()
+            var active = first
+            let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+                captureTarget: { _, _ in active.target() }, makeRecorder: { FocusRecorder() },
+                processTranscript: { _, _, settings, _, languages in await processor.process(settings, languages: languages) })
+            model.preferences.speechLanguages = ["ru", "en"]
+            model.preferences.postProcessing = .init(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
+            model.toggleLocalRecording(mode: .accurate)
+            await waitFor(.recording, in: model)
+            model.preferences.speechLanguages = ["ja"]
+            let originalDate = model.preferences.postProcessing.formats?[.date].example
+            model.preferences.postProcessing.formats?[.date].example = "2026-03-05"
+            model.stop()
+            let deadline = ContinuousClock.now + .seconds(2)
+            while await processor.settings.isEmpty && ContinuousClock.now < deadline { await Task.yield() }
+            let captured = await processor.settings.first
+            let capturedLanguages = await processor.languages.first
+            XCTAssertEqual(capturedLanguages, ["en", "ru"])
+            XCTAssertEqual(captured?.formats?[.date].example, originalDate)
+            if cancel { model.cancel() }
+            else { first.focused = false; active = second; model.tick() }
+            await processor.release()
+            await waitFor(.idle, in: model)
+            XCTAssertEqual(first.sends, 0)
+            XCTAssertEqual(second.sends, 0)
+            XCTAssertEqual(model.lastTranscript, cancel ? "" : "processed transcript")
+            model.shutdown()
+        }
+    }
+
+    @MainActor func testHistoryMeasuresEachAwaitedRequestAndExcludesRecordingEvenWhenPostProcessingFails() async {
+        for failed in [false, true] {
+            let clock = HistoryRequestClock(), editor = FocusEditor("original ")
+            let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+                captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
+                transcribeAudio: { _, _, _, _ in
+                    await Task.yield()
+                    await MainActor.run { clock.value += .milliseconds(1250) }
+                    return "synthetic transcript"
+                }, processTranscript: { source, _, _, selectedModel, _ in
+                    XCTAssertEqual(selectedModel, "test-text-model")
+                    await Task.yield()
+                    await MainActor.run { clock.value += .milliseconds(450) }
+                    return .init(text: source, failed: failed)
+                }, requestClock: { clock.value })
+            model.preferences.textProcessingModel = "test-text-model"
+            model.preferences.saveHistory = true
+            model.preferences.postProcessing = .init(enabled: true)
+            model.toggleLocalRecording(mode: .accurate)
+            await waitFor(.recording, in: model)
+            model.preferences.textProcessingModel = TextProcessingModel.id
+            clock.value += .seconds(40) // User recording time must not be included.
+            model.preferences.mode = .live
+            model.stop()
+            await waitFor(.idle, in: model)
+            XCTAssertEqual(model.history.entries.first?.mode, "accurate")
+            XCTAssertEqual(model.history.entries.first?.transcriptionMillis, 1250)
+            XCTAssertEqual(model.history.entries.first?.postProcessingMillis, 450)
+            model.shutdown()
+        }
+    }
+
+    @MainActor func testPostProcessingCapturesLanguagesForRecordingAndAccurateRetry() async {
+        let editor = FocusEditor("original "), capture = PostLanguageCapture()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+            captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() }, accessibilityTrust: { true },
+            processTranscript: { source, _, _, _, languages in await capture.process(source: source, languages: languages) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        model.preferences.speechLanguages = ["ru"]
+        model.toggleLocalRecording(mode: .accurate)
+        await waitFor(.recording, in: model)
+        model.preferences.speechLanguages = ["en"]
+        model.stop()
+        await waitFor(.idle, in: model)
+        XCTAssertTrue(model.canRetranscribe)
+        model.preferences.speechLanguages = ["de"]
+        model.retranscribeLast()
+        model.preferences.speechLanguages = ["ja"]
+        await waitFor(.idle, in: model)
+        let calls = await capture.calls
+        XCTAssertEqual(calls, [["ru"], ["de"]])
+    }
+
+    @MainActor func testLiveSkipsPostProcessingEvenWhenEnabledAndModeChangesBeforeStop() async {
+        let editor = FocusEditor("original "), processor = HeldPostProcessor()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(),
+            captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
+            processTranscript: { _, _, settings, _, _ in await processor.process(settings) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        model.toggleLocalRecording(mode: .live)
+        await waitFor(.recording, in: model)
+        model.preferences.mode = .accurate
+        model.stop()
+        await waitFor(.idle, in: model)
+        let count = await processor.settings.count
+        await processor.release()
+        XCTAssertEqual(count, 0)
+        XCTAssertFalse(model.lastTranscript.isEmpty)
+        XCTAssertEqual(model.history.entries.first?.mode, "live")
+        XCTAssertNil(model.history.entries.first?.transcriptionMillis)
+        XCTAssertNil(model.history.entries.first?.postProcessingMillis)
+    }
+
+    @MainActor func testVoiceEditSkipsPostProcessing() async {
+        let editor = FocusEditor("original "), processor = HeldPostProcessor()
+        let model = AppModel(localOnly: true, defaults: isolatedDefaults(), captureTarget: { _, _ in editor.target() },
+            makeRecorder: { FocusRecorder() }, processTranscript: { _, _, settings, _, _ in await processor.process(settings) })
+        defer { model.shutdown() }
+        model.preferences.postProcessing.enabled = true
+        model.toggleLocalRecording(transform: true)
+        await waitFor(.recording, in: model)
+        model.stop()
+        await waitFor(.idle, in: model)
+        let calls = await processor.settings.count
+        XCTAssertEqual(calls, 0)
     }
 
     @MainActor func testSwitchingWindowsKeepsRecordingAndPastesIntoFieldAtStop() async {
@@ -268,6 +410,8 @@ final class DictationFocusTests: XCTestCase {
         XCTAssertEqual(second.text, "second replaced transcript")
         XCTAssertEqual(model.history.entries.first?.mode, "accurate")
         XCTAssertEqual(model.history.entries.first?.text, model.lastTranscript)
+        XCTAssertNotNil(model.history.entries.first?.transcriptionMillis)
+        XCTAssertNil(model.history.entries.first?.postProcessingMillis)
         XCTAssertTrue(model.canRetranscribe)
     }
 

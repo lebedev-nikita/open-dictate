@@ -45,14 +45,16 @@ data class MainUiState(
     val model: TranscriptionModel = TranscriptionModel.ACCURATE,
     val liveModelId: String = ModelCatalog.DEFAULT.live.first(),
     val accurateModelId: String = ModelCatalog.DEFAULT.accurate.first(),
-    val transformationModelId: String = ModelCatalog.DEFAULT.text.first(),
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
+    val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
+    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.STANDARD,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
     val newModelCount: Int = 0,
     val transformationButtonEnabled: Boolean = true,
     val languages: Set<DictationLanguage> = emptySet(),
     val prompt: String = "",
+    val postProcessing: com.opendictate.app.model.PostProcessingSettings = com.opendictate.app.model.PostProcessingSettings(),
     val selectionDictionaryActionEnabled: Boolean = true,
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
     val appFilter: AppFilter = AppFilter(),
@@ -95,6 +97,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     private val apiKeyStore = SecureApiKeyStore(application)
     val replacements = (application as OpenDictateApplication).replacementStore
+    val chatGPT = (application as OpenDictateApplication).chatGPT
+    private var chatGPTJob: Job? = null
     val driveSync = (application as OpenDictateApplication).driveSync
     private val historyStore = (application as OpenDictateApplication).transcriptHistoryStore
     private val apiClient = OpenAiTranscriptionClient(application.resources)
@@ -112,8 +116,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
-                    liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId,
-                    transformationModelId = settings.transformationModelId) }
+                    postProcessing = settings.postProcessing, textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
+                    liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId) }
             }
         }
     }
@@ -137,7 +141,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 modelCatalog = ModelCatalog.DEFAULT,
                 liveModelId = settings.liveModelId,
                 accurateModelId = settings.accurateModelId,
-                transformationModelId = settings.transformationModelId,
                 newModelCount = 0,
             )
         }
@@ -145,9 +148,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         refreshModelCatalog(force = true)
     }
 
+    fun connectChatGPT() { connectChatGPTAccount("__last__") }
+    fun connectChatGPTAccount(account: String?) {
+        if (!apiKeyStore.hasKey() || chatGPT.state.value.busy) return
+        chatGPTJob = viewModelScope.launch {
+            chatGPT.connect(apiKeyStore::hasKey, account) { url ->
+                getApplication<Application>().startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
+    fun cancelChatGPT() { chatGPT.cancel(); chatGPTJob?.cancel() }
+    fun disconnectChatGPT() { chatGPTJob = viewModelScope.launch { chatGPT.disconnect() } }
+    override fun onCleared() { cancelChatGPT(); super.onCleared() }
+
     fun getApiKey(): String = apiKeyStore.get().orEmpty()
 
     fun clearApiKey() {
+        cancelChatGPT()
         apiKeyStore.clear()
         modelLoadJob?.cancel()
         modelLoadJob = null
@@ -157,7 +174,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 modelCatalog = ModelCatalog.DEFAULT,
                 liveModelId = settings.liveModelId,
                 accurateModelId = settings.accurateModelId,
-                transformationModelId = settings.transformationModelId,
                 modelsLoading = false,
                 newModelCount = 0,
             )
@@ -192,10 +208,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(accurateModelId = id) }
     }
 
-    fun selectTransformationModel(id: String) {
-        if (id !in modelOptions(mutableState.value.modelCatalog.text, ModelCatalog.DEFAULT.text)) return
-        settings.transformationModelId = id
-        mutableState.update { it.copy(transformationModelId = id) }
+    fun selectTextProcessingModel(id: String) {
+        if (!com.opendictate.app.model.TextProcessingModel.isValid(id)) return
+        val model = com.opendictate.app.model.TextProcessingModel.model(id)
+        val tier = com.opendictate.app.model.TextProcessingModel.tier(id)
+        settings.textProcessingModel = model
+        mutableState.update { it.copy(textProcessingModel = model, textProcessingServiceTier = tier) }
+    }
+
+    fun savePostProcessing(value: com.opendictate.app.model.PostProcessingSettings) {
+        if (!value.isValid) return
+        settings.postProcessing = value
+        mutableState.update { it.copy(postProcessing = value) }
     }
 
     fun refreshModelCatalog(force: Boolean = false) {
@@ -209,14 +233,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val previous = mutableState.value.modelCatalog
                 val hadCatalog = settings.modelCatalogUpdatedAt > 0L
                 settings.modelCatalog = catalog
-                val added = (catalog.live + catalog.accurate + catalog.text).toSet() -
-                    (previous.live + previous.accurate + previous.text).toSet()
+                val added = (catalog.live + catalog.accurate).toSet() -
+                    (previous.live + previous.accurate).toSet()
                 mutableState.update {
                     it.copy(
                         modelCatalog = catalog,
                         liveModelId = settings.liveModelId,
                         accurateModelId = settings.accurateModelId,
-                        transformationModelId = settings.transformationModelId,
                         modelsLoading = false,
                         newModelCount = if (hadCatalog) added.size else 0,
                     )
@@ -368,7 +391,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val matches = apiClient.searchTranscriptHistory(
                     apiKey = apiKey,
-                    model = settings.transformationModelId,
                     query = query,
                     documents = state.entries.map {
                         TranscriptSearchDocument(id = it.id, text = it.text)
@@ -426,11 +448,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         model = settings.model,
         liveModelId = settings.liveModelId,
         accurateModelId = settings.accurateModelId,
-        transformationModelId = settings.transformationModelId,
         modelCatalog = settings.modelCatalog,
         transformationButtonEnabled = settings.transformationButtonEnabled,
         languages = settings.languages,
         prompt = settings.prompt,
+        postProcessing = settings.postProcessing,
+        textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
         appFilter = settings.appFilter,

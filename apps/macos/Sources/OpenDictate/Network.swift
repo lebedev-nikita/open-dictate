@@ -79,32 +79,30 @@ actor OpenAIClient {
         return text
     }
 
-    func transform(source: String, instruction: String, key: String, model: String) async throws -> (String, String?) {
-        let response = try await response(OpenAIRequest.transform(model: model, source: source, instruction: instruction), key: key)
+    func transform(source: String, instruction: String, key: String, model: String = TextProcessingModel.id, chatGPTAccount: String? = nil, serviceTier: TextProcessingServiceTier = .standard) async throws -> (String, String?) {
+        let response = try await response(OpenAIRequest.transform(source: source, instruction: instruction, model: model, serviceTier: serviceTier), key: key, chatGPTAccount: chatGPTAccount)
         guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
               let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }
         return (text, (result["message"] as? String).map { String($0.prefix(1000)) })
     }
 
-    func correctPunctuation(source: String, key: String, enabled: Bool, mode: DictationMode,
-                            formattingRules: String = "") async throws -> String {
-        try await PunctuationCorrection.apply(source: source, enabled: enabled, mode: mode) {
-            let response = try await self.response(OpenAIRequest.punctuation(source: source, formattingRules: formattingRules), key: key, timeout: 10)
+    func postProcess(source: String, key: String, settings: PostProcessingSettings, languages: [String], model: String = TextProcessingModel.id, chatGPTAccount: String? = nil, serviceTier: TextProcessingServiceTier = .standard) async throws -> PostProcessingResult {
+        try await PostProcessing.apply(source: source, settings: settings) {
+            let response = try await self.response(OpenAIRequest.postProcessing(source: source, settings: settings, languages: languages, model: model, serviceTier: serviceTier), key: key, chatGPTAccount: chatGPTAccount)
             guard let data = OpenAIRequest.responseText(response).data(using: .utf8),
                   let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  result["message"] is NSNull,
                   let text = result["transformed_text"] as? String else { throw DictationError.invalidResponse }
             return text
         }
     }
 
-    func search(query: String, entries: [HistoryEntry], key: String, model: String) async throws -> [UUID] {
+    func search(query: String, entries: [HistoryEntry], key: String) async throws -> [UUID] {
         var matches = [UUID]()
         let allowed = Set(entries.map(\.id))
         for batch in OpenAIRequest.historyBatches(entries) {
             try Task.checkCancellation()
-            let result = try await response(OpenAIRequest.search(model: model, query: query, entries: batch), key: key)
+            let result = try await response(OpenAIRequest.search(query: query, entries: batch), key: key)
             guard let data = OpenAIRequest.responseText(result).data(using: .utf8),
                   let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let ids = object["match_ids"] as? [String] else { throw DictationError.invalidResponse }
@@ -115,7 +113,8 @@ actor OpenAIClient {
         return matches
     }
 
-    private func response(_ body: [String: Any], key: String, timeout: Int = 30) async throws -> [String: Any] {
+    private func response(_ body: [String: Any], key: String, timeout: Int = 30, chatGPTAccount: String? = nil) async throws -> [String: Any] {
+        if let chatGPTAccount { return try await ChatGPTSession.shared.response(account: chatGPTAccount, body: body) }
         var request = authorized(OpenAIRequest.responsesURL, key: key, timeout: timeout)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

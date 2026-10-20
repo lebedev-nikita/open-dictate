@@ -13,20 +13,55 @@ synchronizes rules and their enabled states with your other devices.
 Completed text saved to history or copied to the clipboard includes replacements.
 An explicit AI history search may send that saved text to OpenAI.
 
-## Punctuation and AI formatting
+On both platforms, local history may also include request durations for Accurate
+transcription and optional post-processing, or a Live mode label. This metadata
+stays on the device and is removed with its history entry; it is not sent through
+Drive or AI search.
+Android history also records the transcription and optional post-processing
+model IDs and the selected post-processing service tier under the same local-only rules.
 
-Both apps request punctuation as part of the original Live or Accurate
-transcription. Android does not send recognized text for a separate punctuation pass.
+## Optional post-processing
 
-On macOS, **AI post-processing** appears only in Accurate mode and is off by
-default. When enabled, Accurate sends the recognized transcript and saved formatting instructions directly
-to OpenAI's `gpt-6-luna` through the Responses API with `store: false`, before local word
-replacements. It adds a separate processing step; failures keep the original
-transcript. Live and voice editing do not use this step. The switch is saved
-only on the current device and is excluded from Google Drive sync; the transcript is never included in sync.
-Formatting instructions are saved locally and synchronized through Google Drive
-when connected, even while post-processing is off. Android relays these instructions
-without running a separate AI formatting step.
+Post-processing rules and regional examples synchronize through Google Drive. All
+post-processing enable switches remain device-local, including individual value types.
+
+On either platform, **Post-processing** is off by default. When enabled, it sends
+only the recognized transcript, generated instructions and saved format examples directly to OpenAI through
+the Responses API with `store: false`. It runs after ordinary Accurate dictation
+or Accurate retranscription, before local word replacements. Live dictation and
+voice-edit commands skip it.
+No enabled rules means no additional request. Errors retain the original transcript.
+
+Post-processing and text transformation use the shared Text model setting,
+which defaults to `gpt-6-luna`. The default instruction corrects punctuation.
+Choose punctuation and configure value-format rules in the settings menu.
+A rule stores a value type, language or all-language scope, and a formatted
+example for a fixed sample supplied by the app. Creating a rule makes no AI
+request. Automatic formatting uses captured regional locale tags; those tags and
+custom rules are included in optional settings synchronization.
+The final instruction is generated inside the app. Post-processing settings synchronize through
+Google Drive when connected; transcripts are never included in synchronization.
+
+## Optional ChatGPT plan usage
+
+After saving the transcription API key, you can connect ChatGPT in Settings to
+use an eligible plan or credits for GPT-6 Luna text transformation and
+post-processing. Audio transcription and AI history search continue to use the
+API key. Text requests go directly to OpenAI; there is no OpenDictate backend.
+
+Sign-in opens your system browser and temporarily listens on IPv4 loopback for
+the OAuth callback. OpenDictate requests identity and ChatGPT plan-use scopes,
+validates the signed identity and grant, and stores account registrations,
+access/refresh/ID tokens in Android Keystore-protected storage or device-only
+macOS Keychain items. Credentials, account details and host IDs are not synced
+through Drive. This permission does not grant access to ChatGPT conversations.
+
+When ChatGPT is selected, errors or usage limits never silently fall back to
+API billing for text. Manage usage and disconnect the app in ChatGPT settings.
+Disconnect stops local plan usage and attempts to revoke its renewable session;
+if remote revocation cannot be confirmed, the app tells you. Returning sign-in
+retains the account/client registration and host ID. Explicitly disconnecting
+returns text processing to your API key.
 
 ## Optional Google Drive synchronization
 
@@ -38,7 +73,8 @@ connectivity returns; macOS monitors network availability for the same purpose.
 
 
 If you connect Google Drive in Settings, the dictionary, word replacement rules and
-enabled states, AI formatting instructions, dictation mode and selected model IDs are sent directly to
+enabled states, post-processing
+rules, dictation mode and selected recognition/text model IDs are sent directly to
 Google and stored in your account's hidden app-data folder. Sync requests only `drive.appdata`, without access to
 ordinary Drive files. API keys, audio, transcripts/history, exclusions and
 permissions are excluded; other preferences remain local.
@@ -52,7 +88,7 @@ include the application's Desktop OAuth client configuration; this is separate
 from your account authorization. User refresh tokens and legacy client settings
 use device-only, non-synchronizing Keychain storage. macOS sign-in opens your
 browser and briefly listens on loopback for the OAuth response. That listener
-closes on success, failure, cancellation or timeout. No tokens, dictionary contents, replacement rules or formatting instructions are logged.
+closes on success, failure, cancellation or timeout. No tokens, dictionary contents, replacement rules or custom prompts are logged.
 
 Disconnect signs out synchronization on the current device and removes macOS
 user refresh tokens, retaining application client configuration. Manual
@@ -116,7 +152,7 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   query and saved transcript text directly to OpenAI. Search results are
   held in memory, and Responses requests set `store: false`.
 - Dictionary terms, excluded app bundle identifiers and preferences are saved in
-  UserDefaults locally. With optional Drive sync, dictionary, replacement, AI formatting and model settings
+  UserDefaults locally. With optional Drive sync, dictionary, replacement and recognition model settings
   also go to Google as described above. Dictionary terms are sent to OpenAI as transcription
   hints only when you start a session. Exclusions are checked before capture.
 - Launch at login is optional and uses macOS Login Items. OpenDictate does

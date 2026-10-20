@@ -1,0 +1,227 @@
+[
+  {
+    "source": "Цена пять миллионов четыреста тридцать два лари.",
+    "candidate": "Цена 5 000 432 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена five million four hundred thirty-two лари.",
+    "candidate": "Цена 5,000,432 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена 5 миллионов 432 лари.",
+    "candidate": "Цена 5000432 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена пять миллионов четыре тысячи тридцать два лари.",
+    "candidate": "Цена 5.004.032 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена два миллиарда пять миллионов шесть лари.",
+    "candidate": "Цена 2 005 000 006 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена one hundred million and six лари.",
+    "candidate": "Цена 100000006 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена две тысячи один лари.",
+    "candidate": "Цена 2 001 лари.",
+    "valid": true
+  },
+  {
+    "source": "Цена пять миллионов четыреста тридцать два лари.",
+    "candidate": "Цена 5 432 лари.",
+    "valid": false
+  },
+  {
+    "source": "Цена пять миллионов четыреста тридцать два лари.",
+    "candidate": "Цена 5 004 032 лари.",
+    "valid": false
+  },
+  {
+    "source": "Цена пять миллионов четыреста тридцать два лари.",
+    "candidate": "Цена пять тысяч четыреста тридцать два лари.",
+    "valid": false
+  },
+  {
+    "source": "минус пять миллионов четыреста тридцать два",
+    "candidate": "−5 000 432",
+    "valid": true
+  },
+  {
+    "source": "минус пять миллионов четыреста тридцать два",
+    "candidate": "5 000 432",
+    "valid": false
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два",
+    "candidate": "-5 000 432",
+    "valid": false
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два",
+    "candidate": "٥٬٠٠٠٬٤٣٢",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два",
+    "candidate": "50,00,432",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два лари пятьдесят тетри",
+    "candidate": "5 000 432,50 лари",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов и five million",
+    "candidate": "5 000 000 и 5 000 000",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов и five million",
+    "candidate": "5 000 000 и 5 000",
+    "valid": false
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два",
+    "candidate": "пять миллионов четыреста тридцать два",
+    "valid": true
+  },
+  {
+    "source": "полтора миллиона",
+    "candidate": "1 500 000",
+    "valid": true
+  },
+  {
+    "source": "два с половиной миллиона",
+    "candidate": "2 500 000",
+    "valid": true
+  },
+  {
+    "source": "five point five million",
+    "candidate": "5 500 000",
+    "valid": true
+  },
+  {
+    "source": "5.5 million",
+    "candidate": "5 500 000",
+    "valid": true
+  },
+  {
+    "source": "5,5 миллиона",
+    "candidate": "5 500 000",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов целых пять десятых",
+    "candidate": "5 000 000,5",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов секунд",
+    "candidate": "83333 мин 20 с",
+    "valid": true
+  },
+  {
+    "source": "пять тысяч часов",
+    "candidate": "300000 min",
+    "valid": true
+  },
+  {
+    "source": "one million hours",
+    "candidate": "60000000 min",
+    "valid": true
+  },
+  {
+    "source": "один из лучших",
+    "candidate": "один из лучших",
+    "valid": true
+  },
+  {
+    "source": "negative five million four hundred thirty-two",
+    "candidate": "-5,000,432",
+    "valid": true
+  },
+  {
+    "source": "negative five million four hundred thirty-two",
+    "candidate": "5,000,432",
+    "valid": false
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два",
+    "candidate": "минус 5 000 432",
+    "valid": false
+  },
+  {
+    "source": "минус пять миллионов четыреста тридцать два",
+    "candidate": "минус 5 000 432",
+    "valid": true
+  },
+  {
+    "source": "İ: пять миллионов четыреста тридцать два",
+    "candidate": "İ: 5 000 432",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два",
+    "candidate": "50 004,32",
+    "valid": false
+  },
+  {
+    "source": "два миллиона семнадцать",
+    "candidate": "2 000 017",
+    "valid": true
+  },
+  {
+    "source": "два миллиона семнадцать",
+    "candidate": "2 017",
+    "valid": false
+  },
+  {
+    "source": "999 триллионов 999 миллиардов 999 миллионов 999 тысяч 999",
+    "candidate": "999999999999999",
+    "valid": true
+  },
+  {
+    "source": "one million million",
+    "candidate": "unsupported unchanged by guard",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два лари",
+    "candidate": "5000432лари",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два лари",
+    "candidate": "GEL5000432",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов четыреста тридцать два лари",
+    "candidate": "5_000_432 лари",
+    "valid": true
+  },
+  {
+    "source": "две тысячи двадцать шестой год",
+    "candidate": "2026 год",
+    "valid": true
+  },
+  {
+    "source": "two thousand twenty-first",
+    "candidate": "2021st",
+    "valid": true
+  },
+  {
+    "source": "пять миллионов три четверти",
+    "candidate": "5 000 000 3/4",
+    "valid": true
+  }
+]

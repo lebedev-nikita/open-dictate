@@ -8,7 +8,7 @@ let package = Package(
         .executable(name: "OpenDictate", targets: ["OpenDictate"])
     ],
     targets: [
-        .target(name: "OpenDictateCore"),
+        .target(name: "OpenDictateCore", resources: [.process("Resources")]),
         .executableTarget(name: "OpenDictate", dependencies: ["OpenDictateCore"],
                           linkerSettings: [.linkedFramework("Carbon")]),
         .testTarget(name: "OpenDictateCoreTests", dependencies: ["OpenDictateCore"]),

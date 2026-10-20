@@ -24,6 +24,12 @@ enum class DictationOperation {
     TRANSFORMATION,
 }
 
+enum class DictationProcessingStage {
+    TRANSCRIPTION,
+    POST_PROCESSING,
+    TRANSFORMATION,
+}
+
 data class DictationState(
     val sessionId: Long = 0,
     val phase: DictationPhase = DictationPhase.IDLE,
@@ -31,6 +37,8 @@ data class DictationState(
     val model: TranscriptionModel? = null,
     val transcript: String = "",
     val message: String? = null,
+    val processingStage: DictationProcessingStage? = null,
+    val postProcessingEnabled: Boolean = false,
 ) {
     init {
         require(!isActive || model != null) { "Active dictation requires a transcription model" }
@@ -38,6 +46,16 @@ data class DictationState(
 
     val isActive: Boolean
         get() = phase.isActive
+
+    val activeProcessingStage: DictationProcessingStage?
+        get() = if (!phase.isProcessing) null else processingStage ?: when (operation) {
+            DictationOperation.DICTATION -> DictationProcessingStage.TRANSCRIPTION
+            DictationOperation.TRANSFORMATION -> DictationProcessingStage.TRANSFORMATION
+        }
+
+    val showsProcessingIcon: Boolean
+        get() = isActive && phase.isProcessing &&
+            (activeProcessingStage != DictationProcessingStage.TRANSCRIPTION || postProcessingEnabled)
 
     internal fun acceptsActiveUpdate(sessionId: Long): Boolean =
         this.sessionId == sessionId && isActive

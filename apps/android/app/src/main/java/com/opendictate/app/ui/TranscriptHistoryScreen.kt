@@ -3,6 +3,7 @@ package com.opendictate.app.ui
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,16 +60,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 import com.opendictate.app.data.TranscriptHistoryItem
+import com.opendictate.app.model.TranscriptionModel
+import com.opendictate.app.model.TextProcessingModel
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
@@ -395,35 +400,102 @@ private fun HistoryItem(
         colors = CardDefaults.cardColors(containerColor = SettingsSurface),
         shape = RoundedCornerShape(16.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 14.dp, bottom = 14.dp),
-            verticalAlignment = Alignment.Top,
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
         ) {
-            Column(Modifier.weight(1f)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = formattedDate,
+                    modifier = Modifier.weight(1f),
                     color = SettingsMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Spacer(Modifier.height(7.dp))
-                Text(
-                    text = item.text,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClickLabel = copyAction, onClick = onCopy),
-                    color = SettingsText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = if (expanded) Int.MAX_VALUE else 5,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                IconButton(onClick = onDeleteRequest) {
+                    Icon(
+                        Icons.Outlined.DeleteOutline,
+                        contentDescription = stringResource(R.string.history_delete_item),
+                        tint = SettingsSecondary,
+                    )
+                }
             }
-            IconButton(onClick = onDeleteRequest) {
-                Icon(
-                    Icons.Outlined.DeleteOutline,
-                    contentDescription = stringResource(R.string.history_delete_item),
-                    tint = SettingsSecondary,
-                )
-            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = item.text,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClickLabel = copyAction, onClick = onCopy),
+                color = SettingsText,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = if (expanded) Int.MAX_VALUE else 5,
+                overflow = TextOverflow.Ellipsis,
+            )
+            HistoryProcessingDetails(item)
+        }
+    }
+}
+
+@Composable
+private fun HistoryProcessingDetails(item: TranscriptHistoryItem) {
+    val live = item.mode == TranscriptionModel.LIVE
+    val transcriptionModel = item.transcriptionModelId?.takeIf(String::isNotBlank)
+    val transcriptionMillis = item.transcriptionMillis?.takeIf { !live && it >= 0 }
+    val postProcessingModel = item.postProcessingModelId?.takeIf { !live && it.isNotBlank() }?.let { modelId ->
+        item.postProcessingServiceTier?.let { TextProcessingModel.selection(modelId, it) }
+            ?.let(TextProcessingModel::title) ?: modelId
+    }
+    val postProcessingMillis = item.postProcessingMillis?.takeIf { !live && it >= 0 }
+    val hasTranscription = live || transcriptionModel != null || transcriptionMillis != null
+    val hasPostProcessing = postProcessingModel != null || postProcessingMillis != null
+    if (!hasTranscription && !hasPostProcessing) return
+    val liveDescription = stringResource(R.string.history_live_description)
+
+    Column(Modifier.fillMaxWidth().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (hasTranscription) {
+            HistoryProcessingStage(
+                label = if (live) "Live" else stringResource(R.string.history_transcription_stage),
+                model = transcriptionModel,
+                milliseconds = transcriptionMillis,
+                timingDescription = R.string.history_transcription_time_description,
+                modifier = if (live) Modifier.semantics {
+                    contentDescription = liveDescription
+                } else Modifier,
+            )
+        }
+        if (hasPostProcessing) {
+            HistoryProcessingStage(
+                label = stringResource(R.string.history_postprocessing_stage),
+                model = postProcessingModel,
+                milliseconds = postProcessingMillis,
+                timingDescription = R.string.history_postprocessing_time_description,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryProcessingStage(
+    label: String,
+    model: String?,
+    milliseconds: Long?,
+    @StringRes timingDescription: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = if (model == null) label else stringResource(R.string.history_stage_model, label, model),
+            modifier = Modifier.weight(1f),
+            color = SettingsMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        milliseconds?.let {
+            val seconds = formatHistorySeconds(it, LocalConfiguration.current.locales[0])
+            val description = stringResource(timingDescription, seconds)
+            Text(
+                text = stringResource(R.string.history_duration, seconds),
+                modifier = Modifier.semantics { contentDescription = description },
+                color = SettingsMuted,
+                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+            )
         }
     }
 }

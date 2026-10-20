@@ -10,7 +10,7 @@ import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
-import com.opendictate.app.model.TextTransformationModel
+import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.model.preferredModelId
@@ -20,6 +20,16 @@ import java.util.UUID
 class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
     private val replacementPrefs = context.getSharedPreferences("word_replacements", Context.MODE_PRIVATE)
+
+    init {
+        if (!prefs.contains("postprocessingOptions")) prefs.getString("postprocessing", null)?.let { legacy ->
+            runCatching { PostProcessingSettings.fromLegacyJson(legacy).toJson() }.getOrNull()?.let { encoded ->
+                prefs.edit { putString("postprocessingOptions", encoded) }
+            }
+        }
+        prefs.edit { remove("postprocessing") }
+        prefs.edit { remove("custom_transcription_prompt"); remove("transcription_prompt_configured"); remove("transformation_model"); remove("transformation_model_id") }
+    }
 
     var theme: AppTheme
         get() = AppTheme.fromStored(prefs.getString(KEY_THEME, null))
@@ -49,12 +59,6 @@ class SettingsStore(context: Context) {
         get() = TranscriptionModel.fromStored(prefs.getString(KEY_MODEL, null))
         set(value) = saveSynced { putString(KEY_MODEL, value.name) }
 
-    var transformationModel: TextTransformationModel
-        get() = TextTransformationModel.fromStored(
-            prefs.getString(KEY_TRANSFORMATION_MODEL, null),
-        )
-        set(value) = prefs.edit { putString(KEY_TRANSFORMATION_MODEL, value.name) }
-
     var liveModelId: String
         get() = preferredModelId(
             prefs.getString(KEY_LIVE_MODEL_ID, null).orEmpty(),
@@ -71,14 +75,18 @@ class SettingsStore(context: Context) {
         )
         set(value) = saveSynced { putString(KEY_ACCURATE_MODEL_ID, value) }
 
-    var transformationModelId: String
-        get() = preferredModelId(
-            prefs.getString(KEY_TRANSFORMATION_MODEL_ID, null).orEmpty()
-                .ifBlank { transformationModel.apiName },
-            modelCatalog.text,
-            ModelCatalog.DEFAULT.text,
-        )
-        set(value) = saveSynced { putString(KEY_TRANSFORMATION_MODEL_ID, value) }
+    var textProcessingModel: String
+        get() = prefs.getString("text_processing_model", null)?.takeIf(com.opendictate.app.model.TextProcessingModel::isValid)
+            ?.let(com.opendictate.app.model.TextProcessingModel::model)
+            ?: com.opendictate.app.model.TextProcessingModel.ID
+        set(value) {
+            require(com.opendictate.app.model.TextProcessingModel.isValid(value))
+            saveSynced { putString("text_processing_model", com.opendictate.app.model.TextProcessingModel.model(value)) }
+        }
+
+    // Retain the sync key and history tiers for compatibility, but never enable Fast.
+    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier
+        get() = com.opendictate.app.model.TextProcessingServiceTier.STANDARD
 
     var modelCatalog: ModelCatalog
         get() = ModelCatalog.fromCachedJson(prefs.getString(KEY_MODEL_CATALOG_V2, null))
@@ -115,6 +123,11 @@ class SettingsStore(context: Context) {
     var prompt: String
         get() = normalizeDictionaryTerms(prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty())
         set(value) = saveSynced { putString(KEY_PROMPT, normalizeDictionaryTerms(value).trim()) }
+
+    var postProcessing: PostProcessingSettings
+        get() = prefs.getString("postprocessingOptions", null)?.let { runCatching { PostProcessingSettings.fromJson(it) }.getOrNull() }
+            ?: PostProcessingSettings()
+        set(value) = saveSynced { putString("postprocessingOptions", value.toJson()) }
 
     var transformationButtonEnabled: Boolean
         get() = prefs.getBoolean(KEY_TRANSFORMATION_BUTTON_ENABLED, true)
@@ -164,17 +177,21 @@ class SettingsStore(context: Context) {
             }
         }
 
-    private fun syncValues(): Map<String, String> {
+    private fun syncValues(): Map<String, String?> {
         val replacements = replacementPrefs.getString("document", null) ?: "{\"schemaVersion\":1,\"rules\":[]}"
         ReplacementDocument.fromJson(replacements)
-        return mapOf(
+        return mutableMapOf<String, String?>(
         "dictionary" to prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty(), "mode" to model.name.lowercase(),
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
-        "textModel" to prefs.getString(KEY_TRANSFORMATION_MODEL_ID, transformationModel.apiName).orEmpty(),
+        "postprocessingRules" to postProcessing.rulesJson(),
+        "textProcessingModel" to textProcessingModel,
+        "textProcessingServiceTier" to textProcessingServiceTier.apiValue,
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
-        ).also { values -> require(values.values.all { it.toByteArray().size <= 262_144 }) }
+        ).also { values ->
+            require(values.values.all { it == null || it.toByteArray().size <= 262_144 })
+        }
     }
 
     fun syncDocument(): SettingsSyncDocument = synchronized(SYNC_LOCK) {
@@ -219,10 +236,11 @@ class SettingsStore(context: Context) {
         if (replacementJSON != null || enabled != null) replacements.applySync(replacementJSON, enabled?.toBooleanStrict())
         prefs.edit {
             values["dictionary"]?.let { putString(KEY_PROMPT, it.value) }
-            values["mode"]?.let { putString(KEY_MODEL, it.value.uppercase()) }
+            values["mode"]?.let { putString(KEY_MODEL, requireNotNull(it.value).uppercase()) }
             values["liveModel"]?.let { putString(KEY_LIVE_MODEL_ID, it.value) }
             values["accurateModel"]?.let { putString(KEY_ACCURATE_MODEL_ID, it.value) }
-            values["textModel"]?.let { putString(KEY_TRANSFORMATION_MODEL_ID, it.value) }
+            values["textProcessingModel"]?.let { putString("text_processing_model", it.value) }
+            values["postprocessingRules"]?.let { putString("postprocessingOptions", postProcessing.applyingRules(requireNotNull(it.value)).toJson()) }
             putString("sync_document", merged.toJson())
         }
         merged
@@ -231,11 +249,13 @@ class SettingsStore(context: Context) {
     fun validateSyncDocument(merged: SettingsSyncDocument) {
         SettingsSyncDocument.fromJson(merged.toJson())
         val values = merged.entries
-        // Android relays the macOS AI formatting rules without applying them to transcription.
-        require((values["formattingRules"]?.value?.length ?: 0) <= 4_000)
+        values["postprocessingRules"]?.value?.let { PostProcessingSettings().applyingRules(it) }
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
-        listOf("liveModel", "accurateModel", "textModel").forEach { key ->
+        listOf("liveModel", "accurateModel", "textProcessingModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }
+        }
+        values["textProcessingServiceTier"]?.value?.let {
+            require(com.opendictate.app.model.TextProcessingServiceTier.fromValue(it) != null)
         }
         val replacementJSON = values["wordReplacements"]?.value
         replacementJSON?.let(ReplacementDocument::fromJson)
@@ -250,10 +270,8 @@ class SettingsStore(context: Context) {
         private const val KEY_BUTTON_POSITION = "dictation_button_position"
         private const val KEY_THEME = "theme"
         private const val KEY_MODEL = "model"
-        private const val KEY_TRANSFORMATION_MODEL = "transformation_model"
         private const val KEY_LIVE_MODEL_ID = "live_model_id"
         private const val KEY_ACCURATE_MODEL_ID = "accurate_model_id"
-        private const val KEY_TRANSFORMATION_MODEL_ID = "transformation_model_id"
         private const val KEY_MODEL_CATALOG = "model_catalog"
         private const val KEY_MODEL_CATALOG_V2 = "model_catalog_v2"
         private const val KEY_MODEL_CATALOG_UPDATED = "model_catalog_updated"

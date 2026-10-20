@@ -8,6 +8,11 @@ import com.opendictate.app.audio.PcmAudioRecorder
 import com.opendictate.app.data.transcriptionKeywords
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
+import com.opendictate.app.model.PostProcessing
+import com.opendictate.app.model.TextProcessingModel
+import com.opendictate.app.model.TextProcessingServiceTier
+import com.opendictate.app.model.PostProcessingSettings
+import com.opendictate.app.model.PostProcessingResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class OpenAiTranscriptionClient(
     private val resources: Resources? = null,
+    private val chatGPT: com.opendictate.app.chatgpt.ChatGPTSession? = null,
 ) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
@@ -122,36 +128,17 @@ class OpenAiTranscriptionClient(
 
     internal suspend fun transformText(
         apiKey: String,
-        model: String,
         sourceText: String,
         instruction: String,
+        modelId: String = TextProcessingModel.ID,
+        chatGPTAccount: String? = null,
+        serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD,
     ): TextTransformationResult = try {
         withTimeout(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
-                val request = authorizedRequest(apiKey, RESPONSES_URL)
-                    .header("Content-Type", "application/json")
-                    .post(
-                        textTransformationRequest(model, sourceText, instruction)
-                            .toString()
-                            .toRequestBody(JSON),
-                    )
-                    .build()
-                client.newCall(request).await().use { response ->
-                    val body = response.body.string()
-                    if (!response.isSuccessful) {
-                        throw OpenAiException(errorMessage(response.code, body))
-                    }
-                    runCatching { extractTransformationResult(JSONObject(body)) }
-                        .getOrElse { error ->
-                            throw OpenAiException(
-                                localized(
-                                    R.string.error_transformation_empty,
-                                    "OpenAI returned no transformed text",
-                                ),
-                                error,
-                            )
-                        }
-                }
+                val body = textResponse(apiKey, textTransformationRequest(sourceText, instruction, modelId, serviceTier), chatGPTAccount)
+                runCatching { extractTransformationResult(body) }
+                    .getOrElse { throw OpenAiException(localized(R.string.error_transformation_empty, "OpenAI returned no transformed text")) }
             }
         }
     } catch (error: TimeoutCancellationException) {
@@ -168,22 +155,42 @@ class OpenAiTranscriptionClient(
         throw OpenAiException(error.userMessage(), error)
     }
 
+    internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null, serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD): PostProcessingResult =
+        PostProcessing.apply(source, settings) {
+            withContext(Dispatchers.IO) {
+                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }, serviceTier), chatGPTAccount))
+            }
+        }
+
+    private suspend fun textResponse(apiKey: String, body: JSONObject, account: String?): JSONObject {
+        if (account != null) {
+            try { return requireNotNull(chatGPT).response(account, body) }
+            catch (error: kotlinx.coroutines.CancellationException) { throw error }
+            catch (_: Exception) { throw OpenAiException(localized(R.string.chatgpt_request_failed, "ChatGPT unavailable. Check plan usage. No API fallback was used.")) }
+        }
+        val request = authorizedRequest(apiKey, RESPONSES_URL).header("Content-Type", "application/json")
+            .post(body.toString().toRequestBody(JSON)).build()
+        return client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
+            val text = response.body.string()
+            if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, text))
+            JSONObject(text)
+        }
+    }
+
     suspend fun searchTranscriptHistory(
         apiKey: String,
-        model: String,
         query: String,
         documents: List<TranscriptSearchDocument>,
     ): List<Long> {
         if (query.isBlank() || documents.isEmpty()) return emptyList()
         val knownIds = documents.mapTo(mutableSetOf(), TranscriptSearchDocument::id)
         return historySearchBatches(documents).flatMap { batch ->
-            searchTranscriptHistoryBatch(apiKey, model, query.trim(), batch)
+            searchTranscriptHistoryBatch(apiKey, query.trim(), batch)
         }.distinct().filter(knownIds::contains)
     }
 
     private suspend fun searchTranscriptHistoryBatch(
         apiKey: String,
-        model: String,
         query: String,
         documents: List<TranscriptSearchDocument>,
     ): List<Long> = try {
@@ -192,7 +199,7 @@ class OpenAiTranscriptionClient(
                 val request = authorizedRequest(apiKey, RESPONSES_URL)
                     .header("Content-Type", "application/json")
                     .post(
-                        transcriptHistorySearchRequest(model, query, documents)
+                        transcriptHistorySearchRequest(query, documents)
                             .toString()
                             .toRequestBody(JSON),
                     )
@@ -472,11 +479,10 @@ internal fun historySearchBatches(
 }
 
 internal fun transcriptHistorySearchRequest(
-    model: String,
     query: String,
     documents: List<TranscriptSearchDocument>,
 ): JSONObject = JSONObject()
-    .put("model", model)
+    .put("model", TextProcessingModel.ID)
     .put("store", false)
     .put("reasoning", JSONObject().put("effort", "low"))
     .put(
@@ -543,11 +549,13 @@ private const val MAX_HISTORY_DOCUMENT_CHARS = 4_000
 private const val MAX_HISTORY_REQUEST_CHARS = 40_000
 
 internal fun textTransformationRequest(
-    model: String,
     sourceText: String,
     instruction: String,
+    modelId: String = TextProcessingModel.ID,
+    serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD,
 ): JSONObject = JSONObject()
-    .put("model", model)
+    .put("model", modelId)
+    .put("service_tier", serviceTier.apiValue)
     .put("store", false)
     .put("reasoning", JSONObject().put("effort", "low"))
     .put(
@@ -636,6 +644,24 @@ internal fun extractTransformationResult(response: JSONObject): TextTransformati
 
 private const val MAX_USER_MESSAGE_CHARS = 1_000
 
+internal fun postProcessingRequest(source: String, settings: PostProcessingSettings, modelId: String = TextProcessingModel.ID, languages: Collection<String> = emptyList(), serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD): JSONObject {
+    val request = textTransformationRequest(source, settings.prompt(languages), modelId, serviceTier)
+        .put("instructions", PostProcessing.INSTRUCTIONS)
+    val format = request.getJSONObject("text").getJSONObject("format")
+    format.put("name", "post_processing")
+    val schema = format.getJSONObject("schema")
+    schema.getJSONObject("properties").remove("message")
+    schema.getJSONObject("properties").getJSONObject("transformed_text").remove("description")
+    schema.put("required", JSONArray().put("transformed_text"))
+    request.put("reasoning", JSONObject().put("effort", "none"))
+    return request
+}
+
+internal fun extractPostProcessingResult(response: JSONObject): String {
+    require(response.optString("status") == "completed")
+    return JSONObject(extractResponseText(response)).getString("transformed_text")
+}
+
 internal fun extractResponseText(response: JSONObject): String {
     val output = response.optJSONArray("output") ?: return ""
     return buildList {
@@ -665,7 +691,6 @@ internal fun transcriptionMultipartBody(
     .setType(MultipartBody.FORM)
     .addFormDataPart("model", modelId)
     .addFormDataPart("file", "dictation.wav", audioFile.asRequestBody("audio/wav".toMediaType()))
-    .addFormDataPart("prompt", transcriptionPrompt(languages))
     .apply {
         languages.forEach { addFormDataPart("languages[]", it.code) }
         transcriptionKeywords(dictionary).forEach { addFormDataPart("keywords[]", it) }
@@ -679,8 +704,6 @@ internal fun realtimeTranscriptionSessionUpdate(
 ): JSONObject {
     val transcription = JSONObject()
         .put("model", modelId)
-    val context = transcriptionPrompt(languages)
-    if (context.isNotBlank()) transcription.put("prompt", context)
     val keywords = transcriptionKeywords(dictionary)
     if (keywords.isNotEmpty()) transcription.put("keywords", JSONArray(keywords))
     if (languages.isNotEmpty()) {
@@ -699,85 +722,5 @@ internal fun realtimeTranscriptionSessionUpdate(
                 .put("audio", JSONObject().put("input", input)),
         )
 }
-
-private const val RUSSIAN_ORTHOGRAPHY_CONTEXT = "Cyrillic text uses Russian orthography."
-private const val PUNCTUATION_CONTEXT =
-    "Multilingual dictation for written text. STRICTLY follow the punctuation rules of each spoken " +
-        "language, including all grammatically required commas. Use correct capitalization. " +
-        "Preserve the original words, their order, and language switches."
-private val RUSSIAN_PUNCTUATION_PROMPT = """
-    Транскрипция русской речи с нормативной пунктуацией и заглавными буквами. Сохраняй произнесённые слова, их порядок и смысл. Расставляй знаки по синтаксису и смыслу, учитывая интонацию; не превращай каждую паузу в запятую или точку. Не пересказывай, не дописывай незавершённые мысли и не отвечай на вопросы из записи. Выводи только транскрипцию.
-
-    Ниже — образцы пунктуационного оформления, а не содержание записи. Не добавляй их в транскрипцию.
-
-    Сегодня мы обсудим проект. Завтра начнём работу.
-    Ты уже закончил? Когда сможешь прислать результат?
-    Отлично! Как же я рад тебя видеть!
-    Я хотел сказать… Ладно, вернёмся к этому позже.
-
-    Анна, пришли, пожалуйста, документ.
-    Спасибо, коллеги, за помощь.
-    Да, я согласен. Нет, пока не нужно.
-    Конечно, мы всё проверим.
-    Кажется, он уже ушёл.
-    К сожалению, встречу придётся перенести.
-    Это, на мой взгляд, хорошее решение.
-    Однако времени осталось мало.
-    Времени, однако, осталось мало.
-
-    Мы купили хлеб, молоко и сыр.
-    Он открыл документ и начал читать.
-    Я хотел позвонить, но забыл.
-    Нам нужны и время, и деньги, и помощь.
-    Это не только удобно, но и полезно.
-    На столе лежал большой деревянный ящик.
-
-    Я знаю, что ты занят.
-    Когда закончишь, напиши мне.
-    Если будет время, мы обсудим детали.
-    Мы остались дома, потому что начался дождь.
-    Человек, который звонил утром, оставил сообщение.
-    Я думаю, что, если мы начнём сейчас, всё успеем.
-    Он сказал, что приедет и что привезёт документы.
-    Стало темно, и мы включили свет.
-    Вечером похолодало и пошёл снег.
-
-    Документ, отправленный вчера, уже подписан.
-    Отправленный вчера документ уже подписан.
-    Закончив работу, я выключил компьютер.
-    Она сидела, глядя в окно.
-    Мы встретились вечером, около семи часов.
-    Мой брат, инженер, помог с расчётами.
-    Он работает как переводчик.
-    Он, как и я, предпочитает работать утром.
-
-    Наша цель — закончить проект.
-    Я проверю текст, а ты — расчёты.
-    Нужно подготовить три вещи: паспорт, заявление и фотографию.
-    Паспорт, заявление, фотография — всё лежало в папке.
-    Я не пришёл: заболел.
-    Я понял одно: откладывать больше нельзя.
-    Будет время — позвони.
-    Я посмотрел на часы — пора выходить.
-    Одни обсуждали сроки и бюджет; другие проверяли документы и готовили отчёт.
-
-    Он сказал: «Я скоро вернусь».
-    «Я скоро вернусь», — сказал он.
-    «Ты уже дома?» — спросила она.
-    Мы обсуждали статью «Как устроена память».
-    Встреча состоится завтра (если никто не возражает).
-    """.trimIndent()
-
-internal fun transcriptionPrompt(
-    languages: Set<DictationLanguage>,
-): String = buildList {
-    add(PUNCTUATION_CONTEXT)
-    if (DictationLanguage.RUSSIAN in languages && DictationLanguage.UKRAINIAN !in languages) {
-        add(RUSSIAN_ORTHOGRAPHY_CONTEXT)
-    }
-    if (DictationLanguage.RUSSIAN in languages) {
-        add(RUSSIAN_PUNCTUATION_PROMPT)
-    }
-}.joinToString("\n")
 
 class OpenAiException(message: String, cause: Throwable? = null) : IOException(message, cause)
