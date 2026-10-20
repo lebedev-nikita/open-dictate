@@ -15,7 +15,9 @@ final class HistoryTimingPreferencesTests: XCTestCase {
         XCTAssertNil(store.error)
         let old = try XCTUnwrap(store.entries.first)
         XCTAssertNil(old.transcriptionMillis); XCTAssertNil(old.postProcessingMillis)
-        store.add("Measured synthetic text", mode: "accurate", transcriptionMillis: 1250, postProcessingMillis: 450)
+        store.add("Measured synthetic text", mode: "accurate", transcriptionMillis: 1250, postProcessingMillis: 450,
+                  transcriptionModelID: "test-transcribe", postProcessingModelID: TextProcessingModel.id,
+                  postProcessingServiceTier: "default")
         store.add("Live synthetic text", mode: "live", transcriptionMillis: 9000)
         let reopened = HistoryStore(fileURL: url)
         XCTAssertNil(reopened.error)
@@ -23,14 +25,18 @@ final class HistoryTimingPreferencesTests: XCTestCase {
         XCTAssertEqual(reopened.entries.last, old)
         XCTAssertEqual(reopened.entries[1].transcriptionMillis, 1250)
         XCTAssertEqual(reopened.entries[1].postProcessingMillis, 450)
+        XCTAssertEqual(reopened.entries[1].transcriptionModelID, "test-transcribe")
+        XCTAssertEqual(reopened.entries[1].postProcessingModelID, TextProcessingModel.id)
+        XCTAssertNil(reopened.entries.last?.transcriptionModelID)
         XCTAssertNil(reopened.entries[0].transcriptionMillis)
     }
 
     @MainActor func testNativeHistoryMetadataLayouts() throws {
         let date = Date(timeIntervalSince1970: 1_760_000_000)
         let entries = [
-            HistoryEntry(date: date, text: "Synthetic Accurate transcript with both request timings.", mode: "accurate", transcriptionMillis: 1250, postProcessingMillis: 450),
-            HistoryEntry(date: date, text: "Synthetic Live transcript.", mode: "live"),
+            HistoryEntry(date: date, text: "Synthetic Accurate transcript with both request timings.", mode: "accurate", transcriptionMillis: 1250, postProcessingMillis: 450,
+                transcriptionModelID: "gpt-transcribe", postProcessingModelID: TextProcessingModel.id, postProcessingServiceTier: "default"),
+            HistoryEntry(date: date, text: "Synthetic Live transcript.", mode: "live", transcriptionModelID: "gpt-live-transcribe"),
             HistoryEntry(date: date, text: "Synthetic transcript without post-processing.", mode: "accurate", transcriptionMillis: 800),
             HistoryEntry(date: date, text: "Synthetic legacy transcript without recorded timings.", mode: "accurate")
         ]

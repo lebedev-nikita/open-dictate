@@ -23,9 +23,9 @@ no backend, analytics or account to create.
 
 - **Live** (`gpt-live-transcribe`) inserts text as you speak.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
-- On Android, long-press the dictation button to start one recording with the opposite
-  post-processing setting. The menu shows **With post-processing** or **Without
-  post-processing**. This action uses Accurate and leaves the main button's settings unchanged.
+- Start one recording with the opposite post-processing setting from the bottom of
+  Android's long-press menu or the macOS menu bar. The action uses Accurate and leaves
+  the main dictation settings unchanged.
   If all processing rules are off, the one-session **With post-processing** action uses punctuation correction.
 - Voice-directed editing of the selection, or the whole field without a selection,
   using the shared text model (GPT-6 Luna by default).
@@ -82,10 +82,11 @@ copy/paste of the latest transcript and adding selected text to the dictionary.
 Dictation and voice-editing shortcuts are configurable independently, including
 Globe/Fn and modifier-only taps. Excluded apps and launch at login are configurable.
 The compact recording indicator stays out of keyboard focus; its red finish
-button submits the recording, and a spinner shows processing.
+button submits the recording. Processing stages use icons inside a progress ring;
+ordinary dictation without post-processing uses a native spinner.
 
-macOS recordings stay in memory and are discarded after use; there is no
-recording archive or audio retry. Completed transcripts remain available in
+macOS retains the latest ordinary recording in memory for explicit Accurate
+retranscription until the next ordinary recording or app exit. Completed transcripts remain available in
 local history, which can be disabled or deleted. Editors without writable
 Accessibility text use a final clipboard paste. Previous clipboard contents
 are restored if unchanged. Secure fields are excluded.

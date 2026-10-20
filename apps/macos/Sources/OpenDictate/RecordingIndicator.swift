@@ -7,6 +7,7 @@ import SwiftUI
 final class RecordingIndicator {
     private let panel: NSPanel
     private let content: NSHostingView<RecordingStatusView>
+    private var displayedPhase: AppModel.Phase?
 
     init() {
         panel = IndicatorPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
@@ -25,23 +26,25 @@ final class RecordingIndicator {
     }
 
     func show(phase: AppModel.Phase, style: RecordingIndicatorStyle, audioLevels: RecordingAudioLevels,
-              isRussian: Bool, finish: @escaping () -> Void) {
+              isRussian: Bool, stage: DictationProcessingStage? = nil, showsStageIcon: Bool = false,
+              finish: @escaping () -> Void) {
         guard phase != .idle else { hide(); return }
         content.rootView = RecordingStatusView(phase: phase, style: style, audioLevels: audioLevels,
-                                              isRussian: isRussian, finish: finish)
+                                              isRussian: isRussian, stage: stage, showsStageIcon: showsStageIcon, finish: finish)
         let size = RecordingStatusView.size(phase: phase, style: style)
         content.sizingOptions = []
         panel.setContentSize(size)
         panel.ignoresMouseEvents = !phase.showsFinishControl
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
-        if let screen {
+        if let screen, !panel.isVisible || phase != .processing || displayedPhase != .processing {
             panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.midX - size.width / 2,
                                         y: screen.visibleFrame.minY + 28))
         }
+        displayedPhase = phase
         panel.orderFrontRegardless()
     }
 
-    func hide() { panel.orderOut(nil) }
+    func hide() { panel.orderOut(nil); displayedPhase = nil }
 }
 
 private final class IndicatorPanel: NSPanel {
@@ -55,12 +58,16 @@ struct RecordingStatusView: View {
     let style: RecordingIndicatorStyle
     let isRussian: Bool
     let finish: () -> Void
+    let stage: DictationProcessingStage?
+    let showsStageIcon: Bool
     @ObservedObject private var audioLevels: RecordingAudioLevels
 
     init(phase: AppModel.Phase, style: RecordingIndicatorStyle = .compact,
-         audioLevels: RecordingAudioLevels? = nil, isRussian: Bool, finish: @escaping () -> Void) {
+         audioLevels: RecordingAudioLevels? = nil, isRussian: Bool,
+         stage: DictationProcessingStage? = nil, showsStageIcon: Bool = false, finish: @escaping () -> Void) {
         self.phase = phase; self.style = style; self.isRussian = isRussian; self.finish = finish
         self.audioLevels = audioLevels ?? RecordingAudioLevels()
+        self.stage = stage; self.showsStageIcon = showsStageIcon
     }
 
     static let scale: CGFloat = 1.25
@@ -96,9 +103,7 @@ struct RecordingStatusView: View {
                 }
                 .fixedSize()
             } else {
-                ProgressView().progressViewStyle(.circular).controlSize(.mini)
-                    .frame(width: Self.spinnerSize.width, height: Self.spinnerSize.height)
-                    .accessibilityLabel(isRussian ? "Распознавание" : "Transcribing")
+                processing
             }
         }
         .background(style == .waveform ? Color.black : Color(nsColor: .windowBackgroundColor), in: Capsule())
@@ -121,11 +126,30 @@ struct RecordingStatusView: View {
                     .frame(width: Self.waveformSize.width, height: Self.waveformSize.height)
                     .overlay { finishControl }
             } else {
-                ProgressView().progressViewStyle(.circular).controlSize(.mini)
-                    .frame(width: Self.spinnerSize.width, height: Self.spinnerSize.height)
-                    .accessibilityLabel(isRussian ? "Распознавание" : "Transcribing")
+                processing
             }
         }
+    }
+
+    private var processing: some View {
+        Group {
+            if showsStageIcon, let stage {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
+                    ZStack {
+                        Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1.5)
+                        Circle().trim(from: 0, to: 0.72)
+                            .stroke(Color.primary, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                            .rotationEffect(.degrees(timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.2) * 300))
+                        Image(systemName: stage.symbol).font(.system(size: 10, weight: .medium))
+                    }.padding(2)
+                }
+            } else {
+                ProgressView().progressViewStyle(.circular).controlSize(.mini)
+            }
+        }
+        .frame(width: Self.spinnerSize.width, height: Self.spinnerSize.height)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(stage?.label(russian: isRussian) ?? (isRussian ? "Обработка" : "Processing"))
     }
 }
 

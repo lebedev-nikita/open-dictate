@@ -2,6 +2,19 @@ import XCTest
 @testable import OpenDictateCore
 
 final class HistoryTimingTests: XCTestCase {
+    func testModelOnlyRecordsAndCapturedFastMetadataDoNotInventTimes() throws {
+        let entry = HistoryEntry(text: "Synthetic", mode: "accurate", transcriptionModelID: "test-transcribe",
+            postProcessingModelID: TextProcessingModel.id, postProcessingServiceTier: TextProcessingServiceTier.fast.rawValue)
+        XCTAssertEqual(HistoryTiming.labels(for: entry, russian: false),
+            ["Transcr.: test-transcribe", "Post-proc.: GPT-6 Luna Fast"])
+        XCTAssertEqual(try JSONDecoder().decode(HistoryEntry.self, from: JSONEncoder().encode(entry)), entry)
+        XCTAssertTrue(HistoryTiming.details(for: entry, russian: true).allSatisfy { $0.duration == nil })
+        let live = HistoryEntry(text: "Synthetic", mode: "live", transcriptionModelID: "test-live",
+            postProcessingModelID: TextProcessingModel.id)
+        XCTAssertEqual(HistoryTiming.labels(for: live, russian: false), ["Live: test-live"])
+        XCTAssertNil(live.postProcessingModelID)
+    }
+
     func testLegacyEntriesDecodeWithoutInventedTimingsAndNewFieldsRoundTrip() throws {
         let legacy = Data(#"{"id":"3E485AF8-BE63-4C72-8CDA-EAA66C3AE195","date":0,"text":"Legacy synthetic text","mode":"accurate"}"#.utf8)
         let old = try JSONDecoder().decode(HistoryEntry.self, from: legacy)

@@ -1,7 +1,7 @@
-OpenDictate for macOS **0.5.0-rc.22** restores the complete previous RC feature set, including ChatGPT connection, text model selection and value-format rules. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.5.0-rc.23** adds one-session post-processing choices and clearer processing feedback. Requires macOS 14+ on Apple Silicon or Intel.
 
-- Formatting rules synchronize through Google Drive while all post-processing switches remain local.
-- Changing an enable switch does not enqueue synchronization. Existing rule journals migrate without changing local switches.
-- ChatGPT credentials remain device-local in Keychain; audio transcription still uses the separate OpenAI API key.
+- Choose **Dictate with post-processing** or **Dictate without post-processing** from the menu bar. The alternate action uses Accurate for one recording and preserves your normal settings.
+- History puts the transcript first, followed by the models and request durations captured for that recording. Older entries show only known metadata. History remains local.
+- The nonactivating HUD distinguishes transcription, post-processing and voice editing without moving or resizing between processing stages. Ordinary dictation without post-processing keeps a native spinner.
 
 Download the universal DMG and replace OpenDictate in Applications. This release candidate is locally signed and **not notarized**. Verify the attached SHA-256 checksum.

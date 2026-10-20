@@ -48,6 +48,15 @@ class DictationDeliveryTest {
                     val other = context.getString(if (override) R.string.overlay_without_postprocessing else R.string.overlay_with_postprocessing)
                     await { overlay(action) != null }
                     assertNull(overlay(other))
+                    val alternateBounds = Rect().also { overlay(action)!!.getBoundsInScreen(it) }
+                    for (description in listOf(R.string.overlay_last_dictation_description,
+                        R.string.overlay_paste_last_description, R.string.overlay_start_transformation,
+                        R.string.dictionary_add_action)) {
+                        overlay(context.getString(description))?.let { node ->
+                            val bounds = Rect().also(node::getBoundsInScreen)
+                            assertTrue("Alternate dictation must be the bottom menu action", bounds.bottom <= alternateBounds.top)
+                        }
+                    }
                     if (mode == TranscriptionModel.ACCURATE) {
                         automation.takeScreenshot()?.let { bitmap ->
                             java.io.FileOutputStream(java.io.File(context.cacheDir, "alternate-menu-$enabled.png")).use {
@@ -362,7 +371,8 @@ class DictationDeliveryTest {
                                 DictationButtonPosition.RIGHT -> bounds.right == context.resources.displayMetrics.widthPixels - (14 * density).toInt()
                             }
                             bounds.width() == appearance.touchDiameterPx(density) && anchored &&
-                                overlay(description) != null && SystemClock.uptimeMillis() - stableSince >= 400
+                                overlay(description) != null && SystemClock.uptimeMillis() - stableSince >=
+                                if (initialBounds == null) 1_000 else 400
                         }
                         if (initialBounds == null) initialBounds = Rect(bounds) else assertEquals(initialBounds, bounds)
                         val frame = spinnerFrame(bounds)
