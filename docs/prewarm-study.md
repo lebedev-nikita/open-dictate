@@ -6,11 +6,18 @@ This is an API experiment; it does not change either application.
 
 ## Decision and scope
 
-Results are pending. The earlier exploratory series is a pilot, not evidence
-pooled into this study. A useful outcome must improve both the typical delay and
-the user's wait for a completed result, without increasing failures. The working
-product threshold is at least 200 ms and 10%; this is a study assumption, not an
-established perceptual threshold.
+The completed primary series does not support adding cache prewarm to every
+dictation. Its estimated median TTFT saving is -13 ms, with a 95% interval from
+-58 to +32 ms. This excludes the predefined useful improvement of at least
+200 ms and 10% under the tested conditions. It does not establish that prewarm is
+useless for every model, prompt, account, or network. The independent transport
+supplement remains pending.
+
+The earlier exploratory series is a pilot, not evidence pooled into this study.
+A useful outcome must improve both the typical delay and the user's wait for a
+completed result, without increasing failures. The working product threshold is
+at least 200 ms and 10%; this is a study assumption, not an established
+perceptual threshold.
 
 The user's phone uses connected ChatGPT. These authorized measurements use the
 direct OpenAI API, so they cannot establish the effect on that account's OAuth
@@ -123,6 +130,36 @@ OAuth token renewal, Android HTTP/2, mobile radio startup, or persistent phone
 connection reuse. A benefit after GET or prewarm must therefore remain distinct
 from the primary cache-only effect and from a measured phone benefit.
 
+### Independent replication of the zero-lead anomaly
+
+After the original overlap series revealed an unexpected zero-lead improvement,
+a separate fixed replication was specified before its own data collection. This
+is a response to that observation, not part of the original confirmatory plan.
+Its results will not be pooled into the original primary endpoint, and the
+sample will not be extended according to its outcome.
+
+There are 48 four-arm blocks with the same synthetic source within each block:
+cold inference; completed same-prefix prewarm then inference; simultaneous
+same-prefix prewarm and inference; and simultaneous unrelated-prefix prewarm and
+inference. Every arm uses a fresh prefix, with the unrelated preparation using a
+different fresh prefix from its inference. All 24 arm-order permutations occur
+exactly twice, then are shuffled with seed 20261022. Both transports are warmed;
+preparation uses its separate connection and the real inference uses the main
+connection. Concurrent inference starts immediately without awaiting preparation.
+The plan makes 336 Responses calls, comprising 192 inferences and 144
+preparations, plus two GET transport warmups, after the independent transport
+study finishes.
+
+The replication's primary contrast is simultaneous same-prefix preparation
+versus cold inference. Completed preparation and unrelated simultaneous
+preparation are mechanism controls. The unrelated arm distinguishes a
+same-prefix interaction from the effect of merely issuing another request.
+Record cache reads and writes in both members of every concurrent pair: the
+original zero-lead data usually showed inference writing a prefix that the
+preparation subsequently read. A reproducible speedup without inference cache
+reads would still require a different mechanism explanation; it must not be
+described as a demonstrated completed-cache-prewarm benefit.
+
 ## Analysis rules
 
 TTFT starts immediately before sending the POST and ends at the first nonempty
@@ -182,8 +219,129 @@ ChatGPT route and the fraction of sessions whose preparation can finish early.
 
 ## Results
 
-Pending the fixed-sample run. Report cold, prepared, and ordinary-repeat TTFT and
-completion; paired intervals; lead-time results; failures and cache manipulation
-checks; preparation duration; input/output usage and estimated cost. Keep only
-aggregate metrics and synthetic-case identifiers. Never retain keys, request or
-response payloads, user transcripts, or focused-field content.
+### Primary: completed preparation, warm transport
+
+All 128 RU+EN pairs completed, with timings available in both arms. Medians below
+describe each arm separately; the saving and its interval are calculated from
+within-pair differences, not by subtracting those two marginal medians. A
+positive saving favors prewarm.
+
+| Metric | Cold median | Prewarmed median | Paired median saving | 95% paired bootstrap interval |
+| --- | ---: | ---: | ---: | ---: |
+| First text token | 845 ms | 854 ms | -13 ms | -58 to +32 ms |
+| Completed API response | 1,125 ms | 1,143 ms | -28 ms | -91 to +2 ms |
+
+The paired median TTFT saving is -1.58%, with a 95% interval of -6.74% to +3.80%.
+The completion saving is -2.62%, with an interval of -8.67% to +0.21%. Neither
+shows a useful typical improvement. The distribution-free sign interval for the
+TTFT median difference, -62 to +38 ms, supports the same practical interpretation.
+The four wave median TTFT savings were +19, -3, -32, and -40 ms; no wave had a
+point estimate close to the 200 ms threshold.
+
+Cache manipulation worked in every primary pair: all cold inferences read zero
+cached tokens, all prewarmed inferences read their prefix, and all 128 preparation
+calls completed with zero generated output. The median prefix write/read was
+2,897 tokens. Preparation itself took a median 757 ms. This runtime was fully
+outside the inference timings above, making this a favorable test of completed
+preparation; adding a blocking preparation step would not improve those results.
+
+Strict output validation passed for 126/128 cold and 125/128 prewarmed responses;
+the limited content probes passed for 125/128 and 124/128 respectively. These
+small differences do not establish a causal quality regression. All observed
+timings remain in the primary comparison. Restricting to the 123 pairs whose
+outputs both passed JSON validation gives a TTFT saving of -18 ms [-66, +26]
+and a completion saving of -27 ms [-89, +2]. The stricter 121-pair content-probe
+subset leads to the same interpretation. Cold-first and prewarm-first strata
+also have intervals crossing zero. A completed API response is not automatically
+a usable transformed result.
+
+Primary TTFT p90 was 1,294 ms cold and 1,254 ms prewarmed; the bootstrap interval
+for its difference is -282 to +324 ms. Completion p90 was 1,614 versus 1,739 ms,
+with a difference interval of -429 to +259 ms. These tail estimates do not
+establish an improvement or a regression; the typical-delay conclusion must not
+be generalized into a precise tail guarantee.
+
+The supplementary 32-pair RU series estimated a TTFT saving of +57 ms with a
+95% interval of -55 to +210 ms, and a completion saving of +82 ms with an interval
+of -173 to +157 ms. This smaller series is inconclusive about a 200 ms TTFT
+effect and must not replace the predefined RU+EN endpoint. Cache checks passed
+for all RU pairs as well.
+
+### Secondary series
+
+The fixed main plan completed all 1,031 calls: 771 inference requests and 260
+preparations. Every request reached `completed`, and every inference had a TTFT.
+Of the 771 inference outputs, 18 failed JSON/schema validation; 26 failed the
+limited content probes, including those invalid outputs. These probes are not a
+complete semantic evaluation. The estimated main-run API cost is $0.2213 using
+the Standard prices above, excluding pilot, smoke, and transport studies.
+
+All intervals below are exploratory and unadjusted for multiple comparisons.
+Entries show paired median savings in milliseconds [95% bootstrap interval]. A
+positive value favors the second condition named in the comparison.
+
+| Comparison | Pairs | TTFT saving | Completion saving |
+| --- | ---: | ---: | ---: |
+| Cold → ordinary prefix repeat | 128 | -5 [-45, +25] | -25 [-70, +19] |
+| Ordinary repeat → completed prewarm | 128 | +46 [-29, +75] | +14 [-45, +68] |
+| Current → split layout, both cold | 24 | -122 [-207, -17] | -128 [-216, -11] |
+| Current → split layout, frequent use | 24 | -81 [-225, +15] | -181 [-316, -57] |
+| Ordinary split reuse → extra prewarm | 24 | -102 [-202, +38] | -36 [-162, +80] |
+| Cold → completed prewarm, longer source | 16 | -43 [-116, +62] | -201 [-424, -50] |
+
+Ordinary repeats successfully read the cached prefix, as did the prewarmed
+requests. Neither natural reuse nor redundant preparation demonstrated the
+predefined useful typical speedup. Splitting the current input was not faster in
+these samples. The small secondary series cannot establish a universal layout
+or quality difference; their less conservative bootstrap intervals also differ
+from sign intervals on some endpoints. They provide no reason to change the
+production request layout solely to enable prewarm.
+
+### Concurrent preparation
+
+Inference started at source readiness regardless of whether preparation had
+finished. Each lead-time group has 12 pairs. The actual median leads were within
+5 ms of their targets. A completed preparation is distinct from a cache hit:
+the server can make a prefix available before the preparation response finishes.
+
+| Lead | Preparation completed before inference | Inference cache hits | TTFT saving, ms [95% interval] | Completion saving, ms [95% interval] |
+| --- | ---: | ---: | ---: | ---: |
+| 0 s | 0/12 | 1/12 | +494 [+142, +830] | +460 [+176, +887] |
+| 0.5 s | 0/12 | 12/12 | -45 [-408, +231] | -90 [-417, +237] |
+| 1 s | 8/12 | 12/12 | -19 [-123, +188] | +21 [-184, +227] |
+| 2 s | 12/12 | 12/12 | -64 [-263, +107] | -91 [-239, +63] |
+| 5 s | 11/12 | 12/12 | +19 [-121, +210] | +91 [-69, +497] |
+
+The zero-lead result is an unresolved secondary anomaly, not evidence that a
+completed cache preparation accelerated inference. Its cold-arm median TTFT was
+1,473 ms, compared with 900 ms concurrent and 845 ms in the main cold series;
+this cross-series comparison is descriptive, not a matched causal estimate.
+Moreover, 10/12 concurrent preparation requests themselves read the prefix
+written by inference, while 11/12 inferences reported no cache read. The usual
+direction of reuse was therefore inference → preparation. Cache availability
+does not explain the observed benefit through the intended preparation →
+inference mechanism.
+
+The anomaly was not explained by a simple order imbalance: seven pairs ran cold
+first and five concurrent first, with positive subgroup median savings in both.
+Its small sample, multiple secondary comparisons, temporal variation, and
+unverified concurrency mechanism require an independent bounded replication
+before any production decision based on simultaneous requests. The four other
+lead-time groups do not show a reliable typical improvement.
+
+As a separate blocking-policy simulation, adding unhidden preparation duration
+to the primary prewarmed response gives a median completion saving of -789 ms
+[-915, -728] at zero lead and -289 ms [-415, -228] at 0.5 s lead. This is an
+arithmetic scenario using measured sequential durations, not an observed
+concurrent effect. It reinforces that inference must not wait for preparation.
+
+### Transport supplement
+
+Transport results remain pending. The recommendation against adding cache
+prewarm on every dictation is based on the completed primary comparison; it does
+not discard the separate possibility of useful first-session transport
+preparation on the phone.
+
+Only aggregate metrics and synthetic-case identifiers are retained. No keys,
+request or response payloads, user transcripts, or focused-field content belong
+in the study artifacts.

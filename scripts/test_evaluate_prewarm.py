@@ -16,6 +16,9 @@ analysis_spec.loader.exec_module(analysis)
 transport_spec = importlib.util.spec_from_file_location("prewarm_transport", Path(__file__).with_name("evaluate-prewarm-transport.py"))
 transport = importlib.util.module_from_spec(transport_spec)
 transport_spec.loader.exec_module(transport)
+race_spec = importlib.util.spec_from_file_location("prewarm_race", Path(__file__).with_name("evaluate-prewarm-race.py"))
+race = importlib.util.module_from_spec(race_spec)
+race_spec.loader.exec_module(race)
 
 
 def stream(events):
@@ -200,6 +203,40 @@ class TransportProtocolTests(unittest.TestCase):
         self.assertEqual(sum(r["phase"]=="transport" for r in rows),72)
         for connection in instances[1:]:
             self.assertIn(connection.calls,[["infer","close"],["get","infer","close"],["prep","infer","close"]])
+
+    def test_replication_balances_all_permutations_and_keeps_prefix_controls(self):
+        instances=[]
+        class FakeConnection:
+            def __init__(self,key):
+                self.bodies=[]
+                instances.append(self)
+            def warm_transport(self):
+                pass
+            def request(self,body,checks=()):
+                self.bodies.append(body)
+                prep=body.get("prompt_cache_options",{}).get("prewarm",False)
+                return {"status":"completed","ttft_ms":None if prep else 10,"completion_ms":20,
+                        "valid_json":not prep,"cache_read_tokens":2000,"output_tokens":0 if prep else 20}
+            def close(self):
+                pass
+        template={"model":"gpt-6-luna","input":json.dumps({"instruction":"stable rules"})}
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(race.prewarm,"Connection",FakeConnection), patch.object(race.prewarm,"paired_summary",return_value={"n":48}), patch("builtins.print"):
+                race.run(Path(directory)/"run","unused-private-key",{"ru_en":template})
+            rows=[json.loads(line) for line in (Path(directory)/"run/measurements.jsonl").read_text().splitlines()]
+        self.assertEqual(len(rows),336)
+        self.assertEqual(len(instances[0].bodies),192)
+        self.assertEqual(len(instances[1].bodies),144)
+        orders=[]
+        for block in range(48):
+            arms=[r["arm"] for r in rows if r["block"]==block and not r["arm"].startswith("preparation")]
+            orders.append(tuple(arms))
+        from collections import Counter
+        self.assertEqual(set(Counter(orders).values()),{2})
+        self.assertEqual(len(set(orders)),24)
+        inference_prefixes=[body["input"][0] for body in instances[0].bodies]
+        prepared_prefixes=[body["input"][0] for body in instances[1].bodies]
+        self.assertEqual(sum(prefix in inference_prefixes for prefix in prepared_prefixes),96)
 
 
 if __name__ == "__main__":
