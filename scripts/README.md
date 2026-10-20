@@ -57,3 +57,37 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 ```
 
 Delete the temporary WAV after testing.
+
+## Post-processing prewarm study
+
+`evaluate-prewarm.py` compares cold prefixes, completed and concurrent prewarm,
+ordinary cache reuse, and the current versus split message layout. It generates
+the punctuation/value-formatting prompt from `OpenDictateCore`, so macOS and
+Swift are required. Only bundled synthetic text is sent; reports contain timings,
+token counts and boolean checks, without request/response bodies or output text.
+
+The default fixed plan makes 1,031 requests to the direct OpenAI Responses API,
+using `gpt-6-luna`, Standard service and no reasoning. It ignores
+`OPENAI_BASE_URL`; supply a direct API credential as `OPENAI_API_KEY` in the
+ignored `.env` file. Missing credentials fail without fallback. The separate
+transcription-key override requires explicit user authorization for that run;
+it is not a general change to the credential policy.
+
+```bash
+python3 scripts/evaluate-prewarm.py --smoke --output /tmp/prewarm-validation
+python3 scripts/evaluate-prewarm.py --output /tmp/prewarm-study
+```
+
+The smoke run validates the harness and must not be pooled into the main sample.
+Output directories must be new. The runner records the fixed plan before API
+calls, appends every attempt to `measurements.jsonl`, and writes `summary.json`.
+Existing results are never overwritten. To reanalyze, copy the metric directory,
+remove its generated summary, and run:
+
+```bash
+python3 scripts/evaluate-prewarm.py --analyze /tmp/prewarm-study-copy
+```
+
+Timing includes networking from this computer. Cache hits alone do not establish
+speedup, and direct API results do not establish connected ChatGPT performance.
+See [the study](../docs/prewarm-study.md) for controls, uncertainty and findings.
