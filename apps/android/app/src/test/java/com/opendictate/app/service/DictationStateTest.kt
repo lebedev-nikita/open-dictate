@@ -2,10 +2,43 @@ package com.opendictate.app.service
 
 import com.opendictate.app.model.TranscriptionModel
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DictationStateTest {
+    @Test fun `processing stages keep session ownership and cancellation guards`() {
+        for (stage in DictationProcessingStage.entries) {
+            val state = DictationState(sessionId = 42L, phase = DictationPhase.PROCESSING,
+                model = TranscriptionModel.ACCURATE, processingStage = stage)
+            assertEquals(stage, state.activeProcessingStage)
+            assertTrue(state.isActive)
+            assertTrue(state.acceptsActiveUpdate(42L))
+            assertTrue(state.acceptsCancellation(42L))
+            assertFalse(state.acceptsActiveUpdate(41L))
+            assertFalse(state.acceptsCancellation(41L))
+        }
+    }
+
+    @Test fun `processing stage is hidden outside processing even after completion or cancellation`() {
+        for (phase in DictationPhase.entries.filterNot { it.isProcessing }) {
+            val state = DictationState(sessionId = 42L, phase = phase,
+                model = TranscriptionModel.ACCURATE, processingStage = DictationProcessingStage.POST_PROCESSING)
+            assertNull(state.activeProcessingStage)
+        }
+    }
+
+    @Test fun `processing without an explicit stage preserves the operation and explicit stages override it`() {
+        val state = DictationState(sessionId = 42L, phase = DictationPhase.PROCESSING,
+            model = TranscriptionModel.ACCURATE)
+        assertEquals(DictationProcessingStage.TRANSCRIPTION, state.activeProcessingStage)
+        val editing = state.copy(operation = DictationOperation.TRANSFORMATION)
+        assertEquals(DictationProcessingStage.TRANSFORMATION, editing.activeProcessingStage)
+        assertEquals(DictationProcessingStage.TRANSCRIPTION,
+            editing.copy(processingStage = DictationProcessingStage.TRANSCRIPTION).activeProcessingStage)
+    }
+
     @Test
     fun `accurate cancellation does not restore text while recording or processing`() {
         for (phase in listOf(DictationPhase.LISTENING, DictationPhase.PROCESSING)) {

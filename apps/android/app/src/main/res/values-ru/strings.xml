@@ -148,12 +148,16 @@
     <string name="overlay_connecting">СОЕДИНЯЮ</string>
     <string name="overlay_listening">СТОП</string>
     <string name="overlay_processing">ПИШУ…</string>
-    <string name="overlay_processing_description">Подготовка текста. Потяните влево, чтобы отменить изменения.</string>
+    <string name="overlay_processing_description">Транскрипция речи. Потяните влево, чтобы отменить.</string>
+    <string name="overlay_processing_description_left">Транскрипция речи. Потяните вправо, чтобы отменить.</string>
+    <string name="overlay_postprocessing_description">Постобработка текста. Потяните влево, чтобы отменить.</string>
+    <string name="overlay_postprocessing_description_left">Постобработка текста. Потяните вправо, чтобы отменить.</string>
     <string name="overlay_retry">ЕЩЁ РАЗ</string>
     <string name="overlay_idle">ГОВОРИТЬ</string>
     <string name="overlay_transform">ИЗМЕНИТЬ</string>
     <string name="overlay_transforming">МЕНЯЮ…</string>
     <string name="overlay_transforming_description">Преобразование текста. Потяните влево, чтобы отменить.</string>
+    <string name="overlay_transforming_description_left">Преобразование текста. Потяните вправо, чтобы отменить.</string>
     <string name="clipboard_transcript_label">Транскрипция OpenDictate</string>
     <string name="transcript_copied_to_clipboard">Поле ввода недоступно. Текст скопирован в буфер обмена.</string>
 

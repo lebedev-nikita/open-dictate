@@ -151,12 +151,16 @@
     <string name="overlay_connecting">CONNECTING</string>
     <string name="overlay_listening">STOP</string>
     <string name="overlay_processing">WRITING…</string>
-    <string name="overlay_processing_description">Writing text. Swipe left to cancel and undo changes.</string>
+    <string name="overlay_processing_description">Transcribing speech. Swipe left to cancel.</string>
+    <string name="overlay_processing_description_left">Transcribing speech. Swipe right to cancel.</string>
+    <string name="overlay_postprocessing_description">Post-processing text. Swipe left to cancel.</string>
+    <string name="overlay_postprocessing_description_left">Post-processing text. Swipe right to cancel.</string>
     <string name="overlay_retry">TRY AGAIN</string>
     <string name="overlay_idle">SPEAK</string>
     <string name="overlay_transform">TRANSFORM</string>
     <string name="overlay_transforming">EDITING…</string>
     <string name="overlay_transforming_description">Transforming text. Swipe left to cancel.</string>
+    <string name="overlay_transforming_description_left">Transforming text. Swipe right to cancel.</string>
     <string name="clipboard_transcript_label">OpenDictate transcript</string>
     <string name="transcript_copied_to_clipboard">No text field available. Transcript copied to clipboard.</string>
 
