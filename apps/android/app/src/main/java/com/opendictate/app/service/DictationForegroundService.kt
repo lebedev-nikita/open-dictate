@@ -51,7 +51,8 @@ class DictationForegroundService : Service() {
             ACTION_STOP -> requestStop()
             ACTION_CANCEL -> requestCancel(intent.getLongExtra(EXTRA_SESSION_ID, 0L))
             ACTION_START -> if (!DictationStateBus.state.value.isActive) {
-                startDictation(DictationOperation.DICTATION)
+                startDictation(DictationOperation.DICTATION, postProcessingOverride =
+                    if (intent.hasExtra(EXTRA_POST_PROCESSING_ENABLED)) intent.getBooleanExtra(EXTRA_POST_PROCESSING_ENABLED, false) else null)
             }
             ACTION_START_TRANSFORMATION -> if (!DictationStateBus.state.value.isActive) {
                 startDictation(
@@ -79,6 +80,7 @@ class DictationForegroundService : Service() {
     private fun startDictation(
         operation: DictationOperation,
         sourceText: String? = null,
+        postProcessingOverride: Boolean? = null,
     ) {
         val apiKey = SecureApiKeyStore(this).get()
         if (apiKey.isNullOrBlank()) {
@@ -95,13 +97,14 @@ class DictationForegroundService : Service() {
             return
         }
         val settings = SettingsStore(this)
-        val model = settings.model
+        val options = com.opendictate.app.model.DictationStartOptions.resolve(settings.model, settings.postProcessing, postProcessingOverride)
+        val model = options.model
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val textProcessingServiceTier = settings.textProcessingServiceTier
-        val postProcessing = settings.postProcessing.forMode(model)
+        val postProcessing = options.postProcessing
         activePostProcessingEnabled = operation == DictationOperation.DICTATION && postProcessing.shouldProcess
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
         val languages = settings.languages
@@ -584,6 +587,7 @@ class DictationForegroundService : Service() {
         const val ACTION_STOP = "com.opendictate.app.action.STOP_DICTATION"
         const val ACTION_CANCEL = "com.opendictate.app.action.CANCEL_DICTATION"
         const val EXTRA_SOURCE_TEXT = "source_text"
+        const val EXTRA_POST_PROCESSING_ENABLED = "com.opendictate.app.extra.POST_PROCESSING_ENABLED"
         const val EXTRA_SESSION_ID = "com.opendictate.app.extra.SESSION_ID"
         private const val CHANNEL_ID = "dictation"
         private const val MODEL_MESSAGE_CHANNEL_ID = "transformation_messages"

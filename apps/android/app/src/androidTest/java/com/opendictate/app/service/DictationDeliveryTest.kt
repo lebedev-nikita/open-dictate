@@ -31,6 +31,54 @@ class DictationDeliveryTest {
     private val automation: UiAutomation
         get() = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
 
+    @Test fun alternateMenuDictationOverridesOnlyOneSessionAndPreservesMainButtonSettings() = withAccessibility { settings ->
+        val previousProcessing = settings.postProcessing
+        try {
+            for ((mode, enabled) in listOf(TranscriptionModel.ACCURATE to false,
+                TranscriptionModel.ACCURATE to true, TranscriptionModel.LIVE to true)) {
+                settings.model = mode
+                settings.postProcessing = com.opendictate.app.model.PostProcessingSettings(enabled = enabled)
+                val saved = settings.postProcessing
+                val journal = settings.syncDocument()
+                ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { _ ->
+                    await { startButton() != null }
+                    assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK))
+                    val override = !saved.forMode(mode).enabled
+                    val action = context.getString(if (override) R.string.overlay_with_postprocessing else R.string.overlay_without_postprocessing)
+                    val other = context.getString(if (override) R.string.overlay_without_postprocessing else R.string.overlay_with_postprocessing)
+                    await { overlay(action) != null }
+                    assertNull(overlay(other))
+                    if (mode == TranscriptionModel.ACCURATE) {
+                        automation.takeScreenshot()?.let { bitmap ->
+                            java.io.FileOutputStream(java.io.File(context.cacheDir, "alternate-menu-$enabled.png")).use {
+                                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                            }
+                            bitmap.recycle()
+                        }
+                    }
+                    assertTrue(overlay(action)!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                    await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+                    val session = DictationStateBus.state.value
+                    assertEquals(TranscriptionModel.ACCURATE, session.model)
+                    assertEquals(override, session.postProcessingEnabled)
+                    assertEquals(mode, settings.model)
+                    assertEquals(saved, settings.postProcessing)
+                    assertEquals(journal, settings.syncDocument())
+                    context.startService(Intent(context, DictationForegroundService::class.java)
+                        .setAction(DictationForegroundService.ACTION_CANCEL)
+                        .putExtra(DictationForegroundService.EXTRA_SESSION_ID, session.sessionId))
+                    await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+                    if (mode == TranscriptionModel.ACCURATE) {
+                        val primary = captureTargetWithoutNetwork()
+                        assertEquals(mode, primary.model)
+                        assertEquals(enabled, primary.postProcessingEnabled)
+                    }
+                }
+                await { !hasOverlay() }
+            }
+        } finally { settings.postProcessing = previousProcessing }
+    }
+
     @Test fun recordingIsCancelledAndCanRestartAfterKeyboardReopens() = withAccessibility { _ ->
         ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
             await { startButton() != null }
@@ -301,13 +349,21 @@ class DictationDeliveryTest {
                                     DictationOperation.TRANSFORMATION else DictationOperation.DICTATION))
                         }
                         val bounds = Rect()
+                        var settledBounds: Rect? = null
+                        var stableSince = SystemClock.uptimeMillis()
                         await {
                             overlay(description)?.getBoundsInScreen(bounds)
-                            bounds.width() == appearance.touchDiameterPx(density) && overlay(description) != null
+                            if (settledBounds != bounds) {
+                                settledBounds = Rect(bounds)
+                                stableSince = SystemClock.uptimeMillis()
+                            }
+                            val anchored = when (position) {
+                                DictationButtonPosition.LEFT -> bounds.left == (14 * density).toInt()
+                                DictationButtonPosition.RIGHT -> bounds.right == context.resources.displayMetrics.widthPixels - (14 * density).toInt()
+                            }
+                            bounds.width() == appearance.touchDiameterPx(density) && anchored &&
+                                overlay(description) != null && SystemClock.uptimeMillis() - stableSince >= 400
                         }
-                        // Let anchor resizing and the screenshot compositor settle before comparing pixels.
-                        SystemClock.sleep(if (initialBounds == null) 600 else 120)
-                        overlay(description)!!.getBoundsInScreen(bounds)
                         if (initialBounds == null) initialBounds = Rect(bounds) else assertEquals(initialBounds, bounds)
                         val frame = spinnerFrame(bounds)
                         val visibleDiameter = appearance.diameterPx(density)
@@ -458,8 +514,7 @@ class DictationDeliveryTest {
 
     /** Capture through the real overlay, then cancel the recorder before injecting provider states. */
     private fun captureTargetWithoutNetwork(): DictationState {
-        await { startButton() != null }
-        assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+        await { startButton()?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true }
         await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
         val session = DictationStateBus.state.value
         context.startService(Intent(context, DictationForegroundService::class.java)

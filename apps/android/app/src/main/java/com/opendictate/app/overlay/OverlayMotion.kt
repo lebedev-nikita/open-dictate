@@ -62,8 +62,8 @@ internal object OverlayMotion {
         showTransformation: Boolean = false,
     ): Int {
         val heightDp = if (showMenu) {
-            ACTION_HEIGHT_DP * (if (showTransformation) 4 else 3) +
-                GAP_DP * (if (showTransformation) 3 else 2)
+            ACTION_HEIGHT_DP * (if (showTransformation) 5 else 4) +
+                GAP_DP * (if (showTransformation) 4 else 3)
         } else {
             ACTION_HEIGHT_DP
         }
@@ -99,7 +99,7 @@ internal object OverlayMotion {
         showTransformation: Boolean,
         showDictionary: Boolean = false,
     ): Int {
-        val actions = 2 + (if (showTransformation) 1 else 0) + (if (showDictionary) 1 else 0)
+        val actions = 3 + (if (showTransformation) 1 else 0) + (if (showDictionary) 1 else 0)
         return actions * actionHeightPx(density) + (actions - 1) * gapPx(density)
     }
 
@@ -109,6 +109,27 @@ internal object OverlayMotion {
         showDictionary: Boolean = false,
     ): Int = menuHeightPx(density, showTransformation, showDictionary) +
         2 * verticalShadowInsetPx(density)
+
+    data class MenuWindowLayout(val height: Int, val offsetY: Int)
+
+    /** Keep the button fixed; scroll menu contents when neither side fits the full list. */
+    fun menuWindowLayout(
+        primaryOffsetY: Int, displayHeightPx: Int, density: Float,
+        showTransformation: Boolean, showDictionary: Boolean = false,
+        appearance: DictationButtonAppearance = DictationButtonAppearance(), topInsetPx: Int = 0,
+    ): MenuWindowLayout {
+        val minimumTop = maxOf(dpToPx(TOP_MARGIN_DP, density), topInsetPx)
+        val primaryOffset = primaryOffsetY.coerceIn(0,
+            (displayHeightPx - primaryWindowHeightPx(density, appearance) - minimumTop).coerceAtLeast(0))
+        val aboveOffset = primaryOffset + appearance.touchDiameterPx(density) + gapPx(density)
+        val aboveSpace = (displayHeightPx - aboveOffset - minimumTop).coerceAtLeast(1)
+        val belowSpace = (primaryOffset - gapPx(density) + 2 * verticalShadowInsetPx(density)).coerceAtLeast(1)
+        val fullHeight = menuWindowHeightPx(density, showTransformation, showDictionary)
+        val above = fullHeight <= aboveSpace || (fullHeight > belowSpace && aboveSpace >= belowSpace)
+        val height = min(fullHeight, if (above) aboveSpace else belowSpace)
+        return MenuWindowLayout(height, if (above) aboveOffset else
+            primaryOffset - height + 2 * verticalShadowInsetPx(density) - gapPx(density))
+    }
 
     /** Places the menu beside the fixed button, above it when there is room. */
     fun menuWindowOffsetY(
@@ -120,22 +141,8 @@ internal object OverlayMotion {
         appearance: DictationButtonAppearance = DictationButtonAppearance(),
         topInsetPx: Int = 0,
     ): Int {
-        val menuHeight = menuHeightPx(density, showTransformation, showDictionary)
-        val gap = gapPx(density)
-        val minimumTop = maxOf(dpToPx(TOP_MARGIN_DP, density), topInsetPx)
-        // WindowManager may already have clamped the visible button while its position follower
-        // is still settling toward the newly reported display frame.
-        val maximumPrimaryOffset = (displayHeightPx - primaryWindowHeightPx(density, appearance) -
-            minimumTop).coerceAtLeast(0)
-        val renderedPrimaryOffset = primaryOffsetY.coerceIn(0, maximumPrimaryOffset)
-        val aboveOffset = renderedPrimaryOffset + appearance.touchDiameterPx(density) + gap
-        val aboveTop = displayHeightPx - aboveOffset -
-            menuWindowHeightPx(density, showTransformation, showDictionary)
-        return if (aboveTop >= minimumTop) {
-            aboveOffset
-        } else {
-            renderedPrimaryOffset - menuHeight - gap
-        }
+        return menuWindowLayout(primaryOffsetY, displayHeightPx, density, showTransformation,
+            showDictionary, appearance, topInsetPx).offsetY
     }
 
     fun actionHeightPx(density: Float): Int = dpToPx(ACTION_HEIGHT_DP, density)

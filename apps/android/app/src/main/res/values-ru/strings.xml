@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="overlay_with_postprocessing">С постобработкой</string>
+    <string name="overlay_without_postprocessing">Без постобработки</string>
     <string name="language_switcher_description">Изменить язык приложения</string>
     <string name="theme_switcher_description">Изменить тему приложения</string>
     <string name="theme_system">Системная тема</string>

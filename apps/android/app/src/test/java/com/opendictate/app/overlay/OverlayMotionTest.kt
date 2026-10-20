@@ -8,6 +8,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayMotionTest {
+    @Test fun `five-action menu scrolls within the larger available side on short screens`() {
+        for (offset in listOf(0, 90, 260, 330)) {
+            val layout = OverlayMotion.menuWindowLayout(offset, 500, 2f, true, true)
+            assertTrue(layout.height > 0)
+            assertTrue(layout.height < OverlayMotion.menuWindowHeightPx(2f, true, true))
+            assertTrue(layout.offsetY >= 0)
+            assertTrue(500 - layout.offsetY - layout.height >= 64)
+        }
+    }
+
     @Test fun `menu follows a system-clamped button before its motion settles`() {
         val appearance = DictationButtonAppearance(96)
         val menuOffset = OverlayMotion.menuWindowOffsetY(
@@ -86,11 +96,11 @@ class OverlayMotionTest {
     fun `window leaves room for shadows while keeping actions at original right edge`() {
         val density = 2f
 
-        assertEquals(344, OverlayMotion.heightPx(density, showMenu = true))
-        assertEquals(464, OverlayMotion.heightPx(density, showMenu = true, showTransformation = true))
+        assertEquals(464, OverlayMotion.heightPx(density, showMenu = true))
+        assertEquals(584, OverlayMotion.heightPx(density, showMenu = true, showTransformation = true))
         assertEquals(104, OverlayMotion.heightPx(density, showMenu = false))
-        assertEquals(376, OverlayMotion.windowHeightPx(density, showMenu = true))
-        assertEquals(496, OverlayMotion.windowHeightPx(density, showMenu = true, showTransformation = true))
+        assertEquals(496, OverlayMotion.windowHeightPx(density, showMenu = true))
+        assertEquals(616, OverlayMotion.windowHeightPx(density, showMenu = true, showTransformation = true))
         assertEquals(136, OverlayMotion.windowHeightPx(density, showMenu = false))
         assertEquals(104, OverlayMotion.widthPx(density))
         assertEquals(464, OverlayMotion.widthPx(density, showMenu = true))
@@ -114,7 +124,7 @@ class OverlayMotionTest {
         val density = 2f
 
         assertEquals(464, OverlayMotion.widthPx(density, showMenu = true))
-        assertEquals(344, OverlayMotion.heightPx(density, showMenu = true))
+        assertEquals(464, OverlayMotion.heightPx(density, showMenu = true))
         assertEquals(104, OverlayMotion.actionHeightPx(density))
     }
 
@@ -160,7 +170,7 @@ class OverlayMotionTest {
 
         assertEquals(OverlayMotion.gapPx(density), menuTop - primaryBottom)
         assertEquals(OverlayMotion.widthPx(density), OverlayMotion.actionHeightPx(density))
-        assertEquals(224, OverlayMotion.menuHeightPx(density, false))
+        assertEquals(344, OverlayMotion.menuHeightPx(density, false))
     }
 
     @Test
@@ -378,7 +388,7 @@ class OverlayMotionTest {
     @Test
     fun `position keeps a top margin when vertical space is tight`() {
         val density = 2f
-        val displayHeight = 500
+        val displayHeight = 620
         val keyboardTop = 260
 
         val offset = OverlayMotion.windowOffsetY(

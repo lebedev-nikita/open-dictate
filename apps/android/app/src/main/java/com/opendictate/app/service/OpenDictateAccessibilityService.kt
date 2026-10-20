@@ -104,6 +104,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             onAddToDictionaryClick = ::onAddToDictionaryTapped,
             onPasteLastClick = ::onPasteLastTapped,
             onLastDictationClick = ::onLastDictationTapped,
+            onAlternateDictationClick = ::onAlternateDictationTapped,
         )
         scope.launch {
             DictationStateBus.state.collectLatest { state ->
@@ -234,12 +235,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         showDictionary: Boolean,
     ) {
         val view = overlayMenu ?: return
+        view.setPrimaryPostProcessingEnabled(settings.postProcessing.forMode(settings.model).enabled)
         view.setTransformationAvailable(showTransformation)
         view.setDictionaryAvailable(showDictionary)
         val density = resources.displayMetrics.density
         val width = OverlayMotion.windowWidthPx(density, showMenu = true)
-        val height = OverlayMotion.menuWindowHeightPx(density, showTransformation, showDictionary)
-        val y = OverlayMotion.menuWindowOffsetY(
+        val menuLayout = OverlayMotion.menuWindowLayout(
             primaryOffsetY = primaryOffsetY,
             displayHeightPx = resources.displayMetrics.heightPixels,
             density = density,
@@ -248,6 +249,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             appearance = settings.dictationButtonAppearance,
             topInsetPx = overlayTopInsetPx,
         )
+        val height = menuLayout.height
+        val y = menuLayout.offsetY
         val x = OverlayMotion.windowLeftPx(resources.displayMetrics.widthPixels, width,
             settings.dictationButtonAppearance.position)
         val currentParams = overlayMenuLayoutParams
@@ -409,6 +412,15 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             stopDictation()
             return
         }
+        startOrdinaryDictation()
+    }
+
+    private fun onAlternateDictationTapped(postProcessingEnabled: Boolean) {
+        if (DictationStateBus.state.value.isActive) return
+        startOrdinaryDictation(postProcessingEnabled)
+    }
+
+    private fun startOrdinaryDictation(postProcessingOverride: Boolean? = null) {
         setOverlayMenuExpanded(false)
         if (!isReadyToStart()) return
         val focused = findFocusedEditable()
@@ -422,6 +434,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         transcriptDelivery.reset()
         val intent = Intent(this, DictationForegroundService::class.java)
             .setAction(DictationForegroundService.ACTION_START)
+        postProcessingOverride?.let { intent.putExtra(DictationForegroundService.EXTRA_POST_PROCESSING_ENABLED, it) }
         ContextCompat.startForegroundService(this, intent)
     }
 
@@ -613,6 +626,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private fun setOverlayMenuExpanded(expanded: Boolean) {
         if (overlayMenuExpanded == expanded) return
         overlayMenuExpanded = expanded
+        if (expanded) overlayMenu?.scrollTo(0, 0)
         overlay?.setMenuState(expanded = overlayMenuExpanded)
         if (!expanded) removeMenuOverlay()
         scheduleOverlayUpdate()

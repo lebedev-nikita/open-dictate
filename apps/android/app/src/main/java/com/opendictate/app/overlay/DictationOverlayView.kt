@@ -24,6 +24,7 @@ import android.view.ViewOutlineProvider
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.core.content.ContextCompat
 import com.opendictate.app.R
 import com.opendictate.app.model.DictationButtonAppearance
@@ -92,10 +93,24 @@ class DictationOverlayMenuView(
     onAddToDictionaryClick: () -> Unit,
     onPasteLastClick: () -> Unit,
     onLastDictationClick: () -> Unit,
-) : LinearLayout(context) {
+    onAlternateDictationClick: (Boolean) -> Unit,
+) : ScrollView(context) {
     private val density = resources.displayMetrics.density
+    private val actions = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        clipChildren = false
+        clipToPadding = false
+    }
     private var transformationAvailable: Boolean? = null
     private var dictionaryAvailable: Boolean? = null
+    private var alternatePostProcessingEnabled = true
+    private val alternateDictationButton = OverlayMenuActionView(
+        context = context,
+        onClick = { onAlternateDictationClick(alternatePostProcessingEnabled) },
+        iconResource = R.drawable.ic_speech_to_text_rounded_24,
+        labelResource = R.string.overlay_with_postprocessing,
+        descriptionResource = R.string.overlay_with_postprocessing,
+    )
     private val transformationButton = OverlayMenuActionView(
         context = context,
         onClick = onTransformationClick,
@@ -125,9 +140,8 @@ class DictationOverlayMenuView(
         descriptionResource = R.string.overlay_last_dictation_description,
     )
     init {
-        orientation = VERTICAL
-        gravity = Gravity.END
-        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        isHorizontalScrollBarEnabled = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_AUTO
         val horizontalShadowInset = OverlayMotion.horizontalShadowInsetPx(density)
         val verticalShadowInset = OverlayMotion.verticalShadowInsetPx(density)
         setPadding(
@@ -138,30 +152,34 @@ class DictationOverlayMenuView(
         )
         clipChildren = false
         clipToPadding = false
-        addView(
+        addView(actions, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        actions.addView(alternateDictationButton,
+            LinearLayout.LayoutParams(OverlayMotion.widthPx(density, showMenu = true), OverlayMotion.actionHeightPx(density))
+                .apply { bottomMargin = OverlayMotion.gapPx(density) })
+        actions.addView(
             lastDictationButton,
-            LayoutParams(
+            LinearLayout.LayoutParams(
                 OverlayMotion.widthPx(density, showMenu = true),
                 OverlayMotion.actionHeightPx(density),
             ).apply { bottomMargin = OverlayMotion.gapPx(density) },
         )
-        addView(
+        actions.addView(
             pasteLastButton,
-            LayoutParams(
+            LinearLayout.LayoutParams(
                 OverlayMotion.widthPx(density, showMenu = true),
                 OverlayMotion.actionHeightPx(density),
             ),
         )
-        addView(
+        actions.addView(
             transformationButton,
-            LayoutParams(
+            LinearLayout.LayoutParams(
                 OverlayMotion.widthPx(density, showMenu = true),
                 OverlayMotion.actionHeightPx(density),
             ),
         )
-        addView(
+        actions.addView(
             dictionaryButton,
-            LayoutParams(
+            LinearLayout.LayoutParams(
                 OverlayMotion.widthPx(density, showMenu = true),
                 OverlayMotion.actionHeightPx(density),
             ),
@@ -171,10 +189,17 @@ class DictationOverlayMenuView(
     }
 
     fun render(state: DictationState) {
+        alternateDictationButton.render(state)
         lastDictationButton.render(state)
         transformationButton.render(state)
         pasteLastButton.render(state)
         dictionaryButton.render(state)
+    }
+
+    fun setPrimaryPostProcessingEnabled(enabled: Boolean) {
+        alternatePostProcessingEnabled = !enabled
+        val label = if (enabled) R.string.overlay_without_postprocessing else R.string.overlay_with_postprocessing
+        alternateDictationButton.setLabel(label)
     }
 
     fun setTransformationAvailable(available: Boolean) {
@@ -192,13 +217,13 @@ class DictationOverlayMenuView(
     }
 
     private fun updateTrailingButtons() {
-        (pasteLastButton.layoutParams as LayoutParams).apply {
+        (pasteLastButton.layoutParams as LinearLayout.LayoutParams).apply {
             bottomMargin = if (transformationAvailable == true || dictionaryAvailable == true) {
                 OverlayMotion.gapPx(density)
             } else 0
             pasteLastButton.layoutParams = this
         }
-        (transformationButton.layoutParams as LayoutParams).apply {
+        (transformationButton.layoutParams as LinearLayout.LayoutParams).apply {
             bottomMargin = if (transformationAvailable == true && dictionaryAvailable == true) {
                 OverlayMotion.gapPx(density)
             } else 0
@@ -679,7 +704,7 @@ private class OverlayMenuActionView(
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
     private val bounds = RectF()
-    private val label = context.getString(labelResource)
+    private var label = context.getString(labelResource)
     private var renderedLabel: CharSequence = label
 
     init {
@@ -701,8 +726,21 @@ private class OverlayMenuActionView(
         invalidate()
     }
 
+    fun setLabel(resource: Int) {
+        val next = context.getString(resource)
+        if (label == next) return
+        label = next
+        contentDescription = label
+        updateRenderedLabel(width)
+        invalidate()
+    }
+
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
+        updateRenderedLabel(width)
+    }
+
+    private fun updateRenderedLabel(width: Int) {
         val availableTextWidth = width -
             (MENU_START_PADDING_DP + ICON_SIZE_DP + MENU_ICON_GAP_DP + MENU_END_PADDING_DP) * density
         renderedLabel = TextUtils.ellipsize(
