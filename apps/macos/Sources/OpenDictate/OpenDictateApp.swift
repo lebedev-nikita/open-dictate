@@ -5,6 +5,11 @@ import OpenDictateCore
 @main
 struct OpenDictateApp {
     @MainActor static func main() {
+        if CommandLine.arguments.contains("--verify-bundled-resources") {
+            do { try CoreResources.verify(); print("Bundled resources verified.") }
+            catch { fputs("Bundled resource verification failed.\n", stderr); exit(1) }
+            return
+        }
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate

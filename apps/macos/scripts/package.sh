@@ -49,6 +49,8 @@ else
         --entitlements "$macos_root/Resources/OpenDictate.entitlements" "$app"
 fi
 codesign --verify --deep --strict "$app"
+# Run from the shipped bundle: SwiftPM's build-directory fallback cannot validate packaging.
+"$app/Contents/MacOS/OpenDictate" --verify-bundled-resources
 architectures="$(lipo -archs "$app/Contents/MacOS/OpenDictate")"
 [[ "$architectures" == "x86_64 arm64" || "$architectures" == "arm64 x86_64" ]]
 ditto "$app" "$staging/OpenDictate.app"

@@ -359,6 +359,10 @@ macOS packaging renders the original Android vector without adding lighting or s
 
 `scripts/package.sh` emits `dist/macos/OpenDictate.app`, a universal DMG, and a
 SHA-256 checksum. It validates both CPU slices, the bundle signature and the DMG.
+It also runs the packaged executable with `--verify-bundled-resources` to check
+the installed resource paths without reading preferences or credentials, recording
+audio or making network requests. Packaged apps load Core resources from
+`Contents/Resources`; SwiftPM's build-directory lookup is used only outside app bundles.
 After dragging OpenDictate to Applications, press Command + E in the disk image's
 Finder window to eject it.
 The image opens in icon view with one fixed row, left to right: **Applications →

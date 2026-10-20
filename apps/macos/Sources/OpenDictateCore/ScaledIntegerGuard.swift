@@ -4,7 +4,7 @@ import Foundation
 enum ScaledIntegerGuard {
     private struct Vocabulary: Decodable { let small: [String: Int64]; let scales: [String: Int64] }
     private static let vocabulary: Vocabulary = {
-        guard let url = Bundle.module.url(forResource: "scaled-integers", withExtension: "json"),
+        guard let url = CoreResources.url(forResource: "scaled-integers", withExtension: "json"),
               let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(Vocabulary.self, from: data) else {
             preconditionFailure("Missing scaled-integer vocabulary")
         }
