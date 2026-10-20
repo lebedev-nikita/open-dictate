@@ -236,7 +236,7 @@
     <string name="drive_sync_disconnect">Отключить</string>
     <string name="drive_sync_privacy">В Google отправляются только эти настройки. API-ключи, звук и история не синхронизируются. Отключение сохраняет локальные и облачные настройки.</string>
     <string name="drive_sync_source_title">Источник настроек</string>
-    <string name="drive_sync_source_message">Настройки в облаке и на устройстве различаются. Выберите источник словаря, автозамен, режима диктовки и моделей.</string>
+    <string name="drive_sync_source_message">Настройки в облаке и на устройстве различаются. Выберите, какие синхронизируемые настройки использовать: облачные или локальные.</string>
     <string name="drive_sync_source_cloud">Облачные настройки</string>
     <string name="drive_sync_source_cloud_description">Заменить настройки на этом устройстве облачными.</string>
     <string name="drive_sync_source_local">Локальные настройки</string>

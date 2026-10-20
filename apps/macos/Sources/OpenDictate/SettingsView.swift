@@ -164,10 +164,11 @@ struct SettingsView: View {
             modelField(t("Accurate model", "Модель Accurate"), $preferences.accurateModel)
             if preferences.mode == .accurate {
                 VStack(alignment: .leading, spacing: 6) {
-                    settingToggle(t("Correct punctuation", "Исправлять пунктуацию"), $preferences.accuratePunctuationEnabled)
-                    Text(t("Via OpenAI. Only on this device.", "Через OpenAI. Только на этом устройстве."))
+                    settingToggle(t("AI post-processing", "AI-постобработка"), $preferences.accuratePunctuationEnabled)
+                    Text(t("Via OpenAI in Accurate mode. This switch is saved only on this Mac.", "Через OpenAI в режиме Accurate. Переключатель сохраняется только на этом Mac."))
                         .font(.caption).foregroundStyle(.secondary)
                 }.disabled(model.isActive)
+                FormattingRulesEditor(preferences: preferences).disabled(model.isActive)
             }
             HStack {
                 Text(t("Speech languages", "Языки речи"))

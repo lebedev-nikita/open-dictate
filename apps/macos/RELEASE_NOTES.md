@@ -1,14 +1,12 @@
-OpenDictate for macOS **0.4.13** keeps synchronization controls in the settings sidebar. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.5.0-rc.21** adds synchronized AI formatting instructions. Requires macOS 14+ on Apple Silicon or Intel.
 
-- Google Drive sync status and the refresh button now sit above the app version in the sidebar. Command-R still synchronizes settings immediately.
-- The settings content and scrollbar use the full height of the right panel, without a separate synchronization header.
-- Successful syncs show a compact relative time. Hover over the status for the full date and details; progress and retry remain available.
+- In Accurate mode, save your own rules for punctuation, capitalization and paragraph breaks. Empty rules use default punctuation correction; words and numbers remain protected.
+- Formatting rules sync through Google Drive, including when AI post-processing is off. The post-processing switch stays local to each Mac. Android relays the shared rules without applying an extra AI pass.
+- The menu bar shows a native spinner while awaiting transcription without AI post-processing. The menu remains clickable and keeps its size.
 
 ### Install
 
-Quit OpenDictate, then run `brew update` and `brew upgrade --cask lebedev-nikita/tap/open-dictate`.
-
-Alternatively, download `OpenDictate-macOS-0.4.13-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted.
+This is a release candidate. Quit OpenDictate, download `OpenDictate-macOS-0.5.0-rc.21-universal.dmg`, open it and drag OpenDictate to Applications. Existing settings and your Keychain API key are retained. Allow Microphone and Accessibility if prompted. The stable Homebrew version is unchanged.
 
 This release is **locally signed and not notarized**. If Gatekeeper blocks launching it, use **System Settings → Privacy & Security → Open Anyway** for OpenDictate, then launch it again. The disk image includes bilingual instructions.
 

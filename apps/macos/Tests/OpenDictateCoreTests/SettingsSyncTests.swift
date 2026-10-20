@@ -2,6 +2,22 @@ import XCTest
 @testable import OpenDictateCore
 
 final class SettingsSyncTests: XCTestCase {
+    func testSharedFormattingRulesSyncAndClearWithoutEnablingPostProcessing() throws {
+        var root = URL(fileURLWithPath: #filePath)
+        for _ in 0..<5 { root.deleteLastPathComponent() }
+        let remote = try SettingsSyncDocument.decode(Data(contentsOf: root.appendingPathComponent("shared/settings-sync-formatting.json")))
+        XCTAssertNil(remote.entries["accuratePunctuationEnabled"])
+        var local = SettingsSyncDocument()
+        local.record(["formattingRules": ""], deviceId: "new-mac", now: 0, seed: true)
+        XCTAssertTrue(local.needsConnectionChoice(with: remote))
+        local.merge(remote)
+        XCTAssertEqual(local.entries["formattingRules"], remote.entries["formattingRules"])
+        local.record(["formattingRules": ""], deviceId: "new-mac", now: 100)
+        local.merge(remote)
+        XCTAssertEqual(local.entries["formattingRules"]?.value, "")
+        XCTAssertEqual(local, try SettingsSyncDocument.decode(JSONEncoder().encode(local)))
+    }
+
     private func document(_ key: String, _ value: String, _ time: Int64, _ device: String) -> SettingsSyncDocument {
         var result = SettingsSyncDocument()
         result.entries[key] = .init(value: value, modifiedAt: time, deviceId: device)

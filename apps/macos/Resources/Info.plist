@@ -9,9 +9,9 @@
     <key>CFBundleExecutable</key><string>OpenDictate</string>
     <key>CFBundleIdentifier</key><string>com.opendictate.mac</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.4.13</string>
-    <key>CFBundleVersion</key><string>43</string>
-    <key>OpenDictateReleaseVersion</key><string>0.4.13</string>
+    <key>CFBundleShortVersionString</key><string>0.5.0</string>
+    <key>CFBundleVersion</key><string>64</string>
+    <key>OpenDictateReleaseVersion</key><string>0.5.0-rc.21</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>

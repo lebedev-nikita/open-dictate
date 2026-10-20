@@ -18,6 +18,7 @@ struct OpenDictateApp {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var model: AppModel!
     private var statusItem: NSStatusItem!
+    private var menuBarIndicator: MenuBarStatusIndicator!
     private var settingsWindow: NSWindow?
     private var accessibilityActivationObserver: NSObjectProtocol?
     private let recordingIndicator = RecordingIndicator()
@@ -55,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         prepareAccessibility()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem.button { menuBarIndicator = MenuBarStatusIndicator(button: button) }
         model.onStateChange = { [weak self] in self?.updateState() }
         let menu = NSMenu(); menu.delegate = self
         statusItem.menu = menu
@@ -190,9 +192,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         #else
         let phase = model.phase
         #endif
-        statusItem.button?.image = MenuBarIcon.image(for: phase)
+        menuBarIndicator?.update(phase: phase, usesPostProcessing: model.usesPostProcessing)
         statusItem.button?.title = ""
         statusItem.button?.toolTip = "OpenDictate · \(model.stateLabel) · \(model.preferences.shortcutLabel)"
+        statusItem.button?.setAccessibilityLabel("OpenDictate · \(model.stateLabel)")
         #if DEBUG
         if let phase = hudPreviewPhase {
             recordingIndicator.show(phase: phase, style: model.preferences.indicatorStyle,

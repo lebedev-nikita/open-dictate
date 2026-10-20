@@ -231,6 +231,8 @@ class SettingsStore(context: Context) {
     fun validateSyncDocument(merged: SettingsSyncDocument) {
         SettingsSyncDocument.fromJson(merged.toJson())
         val values = merged.entries
+        // Android relays the macOS AI formatting rules without applying them to transcription.
+        require((values["formattingRules"]?.value?.length ?: 0) <= 4_000)
         require(values["mode"]?.value in listOf(null, "live", "accurate"))
         listOf("liveModel", "accurateModel", "textModel").forEach { key ->
             values[key]?.value?.let { require(it.matches(Regex("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"))) }

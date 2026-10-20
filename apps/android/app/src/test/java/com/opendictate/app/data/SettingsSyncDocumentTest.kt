@@ -4,6 +4,20 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SettingsSyncDocumentTest {
+    @Test fun `formatting rules survive Android relay and clearing without syncing postprocessing switch`() {
+        val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
+            .first { java.io.File(it, "shared/settings-sync-formatting.json").isFile }
+        val remote = SettingsSyncDocument.fromJson(java.io.File(root, "shared/settings-sync-formatting.json").readText())
+        assertNull(remote.entries["accuratePunctuationEnabled"])
+        assertTrue(SettingsSyncDocument().needsConnectionChoice(remote))
+        val relayed = remote.record(mapOf("dictionary" to "Android edit"), "android", 100)
+        assertEquals(remote.entries["formattingRules"], relayed.entries["formattingRules"])
+        assertEquals(relayed, SettingsSyncDocument.fromJson(relayed.toJson()))
+        val cleared = relayed.record(mapOf("formattingRules" to ""), "mac", 200).merge(remote)
+        assertEquals("", cleared.entries["formattingRules"]?.value)
+        assertNull(cleared.entries["accuratePunctuationEnabled"])
+    }
+
     @Test fun `punctuation is excluded from seeds legacy journals merges and exports`() {
         val root = generateSequence(java.io.File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
             .first { java.io.File(it, "shared/settings-sync-punctuation.json").isFile }

@@ -12,12 +12,14 @@ for the rule list and enabled states.
 Android punctuation is requested in the original transcription; there is no
 separate punctuation correction request.
 
-On macOS, optional Accurate punctuation correction sends only recognized text
+On macOS, optional Accurate AI post-processing sends recognized text and saved formatting instructions
 directly to OpenAI with Responses storage disabled. It is off by default, never runs on Live
 or voice-edit instructions, and rejects output that changes word boundaries,
 spelling, order, numbers or address contents beyond allowed capitalization.
 Failures retain the original transcript; cancellation still prevents delivery.
 The enabled switch stays on the current device and is excluded from Drive sync.
+Formatting instructions are synchronized independently, including while the switch is off.
+Instructions are separate from transcript content and cannot relax the word/number validation.
 
 ## Optional Google Drive synchronization
 
@@ -27,9 +29,9 @@ persistent storage or credentials, audio or history. Android's normal
 sync offline and resume queued work when connectivity returns.
 
 Sync uses Google's HTTPS endpoints without a backend, requests only
-`drive.appdata` and exports an allowlist of dictionary, replacement, mode and
+`drive.appdata` and exports an allowlist of dictionary, replacement, AI formatting, mode and
 model settings. Legacy Accurate punctuation sync entries are discarded.
-API keys, audio and history are excluded. Tokens, dictionary/replacement contents and raw
+API keys, audio and history are excluded. Tokens, dictionary/replacement contents, formatting instructions and raw
 provider payloads are never logged. Drive clients disable redirects, cookies and
 persistent caches. Remote data is bounded and validated before application;
 unknown keys survive, while unsupported versions stop sync.
