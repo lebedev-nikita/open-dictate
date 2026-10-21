@@ -80,6 +80,32 @@ class PostProcessingLayoutTest {
         androidx.test.espresso.Espresso.closeSoftKeyboard()
     }
 
+    @Test fun formattingToggleAndEditorAreIndependentWhenDefaultIsOff() {
+        val settings = mutableStateOf(PostProcessingSettings(enabled = false))
+        compose.setContent {
+            OpenDictateTheme { Surface(Modifier.fillMaxSize()) {
+                Column(Modifier.safeDrawingPadding().padding(20.dp)) {
+                    PostProcessingSettingsPanel(settings.value, setOf("en", "ru"), { settings.value = it })
+                }
+            } }
+        }
+        compose.onNodeWithContentDescription(label(R.string.postprocessing_values)).performClick()
+        assertTrue(settings.value.formatValues)
+        assertFalse(settings.value.enabled)
+        assertNotNull(settings.value.formats)
+        val formats = settings.value.formats
+        compose.onNodeWithTag("valueFormatsSave").assertDoesNotExist()
+        compose.onNodeWithContentDescription(label(R.string.postprocessing_values)).performClick()
+        assertFalse(settings.value.formatValues)
+        assertEquals(formats, settings.value.formats)
+        val beforeEditing = settings.value
+        compose.onNodeWithText(label(R.string.postprocessing_value_rules)).performClick()
+        compose.onNodeWithTag("valueFormatsSave").assertIsDisplayed()
+        assertEquals(beforeEditing, settings.value)
+        compose.onNodeWithText(label(R.string.postprocessing_cancel)).performClick()
+        assertEquals(beforeEditing, settings.value)
+    }
+
     @Test fun ruleLanguageMenuContainsOnlySelectedDictationLanguagesAndAllLanguages() {
         val formats = ValueFormatting.systemDefaults(Locale.US)
         val selected = mutableStateOf(setOf("ru", "en"))

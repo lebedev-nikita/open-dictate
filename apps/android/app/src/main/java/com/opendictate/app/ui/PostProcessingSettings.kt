@@ -6,10 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.Numbers
+import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Spellcheck
+import androidx.compose.material.icons.outlined.TouchApp
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
@@ -46,44 +49,37 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, selec
         val locales = Resources.getSystem().configuration.locales
         return ValueFormatting.systemDefaults(locales[0], twentyFourHour, preferredLocales = List(locales.size()) { locales[it] })
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        PostProcessingToggle(title, settings.enabled, { onChange(settings.copy(enabled = it)) })
-        Text(stringResource(if (settings.enabled) R.string.postprocessing_default_on_hint else R.string.postprocessing_default_off_hint),
-            style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        PostProcessingToggle(stringResource(R.string.postprocessing_punctuation), settings.punctuation,
-            { onChange(settings.copy(punctuation = it)) })
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Row(Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Button) { formatsOpen = true }
-                .padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.postprocessing_values), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null)
-            }
-            val valuesTitle = stringResource(R.string.postprocessing_values)
-            Switch(settings.formatValues, onCheckedChange = { onChange(settings.copy(formatValues = it,
-                formats = settings.formats ?: if (it) defaults() else null)) },
-                modifier = Modifier.semantics { contentDescription = valuesTitle })
-        }
+    Column(Modifier.fillMaxWidth()) {
+        ToggleRow(Icons.Outlined.TouchApp, title,
+            stringResource(if (settings.enabled) R.string.postprocessing_default_on_hint else R.string.postprocessing_default_off_hint),
+            settings.enabled, { onChange(settings.copy(enabled = it)) },
+            modifier = Modifier.semantics { contentDescription = title })
+        SettingsDivider()
+        val punctuationTitle = stringResource(R.string.postprocessing_punctuation)
+        ToggleRow(Icons.Outlined.Spellcheck, punctuationTitle, "", settings.punctuation,
+            { onChange(settings.copy(punctuation = it)) },
+            modifier = Modifier.semantics { contentDescription = punctuationTitle })
+        SettingsDivider()
+        val valuesTitle = stringResource(R.string.postprocessing_values)
+        ToggleRow(Icons.Outlined.Numbers, valuesTitle, "", settings.formatValues,
+            { onChange(settings.copy(formatValues = it, formats = settings.formats ?: if (it) defaults() else null)) },
+            modifier = Modifier.semantics { contentDescription = valuesTitle })
+        SettingsDivider()
+        ActionRow(Icons.Outlined.Tune, stringResource(R.string.postprocessing_value_rules), "", { formatsOpen = true })
+        SettingsDivider()
         TextButton(onClick = { onChange(PostProcessingSettings(enabled = settings.enabled)) },
             enabled = settings != PostProcessingSettings(enabled = settings.enabled),
-            contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(stringResource(R.string.postprocessing_reset_settings))
+            contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Restore, null, Modifier.size(22.dp))
+                Spacer(Modifier.width(14.dp))
+                Text(stringResource(R.string.postprocessing_reset_settings), style = MaterialTheme.typography.bodyMedium)
+            }
         }
         if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(), selectedLanguages,
             onDismiss = { formatsOpen = false }, onSave = { chosen ->
                 onChange(settings.copy(formatValues = true, formats = chosen)); formatsOpen = false
             })
-    }
-}
-
-@Composable
-private fun PostProcessingToggle(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-        .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
-        .semantics { contentDescription = title }, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Switch(checked, onCheckedChange = null)
     }
 }
 
