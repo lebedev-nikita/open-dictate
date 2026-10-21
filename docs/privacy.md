@@ -25,7 +25,7 @@ model IDs and the selected post-processing service tier under the same local-onl
 Post-processing rules and regional examples synchronize through Google Drive. All
 post-processing enable switches remain device-local, including individual value types.
 
-Android’s **Post-processing by default** starts off and selects the main button’s
+Android’s **Post-processing → Enabled by default** starts off and selects the main button’s
 Accurate variant; the floating menu offers the opposite choice. Rules can be
 configured independently. macOS uses a separate processed dictation action and
 shortcut; ordinary dictation skips it. macOS retranscription preserves the original

@@ -38,7 +38,7 @@ import com.opendictate.app.model.ValueKind
 @Composable
 internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, selectedLanguages: Set<String>, onChange: (PostProcessingSettings) -> Unit) {
     var formatsOpen by rememberSaveable { mutableStateOf(false) }
-    val title = stringResource(R.string.postprocessing_title)
+    val title = stringResource(R.string.postprocessing_default_enabled)
     val context = LocalContext.current
     fun defaults(): ValueFormatting {
         val hourPreference = android.provider.Settings.System.getString(context.contentResolver, android.provider.Settings.System.TIME_12_24)

@@ -31,7 +31,7 @@ class PostProcessingLayoutTest {
                 Column(Modifier.safeDrawingPadding().padding(20.dp)) { PostProcessingSettingsPanel(settings.value, setOf("en", "ru"), { settings.value = it }) }
             } }
         }
-        val defaultToggle = compose.onNodeWithText(label(R.string.postprocessing_title), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val defaultToggle = compose.onNodeWithText(label(R.string.postprocessing_default_enabled), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val punctuation = compose.onNodeWithText(label(R.string.postprocessing_punctuation), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val values = compose.onNodeWithText(label(R.string.postprocessing_values), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertEquals("Default choice and rules must share the same leading edge", defaultToggle.left, punctuation.left, 1f)
@@ -43,14 +43,14 @@ class PostProcessingLayoutTest {
         }
         val punctuationStyle = textStyle(R.string.postprocessing_punctuation)
         val valuesStyle = textStyle(R.string.postprocessing_values)
-        val defaultStyle = textStyle(R.string.postprocessing_title)
+        val defaultStyle = textStyle(R.string.postprocessing_default_enabled)
         assertEquals(defaultStyle.fontSize, punctuationStyle.fontSize)
         assertEquals(defaultStyle.fontWeight, punctuationStyle.fontWeight)
         assertEquals(punctuationStyle.fontSize, valuesStyle.fontSize)
         assertEquals(punctuationStyle.fontWeight, valuesStyle.fontWeight)
         capture("postprocessing-default-off")
         val original = settings.value
-        compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).performClick()
+        compose.onNodeWithContentDescription(label(R.string.postprocessing_default_enabled)).performClick()
         assertEquals(original.copy(enabled = true), settings.value)
         compose.onNodeWithText(label(R.string.postprocessing_punctuation)).assertIsDisplayed()
         compose.onNodeWithText(label(R.string.postprocessing_values)).assertIsDisplayed()

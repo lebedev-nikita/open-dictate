@@ -241,7 +241,7 @@ internal fun SettingsScreen(
 
                     val postProcessingState = rememberSaveableStateHolder()
                     if (state.model == TranscriptionModel.ACCURATE) {
-                        Spacer(Modifier.height(28.dp))
+                        SectionTitle(stringResource(R.string.postprocessing_title))
                         postProcessingState.SaveableStateProvider("postprocessing") {
                             SettingsGroup { PostProcessingSettingsPanel(state.postProcessing, state.languages.map { it.code }.toSet(), viewModel::savePostProcessing) }
                         }
