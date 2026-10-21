@@ -56,7 +56,7 @@ struct SettingsView: View {
                         case "general": generalPage
                         default: dictationPage
                         }
-                    }.padding(28).frame(maxWidth: .infinity, alignment: .leading)
+                    }.padding(selection == "shortcuts" ? 24 : 28).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if !model.message.isEmpty {
                     Divider()

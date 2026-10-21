@@ -43,7 +43,7 @@ final class ShortcutSettingsTests: XCTestCase {
         for (language, dark, width) in [("en", true, 568.0), ("ru", false, 464.0)] {
             model.preferences.interfaceLanguage = language
             let host = NSHostingView(rootView: ShortcutSettingsView(model: model, preferences: model.preferences)
-                .padding(28).frame(width: width, alignment: .topLeading)
+                .padding(24).frame(width: width, alignment: .topLeading)
                 .background(Color(nsColor: .windowBackgroundColor)))
             host.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
             host.frame = NSRect(x: 0, y: 0, width: width, height: host.fittingSize.height)

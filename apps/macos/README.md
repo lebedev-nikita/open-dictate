@@ -228,9 +228,10 @@ application windows while preserving the recording indicator. Reopen Settings
 from the menu bar or with Command-comma while the app is active.
 
 Settings → Keyboard shortcuts groups global dictation and voice-editing bindings,
-a separate binding for dictation with post-processing, the fixed Escape cancellation key, and application-window shortcuts. It also
-provides default reset, Globe/Fn and function-key guidance, and a link to macOS
-Keyboard settings. Bindings are local to this Mac and do not sync through Drive.
+a separate binding for dictation with post-processing, and the fixed Escape
+cancellation key in one compact list. Restore defaults follows the list; the
+information button beside Voice editing explains its selection behavior.
+Bindings are local to this Mac and do not sync through Drive.
 
 Click either shortcut and press the desired combination. Letters,
 symbols, navigation, numpad and F1–F20 keys work with any combination of Control,
