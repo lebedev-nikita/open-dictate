@@ -141,6 +141,10 @@ For macOS changes, also run `swift test --package-path apps/macos` and
 focus changes, cancellation, microphone permissions and insertion on macOS.
 Mock tests cannot verify TCC, Accessibility or actual OpenAI model access.
 
+For UI changes, inspect the result yourself in the running app and compare it
+with the rest of the application's design. Fix any unintended visual or
+interaction inconsistencies before handing the changes to a human.
+
 The work is complete when required commands pass, no generated build output is
 committed, and behavior-specific coverage exists for pure logic. Exercise
 overlay visibility, focus changes, cancellation, and transcript insertion on a
