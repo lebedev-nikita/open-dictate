@@ -396,7 +396,7 @@ private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SettingsDivider() {
+internal fun SettingsDivider() {
     HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 }
 
@@ -409,7 +409,7 @@ private fun RowCopy(title: String, subtitle: String, modifier: Modifier = Modifi
 }
 
 @Composable
-private fun ActionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+internal fun ActionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Surface(onClick = onClick, color = SettingsSurface) {
         Row(Modifier.fillMaxWidth().heightIn(min = 76.dp).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, Modifier.size(22.dp), tint = SettingsMuted)
@@ -422,10 +422,10 @@ private fun ActionRow(icon: ImageVector, title: String, subtitle: String, onClic
 }
 
 @Composable
-private fun ToggleRow(icon: ImageVector, title: String, subtitle: String, checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true) {
+internal fun ToggleRow(icon: ImageVector, title: String, subtitle: String, checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier) {
     Row(
-        Modifier.fillMaxWidth().toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
+        modifier.fillMaxWidth().toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
             .heightIn(min = 80.dp).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

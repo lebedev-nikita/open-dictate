@@ -295,6 +295,7 @@
     <string name="postprocessing_default_off_hint">Main button: without post-processing. Menu: with it.</string>
     <string name="postprocessing_punctuation">Correct punctuation</string>
     <string name="postprocessing_values">Format values</string>
+    <string name="postprocessing_value_rules">Formatting rules</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>
     <string name="history_transcription_stage">Transcription</string>
     <string name="history_postprocessing_stage">Post-processing</string>
