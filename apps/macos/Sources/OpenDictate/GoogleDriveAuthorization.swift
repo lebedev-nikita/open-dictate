@@ -10,30 +10,19 @@ struct DriveCredentials: Codable {
 }
 
 enum DriveCredentialStore {
-    private static var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.opendictate.mac",
-         kSecAttrAccount as String: "google-drive-oauth", kSecAttrSynchronizable as String: false]
-    }
     static func load() throws -> DriveCredentials? {
-        var item = query; item[kSecReturnData as String] = true; item[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(item as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess, let data = result as? Data else { throw DriveError.authorization }
-        return try JSONDecoder().decode(DriveCredentials.self, from: data)
+        do {
+            guard let data = try CredentialVault.shared.read(.drive) else { return nil }
+            return try JSONDecoder().decode(DriveCredentials.self, from: data)
+        } catch { throw DriveError.authorization }
     }
     static func save(_ credentials: DriveCredentials) throws {
-        let attributes: [String: Any] = [kSecValueData as String: try JSONEncoder().encode(credentials),
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
-        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if status == errSecItemNotFound {
-            var item = query; item.merge(attributes) { _, new in new }; status = SecItemAdd(item as CFDictionary, nil)
-        }
-        guard status == errSecSuccess else { throw DriveError.authorization }
+        do { try CredentialVault.shared.write(JSONEncoder().encode(credentials), to: .drive) }
+        catch { throw DriveError.authorization }
     }
     static func delete() throws {
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else { throw DriveError.authorization }
+        do { try CredentialVault.shared.delete(.drive) }
+        catch { throw DriveError.authorization }
     }
 
     static func signOut(loadCredentials: () throws -> DriveCredentials? = load,

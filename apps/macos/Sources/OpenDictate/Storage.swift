@@ -195,34 +195,16 @@ final class Preferences: ObservableObject {
 }
 
 enum APIKeyStore {
-    private static var query: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.opendictate.mac",
-         kSecAttrAccount as String: "openai-api-key", kSecAttrSynchronizable as String: false]
-    }
     static func load() throws -> String? {
-        var query = query
-        query[kSecReturnData as String] = true; query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        if status == errSecItemNotFound { return nil }
-        guard status == errSecSuccess, let data = result as? Data else { throw DictationError.keychain }
-        return String(data: data, encoding: .utf8)
+        try CredentialVault.shared.read(.apiKey).flatMap { String(data: $0, encoding: .utf8) }
     }
     static func save(_ key: String) throws {
         let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, !value.contains(where: { $0.isWhitespace }) else { throw DictationError.missingKey }
-        let attributes: [String: Any] = [kSecValueData as String: Data(value.utf8),
-                                       kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
-        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if status == errSecItemNotFound {
-            var item = query; item.merge(attributes) { _, new in new }
-            status = SecItemAdd(item as CFDictionary, nil)
-        }
-        guard status == errSecSuccess else { throw DictationError.keychain }
+        try CredentialVault.shared.write(Data(value.utf8), to: .apiKey)
     }
     static func delete() throws {
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else { throw DictationError.keychain }
+        try CredentialVault.shared.delete(.apiKey)
     }
 }
 
