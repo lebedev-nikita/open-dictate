@@ -314,7 +314,6 @@
     <string name="chatgpt_reconnect">Reconnect ChatGPT</string>
     <string name="chatgpt_revoke_failed">Signed out on this device. Remote sign-out was not confirmed; disconnect the app in ChatGPT settings.</string>
     <string name="chatgpt_waiting">Waiting for ChatGPT…</string>
-    <string name="postprocessing_reset_settings">Reset settings</string>
     <string name="value_formats_hint">Edit the examples or choose a format.</string>
     <string name="value_formats_invalid">Use an example with digits, at most 96 characters and no line breaks.</string>
     <string name="value_formats_choose">Choose format: %1$s</string>

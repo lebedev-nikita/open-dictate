@@ -310,7 +310,6 @@
     <string name="chatgpt_reconnect">Войти в ChatGPT снова</string>
     <string name="chatgpt_revoke_failed">На этом устройстве выполнен выход. Отзыв доступа не подтверждён; отключите приложение в настройках ChatGPT.</string>
     <string name="chatgpt_waiting">Ожидание ChatGPT…</string>
-    <string name="postprocessing_reset_settings">Сбросить настройки</string>
     <string name="value_formats_hint">Измените образцы или выберите формат.</string>
     <string name="value_formats_invalid">Образец должен содержать цифры, не более 96 символов и без переноса строк.</string>
     <string name="value_formats_choose">Выбрать формат: %1$s</string>
