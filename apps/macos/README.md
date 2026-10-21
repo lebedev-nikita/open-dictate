@@ -41,9 +41,14 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   Only key codes and modifier flags are inspected; typed characters are not read
   or stored. Holding a shortcut does not repeatedly toggle dictation. Escape is
   registered only during recording/processing (or when explicitly assigned).
-- `AudioRecorder` copies tap buffers and converts on a serial worker to mono
-  PCM16 at 24 kHz. Chunks are 40 ms. Live audio stays off disk; Accurate builds
-  a WAV in memory. Both stop below the provider's 25 MB upload limit.
+- `AudioRecorder` receives input through `AVAudioSinkNode`. Its native callback
+  copies into a bounded, preallocated single-producer/single-consumer buffer
+  without allocations, locks or dispatch calls. A serial worker drains it every
+  5 ms and converts to mono PCM16 at 24 kHz; network chunks remain 40 ms.
+  Readiness follows the first converted samples. Stopping drains captured input
+  and the converter's tail; overflow fails visibly. Idle preparation never starts
+  microphone capture. Live audio stays off disk; Accurate builds a WAV in memory.
+  Both stop below the provider's 25 MB upload limit.
 - `LiveTranscriptionSession` opens immediately, bounds early audio to 300 chunks,
   flushes after `session.updated`, serializes sends and explicitly commits.
   Overflow fails visibly instead of silently dropping speech.
