@@ -27,6 +27,7 @@ final class LocalSmokeChecks {
         }
     }
     func cancel() async {
+        model.cancel()
         target = nil; replacements = nil; model.hotKeys.setCancelEnabled(false)
         model.present(CheckMessage("LOCAL CHECK: cancelled before paste; field unchanged"))
     }

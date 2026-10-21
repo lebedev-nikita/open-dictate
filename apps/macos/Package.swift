@@ -9,9 +9,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "OpenDictateCore", resources: [.process("Resources")]),
-        .executableTarget(name: "OpenDictate", dependencies: ["OpenDictateCore"],
+        .target(name: "OpenDictateAudio", linkerSettings: [.linkedFramework("AVFAudio")]),
+        .executableTarget(name: "OpenDictate", dependencies: ["OpenDictateCore", "OpenDictateAudio"],
                           linkerSettings: [.linkedFramework("Carbon")]),
         .testTarget(name: "OpenDictateCoreTests", dependencies: ["OpenDictateCore"]),
-        .testTarget(name: "OpenDictateTests", dependencies: ["OpenDictate", "OpenDictateCore"])
-    ]
+        .testTarget(name: "OpenDictateTests", dependencies: ["OpenDictate", "OpenDictateCore", "OpenDictateAudio"])
+    ],
+    cxxLanguageStandard: .cxx17
 )
