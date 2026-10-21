@@ -69,6 +69,21 @@ struct KeyboardShortcut: Codable, Equatable {
 struct ShortcutBindings: Codable, Equatable {
     var dictate: KeyboardShortcut
     var transform: KeyboardShortcut
+    var dictateWithPostProcessing: KeyboardShortcut
+    private enum CodingKeys: String, CodingKey { case dictate, transform, dictateWithPostProcessing }
+
+    init(dictate: KeyboardShortcut, transform: KeyboardShortcut, dictateWithPostProcessing: KeyboardShortcut = .disabled) {
+        self.dictate = dictate; self.transform = transform
+        self.dictateWithPostProcessing = dictateWithPostProcessing
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        dictate = try values.decode(KeyboardShortcut.self, forKey: .dictate)
+        transform = try values.decode(KeyboardShortcut.self, forKey: .transform)
+        // Preserve existing assignments without reserving another key on upgrade.
+        dictateWithPostProcessing = try values.decodeIfPresent(KeyboardShortcut.self, forKey: .dictateWithPostProcessing) ?? .disabled
+    }
     static let defaults = legacy(modifiers: "option", key: "space")
 
     static func legacy(modifiers: String, key: String) -> Self {
@@ -80,7 +95,14 @@ struct ShortcutBindings: Codable, Equatable {
         return Self(dictate: .init(keyCode: code, flags: flags, keyLabel: label),
                     transform: .init(keyCode: code, flags: flags.union(.shift), keyLabel: label))
     }
-    var isValid: Bool { dictate.isValid && transform.isValid && (!dictate.isEnabled || !transform.isEnabled || !dictate.matches(transform)) }
+    var isValid: Bool {
+        let shortcuts = [dictate, transform, dictateWithPostProcessing]
+        guard shortcuts.allSatisfy(\.isValid) else { return false }
+        let enabled = shortcuts.filter(\.isEnabled)
+        return !enabled.enumerated().contains { index, shortcut in
+            enabled.dropFirst(index + 1).contains { shortcut.matches($0) }
+        }
+    }
 }
 
 /// Modifier-only shortcuts fire on release, only if no other key was used.

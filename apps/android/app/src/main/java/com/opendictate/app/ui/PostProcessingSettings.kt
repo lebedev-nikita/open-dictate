@@ -47,41 +47,42 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, selec
         return ValueFormatting.systemDefaults(locales[0], twentyFourHour, preferredLocales = List(locales.size()) { locales[it] })
     }
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        PostProcessingToggle(title, settings.enabled, { onChange(settings.copy(enabled = it)) }, heading = true)
-        if (settings.enabled) {
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            PostProcessingToggle(stringResource(R.string.postprocessing_punctuation), settings.punctuation,
-                { onChange(settings.copy(punctuation = it)) })
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Button) { formatsOpen = true }
-                    .padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.postprocessing_values), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null)
-                }
-                val valuesTitle = stringResource(R.string.postprocessing_values)
-                Switch(settings.formatValues, onCheckedChange = { onChange(settings.copy(formatValues = it,
-                    formats = settings.formats ?: if (it) defaults() else null)) },
-                    modifier = Modifier.semantics { contentDescription = valuesTitle })
+        PostProcessingToggle(title, settings.enabled, { onChange(settings.copy(enabled = it)) })
+        Text(stringResource(if (settings.enabled) R.string.postprocessing_default_on_hint else R.string.postprocessing_default_off_hint),
+            style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        PostProcessingToggle(stringResource(R.string.postprocessing_punctuation), settings.punctuation,
+            { onChange(settings.copy(punctuation = it)) })
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Button) { formatsOpen = true }
+                .padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.postprocessing_values), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null)
             }
-            TextButton(onClick = { onChange(PostProcessingSettings(enabled = settings.enabled)) },
-                enabled = settings != PostProcessingSettings(enabled = settings.enabled),
-                contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.postprocessing_reset_settings))
-            }
-            if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(), selectedLanguages,
-                onDismiss = { formatsOpen = false }, onSave = { chosen ->
-                    onChange(settings.copy(formatValues = true, formats = chosen)); formatsOpen = false
-                })
+            val valuesTitle = stringResource(R.string.postprocessing_values)
+            Switch(settings.formatValues, onCheckedChange = { onChange(settings.copy(formatValues = it,
+                formats = settings.formats ?: if (it) defaults() else null)) },
+                modifier = Modifier.semantics { contentDescription = valuesTitle })
         }
+        TextButton(onClick = { onChange(PostProcessingSettings(enabled = settings.enabled)) },
+            enabled = settings != PostProcessingSettings(enabled = settings.enabled),
+            contentPadding = PaddingValues(0.dp), modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.postprocessing_reset_settings))
+        }
+        if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(), selectedLanguages,
+            onDismiss = { formatsOpen = false }, onSave = { chosen ->
+                onChange(settings.copy(formatValues = true, formats = chosen)); formatsOpen = false
+            })
     }
 }
 
 @Composable
-private fun PostProcessingToggle(title: String, checked: Boolean, onChange: (Boolean) -> Unit, heading: Boolean = false) {
+private fun PostProcessingToggle(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
         .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
         .semantics { contentDescription = title }, verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f), style = if (heading) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium)
+        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Switch(checked, onCheckedChange = null)
     }
 }

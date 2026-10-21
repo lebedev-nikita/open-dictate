@@ -289,7 +289,9 @@
     <string name="gestures_hide_left_hint">Swipe left when not recording</string>
     <string name="gestures_keyboard_recovery">To bring the button back, close and reopen the keyboard.</string>
     <string name="postprocessing_cancel">Cancel</string>
-    <string name="postprocessing_title">Post-processing</string>
+    <string name="postprocessing_title">Post-processing by default</string>
+    <string name="postprocessing_default_on_hint">Main button: with post-processing. Menu: without it.</string>
+    <string name="postprocessing_default_off_hint">Main button: without post-processing. Menu: with it.</string>
     <string name="postprocessing_punctuation">Correct punctuation</string>
     <string name="postprocessing_values">Format values</string>
     <string name="postprocessing_failed">Post-processing failed; the original transcript was kept.</string>

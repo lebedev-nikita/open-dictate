@@ -406,7 +406,8 @@ private class OverlayPrimaryActionView(
     private fun drawSpinner(canvas: Canvas) {
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = visibleDiameterPx * 18f / DictationButtonAppearance.DEFAULT_DIAMETER_DP
+        val radius = visibleDiameterPx * (if (showProcessingIcon) 18f else 10f) /
+            DictationButtonAppearance.DEFAULT_DIAMETER_DP
         val rotation = SystemClock.uptimeMillis() % SPINNER_PERIOD_MS *
             360f / SPINNER_PERIOD_MS
         spinner.color = activeColor()

@@ -13,7 +13,7 @@ import org.junit.Test
 class DictationSettingsTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    @Test fun bothModesOmitPunctuationCorrectionAfterUpgradingWithItEnabled() {
+    @Test fun legacyPunctuationPreferenceDoesNotAddASeparateRecognitionToggle() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val settings = SettingsStore(context)
         val previousModel = settings.model
@@ -26,8 +26,14 @@ class DictationSettingsTest {
             listOf(R.string.settings_mode_live, R.string.settings_mode_accurate).forEach { mode ->
                 compose.onNodeWithText(context.getString(mode)).performScrollTo().performClick()
                 compose.onNodeWithText(context.getString(R.string.settings_recognition_model)).assertIsDisplayed()
-                listOf("Correct punctuation", "Исправлять пунктуацию").forEach { title ->
-                    compose.onNodeWithText(title).assertDoesNotExist()
+                if (mode == R.string.settings_mode_accurate) {
+                    compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_title))
+                        .performScrollTo().assertIsDisplayed()
+                    compose.onAllNodesWithText(context.getString(R.string.postprocessing_punctuation)).assertCountEquals(1)
+                    compose.onNodeWithText(context.getString(R.string.postprocessing_values)).assertExists()
+                } else {
+                    compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_title)).assertDoesNotExist()
+                    compose.onNodeWithText(context.getString(R.string.postprocessing_punctuation)).assertDoesNotExist()
                 }
                 compose.onNodeWithText(context.getString(R.string.dictation_languages_title))
                     .performScrollTo().assertIsDisplayed()

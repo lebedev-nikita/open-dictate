@@ -166,10 +166,10 @@ final class PostProcessingPreferencesTests: XCTestCase {
             preferences.postProcessing = .init(enabled: enabled, formatValues: values,
                 formats: values ? .systemDefaults(locale: Locale(identifier: language == "ru" ? "ru_RU" : "en_US")) : nil)
             let host = NSHostingView(rootView: PostProcessingSettingsView(preferences: preferences).padding(28)
-                .frame(width: width, height: enabled ? 650 : 120, alignment: .topLeading)
+                .frame(width: width, height: 320, alignment: .topLeading)
                 .background(Color(nsColor: .windowBackgroundColor)))
             host.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
-            host.frame = NSRect(x: 0, y: 0, width: width, height: enabled ? 650 : 120)
+            host.frame = NSRect(x: 0, y: 0, width: width, height: 320)
             let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false; window.contentView = host; window.appearance = host.appearance
             window.makeKeyAndOrderFront(nil)

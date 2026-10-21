@@ -23,9 +23,12 @@ no backend, analytics or account to create.
 
 - **Live** (`gpt-live-transcribe`) inserts text as you speak.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
+- **Post-processing by default** chooses the main Android button's Accurate behavior.
+  Punctuation and value-formatting settings stay available when it is off; changing
+  the default preserves those rules.
 - Start one recording with the opposite post-processing setting from the bottom of
-  Android's long-press menu or the macOS menu bar. The action uses Accurate and leaves
-  the main dictation settings unchanged.
+  Android's long-press menu. macOS offers a separate processed dictation action and
+  configurable shortcut. These actions use Accurate and leave the main mode unchanged.
   If all processing rules are off, the one-session **With post-processing** action uses punctuation correction.
 - Voice-directed editing of the selection, or the whole field without a selection,
   using the shared text model (GPT-6 Luna by default).

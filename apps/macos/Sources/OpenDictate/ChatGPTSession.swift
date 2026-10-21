@@ -14,22 +14,15 @@ struct ChatGPTRecord: Codable, Sendable {
 }
 struct ChatGPTJournal: Codable { var records = [String: ChatGPTRecord](); var active: String?; var last: String? }
 enum ChatGPTStore {
-    static var query: [String: Any] { [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.opendictate.mac",
-        kSecAttrAccount as String: "chatgpt-oauth", kSecAttrSynchronizable as String: false] }
     static func load() throws -> ChatGPTJournal {
-        var item = query; item[kSecReturnData as String] = true; item[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(item as CFDictionary, &result)
-        if status == errSecItemNotFound { return ChatGPTJournal() }
-        guard status == errSecSuccess, let data = result as? Data else { throw ChatGPTError.unavailable }
-        return try JSONDecoder().decode(ChatGPTJournal.self, from: data)
+        do {
+            guard let data = try CredentialVault.shared.read(.chatGPT) else { return ChatGPTJournal() }
+            return try JSONDecoder().decode(ChatGPTJournal.self, from: data)
+        } catch { throw ChatGPTError.unavailable }
     }
     static func save(_ journal: ChatGPTJournal) throws {
-        let attributes: [String: Any] = [kSecValueData as String: try JSONEncoder().encode(journal),
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
-        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if status == errSecItemNotFound { var item = query; item.merge(attributes) { _, new in new }; status = SecItemAdd(item as CFDictionary, nil) }
-        guard status == errSecSuccess else { throw ChatGPTError.unavailable }
+        do { try CredentialVault.shared.write(JSONEncoder().encode(journal), to: .chatGPT) }
+        catch { throw ChatGPTError.unavailable }
     }
 }
 private final class ChatGPTNoRedirects: NSObject, URLSessionTaskDelegate {

@@ -25,14 +25,16 @@ class PostProcessingLayoutTest {
     private fun label(id: Int) = context.getString(id)
 
     @Test fun optionLabelsShareAnInsetAndTypography() {
-        val settings = mutableStateOf(PostProcessingSettings(enabled = true))
+        val settings = mutableStateOf(PostProcessingSettings(enabled = false))
         compose.setContent {
             OpenDictateTheme { Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.safeDrawingPadding().padding(20.dp)) { PostProcessingSettingsPanel(settings.value, setOf("en", "ru"), { settings.value = it }) }
             } }
         }
+        val defaultToggle = compose.onNodeWithText(label(R.string.postprocessing_title), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val punctuation = compose.onNodeWithText(label(R.string.postprocessing_punctuation), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val values = compose.onNodeWithText(label(R.string.postprocessing_values), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertEquals("Default choice and rules must share the same leading edge", defaultToggle.left, punctuation.left, 1f)
         assertEquals("Option labels must share the same leading edge", punctuation.left, values.left, 1f)
         fun textStyle(id: Int): androidx.compose.ui.text.TextStyle {
             val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
@@ -41,8 +43,18 @@ class PostProcessingLayoutTest {
         }
         val punctuationStyle = textStyle(R.string.postprocessing_punctuation)
         val valuesStyle = textStyle(R.string.postprocessing_values)
+        val defaultStyle = textStyle(R.string.postprocessing_title)
+        assertEquals(defaultStyle.fontSize, punctuationStyle.fontSize)
+        assertEquals(defaultStyle.fontWeight, punctuationStyle.fontWeight)
         assertEquals(punctuationStyle.fontSize, valuesStyle.fontSize)
         assertEquals(punctuationStyle.fontWeight, valuesStyle.fontWeight)
+        capture("postprocessing-default-off")
+        val original = settings.value
+        compose.onNodeWithContentDescription(label(R.string.postprocessing_title)).performClick()
+        assertEquals(original.copy(enabled = true), settings.value)
+        compose.onNodeWithText(label(R.string.postprocessing_punctuation)).assertIsDisplayed()
+        compose.onNodeWithText(label(R.string.postprocessing_values)).assertIsDisplayed()
+        capture("postprocessing-default-on")
     }
 
     @Test fun keyboardAndFieldChangesKeepThePanelAnchored() {

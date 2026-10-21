@@ -38,6 +38,19 @@ ChatGPT text streams retain finished output items only in request memory. A succ
 terminal event is required before returning assembled output; deltas, interruption,
 incomplete responses and errors cannot deliver a partial result.
 
+## macOS credential storage
+
+macOS credentials share one non-synchronizing Keychain item with
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. API-key, Drive and ChatGPT payloads
+remain independent. All read/modify/write operations are serialized; each operation
+reads Keychain rather than using a persistent in-memory credential cache. This
+preserves Keychain lock and access-denial behavior. Legacy entries are copied before
+cleanup. Failed reads or writes never mark a missing credential as migrated. Failed
+cleanup may leave the legacy copy; explicit deletion also removes that copy, while
+a persisted deletion marker prevents it from being imported again. Corrupt or
+unsupported shared records fail without falling back to obsolete credentials.
+Neither Keychain ACLs nor signing requirements are relaxed.
+
 ## Optional Google Drive synchronization
 
 Validated replicas and Drive versions are cached only in process memory, without
