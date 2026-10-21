@@ -27,7 +27,7 @@ struct SpeechLanguagePicker: View {
         .accessibilityValue(selected.isEmpty ? summary : selected.map(\.nativeName).joined(separator: ", "))
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
             SpeechLanguageList(preferences: preferences, close: { isPresented = false })
-                .preferredColorScheme(preferences.theme.colorScheme)
+                .background(AppThemeAppearance(theme: preferences.theme))
         }
         .onChange(of: isEnabled) { _, enabled in if !enabled { isPresented = false } }
     }

@@ -69,7 +69,7 @@ struct SettingsView: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(minWidth: 740, minHeight: 590)
-        .preferredColorScheme(preferences.theme.colorScheme)
+        .background(AppThemeAppearance(theme: preferences.theme))
         .onAppear { model.refreshPermissions() }
         .alert(t("Delete all history?", "Удалить всю историю?"), isPresented: $confirmClear) {
             Button(t("Delete", "Удалить"), role: .destructive) { model.cancelSearch(); history.clear() }
