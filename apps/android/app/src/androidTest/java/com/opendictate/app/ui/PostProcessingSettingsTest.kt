@@ -49,7 +49,7 @@ class PostProcessingSettingsTest {
             assertFalse(store.postProcessing.enabled); assertTrue(store.postProcessing.punctuation)
             compose.onNodeWithText(label(R.string.postprocessing_title)).performScrollTo().assertIsDisplayed()
             capture("default-settings-top")
-            compose.onNodeWithText(label(R.string.postprocessing_reset_settings)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(label(R.string.postprocessing_value_rules)).performScrollTo().assertIsDisplayed()
             capture("default-settings")
             compose.onNodeWithText("Post-processing prompt").assertDoesNotExist()
             action(R.string.postprocessing_value_rules)
@@ -84,8 +84,6 @@ class PostProcessingSettingsTest {
             compose.onNodeWithText("2026-03-05").assertDoesNotExist()
             compose.onNodeWithTag("valueFormatsSave").performClick(); compose.waitForIdle()
             assertTrue(store.postProcessing.formats!!.rules.isEmpty())
-            action(R.string.postprocessing_reset_settings)
-            assertEquals(PostProcessingSettings(enabled = false), store.postProcessing)
             val rules = store.postProcessing
             compose.onNodeWithContentDescription(label(R.string.postprocessing_default_enabled)).performScrollTo().performClick()
             assertEquals(rules.copy(enabled = true), store.postProcessing)

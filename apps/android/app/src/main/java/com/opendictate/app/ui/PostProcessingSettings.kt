@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Numbers
-import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Spellcheck
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Tune
@@ -66,16 +65,6 @@ internal fun PostProcessingSettingsPanel(settings: PostProcessingSettings, selec
             modifier = Modifier.semantics { contentDescription = valuesTitle })
         SettingsDivider()
         ActionRow(Icons.Outlined.Tune, stringResource(R.string.postprocessing_value_rules), "", { formatsOpen = true })
-        SettingsDivider()
-        TextButton(onClick = { onChange(PostProcessingSettings(enabled = settings.enabled)) },
-            enabled = settings != PostProcessingSettings(enabled = settings.enabled),
-            contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Restore, null, Modifier.size(22.dp))
-                Spacer(Modifier.width(14.dp))
-                Text(stringResource(R.string.postprocessing_reset_settings), style = MaterialTheme.typography.bodyMedium)
-            }
-        }
         if (formatsOpen) ValueFormattingSheet(settings.formats ?: defaults(), defaults(), selectedLanguages,
             onDismiss = { formatsOpen = false }, onSave = { chosen ->
                 onChange(settings.copy(formatValues = true, formats = chosen)); formatsOpen = false
