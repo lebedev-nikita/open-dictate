@@ -8,6 +8,7 @@ final class LocalSmokeChecks {
     private var target: TextTarget?
     private var replacements: WordReplacementEngine?
     private let model: AppModel
+    private let recorder = AudioRecorder()
     init(model: AppModel) { self.model = model }
 
     func toggle() async {
@@ -43,10 +44,10 @@ final class LocalSmokeChecks {
     }
     func record() {
         Task { [model] in
-            let recorder = AudioRecorder()
+            let recorder = self.recorder
             do {
                 model.audioLevels.reset()
-                try await recorder.start(keepAudio: true, onChunk: { _ in }, onLevel: { [weak model] level in
+                try await recorder.start(keepAudio: true, onReady: {}, onChunk: { _ in }, onLevel: { [weak model] level in
                     Task { @MainActor in model?.audioLevels.append(level) }
                 }, onError: { _ in })
                 try await Task.sleep(nanoseconds: 2_000_000_000)

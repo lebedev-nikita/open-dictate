@@ -90,9 +90,10 @@ struct RecordingStatusView: View {
                 waveform
             } else if phase.showsFinishControl {
                 HStack(spacing: 0) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 9, weight: .medium)).frame(width: 22, height: 22)
-                        .accessibilityHidden(true)
+                    Group {
+                        if phase == .preparing { startingMicrophone }
+                        else { Image(systemName: "mic.fill").font(.system(size: 9, weight: .medium)).accessibilityHidden(true) }
+                    }.frame(width: 22, height: 22)
                     ZStack {
                         Circle().fill(Color.red).frame(width: 14, height: 14)
                         RoundedRectangle(cornerRadius: 1).fill(Color.white).frame(width: 4.5, height: 4.5)
@@ -122,13 +123,21 @@ struct RecordingStatusView: View {
     private var waveform: some View {
         Group {
             if phase.showsFinishControl {
-                WaveformBars(samples: audioLevels.history.samples)
-                    .frame(width: Self.waveformSize.width, height: Self.waveformSize.height)
-                    .overlay { finishControl }
+                Group {
+                    if phase == .preparing { startingMicrophone }
+                    else { WaveformBars(samples: audioLevels.history.samples) }
+                }
+                .frame(width: Self.waveformSize.width, height: Self.waveformSize.height)
+                .overlay { finishControl }
             } else {
                 processing
             }
         }
+    }
+
+    private var startingMicrophone: some View {
+        ProgressView().progressViewStyle(.circular).controlSize(.mini)
+            .accessibilityLabel(isRussian ? "Запуск микрофона" : "Starting microphone")
     }
 
     private var processing: some View {
