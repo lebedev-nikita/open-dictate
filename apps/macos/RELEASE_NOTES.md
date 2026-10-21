@@ -1,7 +1,7 @@
-OpenDictate for macOS **0.5.0-rc.28** reduces microphone startup delay and shows when recording is actually ready. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.5.0-rc.29** makes microphone readiness faster without keeping the microphone active between dictations. Requires macOS 14+ on Apple Silicon or Intel.
 
-- The audio graph is prepared ahead of dictation without starting the microphone or recording audio. Switching the default input device while idle still uses the newly selected microphone.
-- While a microphone starts, the indicator shows a spinner. The microphone or waveform and the recording menu-bar icon appear only after the first captured PCM buffer. With AirPods or other Bluetooth microphones, begin speaking once this ready state appears; speech before the device starts cannot be recovered.
-- Finishing or cancelling while the microphone is still starting ends safely without uploading an empty recording. Accurate continues to send audio only after recording stops.
+- Audio capture now uses Apple's AVAudioSinkNode with a bounded, preallocated buffer. Audio processing stays off the realtime callback, and Live network chunks remain 40 ms.
+- The indicator becomes ready after the first captured samples. A local built-in microphone check measured a median of 67 ms to readiness over six runs, compared with the earlier 153 ms baseline. Bluetooth microphone startup depends on the device; begin speaking when the ready indicator appears.
+- Stopping includes the final captured samples and the audio converter's tail. Buffer overflow reports a capture failure instead of silently losing speech. Startup cancellation, secure-field protection and input-device selection remain supported.
 
 Download the universal DMG and replace OpenDictate in Applications. This release candidate is ad-hoc signed and **not notarized**. Verify the attached SHA-256 checksum.
