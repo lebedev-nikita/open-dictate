@@ -117,17 +117,19 @@ rotation use device-only Keychain storage, independent of Drive. See
 ### Post-processing
 
 Post-processing rules and regional examples synchronize through Google Drive. All
-post-processing enable switches remain device-local, including individual value types.
+rule-enable switches remain device-local, including individual value types. macOS
+has no global post-processing switch: the invoked dictation action chooses it.
 
 The shared **Text model** selector sits beside recognition models and offers
 **GPT-6 Luna**. Voice editing and post-processing use the standard service tier.
 Saved or synchronized Fast preferences no longer enable Fast; existing history
 keeps the tier used for each request.
 
-In Accurate mode, Settings → Dictation → **Post-processing** expands when enabled.
-Live hides the section and retains its saved settings. Post-processing is off by
-default; punctuation is the initial rule. The shared Text model selection controls
-both post-processing and voice editing.
+Settings → Dictation → **Post-processing** configures rules for the dedicated
+**Dictation with post-processing** action, available regardless of the main mode.
+Punctuation is the initial rule. The shared Text model selection controls both
+post-processing and voice editing. Ordinary dictation always skips post-processing,
+including when older preferences had its global switch enabled.
 
 Enable **Format values** for automatic language/regional styles. The native
 popover lists only custom rules, grouped by value type; **All languages** comes
@@ -159,9 +161,9 @@ language-specific examples. These reference phrases preserve omitted place-value
 groups; your saved notation examples still control the output style. Both platforms
 use the same bundled data, independent of OS spellout support or interface language.
 
-Post-processing runs once after ordinary Accurate dictation or Accurate
-retranscription, before local replacements. Live and voice editing skip it.
-No enabled rules means no extra request. Text and generated instructions go
+The dedicated action uses Accurate once and applies post-processing before local
+replacements. Ordinary Live/Accurate dictation and voice editing skip it.
+If every rule is off, the dedicated action uses punctuation correction. Text and generated instructions go
 directly to OpenAI Responses with `store: false`. Failure preserves the original
 transcript; cancellation and focus guards still apply. Punctuation-only processing
 rejects changes to words and numbers. Model-based value formatting preserves
@@ -169,18 +171,21 @@ ambiguous values and identifiers by instruction. A bounded Russian/English parse
 rejects changed supported scaled integers; it is not a general validator for other
 languages or numeric expressions.
 
-The menu bar offers **Dictate with post-processing** or **Dictate without
-post-processing**, opposite to the main dictation setting. This starts one Accurate
-recording without changing saved preferences or synchronized settings. With a Live
-main mode, the alternate action offers post-processing and uses Accurate once.
-If all rules are off, the one-session processing action uses punctuation correction.
+The menu bar offers separate **Start dictation** and **Dictate with post-processing**
+actions. Each has an independent binding in Settings → Keyboard shortcuts. The new
+post-processing binding starts unassigned, preserving existing assignments on
+upgrade. Either dictation shortcut finishes the current recording; Escape cancels.
+The dedicated action does not change the saved main mode or synchronized rules.
+Retranscription preserves the original recording's post-processing choice and
+uses the current rules.
 
 ### Retranscribe the last recording
 
 Choose **Retranscribe last recording** in the menu bar to recognize the latest
 ordinary Live or Accurate recording again through Accurate, without recording
 new audio. The command uses the current Accurate model, speech languages,
-dictionary, timeout, post-processing and word replacements. The selected
+dictionary, timeout and word replacements. It preserves the original
+post-processing choice while applying current rules. The selected
 dictation mode stays unchanged. Results are inserted into the eligible field
 focused when you invoke the command; switching fields during processing prevents
 insertion. With no eligible field (including secure or excluded fields), the
@@ -222,12 +227,18 @@ Command-W closes the current settings window. Command-Shift-W closes all regular
 application windows while preserving the recording indicator. Reopen Settings
 from the menu bar or with Command-comma while the app is active.
 
-In Settings, click either shortcut and press the desired combination. Letters,
+Settings → Keyboard shortcuts groups global dictation and voice-editing bindings,
+a separate binding for dictation with post-processing, the fixed Escape cancellation key, and application-window shortcuts. It also
+provides default reset, Globe/Fn and function-key guidance, and a link to macOS
+Keyboard settings. Bindings are local to this Mac and do not sync through Drive.
+
+Click either shortcut and press the desired combination. Letters,
 symbols, navigation, numpad and F1–F20 keys work with any combination of Control,
-Option, Shift and Command, or without modifiers. Dictation and voice editing are
+Option, Shift and Command, or without modifiers. All three actions are
 configured independently; their defaults remain Option+Space and Option+Shift+Space.
 Existing preferences migrate automatically. Escape clears the shortcut; either or both can remain unassigned. Dictation and voice editing are still available from the menu;
-use the adjacent key menu to assign Escape, an F-key, or Globe/Fn directly.
+use the adjacent key menu to turn off a shortcut or assign Escape, an F-key,
+or Globe/Fn directly. Changes are unavailable during an active dictation.
 During an active dictation, unmodified Escape always cancels even if assigned.
 Conflicting registrations leave the previous shortcut working and show an error.
 
@@ -246,7 +257,12 @@ Keys reserved by macOS or intercepted by keyboard firmware cannot be guaranteed.
 See [Apple's function-key guide](https://support.apple.com/102439) and
 [AppKit event monitoring](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/MonitoringEvents/MonitoringEvents.html).
 
-Credentials live in a device-only, non-synchronizing Keychain item. Preferences
+Credentials live in one device-only, non-synchronizing Keychain item, with separate
+payloads for the API key, Google Drive and ChatGPT. Legacy entries migrate on first
+use: data is saved in the shared item before the old entry is retired. This first
+transition may still prompt for each old entry. Later updates access only the shared
+item, so Keychain can authorize it once rather than each provider separately.
+macOS still controls authorization and keychain-unlock prompts. Preferences
 use the app's UserDefaults domain. The last 500 completed transcripts are saved
 in `~/Library/Application Support/OpenDictate/history.json` with owner-only
 permissions. History places selectable text before compact processing details.

@@ -25,12 +25,16 @@ model IDs and the selected post-processing service tier under the same local-onl
 Post-processing rules and regional examples synchronize through Google Drive. All
 post-processing enable switches remain device-local, including individual value types.
 
-On either platform, **Post-processing** is off by default. When enabled, it sends
-only the recognized transcript, generated instructions and saved format examples directly to OpenAI through
-the Responses API with `store: false`. It runs after ordinary Accurate dictation
-or Accurate retranscription, before local word replacements. Live dictation and
-voice-edit commands skip it.
-No enabled rules means no additional request. Errors retain the original transcript.
+Android’s **Post-processing by default** starts off and selects the main button’s
+Accurate variant; the floating menu offers the opposite choice. Rules can be
+configured independently. macOS uses a separate processed dictation action and
+shortcut; ordinary dictation skips it. macOS retranscription preserves the original
+recording’s processing choice, while Android retranscription uses current settings.
+When processing runs, only the recognized transcript, generated instructions and
+saved format examples go directly to OpenAI Responses with `store: false`, before
+local word replacements. Live dictation and voice editing skip post-processing.
+The explicit processed action uses punctuation correction if all rules are off;
+otherwise no enabled rules means no additional request. Errors retain the original transcript.
 
 Post-processing and text transformation use the shared Text model setting,
 which defaults to `gpt-6-luna`. The default instruction corrects punctuation.
@@ -53,7 +57,7 @@ Sign-in opens your system browser and temporarily listens on IPv4 loopback for
 the OAuth callback. OpenDictate requests identity and ChatGPT plan-use scopes,
 validates the signed identity and grant, and stores account registrations,
 access/refresh/ID tokens in Android Keystore-protected storage or device-only
-macOS Keychain items. Credentials, account details and host IDs are not synced
+macOS Keychain storage. Credentials, account details and host IDs are not synced
 through Drive. This permission does not grant access to ChatGPT conversations.
 
 When ChatGPT is selected, errors or usage limits never silently fall back to
@@ -108,6 +112,10 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
 - Your OpenAI API key is stored in a non-synchronizing, device-only Keychain
   item, available while your login keychain is unlocked. It is never saved in
   preferences, the app bundle, logs or release artifacts.
+- On macOS, one Keychain item holds independent API-key, Google Drive and ChatGPT
+  payloads. Older entries are migrated only after they can be read and safely
+  written to the shared item. Removing one credential leaves the other sections
+  intact. Credentials remain device-only and excluded from synchronization.
 - The API key copy button places the entered key, or the saved Keychain key
   when the field is empty, on the system clipboard only when you click it.
   The clipboard item is marked confidential for compatible clipboard utilities.

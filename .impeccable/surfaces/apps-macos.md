@@ -16,15 +16,15 @@ color is retained for selected controls and keyboard focus. The captured system
 accent is blue; this is a native control state, not an added brand color.
 
 STORY: The first Dictation page presents the API key, microphone and Accessibility
-permissions, Live/Accurate mode, transcription and shared text models, speech language, and start/finish, voice-edit,
-cancel shortcuts. Dictionary, Replacements, History, and Settings are secondary pages. The
+permissions, Live/Accurate mode, transcription and shared text models, speech language,
+and post-processing rules. Dictionary, Replacements, History, Keyboard shortcuts, and Settings are secondary pages. The
 rail keeps the current shortcut and version visible. Settings groups Google Drive and ChatGPT in the localized Integrations subsection.
 
 FIRST VIEWPORT: Default settings content is 790 × 650pt, with a fixed 190pt
 sidebar and a scrollable body. The NSWindow minimum is 740 × 620pt including
 window chrome; the SwiftUI content minimum is 740 × 590pt. The compact review
 uses 740 × 590pt content. Rail padding is 20pt and body padding is 28pt. At the
-default size, setup, mode, language and shortcut rows form one continuous page;
+default size, setup, mode, language and post-processing rules form one continuous page;
 at the minimum, the longer Russian supporting copy scrolls vertically. Headings
 use 27pt semibold system type; navigation uses 13pt regular/selected-medium type.
 The selected row's tonal fill and the native keyboard focus ring are distinct.
@@ -70,7 +70,7 @@ comp or direction roll.
 
 ## Implementation evidence
 
-- `apps/macos/Sources/OpenDictate/SettingsView.swift`: five pages, system type,
+- `apps/macos/Sources/OpenDictate/SettingsView.swift`: six pages, system type,
   semantic colors, native control styles, scrolling, and passive status content.
 - `apps/macos/Sources/OpenDictate/OpenDictateApp.swift`: window dimensions,
   menu commands, recording panel ownership and nonactivation.
@@ -107,14 +107,14 @@ review screenshots are evidence rather than shipping artwork.
 ## Theme choice
 
 A native menu button beside the version at the bottom of the sidebar offers System, Light and Dark appearance.
-The choice is saved in local preferences and applies to all five settings pages.
+The choice is saved in local preferences and applies to all six settings pages.
 Dark preserves the prior default; System follows macOS. Semantic AppKit surfaces
 and foreground colors keep the navigation selection readable in either theme.
 The nonactivating recording indicator retains its dark appearance.
 
 ## Dictation settings
 
-Mode remains Operate. `SettingsView.swift` retains the native Dictation page, speech-language controls and recognition hints in Dictionary, and places the shared Text model / Текстовая модель selector beside transcription models. Post-processing remains a separate Accurate-only section before shortcuts. There is no transcription prompt control or editor. `GoogleDriveSettingsView.swift` retains the existing synchronization controls. Native system typography, semantic surfaces, fixed rail and scrollable body remain the visual authority.
+Mode remains Operate. `SettingsView.swift` retains the native Dictation page, speech-language controls and recognition hints in Dictionary, and places the shared Text model / Текстовая модель selector beside transcription models. Post-processing rules remain a separate section visible in either Live or Accurate, with guidance pointing to Keyboard shortcuts. There is no global post-processing switch or transcription prompt editor on macOS. `GoogleDriveSettingsView.swift` retains the existing synchronization controls. Native system typography, semantic surfaces, fixed rail and scrollable body remain the visual authority.
 
 Earlier shared-selector full Settings evidence is `.impeccable/review/text-model-macos-{accurate-en-false,accurate-ru-false,accurate-ru-true,live-en-true}.png`. These four isolated localOnly production `NSHostingView` captures at 1000 × 900pt were viewed and valid; the test-runner footer version 16.0 is not product-version evidence. That finish review passed the shared text-model selector with disposition **ship** and no material fixes. Earlier preset component captures remain historical evidence. Verification and limits are recorded under Shared text-model selector.
 
@@ -193,7 +193,7 @@ Finish reviewer disposition: **ship** for this narrow addition; all five finish-
 
 ## Post-processing extension
 
-`PostProcessingSettingsView.swift` presents a separate Accurate-only section between transcription and shortcuts. Live hides its section and divider while retaining saved configuration. The native global switch starts off, saves immediately and collapses options while disabled. Expanded content retains 14pt spacing and system controls: punctuation starts on; Format values has a popup action and separate switch. Switching values off retains examples. Reset settings restores punctuation-only options while preserving global enabled state. The final prompt has no visible editor or Save controls.
+`PostProcessingSettingsView.swift` presents a separate rule section after transcription, visible in both Live and Accurate. There is no global post-processing switch on macOS and no mode-dependent visibility. A wrapping callout explains that rules apply through Dictation with post-processing and points to Keyboard shortcuts. Content retains 14pt spacing and native controls: punctuation starts on; Format values has a popup action and separate switch. Switching values off retains examples. Reset settings restores punctuation-only options. The final prompt has no visible editor or Save controls.
 
 Format values opens `ValueFormattingMenu`, a native popover with system typography, semantic surfaces, 20pt padding, a 440pt width and a 350pt scrolling list viewport. A Value types `DisclosureGroup` holds native checkboxes; Add rule opens the editor. Custom rules group by type, then All languages first and localized alphabetical language order. Rows show language and result with native edit/delete actions; result examples use semantic primary foreground for readable light appearance. Keep native focus, scrolling and appearance behavior.
 
@@ -201,11 +201,11 @@ Each rule pairs a value type, an ISO language or nil for All languages, and a re
 
 `OpenDictateCore/ValueFormatting.swift` selects specific-language custom rules before All languages custom rules, then native automatic language/regional defaults. First enabling values or saving the menu captures concrete defaults and language locales independently of interface-language override. Shared production `postprocessing-rules.json` owns type definitions, suggestions, instruction rules and immutable localized source samples (`sourceEn`/`sourceRu`); the editor displays these samples directly, without model reconstruction.
 
-Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary Accurate final text and Accurate retry use post-processing; Live bypasses it while preserving saved configuration, and voice editing remains separate. Cancellation and failures preserve the existing delivery and transcript safeguards.
+Post-processing and transformation use the shared immutable text-model snapshot; the sole built-in choice is GPT-6 Luna. Ordinary dictation always skips post-processing in either main mode. The dedicated Dictation with post-processing action uses Accurate for that session, then applies the saved rules without changing the main mode. Retranscribe preserves the original recording's processing choice and captures current rules at invocation; voice editing remains separate. `AppModel.swift` owns these session choices and retained-audio behavior. Cancellation and failures preserve the existing delivery and transcript safeguards.
 
 Drive synchronizes the atomic `postprocessingOptions` configuration. Schema 2 persists `customRules` and captured `languageLocales` with enabled state, punctuation and value-type settings. Schema-1 fixed styles decode unchanged and appear as All languages rules. The hidden generated prompt is assembled from shared rules at request time and never synchronized. General instructions remain English; cardinal reference blocks include only selected dictation languages. Auto includes explicit language-specific custom styles without automatic language reference blocks. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared `textProcessingModel` key remains independent; retired `textModel` and `postprocessing` entries do not restore prompt editing.
 
-Native evidence is `.impeccable/review/custom-value-rules/value-formats-macos-{en,ru}-top.png` and `value-rule-macos-{en,ru}.png` in the same directory. These are isolated production-component captures of the rule list and editor, not a full OS flow or installer. No HTML detector applies to this native surface; this code-led local extension introduces no new visual tokens or shipping raster assets. Fresh TCC, hotkeys, insertion, real Drive/API requests and model-output quality remain outside this UI evidence.
+Current native evidence is `.impeccable/review/dedicated-postprocessing/postprocessing-macos-ru-false.png` and `postprocessing-macos-en-true-values.png` in the same directory, plus the shortcut-page captures below. All four final renders were viewed without clipping after the caption-wrapping correction. Finish disposition: **ship**, with no material fixes across all five review sections. Supplied verification reports 241 passing Swift tests, required Android checks and universal packaging. These isolated production-component captures do not demonstrate live OS permissions, hotkeys, insertion, real Drive/API requests or model-output quality. No HTML detector applies; no new visual tokens or shipping raster assets are introduced.
 
 ## History timing captions
 
@@ -221,7 +221,7 @@ Mode remains Operate in the established SwiftUI/AppKit world. `SettingsView.swif
 
 The shared Text model / Текстовая модель selector sits beside transcription models on both platforms and stays visible in Live for transformation. Its built-in list contains only GPT-6 Luna (`gpt-6-luna`), selected by default. This saved choice is independent of post-processing options: transformation and post-processing use the immutable session-start model snapshot; Accurate retry captures it at invocation. AI history search remains fixed to `gpt-6-luna`. Drive synchronizes the new `textProcessingModel` key and validates its model ID before atomic import. The retired `textModel` key remains discarded so old RC data cannot restore it. `Storage.swift`, `OpenDictateCore/SettingsSync.swift`, `AppModel.swift` and the request builders are behavior authority.
 
-Fresh finish disposition: **ship**, with no material fixes. All four full Settings captures `.impeccable/review/text-model-macos-{accurate-en-false,accurate-ru-false,accurate-ru-true,live-en-true}.png` were viewed and valid. Isolated localOnly production `NSHostingView` renders at 1000 × 900pt cover English/Russian, Accurate off/expanded and Live with the shared selector visible and post-processing hidden. The runner footer version 16.0 is not installer-version evidence. Supplied verification reports 194 passing Swift tests, successful universal packaging and version checks, core request-builder/merge coverage, and a session test changing the saved selection during recording to verify snapshot behavior. Shared configuration checks passed all five tests. Native captures have no HTML detector; no new token or shipping raster asset is introduced. TCC, hotkeys, insertion, physical devices, real Drive and paid OpenAI requests were not verified.
+Fresh finish disposition: **ship**, with no material fixes. All four full Settings captures `.impeccable/review/text-model-macos-{accurate-en-false,accurate-ru-false,accurate-ru-true,live-en-true}.png` were viewed and valid. Isolated localOnly production `NSHostingView` renders at 1000 × 900pt cover English/Russian and Live/Accurate settings layouts. The runner footer version 16.0 is not installer-version evidence. Supplied verification reports 194 passing Swift tests, successful universal packaging and version checks, core request-builder/merge coverage, and a session test changing the saved selection during recording to verify snapshot behavior. Shared configuration checks passed all five tests. Native captures have no HTML detector; no new token or shipping raster asset is introduced. TCC, hotkeys, insertion, physical devices, real Drive and paid OpenAI requests were not verified.
 
 ## ChatGPT plan connection
 
@@ -231,3 +231,11 @@ Turning on starts browser sign-in; turning off disconnects. The switch disables 
 Audio transcription and explicit AI history search continue to use the API key. Plan-request failure has no automatic paid API fallback; failed post-processing keeps the original transcript. Credentials stay in device-only, non-synchronizing Keychain storage and never enter Drive synchronization. Implementation authority is `ChatGPTSettingsView.swift`, `GoogleDriveSettingsView.swift`, `ChatGPTConnection.swift`, `ChatGPTSession.swift`, `ChatGPTAuthorization.swift`, `SettingsView.swift`, `AppModel.swift`, `Network.swift` and `OpenDictateCore/ChatGPTProtocol.swift`; `docs/chatgpt-plan.md` records user guidance and official protocol references. `ChatGPTMark.swift` shares original vector geometry with Android's `ic_chatgpt_24.xml`; source comments and third-party notices preserve provenance.
 
 Fresh native UI/source finish disposition: **ship** at the helper-contrast fix scope. The initial macOS helper contrast finding is resolved by primary foreground; the other inspected UI/source sections passed. Native evidence is `.impeccable/review/integrations-macos-{en-ready,ru-locked}.png`, isolated production provider components with synthetic connection state. Source verifies the shared Integrations placement; these are not full Settings captures. Supplied verification reports 200 passing Swift tests and successful universal packaging, alongside the green Android suites and three instrumentation configurations. Captures remain ignored review evidence; no HTML detector, new visual token or shipping raster asset is involved. This UI change does not claim real ChatGPT login, eligibility, paid inference, TCC, hotkeys, insertion or physical-device verification.
+
+## Keyboard shortcuts page
+
+Mode remains Operate in the established SwiftUI/AppKit world. `SettingsView.swift` places Keyboard shortcuts / Горячие клавиши between History and Settings in the fixed rail. This dedicated page owns shortcut controls and guidance; Dictation and general Settings contain no shortcut blocks. The persistent primary-shortcut hint remains in the sidebar. `ShortcutSettingsView.swift` retains the 27pt semibold heading, system type, semantic primary text, native controls and dividers, with 24pt section spacing and vertically wrapping English/Russian copy.
+
+Three rows provide independent recorder controls for Dictation, Dictation with post-processing / Диктовка с постобработкой, and Voice editing. Ordinary Dictation explicitly skips post-processing; the dedicated action explains its one-session Accurate path and saved rules. Its binding starts unassigned, preserving saved ordinary and voice-edit bindings. Each key menu offers explicit disable, Globe/Fn, F1–F20 and Escape. Controls disable during active dictation; inline conflict guidance preserves the saved bindings. Restore defaults and the fixed Esc cancellation reference follow the recording guidance. Native disclosures cover modifier taps, Fn and function-key setup with a Keyboard Settings link and an Accessibility action when permission is missing, then app-window commands ⌘, / ⌘W / ⇧⌘W / ⌘Q.
+
+`HotKeys.swift`, `KeyboardShortcut.swift`, `AppModel.swift` and `OpenDictateApp.swift` are binding and action authority. The menu permanently offers ordinary and processed dictation alongside voice editing. Current page evidence is `.impeccable/review/dedicated-postprocessing/shortcuts-macos-{en,ru}.png`; the same **ship** review and 241-test verification cover the shortcut page and rules section. These isolated production `NSHostingView` captures cover the page, not the full sidebar, expanded disclosures or live OS permissions. No HTML detector applies; no new visual world, token or shipping raster asset is introduced.
