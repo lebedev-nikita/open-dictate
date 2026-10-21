@@ -7,43 +7,40 @@ struct PostProcessingSettingsView: View {
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
     private var settings: PostProcessingSettings { preferences.postProcessing }
     var body: some View {
-        if preferences.mode == .accurate {
-            VStack(alignment: .leading, spacing: 14) {
-                Toggle(isOn: Binding(get: { settings.enabled }, set: { preferences.postProcessing.enabled = $0 })) {
-                    HStack { Text(t("Post-processing", "Постобработка")).fontWeight(.medium); Spacer(minLength: 12) }
-                }.toggleStyle(.switch)
-                if settings.enabled {
-                    Toggle(isOn: Binding(get: { settings.punctuation }, set: { preferences.postProcessing.punctuation = $0 })) {
-                        HStack { Text(t("Correct punctuation", "Исправить пунктуацию")); Spacer(minLength: 12) }
-                    }.toggleStyle(.switch)
-                    HStack(spacing: 12) {
-                        Button { formatsOpen = true } label: {
-                            HStack {
-                                Text(t("Format values", "Отформатировать значения"))
-                                Image(systemName: "chevron.right").font(.caption)
-                            }
-                        }.buttonStyle(.plain)
-                        .popover(isPresented: $formatsOpen, arrowEdge: .bottom) {
-                            ValueFormattingMenu(initial: settings.formats ?? .systemDefaults(), russian: preferences.isRussian, selectedLanguages: preferences.speechLanguages,
-                                onCancel: { formatsOpen = false }, onSave: { formats in
-                                    var next = settings
-                                    next.formats = formats; next.formatValues = true
-                                    preferences.postProcessing = next
-                                    formatsOpen = false
-                                })
-                        }
-                        Spacer()
-                        Toggle(t("Format values", "Отформатировать значения"), isOn: Binding(get: { settings.formatValues }, set: { enabled in
-                            var next = settings
-                            if enabled && next.formats == nil { next.formats = .systemDefaults() }
-                            next.formatValues = enabled
-                            preferences.postProcessing = next
-                        })).labelsHidden().toggleStyle(.switch)
+        VStack(alignment: .leading, spacing: 14) {
+            Text(t("Post-processing", "Постобработка")).fontWeight(.medium)
+            Text(t("Applied when you use Dictation with post-processing. Set its shortcut in Keyboard shortcuts.",
+                   "Применяется при диктовке с постобработкой. Назначьте ей сочетание во вкладке «Горячие клавиши»."))
+                .font(.callout).fixedSize(horizontal: false, vertical: true)
+            Toggle(isOn: Binding(get: { settings.punctuation }, set: { preferences.postProcessing.punctuation = $0 })) {
+                HStack { Text(t("Correct punctuation", "Исправить пунктуацию")); Spacer(minLength: 12) }
+            }.toggleStyle(.switch)
+            HStack(spacing: 12) {
+                Button { formatsOpen = true } label: {
+                    HStack {
+                        Text(t("Format values", "Отформатировать значения"))
+                        Image(systemName: "chevron.right").font(.caption)
                     }
-                    Button(t("Reset settings", "Сбросить настройки")) { preferences.postProcessing = .init(enabled: settings.enabled) }
-                        .disabled(settings == PostProcessingSettings(enabled: settings.enabled))
+                }.buttonStyle(.plain)
+                .popover(isPresented: $formatsOpen, arrowEdge: .bottom) {
+                    ValueFormattingMenu(initial: settings.formats ?? .systemDefaults(), russian: preferences.isRussian, selectedLanguages: preferences.speechLanguages,
+                        onCancel: { formatsOpen = false }, onSave: { formats in
+                            var next = settings
+                            next.formats = formats; next.formatValues = true
+                            preferences.postProcessing = next
+                            formatsOpen = false
+                        })
                 }
+                Spacer()
+                Toggle(t("Format values", "Отформатировать значения"), isOn: Binding(get: { settings.formatValues }, set: { enabled in
+                    var next = settings
+                    if enabled && next.formats == nil { next.formats = .systemDefaults() }
+                    next.formatValues = enabled
+                    preferences.postProcessing = next
+                })).labelsHidden().toggleStyle(.switch)
             }
+            Button(t("Reset settings", "Сбросить настройки")) { preferences.postProcessing = .init(enabled: settings.enabled) }
+                .disabled(settings == PostProcessingSettings(enabled: settings.enabled))
         }
     }
 }

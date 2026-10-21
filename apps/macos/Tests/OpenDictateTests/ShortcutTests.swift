@@ -40,6 +40,22 @@ final class ShortcutTests: XCTestCase {
         XCTAssertFalse(KeyboardShortcut.disabled.usesEventMonitor)
         XCTAssertTrue(ShortcutBindings(dictate: .disabled, transform: .disabled).isValid)
         XCTAssertTrue(ShortcutBindings.defaults.isValid)
+        XCTAssertFalse(ShortcutBindings(dictate: a, transform: .disabled, dictateWithPostProcessing: b).isValid)
+        XCTAssertFalse(ShortcutBindings(dictate: .disabled, transform: a, dictateWithPostProcessing: b).isValid)
+        XCTAssertTrue(ShortcutBindings(dictate: .disabled, transform: .disabled, dictateWithPostProcessing: a).isValid)
+    }
+
+    func testOldBindingsDecodeWithNewActionUnassignedAndNewBindingRoundTrips() throws {
+        let original = ShortcutBindings.defaults
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        legacy.removeValue(forKey: "dictateWithPostProcessing")
+        let restored = try JSONDecoder().decode(ShortcutBindings.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertEqual(restored.dictate, original.dictate)
+        XCTAssertEqual(restored.transform, original.transform)
+        XCTAssertFalse(restored.dictateWithPostProcessing.isEnabled)
+        var updated = restored
+        updated.dictateWithPostProcessing = .init(keyCode: nil, flags: [.control, .function])
+        XCTAssertEqual(try JSONDecoder().decode(ShortcutBindings.self, from: JSONEncoder().encode(updated)), updated)
     }
 
     @MainActor func testDisabledBindingsPersistAndDoNotRegisterModifierGestures() async throws {
@@ -150,7 +166,8 @@ final class ShortcutTests: XCTestCase {
         defer { keys.shutdown() }
         let flags: NSEvent.ModifierFlags = [.control, .option, .command, .shift]
         let previous = ShortcutBindings(dictate: .init(keyCode: 80, flags: flags, keyLabel: "F19"),
-                                        transform: .init(keyCode: 90, flags: flags, keyLabel: "F20"))
+                                        transform: .init(keyCode: 90, flags: flags, keyLabel: "F20"),
+                                        dictateWithPostProcessing: .init(keyCode: 64, flags: flags, keyLabel: "F17"))
         let conflicting = KeyboardShortcut(keyCode: 79, flags: flags, keyLabel: "F18")
         var reservation: EventHotKeyRef?
         let id = EventHotKeyID(signature: 0x54455354, id: 99)
@@ -158,16 +175,24 @@ final class ShortcutTests: XCTestCase {
                                           OptionBits(kEventHotKeyExclusive), &reservation), noErr)
         defer { if let reservation { UnregisterEventHotKey(reservation) } }
         try keys.configure(previous)
-        XCTAssertThrowsError(try keys.configure(.init(dictate: previous.dictate, transform: conflicting)))
+        XCTAssertThrowsError(try keys.configure(.init(dictate: previous.dictate, transform: previous.transform, dictateWithPostProcessing: conflicting)))
         var probe: EventHotKeyRef?
         let status = RegisterEventHotKey(80, previous.dictate.carbonModifiers, id, GetApplicationEventTarget(),
                                         OptionBits(kEventHotKeyExclusive), &probe)
         if let probe { UnregisterEventHotKey(probe) }
         XCTAssertEqual(status, OSStatus(eventHotKeyExistsErr))
+        probe = nil
+        XCTAssertEqual(RegisterEventHotKey(64, previous.dictateWithPostProcessing.carbonModifiers, id, GetApplicationEventTarget(),
+                                           OptionBits(kEventHotKeyExclusive), &probe), OSStatus(eventHotKeyExistsErr))
+        if let probe { UnregisterEventHotKey(probe) }
         keys.shutdown()
         probe = nil
         XCTAssertEqual(RegisterEventHotKey(80, previous.dictate.carbonModifiers, id, GetApplicationEventTarget(),
                                           OptionBits(kEventHotKeyExclusive), &probe), noErr)
+        if let probe { UnregisterEventHotKey(probe) }
+        probe = nil
+        XCTAssertEqual(RegisterEventHotKey(64, previous.dictateWithPostProcessing.carbonModifiers, id, GetApplicationEventTarget(),
+                                           OptionBits(kEventHotKeyExclusive), &probe), noErr)
         if let probe { UnregisterEventHotKey(probe) }
     }
 }

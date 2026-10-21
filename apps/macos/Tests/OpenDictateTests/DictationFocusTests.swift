@@ -93,7 +93,7 @@ private actor PostLanguageCapture {
 }
 
 final class DictationFocusTests: XCTestCase {
-    @MainActor func testAlternateDictationUsesAccurateOnceAndPrimaryKeepsItsPolicy() async {
+    @MainActor func testDedicatedPostProcessingActionUsesAccurateAndPrimaryAlwaysSkipsProcessing() async {
         for mode in DictationMode.allCases {
             for enabled in [false, true] {
                 let editor = FocusEditor("original ")
@@ -101,25 +101,33 @@ final class DictationFocusTests: XCTestCase {
                     captureTarget: { _, _ in editor.target() }, makeRecorder: { FocusRecorder() },
                     processTranscript: { source, _, settings, _, _ in .init(text: settings.shouldProcess ? "processed" : source) })
                 model.preferences.mode = mode
-                model.preferences.postProcessing = .init(enabled: enabled)
+                model.preferences.postProcessing = .init(enabled: enabled, punctuation: enabled)
                 model.preferences.saveHistory = true
                 let saved = model.preferences.postProcessing
-                let override = model.alternatePostProcessingEnabled
-                model.toggleLocalRecording(mode: mode, postProcessingOverride: override)
+                model.toggleLocalRecording(mode: mode, withPostProcessing: true)
                 await waitFor(.recording, in: model)
-                XCTAssertEqual(model.showsProcessingStageIcon, override)
+                XCTAssertTrue(model.showsProcessingStageIcon)
                 model.stop()
                 await waitFor(.idle, in: model)
                 XCTAssertEqual(model.history.entries.first?.mode, "accurate")
-                XCTAssertEqual(model.lastTranscript, override ? "processed" : "Локальная проверка 🙂")
+                XCTAssertEqual(model.lastTranscript, "processed")
                 XCTAssertEqual(model.preferences.mode, mode)
                 XCTAssertEqual(model.preferences.postProcessing, saved)
+                model.retranscribeLast()
+                await waitFor(.idle, in: model)
+                XCTAssertEqual(model.lastTranscript, "processed", "Retry retains the dedicated action")
                 model.toggleLocalRecording(mode: mode)
                 await waitFor(.recording, in: model)
-                XCTAssertEqual(model.showsProcessingStageIcon, saved.forMode(mode).shouldProcess)
-                model.cancel()
+                XCTAssertFalse(model.showsProcessingStageIcon)
+                model.toggleLocalRecording(withPostProcessing: true)
                 await waitFor(.idle, in: model)
                 XCTAssertNil(model.processingStage)
+                XCTAssertEqual(model.lastTranscript, "Локальная проверка 🙂")
+                XCTAssertEqual(model.history.entries.first?.mode, mode.rawValue)
+                model.preferences.postProcessing.enabled = true
+                model.retranscribeLast()
+                await waitFor(.idle, in: model)
+                XCTAssertEqual(model.lastTranscript, "Локальная проверка 🙂", "Retry of ordinary dictation never enables processing")
                 model.shutdown()
             }
         }
@@ -134,7 +142,7 @@ final class DictationFocusTests: XCTestCase {
         defer { model.shutdown() }
         model.preferences.postProcessing.enabled = true
         await transcriber.hold()
-        model.toggleLocalRecording()
+        model.toggleLocalRecording(withPostProcessing: true)
         await waitFor(.recording, in: model)
         model.stop()
         XCTAssertEqual(model.processingStage, .transcription)
@@ -176,7 +184,7 @@ final class DictationFocusTests: XCTestCase {
                 processTranscript: { _, _, settings, _, languages in await processor.process(settings, languages: languages) })
             model.preferences.speechLanguages = ["ru", "en"]
             model.preferences.postProcessing = .init(enabled: true, formatValues: true, formats: .systemDefaults(locale: Locale(identifier: "en_US")))
-            model.toggleLocalRecording(mode: .accurate)
+            model.toggleLocalRecording(mode: .accurate, withPostProcessing: true)
             await waitFor(.recording, in: model)
             model.preferences.speechLanguages = ["ja"]
             let originalDate = model.preferences.postProcessing.formats?[.date].example
@@ -218,7 +226,7 @@ final class DictationFocusTests: XCTestCase {
             model.preferences.accurateModel = "test-transcribe-model"
             model.preferences.saveHistory = true
             model.preferences.postProcessing = .init(enabled: true)
-            model.toggleLocalRecording(mode: .accurate)
+            model.toggleLocalRecording(mode: .accurate, withPostProcessing: true)
             await waitFor(.recording, in: model)
             model.preferences.textProcessingModel = TextProcessingModel.id
             model.preferences.accurateModel = "changed-transcribe-model"
@@ -243,7 +251,7 @@ final class DictationFocusTests: XCTestCase {
         defer { model.shutdown() }
         model.preferences.postProcessing.enabled = true
         model.preferences.speechLanguages = ["ru"]
-        model.toggleLocalRecording(mode: .accurate)
+        model.toggleLocalRecording(mode: .accurate, withPostProcessing: true)
         await waitFor(.recording, in: model)
         model.preferences.speechLanguages = ["en"]
         model.stop()

@@ -3,7 +3,7 @@ import Carbon
 
 @MainActor
 final class HotKeys {
-    enum Action: UInt32 { case dictate = 1, transform, cancel }
+    enum Action: UInt32 { case dictate = 1, transform, cancel, dictateWithPostProcessing }
     private var registrations = [Action: EventHotKeyRef]()
     private var handler: EventHandlerRef?
     private var pressed = Set<Action>()
@@ -56,7 +56,8 @@ final class HotKeys {
         unregister(.cancel)
         // If Escape itself is assigned, its existing registration routes to cancel.
         let escape = KeyboardShortcut(keyCode: 53, flags: [], keyLabel: "Esc")
-        if enabled && bindings?.dictate.matches(escape) != true && bindings?.transform.matches(escape) != true {
+        if enabled && bindings?.dictate.matches(escape) != true && bindings?.transform.matches(escape) != true &&
+            bindings?.dictateWithPostProcessing.matches(escape) != true {
             try? register(.cancel, shortcut: escape)
         }
     }
@@ -67,7 +68,7 @@ final class HotKeys {
     }
 
     private func install(_ candidate: ShortcutBindings) throws {
-        for (action, shortcut) in [(Action.dictate, candidate.dictate), (.transform, candidate.transform)] {
+        for (action, shortcut) in actionBindings(candidate) {
             guard shortcut.isEnabled else { continue }
             if shortcut.usesEventMonitor { gestures[action] = ShortcutGesture() }
             else { try register(action, shortcut: shortcut) }
@@ -85,7 +86,7 @@ final class HotKeys {
     }
 
     private func handle(_ event: NSEvent, bindings: ShortcutBindings) {
-        for (action, shortcut) in [(Action.dictate, bindings.dictate), (.transform, bindings.transform)] {
+        for (action, shortcut) in actionBindings(bindings) {
             guard var gesture = gestures[action] else { continue }
             let fire = gesture.handle(type: event.type, keyCode: event.keyCode, flags: event.modifierFlags,
                                       isRepeat: event.type == .keyDown && event.isARepeat, shortcut: shortcut)
@@ -98,16 +99,20 @@ final class HotKeys {
         // Carbon consumes its key events before AppKit monitors see them.
         // A modifier used for a registered shortcut must not also fire a tap.
         for action in Array(gestures.keys) { gestures[action]?.cancelTap() }
-        let shortcut = action == .dictate ? bindings?.dictate : bindings?.transform
+        let shortcut = bindings.flatMap { value in actionBindings(value).first { $0.0 == action }?.1 }
         if cancelEnabled && shortcut?.keyCode == 53 && shortcut?.flags.isEmpty == true { onAction?(.cancel) }
         else { onAction?(action) }
     }
 
     private func clearShortcuts() {
-        unregister(.dictate); unregister(.transform)
+        unregister(.dictate); unregister(.transform); unregister(.dictateWithPostProcessing)
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }; globalMonitor = nil
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }; localMonitor = nil
         gestures.removeAll()
+    }
+
+    private func actionBindings(_ bindings: ShortcutBindings) -> [(Action, KeyboardShortcut)] {
+        [(.dictate, bindings.dictate), (.transform, bindings.transform), (.dictateWithPostProcessing, bindings.dictateWithPostProcessing)]
     }
 
     private func register(_ action: Action, shortcut: KeyboardShortcut) throws {

@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let checks = LocalSmokeChecks(model: model); localChecks = checks
             model.hotKeys.onAction = { action in
                 switch action {
-                case .dictate, .transform: Task { await checks.toggle() }
+                case .dictate, .transform, .dictateWithPostProcessing: Task { await checks.toggle() }
                 case .cancel: self.model.cancel(); Task { await checks.cancel() }
                 }
             }
@@ -101,9 +101,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         add(menu, model.isActive ? p.t("Finish dictation", "Завершить диктовку") : p.t("Start dictation", "Начать диктовку"),
             #selector(dictate), key: p.shortcutLabel, enabled: model.phase != .processing)
-        add(menu, model.alternatePostProcessingEnabled ? p.t("Dictate with post-processing", "Диктовать с постобработкой") :
-            p.t("Dictate without post-processing", "Диктовать без постобработки"),
-            #selector(alternateDictation), enabled: !model.isActive)
+        add(menu, p.t("Dictate with post-processing", "Диктовать с постобработкой"),
+            #selector(processedDictation), key: p.shortcuts.dictateWithPostProcessing.label, enabled: !model.isActive)
         add(menu, p.t("Edit text by voice", "Изменить текст голосом"), #selector(transform), key: p.editShortcutLabel, enabled: !model.isActive)
         if model.isActive { add(menu, p.t("Cancel", "Отменить"), #selector(cancel), key: "Esc") }
         menu.addItem(.separator())
@@ -242,9 +241,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Task { try? await Task.sleep(nanoseconds: 120_000_000); action() }
     }
     @objc private func dictate() { afterMenu { self.model.toggle(transform: false) } }
-    @objc private func alternateDictation() {
-        let enabled = model.alternatePostProcessingEnabled
-        afterMenu { self.model.toggle(transform: false, postProcessingOverride: enabled) }
+    @objc private func processedDictation() {
+        afterMenu { self.model.toggle(transform: false, withPostProcessing: true) }
     }
     @objc private func transform() { afterMenu { self.model.toggle(transform: true) } }
     @objc private func cancel() { model.cancel() }
