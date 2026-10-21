@@ -133,7 +133,7 @@ final class RecordingIndicatorTests: XCTestCase {
     func testWaveformHasTenBarsAndNewestInputChangesRightmostHeight() async throws {
         try await MainActor.run {
             let levels = RecordingAudioLevels()
-            let quiet = try render(.preparing, style: .waveform, levels: levels)
+            let quiet = try render(.recording, style: .waveform, levels: levels)
             XCTAssertEqual(quiet.pixelsWide, 63)
             XCTAssertEqual(quiet.pixelsHigh, 29)
             XCTAssertNil(redBounds(quiet))
@@ -167,6 +167,15 @@ final class RecordingIndicatorTests: XCTestCase {
             XCTAssertEqual(size.height / 17.5, (1 + sqrt(5)) / 2, accuracy: 0.001)
             XCTAssertEqual(size.width / waveformBounds.width, (1 + sqrt(5)) / 2, accuracy: 0.05)
         }
+    }
+
+    @MainActor func testMicrophoneStartupDoesNotShowAListeningWaveformOrMoveTheFinishControl() throws {
+        let preparing = try render(.preparing, style: .waveform)
+        let recording = try render(.recording, style: .waveform)
+        XCTAssertEqual(preparing.pixelsWide, recording.pixelsWide)
+        XCTAssertEqual(preparing.pixelsHigh, recording.pixelsHigh)
+        XCTAssertNotEqual(whiteBars(preparing).count, 10, "Starting must be distinct from listening in silence")
+        XCTAssertTrue(AppModel.Phase.preparing.showsFinishControl)
     }
 
     func testWaveformProcessingShrinksToCircleWithRestoredVerticalSpace() async throws {

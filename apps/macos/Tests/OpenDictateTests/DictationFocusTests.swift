@@ -11,10 +11,10 @@ private actor FocusRecorder: AudioRecording {
     private var pcm: Data
     private var onError: (@Sendable (DictationError) -> Void)?
     init(pcm: Data = Data(repeating: 0, count: 4_800)) { self.pcm = pcm }
-    func start(keepAudio: Bool, onChunk: @escaping @Sendable (Data) -> Void,
+    func start(keepAudio: Bool, onReady: @escaping @Sendable () -> Void, onChunk: @escaping @Sendable (Data) -> Void,
                onLevel: @escaping @Sendable (Float) -> Void,
                onError: @escaping @Sendable (DictationError) -> Void) async throws {
-        starts += 1; keepsAudio = keepAudio; self.onError = onError
+        starts += 1; keepsAudio = keepAudio; self.onError = onError; onReady()
     }
     func interrupt() { onError?(.connection) }
     func stop() async -> (Data, Int) {
