@@ -27,12 +27,13 @@ class DictationSettingsTest {
                 compose.onNodeWithText(context.getString(mode)).performScrollTo().performClick()
                 compose.onNodeWithText(context.getString(R.string.settings_recognition_model)).assertIsDisplayed()
                 if (mode == R.string.settings_mode_accurate) {
-                    compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_title))
+                    compose.onNodeWithText(context.getString(R.string.postprocessing_title)).performScrollTo().assertIsDisplayed()
+                    compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_default_enabled))
                         .performScrollTo().assertIsDisplayed()
                     compose.onAllNodesWithText(context.getString(R.string.postprocessing_punctuation)).assertCountEquals(1)
                     compose.onNodeWithText(context.getString(R.string.postprocessing_values)).assertExists()
                 } else {
-                    compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_title)).assertDoesNotExist()
+                    compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_default_enabled)).assertDoesNotExist()
                     compose.onNodeWithText(context.getString(R.string.postprocessing_punctuation)).assertDoesNotExist()
                 }
                 compose.onNodeWithText(context.getString(R.string.dictation_languages_title))

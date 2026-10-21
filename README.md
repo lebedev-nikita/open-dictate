@@ -23,7 +23,7 @@ no backend, analytics or account to create.
 
 - **Live** (`gpt-live-transcribe`) inserts text as you speak.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
-- **Post-processing by default** chooses the main Android button's Accurate behavior.
+- **Post-processing → Enabled by default** chooses the main Android button's Accurate behavior.
   Punctuation and value-formatting settings stay available when it is off; changing
   the default preserves those rules.
 - Start one recording with the opposite post-processing setting from the bottom of

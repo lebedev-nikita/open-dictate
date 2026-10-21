@@ -285,10 +285,11 @@
     <string name="gestures_hide_left_hint">Смахните влево без записи</string>
     <string name="gestures_keyboard_recovery">Чтобы вернуть кнопку, закройте и снова откройте клавиатуру.</string>
     <string name="postprocessing_cancel">Отмена</string>
-    <string name="postprocessing_title">Постобработка по умолчанию</string>
+    <string name="postprocessing_title">Постобработка</string>
+    <string name="postprocessing_default_enabled">Включена по умолчанию</string>
     <string name="postprocessing_default_on_hint">Основная кнопка — с постобработкой, в меню — без неё.</string>
     <string name="postprocessing_default_off_hint">Основная кнопка — без постобработки, в меню — с ней.</string>
-    <string name="postprocessing_punctuation">Исправить пунктуацию</string>
+    <string name="postprocessing_punctuation">Исправлять пунктуацию</string>
     <string name="postprocessing_values">Отформатировать значения</string>
     <string name="postprocessing_failed">Постобработка не удалась; сохранена исходная расшифровка.</string>
     <string name="history_transcription_stage">Транскрипция</string>
