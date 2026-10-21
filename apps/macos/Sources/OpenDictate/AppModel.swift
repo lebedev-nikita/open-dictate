@@ -8,6 +8,7 @@ import OpenDictateCore
 final class AppModel: ObservableObject {
     typealias AudioTranscriber = @Sendable (Data, String, TranscriptionContext, Int) async throws -> String
     typealias TextPostProcessor = @Sendable (String, String, PostProcessingSettings, String, [String]) async throws -> PostProcessingResult
+    typealias LiveSessionFactory = (String, TranscriptionContext, @escaping @Sendable (String) -> Void) -> LiveTranscriptionSession
     enum Phase {
         case idle, preparing, recording, processing
         var showsFinishControl: Bool { self == .preparing || self == .recording }
@@ -36,6 +37,7 @@ final class AppModel: ObservableObject {
     private let localOnly: Bool
     private let captureTarget: @MainActor ([String], Bool) throws -> TextTarget
     private let makeRecorder: () -> any AudioRecording
+    private let makeLiveSession: LiveSessionFactory?
     private let accessibilityTrust: () -> Bool
     private let transcribeAudio: AudioTranscriber?
     private let processTranscript: TextPostProcessor?
@@ -104,6 +106,7 @@ final class AppModel: ObservableObject {
          defaults: UserDefaults? = nil,
          captureTarget: @escaping @MainActor ([String], Bool) throws -> TextTarget = { try TextTarget.capture(exclusions: $0, transform: $1) },
          makeRecorder: @escaping () -> any AudioRecording = { AudioRecorder() },
+         makeLiveSession: LiveSessionFactory? = nil,
          accessibilityTrust: @escaping () -> Bool = { AXIsProcessTrusted() },
          transcribeAudio: AudioTranscriber? = nil,
          processTranscript: TextPostProcessor? = nil,
@@ -113,6 +116,7 @@ final class AppModel: ObservableObject {
         self.requestClock = requestClock ?? { clockOrigin.duration(to: .now) }
         self.captureTarget = captureTarget
         self.makeRecorder = makeRecorder
+        self.makeLiveSession = makeLiveSession
         self.accessibilityTrust = accessibilityTrust
         self.transcribeAudio = transcribeAudio
         self.processTranscript = processTranscript
@@ -286,19 +290,14 @@ final class AppModel: ObservableObject {
     private func start(_ session: Session) async {
         let id = session.id
         do {
-            if session.mode == .live && !localOnly {
-                let live = LiveTranscriptionSession(key: session.key, context: session.context) { [weak self] text in
-                    Task { @MainActor in self?.receive(text, id: id) }
-                }
-                session.live = live
-                let (stream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingOldest(AudioConstants.maximumQueuedChunks))
-                session.continuation = continuation
-                session.pump = Task { [weak self] in
-                    do { for await chunk in stream { try Task.checkCancellation(); try await live.append(chunk) } }
-                    catch { if self?.current?.id == id { self?.fail(error, session: session) } }
-                }
-                try await live.start()
-            }
+            // Install the bounded handoff before capture. Client construction and
+            // socket startup must never hold up the microphone or its first chunks.
+            let stream: AsyncStream<Data>?
+            if session.mode == .live && (!localOnly || makeLiveSession != nil) {
+                let handoff = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingOldest(AudioConstants.maximumQueuedChunks))
+                stream = handoff.stream
+                session.continuation = handoff.continuation
+            } else { stream = nil }
             try Task.checkCancellation()
             let continuation = session.continuation
             try await session.recorder?.start(keepAudio: true, onChunk: { [weak self] chunk in
@@ -316,6 +315,19 @@ final class AppModel: ObservableObject {
                     if case .tooLong = error { self?.stop() } else { self?.fail(error, session: session) }
                 }
             })
+            try Task.checkCancellation()
+            if let stream {
+                let factory = makeLiveSession ?? { LiveTranscriptionSession(key: $0, context: $1, partial: $2) }
+                let live = factory(session.key, session.context) { [weak self] text in
+                    Task { @MainActor in self?.receive(text, id: id) }
+                }
+                session.live = live
+                try await live.start()
+                session.pump = Task { [weak self] in
+                    do { for await chunk in stream { try Task.checkCancellation(); try await live.append(chunk) } }
+                    catch { if self?.current?.id == id { self?.fail(error, session: session) } }
+                }
+            }
             try Task.checkCancellation()
             guard current?.id == id else { return }
             if session.stopRequested { beginCompletion(session) }
@@ -366,10 +378,10 @@ final class AppModel: ObservableObject {
             let transcript: String
             if let transcribeAudio {
                 transcript = try await transcribeAudio(pcm, session.key, session.context, session.timeout)
-            } else if localOnly {
-                transcript = "Локальная проверка 🙂"
             } else if let live = session.live {
                 transcript = try await live.finish(timeout: session.timeout)
+            } else if localOnly {
+                transcript = "Локальная проверка 🙂"
             } else {
                 transcript = try await client.transcribe(pcm: pcm, key: session.key, context: session.context, timeout: session.timeout)
             }
