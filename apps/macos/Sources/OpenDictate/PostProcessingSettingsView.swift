@@ -39,8 +39,6 @@ struct PostProcessingSettingsView: View {
                     preferences.postProcessing = next
                 })).labelsHidden().toggleStyle(.switch)
             }
-            Button(t("Reset settings", "Сбросить настройки")) { preferences.postProcessing = .init(enabled: settings.enabled) }
-                .disabled(settings == PostProcessingSettings(enabled: settings.enabled))
         }
     }
 }

@@ -147,7 +147,7 @@ automatic language defaults. Unknown or mixed-language text uses the general
 style. Explicit language rules also work with automatic detection. **Save rule**
 returns to the popover draft; **Done** saves it and **Cancel** discards it.
 **System defaults** clears custom rules and captures current regional preferences.
-**Reset settings** restores punctuation only. The final prompt stays hidden.
+The final prompt stays hidden.
 
 Rules and captured regional preferences synchronize through Google Drive in
 version-2 post-processing settings. Version-1 fixed examples remain readable and
