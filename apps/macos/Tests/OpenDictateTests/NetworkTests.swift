@@ -2,7 +2,7 @@ import XCTest
 import OpenDictateCore
 @testable import OpenDictate
 
-final class MockSocket: LiveSocket, @unchecked Sendable {
+private final class MockSocket: LiveSocket, @unchecked Sendable {
     let responseStatus: Int? = nil
     private let lock = NSLock()
     private var sent = [String]()
