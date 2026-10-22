@@ -35,9 +35,15 @@ final class RecordingIndicatorStyleTests: XCTestCase {
             let levels = RecordingAudioLevels()
             var frames = [[Float]]()
             let subscription = levels.$history.sink { frames.append($0.samples) }
-            levels.append(0.1); levels.append(0.8); levels.reset()
+            levels.append(0.1, at: .zero)
+            levels.append(0.4, at: .milliseconds(40))
+            XCTAssertEqual(frames.count, 2, "Suppressed audio updates must not rebuild the HUD")
+            levels.append(0.8, at: .milliseconds(120))
+            levels.reset()
             XCTAssertEqual(Array(frames[2].suffix(2)), [0.1, 0.8])
             XCTAssertEqual(frames.last, Array(repeating: 0, count: 10))
+            levels.append(0.6, at: .milliseconds(140))
+            XCTAssertEqual(Array(frames.last!.suffix(2)), [0, 0.6])
             withExtendedLifetime(subscription) {}
         }
     }

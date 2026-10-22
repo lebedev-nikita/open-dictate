@@ -61,8 +61,9 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   spans 38.63 × 17.5 pt; capsule width / waveform width and capsule height /
   waveform height both equal the golden ratio, with 5.41 pt vertical insets.
   New input appears on
-  the right and older levels move left, using the existing 40 ms microphone
-  level callbacks. Only ten normalized RMS levels live in memory and are cleared
+  the right and older levels move left at ten updates per second, showing about
+  one second of microphone levels independently of audio buffer size. Only ten
+  normalized RMS levels live in memory and are cleared
   on every session exit. The HUD alone observes those updates, without rebuilding
   menu state. Click the red button or waveform capsule to stop/submit without
   moving focus. Preparation already offers the finish action; processing shows

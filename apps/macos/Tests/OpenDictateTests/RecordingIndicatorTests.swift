@@ -139,7 +139,7 @@ final class RecordingIndicatorTests: XCTestCase {
             XCTAssertNil(redBounds(quiet))
             let quietBars = whiteBars(quiet)
             XCTAssertEqual(quietBars.count, 10)
-            levels.append(1)
+            levels.append(1, at: .zero)
             let loud = try render(.recording, style: .waveform, levels: levels)
             let loudBars = whiteBars(loud)
             XCTAssertEqual(loudBars.count, 10)
@@ -149,7 +149,7 @@ final class RecordingIndicatorTests: XCTestCase {
             XCTAssertEqual(loudBar.height, 17.5, accuracy: 1)
             XCTAssertEqual(loudBar.minY, 5.41, accuracy: 1)
             XCTAssertEqual(CGFloat(loud.pixelsHigh) - loudBar.maxY, 5.41, accuracy: 1)
-            for _ in 1..<10 { levels.append(1) }
+            for index in 1..<10 { levels.append(1, at: .milliseconds(index * 100)) }
             let fullLevel = try render(.recording, style: .waveform, levels: levels)
             let fullLevelBars = whiteBars(fullLevel)
             XCTAssertEqual(fullLevelBars.count, 10)
