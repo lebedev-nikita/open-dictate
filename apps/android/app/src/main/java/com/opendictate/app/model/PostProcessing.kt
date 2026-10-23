@@ -67,7 +67,9 @@ data class PostProcessingSettings(
     }
 }
 
-data class PostProcessingResult(val text: String, val failed: Boolean = false)
+data class PostProcessingResult(val text: String, val failure: FailureDetails? = null) {
+    val failed: Boolean get() = failure != null
+}
 
 object PostProcessing {
     const val INSTRUCTIONS = "Post-process only source_text according to instruction. Preserve its meaning and language " +
@@ -83,23 +85,34 @@ object PostProcessing {
             require(settings.isValid)
             val candidate = request().trim()
             currentCoroutineContext().ensureActive()
-            if (candidate.isBlank() || settings.hasValueFormatting && !ScaledIntegerGuard.preserves(source, candidate) ||
-                settings.punctuation && !settings.hasValueFormatting &&
-                !validPunctuation(candidate, source)) PostProcessingResult(source, failed = true)
-            else PostProcessingResult(candidate)
+            val reason = when {
+                candidate.isBlank() -> ErrorReason.EMPTY_RESULT
+                settings.hasValueFormatting && !ScaledIntegerGuard.preserves(source, candidate) -> ErrorReason.VALUE_CHANGED
+                settings.punctuation && !settings.hasValueFormatting -> punctuationFailure(candidate, source)
+                else -> null
+            }
+            if (reason != null) PostProcessingResult(source, FailureDetails(reason)) else PostProcessingResult(candidate)
         } catch (error: CancellationException) { throw error }
-        catch (_: Exception) {
+        catch (error: Exception) {
             currentCoroutineContext().ensureActive()
-            PostProcessingResult(source, failed = true)
+            PostProcessingResult(source, FailureDetails.from(error))
         }
     }
 
-    private fun validPunctuation(candidate: String, source: String): Boolean {
+    private fun punctuationFailure(candidate: String, source: String): ErrorReason? {
         val editable = ".,!?;:…—–()[]{}\"'«»“”„‘’".toSet()
         fun signature(text: String) = text.split(Regex("[\\s\\p{Z}\\u0085]+")).map { it.trim { c -> c in editable } }
             .filter(String::isNotEmpty).map { if (it.contains("://") || it.contains('@') || it.contains('/')) it else it.lowercase(java.util.Locale.ROOT) }
         val numbers = Regex("[+-]?(?:[.,]\\p{N}+|\\p{N}+(?:[.,:/]\\p{N}+)*)")
-        return signature(candidate) == signature(source) && numbers.findAll(candidate).map { it.value }.toList() ==
-            numbers.findAll(source).map { it.value }.toList()
+        if (numbers.findAll(candidate).map { it.value }.toList() != numbers.findAll(source).map { it.value }.toList()) {
+            return ErrorReason.NUMBERS_CHANGED
+        }
+        if (signature(candidate) == signature(source)) return null
+        fun boundaries(text: String) = signature(text).map { token -> token.filterNot { it in editable } }
+        val candidateWords = boundaries(candidate)
+        val sourceWords = boundaries(source)
+        return if (candidateWords != sourceWords && candidateWords.joinToString("") == sourceWords.joinToString("")) {
+            ErrorReason.SPACING_CHANGED
+        } else ErrorReason.WORDS_CHANGED
     }
 }

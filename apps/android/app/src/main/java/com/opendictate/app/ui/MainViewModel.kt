@@ -90,6 +90,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val state = mutableState.asStateFlow()
     private val mutableHistoryState = MutableStateFlow(HistoryUiState())
     val historyState = mutableHistoryState.asStateFlow()
+    private val errorHistoryStore = (application as OpenDictateApplication).errorHistoryStore
+    private val mutableErrorHistoryState = MutableStateFlow(ErrorHistoryUiState())
+    val errorHistoryState = mutableErrorHistoryState.asStateFlow()
+
+    suspend fun observeErrorHistory() {
+        errorHistoryStore.revision.collect {
+            try {
+                val entries = withContext(Dispatchers.IO) { errorHistoryStore.getAll() }
+                mutableErrorHistoryState.value = ErrorHistoryUiState(entries = entries, isLoading = false)
+            } catch (error: CancellationException) { throw error }
+            catch (_: Exception) {
+                mutableErrorHistoryState.update { it.copy(isLoading = false, failed = true) }
+            }
+        }
+    }
+
+    fun clearErrorHistory() {
+        viewModelScope.launch {
+            try { withContext(Dispatchers.IO) { errorHistoryStore.clear() } }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) { mutableErrorHistoryState.update { it.copy(failed = true) } }
+        }
+    }
     private var historyLoadJob: Job? = null
     private var modelLoadJob: Job? = null
     private var appsLoadJob: Job? = null

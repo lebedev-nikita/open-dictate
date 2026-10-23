@@ -15,6 +15,29 @@ import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
 class ChatGPTSessionTest {
+    @Test fun postProcessingRetainsPlanHttpStatusWithoutApiFallback() = runBlocking {
+        val (context, cleanup) = isolated()
+        try {
+            seed(context)
+            val http = OkHttpClient.Builder().addInterceptor { chain ->
+                val refresh = chain.request().url.encodedPath.endsWith("/oauth/token")
+                val body = if (refresh)
+                    """{"access_token":"synthetic-new","refresh_token":"synthetic-rotated","scope":"chatgpt.tokens.use.direct","expires_in":3600,"token_type":"Bearer"}"""
+                else """{"error":{"message":"synthetic private provider detail"}}"""
+                Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+                    .code(if (refresh) 200 else 429).message("Synthetic")
+                    .body(body.toResponseBody("application/json".toMediaType())).build()
+            }.build()
+            val api = OkHttpClient.Builder().addInterceptor { error("API fallback must not run") }.build()
+            val result = com.opendictate.app.network.OpenAiTranscriptionClient(
+                context.resources, ChatGPTSession(context, http), api,
+            ).postProcess("synthetic-key", "synthetic source", com.opendictate.app.model.PostProcessingSettings(true),
+                emptySet(), chatGPTAccount = "oaiapp_test")
+            assertEquals("synthetic source", result.text)
+            assertEquals(com.opendictate.app.model.FailureDetails(com.opendictate.app.model.ErrorReason.HTTP, 429), result.failure)
+        } finally { cleanup() }
+    }
+
     private fun isolated(): Pair<Context, () -> Unit> {
         val actual = InstrumentationRegistry.getInstrumentation().targetContext
         val prefix = "chatgpt-test-${java.util.UUID.randomUUID()}-"
@@ -44,7 +67,7 @@ class ChatGPTSessionTest {
                     val buffer = okio.Buffer(); request.body!!.writeTo(buffer)
                     val payload = JSONObject(buffer.readUtf8())
                     assertTrue(payload.getBoolean("stream")); assertFalse(payload.getBoolean("store")); assertTrue(payload.get("input") is org.json.JSONArray)
-                    assertEquals("priority", payload.getString("service_tier"))
+                    assertEquals("default", payload.getString("service_tier"))
                     responses.incrementAndGet()
                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\"}}\n\n"
                 }
@@ -92,7 +115,7 @@ class ChatGPTSessionTest {
                     assertEquals("Bearer synthetic-new", request.header("Authorization"))
                     val buffer = okio.Buffer(); requireNotNull(request.body).writeTo(buffer)
                     val body = JSONObject(buffer.readUtf8())
-                    assertEquals("priority", body.getString("service_tier"))
+                    assertEquals("default", body.getString("service_tier"))
                     val input = JSONObject(body.getJSONArray("input").getJSONObject(0).getString("content"))
                     assertTrue(input.getString("instruction").contains("[ru] Russian."))
                     assertFalse(input.getString("instruction").contains("[en] English."))

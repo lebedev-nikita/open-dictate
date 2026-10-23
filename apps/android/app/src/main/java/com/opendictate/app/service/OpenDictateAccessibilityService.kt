@@ -719,7 +719,15 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             selectionEnd = snapshot.cursorAfter(transcript),
         )
         when (transcriptDelivery.record(transcript, phase, inserted)) {
-            TranscriptDeliveryOutcome.COPY_TO_CLIPBOARD -> copyTranscript(transcript)
+            TranscriptDeliveryOutcome.COPY_TO_CLIPBOARD -> {
+                copyTranscript(transcript)
+                val diagnostics = DictationStateBus.state.value.diagnostics
+                if (diagnostics != null) (application as com.opendictate.app.OpenDictateApplication).recordError(
+                    diagnostics.copy(stage = com.opendictate.app.model.ErrorStage.DELIVERY,
+                        route = com.opendictate.app.model.ErrorRoute.DEVICE, model = null),
+                    com.opendictate.app.model.FailureDetails(com.opendictate.app.model.ErrorReason.DELIVERY_REJECTED),
+                )
+            }
             TranscriptDeliveryOutcome.INSERTED,
             TranscriptDeliveryOutcome.PENDING,
             -> Unit

@@ -2,7 +2,7 @@
 version: 1
 slug: "android-settings"
 primary_target: "apps/android/app/src/main/java/com/opendictate/app/ui/SettingsScreen.kt"
-related_targets: ["apps/android/app/src/main/java/com/opendictate/app/ui/SettingsTheme.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/DictationButtonSettings.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ReplacementSheet.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/PostProcessingSettings.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/GesturesScreen.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/OpenDictateApp.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ChatGPTSettings.kt"]
+related_targets: ["apps/android/app/src/main/java/com/opendictate/app/ui/SettingsTheme.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/DictationButtonSettings.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ReplacementSheet.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/PostProcessingSettings.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/GesturesScreen.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/OpenDictateApp.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ChatGPTSettings.kt", "apps/android/app/src/main/java/com/opendictate/app/ui/ErrorHistoryScreen.kt"]
 ---
 
 SCOPE: Android settings redesign. Mode: Operate. The existing dictation overlay, launcher mark, and website identity are outside this surface.
@@ -106,6 +106,14 @@ Post-processing and transformation use the shared immutable text-model snapshot;
 Drive synchronizes the atomic `postprocessingOptions` configuration. Schema 2 persists `customRules` and captured `languageLocales` with enabled state, punctuation and value-type settings. Schema-1 fixed styles decode unchanged and appear as All languages rules. The hidden generated prompt is assembled from shared rules at request time and never synchronized. General instructions remain English; cardinal reference blocks include only selected dictation languages. Auto includes explicit language-specific custom styles without automatic language reference blocks. Legacy arbitrary prompt text is discarded while its enabled state migrates; legacy cloud entries seed at clock zero so they cannot override an edited structured configuration. The shared `textProcessingModel` key remains independent; retired `textModel` and `postprocessing` entries do not restore prompt editing.
 
 Current native evidence is under `.impeccable/review/android-postprocessing-no-reset/`: English light phone, Russian dark phone at 1.3 font scale, Russian phone landscape, and English tablet in both orientations. Visual inspection confirms the shared row anatomy and the final Formatting rules action following the group’s bottom corners. All 194 JVM tests, required Debug/Release lint and builds, and 12 native UI tests passed; the settings flow also passed in each additional capture configuration. Coverage includes rule editing, save/cancel, recreation and default switching. The editor retains its System defaults draft action. No new visual tokens or shipping raster assets are introduced; no physical-device, API or insertion verification is implied.
+
+## Error history
+
+An ordinary tap on the settings header’s History action opens transcript history; holding it opens the separate Error history / История ошибок diagnostic screen. The same 48 dp button exposes a localized accessibility long-click action. `OpenDictateApp.kt` owns the saveable destination flag, restoring it across Activity recreation; the header arrow and system Back return to settings.
+
+`ErrorHistoryScreen.kt` retains the neutral native Material 3 theme, existing Settings tokens, centered 680 dp maximum column, 20 dp list gutters and 16 dp rounded surfaces. A titleLarge heading and count precede the privacy note and scrolling records. Each record shows its stage, localized date and reason, compact technical metadata and a Copy diagnostics action. Only the latest 100 errors are stored locally as metadata, without dictated text, audio, keys or raw responses; nothing is uploaded automatically. Clear history requires native confirmation and preserves transcript history. Loading progress, an explanatory empty state and localized storage-error guidance cover unavailable content; storage failures ask the user to reopen the screen.
+
+Finish review disposition: **ship**, with no material fixes. The visual system is unchanged; no new tokens or shipping assets are introduced.
 
 ## History timing captions
 

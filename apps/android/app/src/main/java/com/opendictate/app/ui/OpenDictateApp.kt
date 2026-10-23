@@ -86,9 +86,11 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     val dictation by DictationStateBus.state.collectAsState()
     val context = LocalContext.current
     val clipboardTranscriptLabel = stringResource(R.string.clipboard_transcript_label)
+    val clipboardDiagnosticsLabel = stringResource(R.string.error_history_title)
     val lifecycleOwner = LocalLifecycleOwner.current
     var showKeyDialog by remember { mutableStateOf(false) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
+    var showErrorHistory by rememberSaveable { mutableStateOf(false) }
     var showAppFilter by rememberSaveable { mutableStateOf(false) }
     val settingsScrollState = rememberScrollState()
     val maximumDisplayRefreshRate = LocalView.current.display
@@ -103,11 +105,15 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     LaunchedEffect(showHistory) {
         if (showHistory) viewModel.refreshHistory()
     }
+    LaunchedEffect(showErrorHistory) {
+        if (showErrorHistory) viewModel.observeErrorHistory()
+    }
     LaunchedEffect(showAppFilter) {
         if (showAppFilter) viewModel.loadInstalledApps()
     }
-    BackHandler(enabled = showHistory || showAppFilter) {
+    BackHandler(enabled = showHistory || showAppFilter || showErrorHistory) {
         when {
+            showErrorHistory -> showErrorHistory = false
             showAppFilter -> showAppFilter = false
             else -> showHistory = false
         }
@@ -130,7 +136,20 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
             containerColor = SettingsCanvas,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { padding ->
-            if (showAppFilter) {
+            if (showErrorHistory) {
+                val errors by viewModel.errorHistoryState.collectAsState()
+                ErrorHistoryScreen(
+                    state = errors,
+                    onBack = { showErrorHistory = false },
+                    onClear = viewModel::clearErrorHistory,
+                    onCopy = { report ->
+                        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+                            ClipData.newPlainText(clipboardDiagnosticsLabel, report),
+                        )
+                    },
+                    modifier = Modifier.padding(padding),
+                )
+            } else if (showAppFilter) {
                 AppFilterScreen(
                     apps = state.installedApps,
                     appFilter = state.appFilter,
@@ -163,6 +182,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                     scrollState = settingsScrollState,
                     maximumDisplayRefreshRate = maximumDisplayRefreshRate,
                     onHistory = { showHistory = true },
+                    onErrorHistory = { showErrorHistory = true },
                     onApiKey = { showKeyDialog = true },
                     onMicrophone = {
                         val permissions = buildList {

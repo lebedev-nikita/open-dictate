@@ -202,6 +202,13 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
 - A transformation may return a short answer or error as a private Android
   notification. OpenDictate does not persist that message; Android notification
   history is controlled by the device's system settings.
+- A separate local error history retains up to 100 recent dictation errors. It
+  contains app version, timestamps, random attempt identifiers, processing stage,
+  API/ChatGPT/device route, bundled model identifier, failure category, HTTP status
+  and duration. It excludes dictated text, field contents, audio, keys, account
+  identifiers and raw responses. No diagnostic data is automatically uploaded or
+  synchronized. Hold the history button in settings to view or clear it, or
+  explicitly copy an error's technical details to the system clipboard.
 - Android backup is disabled for the application.
 - When you choose Add to OpenDictate dictionary from Android's text selection
   menu, the floating button's long-press menu, or Android's Share menu, only
