@@ -218,6 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func openSettings() {
         model.refreshPermissions()
+        model.chatGPT.capturedAccount()
         model.driveSync.refreshIfStale()
         if settingsWindow == nil {
             #if DEBUG

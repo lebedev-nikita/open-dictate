@@ -14,16 +14,33 @@ struct ChatGPTAccount { let client: String; let email: String }
     @Published private(set) var revocationUnconfirmed = false
     private let defaults: UserDefaults
     private let localOnly: Bool
+    private let persistence: ChatGPTPersistence
     private let authorization = ChatGPTAuthorization()
     private var work: Task<Void, Never>?
-    init(defaults: UserDefaults, localOnly: Bool) {
-        self.defaults = defaults; self.localOnly = localOnly
+    init(defaults: UserDefaults, localOnly: Bool, persistence: ChatGPTPersistence = .keychain) {
+        self.defaults = defaults; self.localOnly = localOnly; self.persistence = persistence
         if !localOnly {
-            do { let saved = try ChatGPTStore.load(); accountID = saved.active; email = saved.active.flatMap { saved.records[$0]?.email } ?? ""; accounts = saved.records.values.filter { !$0.subject.isEmpty }.map { ChatGPTAccount(client: $0.client, email: $0.email) }.sorted { $0.client < $1.client } }
+            do { apply(try persistence.load()) }
             catch { accountID = "unavailable"; failed = true }
         }
     }
     var connected: Bool { accountID != nil }
+    /// Retry a failed startup read without turning a selected ChatGPT route into API billing.
+    @discardableResult func capturedAccount() -> String? {
+        if !localOnly, !busy, accountID == "unavailable" {
+            do { apply(try persistence.load()) } catch { failed = true }
+        }
+        return accountID
+    }
+    private func apply(_ saved: ChatGPTJournal) {
+        accountID = saved.active
+        let active = saved.active.flatMap { saved.records[$0] }
+        email = active?.email ?? ""
+        accounts = saved.records.values.filter { !$0.subject.isEmpty }
+            .map { ChatGPTAccount(client: $0.client, email: $0.email) }.sorted { $0.client < $1.client }
+        failed = saved.active != nil && (active?.access.isEmpty != false ||
+            active?.scope.split(separator: " ").contains("chatgpt.tokens.use.direct") != true)
+    }
     func connect(hasKey: @escaping () -> Bool, account: String? = "__last__") {
         guard !localOnly, hasKey(), !busy else { return }
         busy = true; failed = false; revocationUnconfirmed = false

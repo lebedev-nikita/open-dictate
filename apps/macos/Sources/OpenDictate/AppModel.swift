@@ -238,7 +238,7 @@ final class AppModel: ObservableObject {
             let target = try captureTarget(preferences.excludedApps, transform)
             let recorder = standbyRecorder ?? makeRecorder()
             standbyRecorder = nil
-            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: recorder, chatGPTAccount: chatGPT.accountID, withPostProcessing: withPostProcessing)
+            let session = Session(target: target, transform: transform, key: key, preferences: preferences, replacements: replacements.engine(), recorder: recorder, chatGPTAccount: chatGPT.capturedAccount(), withPostProcessing: withPostProcessing)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -254,7 +254,7 @@ final class AppModel: ObservableObject {
         do {
             preferences.mode = mode
             let target = try captureTarget(preferences.excludedApps, transform)
-            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.accountID, withPostProcessing: withPostProcessing)
+            let session = Session(target: target, transform: transform, key: "", preferences: preferences, replacements: replacements.engine(), recorder: makeRecorder(), chatGPTAccount: chatGPT.capturedAccount(), withPostProcessing: withPostProcessing)
             if !transform { lastDictationAudio = nil }
             current = session; phase = .preparing; audioLevels.reset(); message = ""
             hotKeys.setCancelEnabled(true); onStateChange?()
@@ -277,7 +277,7 @@ final class AppModel: ObservableObject {
             // A missing/secure/excluded field still permits recognition for explicit copying.
             let target = try? captureTarget(preferences.excludedApps, false)
             let session = Session(target: target, transform: false, key: key, preferences: preferences,
-                                  replacements: replacements.engine(), recorder: nil, replayAudio: audio, chatGPTAccount: chatGPT.accountID, withPostProcessing: lastDictationWithPostProcessing)
+                                  replacements: replacements.engine(), recorder: nil, replayAudio: audio, chatGPTAccount: chatGPT.capturedAccount(), withPostProcessing: lastDictationWithPostProcessing)
             session.deliveryTarget = target
             current = session; partial = ""; audioLevels.reset(); elapsed = 0; message = ""
             hotKeys.setCancelEnabled(true)

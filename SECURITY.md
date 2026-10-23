@@ -165,6 +165,11 @@ Android retries unreadable ChatGPT credentials before requests or authorization;
 failed reads never become an empty credential journal. Token replacements are
 committed on an I/O worker before inference. Cancelling dictation allows an
 in-flight token refresh and its save to finish, then stops before inference.
+macOS also retries failed startup reads, rechecks Keychain for each credential
+operation, and retains token replacements only in memory until a protected write
+succeeds. A retry preserves other account registrations and cannot overwrite a
+newer sign-in. Cancelling dictation stops inference without cancelling token
+rotation; signing out waits for rotation and revokes the latest refresh token.
 Plan inference requires `store: false`, `stream: true`, array input and the
 terminal `response.completed`; deltas, incomplete streams and usage errors are
 not successful results. OAuth and SSE responses are bounded and never logged.

@@ -12,7 +12,12 @@ struct ChatGPTRecord: Codable, Sendable {
     var scope = ""
     var expires: TimeInterval = 0
 }
-struct ChatGPTJournal: Codable { var records = [String: ChatGPTRecord](); var active: String?; var last: String? }
+struct ChatGPTJournal: Codable, Sendable { var records = [String: ChatGPTRecord](); var active: String?; var last: String? }
+struct ChatGPTPersistence: Sendable {
+    var load: @Sendable () throws -> ChatGPTJournal
+    var save: @Sendable (ChatGPTJournal) throws -> Void
+    static let keychain = Self(load: { try ChatGPTStore.load() }, save: { try ChatGPTStore.save($0) })
+}
 enum ChatGPTStore {
     static func load() throws -> ChatGPTJournal {
         do {
@@ -32,17 +37,55 @@ private final class ChatGPTNoRedirects: NSObject, URLSessionTaskDelegate {
 actor ChatGPTSession {
     static let shared = ChatGPTSession()
     private var journal: ChatGPTJournal?
+    private var pendingJournal: ChatGPTJournal?
+    private struct PendingCredential { let previousRefresh: String; let record: ChatGPTRecord }
+    private var pendingCredentials = [String: PendingCredential]()
     private let inMemory: Bool
-    private var refreshes = [String: Task<ChatGPTRecord, Error>]()
+    private let persistence: ChatGPTPersistence
+    private struct Refresh { let id = UUID(); let task: Task<ChatGPTRecord, Error> }
+    private var refreshes = [String: Refresh]()
+    private var disconnecting = Set<String>()
+    private var recoveredAccount: String?
+    private var unresolvedAccountRetired = false
     private let session: URLSession
-    init(session: URLSession? = nil, initial: ChatGPTJournal? = nil) {
-        self.journal = initial; self.inMemory = initial != nil
+    init(session: URLSession? = nil, initial: ChatGPTJournal? = nil, persistence: ChatGPTPersistence = .keychain) {
+        self.journal = initial; self.inMemory = initial != nil; self.persistence = persistence
         let config = URLSessionConfiguration.ephemeral
         config.urlCache = nil; config.httpCookieStorage = nil; config.timeoutIntervalForRequest = 45; config.timeoutIntervalForResource = 60
         self.session = session ?? URLSession(configuration: config, delegate: ChatGPTNoRedirects(), delegateQueue: nil)
     }
-    private func load() throws -> ChatGPTJournal { if let journal { return journal }; let saved = try ChatGPTStore.load(); journal = saved; return saved }
-    private func save(_ journal: ChatGPTJournal) throws { if !inMemory { try ChatGPTStore.save(journal) }; self.journal = journal }
+    private func load() throws -> ChatGPTJournal {
+        // Every operation must pass the Keychain boundary, even after an earlier successful read.
+        var saved = try inMemory ? (journal ?? ChatGPTJournal()) : persistence.load()
+        if let pendingJournal {
+            try persistence.save(pendingJournal)
+            self.pendingJournal = nil; saved = pendingJournal
+        }
+        if !pendingCredentials.isEmpty {
+            var changed = false
+            for (id, pending) in pendingCredentials {
+                // Preserve sign-out, a newer sign-in and other registrations if they changed during refresh.
+                if saved.records[id]?.refresh == pending.previousRefresh, saved.records[id]?.access.isEmpty == false {
+                    saved.records[id] = pending.record; changed = true
+                }
+            }
+            if changed, !inMemory { try persistence.save(saved) }
+            pendingCredentials.removeAll()
+        }
+        journal = saved
+        return saved
+    }
+    private func save(_ journal: ChatGPTJournal) throws {
+        if !inMemory {
+            do { try persistence.save(journal) }
+            catch {
+                // A rotating token may already be consumed remotely. Keep its replacement for a durable retry.
+                pendingJournal = journal
+                throw error
+            }
+        }
+        pendingJournal = nil; self.journal = journal
+    }
     func active() throws -> ChatGPTRecord? { let saved = try load(); return saved.active.flatMap { saved.records[$0] }.flatMap { $0.access.isEmpty ? nil : $0 } }
     func registration(id: String? = nil) throws -> ChatGPTRecord? { let saved = try load(); return (id ?? saved.last).flatMap { saved.records[$0] } }
     func exchange(_ attempt: ChatGPTAuthorization.Result, expected: ChatGPTRecord?) async throws -> ChatGPTRecord {
@@ -70,17 +113,27 @@ actor ChatGPTSession {
         try Task.checkCancellation()
         return record
     }
-    func activate(_ record: ChatGPTRecord) throws { var saved = try load(); saved.records[record.client] = record; saved.last = record.client; saved.active = record.client; try save(saved) }
+    func activate(_ record: ChatGPTRecord) throws {
+        var saved = try load(); saved.records[record.client] = record; saved.last = record.client; saved.active = record.client
+        try save(saved)
+        unresolvedAccountRetired = true; recoveredAccount = nil
+    }
     func disconnect() async throws {
+        guard let id = try load().active else { return }
+        disconnecting.insert(id)
+        unresolvedAccountRetired = true; recoveredAccount = nil
+        defer { disconnecting.remove(id) }
+        // Revoke the latest token, including one the server is replacing right now.
+        if let refresh = refreshes[id] { _ = try? await refresh.task.value }
         var saved = try load()
-        guard let id = saved.active, var record = saved.records[id] else { return }
-        refreshes[id]?.cancel(); refreshes[id] = nil
+        guard var record = saved.records[id] else { throw ChatGPTError.unavailable }
+        let refreshToken = record.refresh
         saved.active = nil; record.access = ""; record.refresh = ""; record.idToken = ""
         saved.records[id] = record
-        let old = try load().records[id]!
         try save(saved) // Stop local access even if revocation is temporarily unavailable.
+        if refreshToken.isEmpty { return }
         _ = try await request(URL(string: "https://auth.openai.com/api/accounts/oauth/revoke")!,
-            fields: ["client_id": id, "token": old.refresh, "token_type_hint": "refresh_token"], empty: true)
+            fields: ["client_id": id, "token": refreshToken, "token_type_hint": "refresh_token"], empty: true)
     }
     private func credentials(_ value: [String: Any], client: String) throws -> ChatGPTRecord {
         guard let access = value["access_token"] as? String, !access.isEmpty,
@@ -90,45 +143,67 @@ actor ChatGPTSession {
               (value["token_type"] as? String)?.lowercased() == "bearer" else { throw ChatGPTError.unavailable }
         return ChatGPTRecord(client: client, access: access, refresh: refresh, scope: scope, expires: Date().timeIntervalSince1970 + expires)
     }
-    private func token(_ id: String) async throws -> String {
-        guard let current = try load().records[id], !current.access.isEmpty, current.scope.split(separator: " ").contains("chatgpt.tokens.use.direct") else { throw ChatGPTError.unavailable }
+    private func token(_ captured: String) async throws -> String {
+        try Task.checkCancellation()
+        let saved = try load()
+        let id: String
+        if captured == "unavailable" {
+            guard !unresolvedAccountRetired else { throw ChatGPTError.unavailable }
+            if recoveredAccount == nil { recoveredAccount = saved.active }
+            guard let recoveredAccount else { throw ChatGPTError.unavailable }
+            id = recoveredAccount
+        } else { id = captured }
+        guard !disconnecting.contains(id), let current = saved.records[id], !current.access.isEmpty,
+              current.scope.split(separator: " ").contains("chatgpt.tokens.use.direct") else { throw ChatGPTError.unavailable }
         if current.expires > Date().timeIntervalSince1970 + 60 { return current.access }
-        let task: Task<ChatGPTRecord, Error>
-        if let running = refreshes[id] { task = running }
+        let refresh: Refresh
+        if let running = refreshes[id] { refresh = running }
         else {
-            task = Task {
-                let tokens = try await self.request(ChatGPTProtocol.tokenURL, fields: ["grant_type": "refresh_token", "client_id": id,
-                    "refresh_token": current.refresh, "resource": ChatGPTProtocol.resource])
-                var next = try self.credentials(tokens, client: id)
-                next.subject = current.subject; next.email = current.email; next.idToken = current.idToken
-                return next
-            }
-            refreshes[id] = task
+            // This broker-owned task finishes the durable replacement even if every dictation waiter cancels.
+            refresh = Refresh(task: Task {
+                do {
+                    let tokens = try await self.request(ChatGPTProtocol.tokenURL, fields: ["grant_type": "refresh_token", "client_id": id,
+                        "refresh_token": current.refresh, "resource": ChatGPTProtocol.resource])
+                    var next = try self.credentials(tokens, client: id)
+                    next.subject = current.subject; next.email = current.email; next.idToken = current.idToken
+                    self.pendingCredentials[id] = PendingCredential(previousRefresh: current.refresh, record: next)
+                    let saved = try self.load()
+                    guard saved.records[id]?.refresh == next.refresh, saved.records[id]?.access.isEmpty == false else {
+                        throw ChatGPTError.unavailable
+                    }
+                    return next
+                } catch {
+                    if error is ChatGPTReauthentication {
+                        var cleared = current
+                        cleared.access = ""; cleared.refresh = ""; cleared.idToken = ""
+                        self.pendingCredentials[id] = PendingCredential(previousRefresh: current.refresh, record: cleared)
+                        _ = try self.load()
+                    }
+                    throw error
+                }
+            })
+            refreshes[id] = refresh
         }
-        do {
-            let next = try await task.value
-            var saved = try load()
-            guard saved.records[id]?.refresh == current.refresh || saved.records[id]?.refresh == next.refresh,
-                  saved.records[id]?.access.isEmpty == false else { throw ChatGPTError.unavailable }
-            saved.records[id] = next; try save(saved); refreshes[id] = nil
-            return next.access
-        } catch {
-            refreshes[id] = nil
-            if error is ChatGPTReauthentication {
-                var saved = try load()
-                saved.records[id]?.access = ""; saved.records[id]?.refresh = ""; saved.records[id]?.idToken = ""
-                try save(saved)
-            }
-            throw error
+        defer {
+            // An older waiter must not remove a newer refresh after actor reentrancy.
+            if refreshes[id]?.id == refresh.id { refreshes[id] = nil }
         }
+        let next = try await refresh.task.value
+        try Task.checkCancellation()
+        guard !disconnecting.contains(id), try load().records[id]?.refresh == next.refresh else {
+            throw ChatGPTError.unavailable
+        }
+        return next.access
     }
     func response(account: String, body: [String: Any]) async throws -> [String: Any] {
         do {
             guard body["model"] as? String == "gpt-6-luna" else { throw ChatGPTError.unavailable }
-            return try await request(URL(string: ChatGPTProtocol.resource + "/responses")!, bearer: token(account), body: ChatGPTProtocol.planRequest(body))
+            let bearer = try await token(account)
+            try Task.checkCancellation()
+            return try await request(URL(string: ChatGPTProtocol.resource + "/responses")!, bearer: bearer, body: ChatGPTProtocol.planRequest(body))
         }
         catch is CancellationError { throw CancellationError() }
-        catch { throw ChatGPTError.unavailable }
+        catch { if Task.isCancelled { throw CancellationError() }; throw ChatGPTError.unavailable }
     }
     private func request(_ url: URL, bearer: String? = nil, fields: [String: String]? = nil,
                          body: [String: Any]? = nil, empty: Bool = false) async throws -> [String: Any] {
