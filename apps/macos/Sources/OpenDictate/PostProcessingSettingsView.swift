@@ -18,7 +18,7 @@ struct PostProcessingSettingsView: View {
             HStack(spacing: 12) {
                 Button { formatsOpen = true } label: {
                     HStack {
-                        Text(t("Format values", "Отформатировать значения"))
+                        Text(t("Format values", "Форматировать значения"))
                         Image(systemName: "chevron.right").font(.caption)
                     }
                 }.buttonStyle(.plain)
@@ -32,7 +32,7 @@ struct PostProcessingSettingsView: View {
                         })
                 }
                 Spacer()
-                Toggle(t("Format values", "Отформатировать значения"), isOn: Binding(get: { settings.formatValues }, set: { enabled in
+                Toggle(t("Format values", "Форматировать значения"), isOn: Binding(get: { settings.formatValues }, set: { enabled in
                     var next = settings
                     if enabled && next.formats == nil { next.formats = .systemDefaults() }
                     next.formatValues = enabled
@@ -68,7 +68,7 @@ struct ValueFormattingMenu: View {
                         draft.setRule(rule, replacing: editing); self.editing = nil
                     }).id(editing)
             } else {
-                Text(t("Format values", "Отформатировать значения")).font(.headline)
+                Text(t("Format values", "Форматировать значения")).font(.headline)
                 HStack {
                     DisclosureGroup(t("Value types", "Типы значений"), isExpanded: $typesOpen) {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading) {
