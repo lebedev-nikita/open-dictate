@@ -35,7 +35,7 @@ class ErrorHistoryScreenTest {
         store.clear()
         val attempt = ErrorContext(UUID.randomUUID().toString(), ErrorStage.POST_PROCESSING, ErrorRoute.CHATGPT,
             ErrorOperation.DICTATION, TranscriptionModel.ACCURATE, DiagnosticModel.TEXT)
-        store.add(attempt, FailureDetails(ErrorReason.SPACING_CHANGED), 1920)
+        store.add(attempt.copy(model = DiagnosticModel.OTHER), FailureDetails(ErrorReason.SPACING_CHANGED), 1920)
         store.add(attempt, FailureDetails.http(429), 2870)
 
         compose.onNodeWithContentDescription(label(R.string.history_open)).performClick()
@@ -49,6 +49,7 @@ class ErrorHistoryScreenTest {
         compose.onNodeWithText(label(R.string.error_history_title)).assertIsDisplayed()
         compose.waitUntil(10_000) { compose.onAllNodesWithText(label(R.string.error_history_copy)).fetchSemanticsNodes().isNotEmpty() }
         val shot = arguments.getString("errorHistoryScreenshot")
+        compose.onNodeWithText(label(R.string.error_model_other), substring = true).assertIsDisplayed()
         if (shot != null) capture(shot)
         compose.onAllNodesWithText(label(R.string.error_history_copy)).onFirst().performClick()
         compose.runOnIdle {
@@ -56,6 +57,12 @@ class ErrorHistoryScreenTest {
             assertTrue(report.contains("HTTP: 429"))
             assertTrue(report.contains("Route: CHATGPT"))
         }
+        compose.onNodeWithContentDescription(label(R.string.error_history_clear)).performClick()
+        compose.onNodeWithText(label(R.string.error_history_clear_hint)).assertIsDisplayed()
+        if (shot != null) capture("$shot-clear")
+        compose.onNodeWithText(label(R.string.action_cancel)).performClick()
+        compose.onNodeWithText(label(R.string.error_reason_http)).assertIsDisplayed()
+        assertEquals(2, store.getAll().size)
         compose.onNodeWithContentDescription(label(R.string.error_history_clear)).performClick()
         compose.onNodeWithText(label(R.string.error_history_clear)).performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText(label(R.string.error_history_empty)).fetchSemanticsNodes().isNotEmpty() }

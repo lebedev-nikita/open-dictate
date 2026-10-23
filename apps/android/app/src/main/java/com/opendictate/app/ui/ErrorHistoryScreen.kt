@@ -136,7 +136,9 @@ private fun ErrorHistoryRow(entry: ErrorHistoryEntry, onCopy: () -> Unit) {
             Text(stringResource(reason), style = MaterialTheme.typography.bodyLarge, color = SettingsText)
             val metadata = buildList {
                 add(route)
-                entry.context.model?.let { add(it.id) }
+                entry.context.model?.let {
+                    add(if (it == DiagnosticModel.OTHER) stringResource(R.string.error_model_other) else it.id)
+                }
                 entry.failure.httpStatus?.let { add("HTTP $it") }
                 entry.durationMillis?.let { add(stringResource(R.string.error_history_duration, it)) }
             }
