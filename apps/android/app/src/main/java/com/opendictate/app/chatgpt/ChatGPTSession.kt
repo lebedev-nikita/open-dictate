@@ -1,6 +1,8 @@
 package com.opendictate.app.chatgpt
 
 import android.content.Context
+import com.opendictate.app.model.FailureDetails
+import com.opendictate.app.model.ErrorReason
 import com.opendictate.app.data.SecureApiKeyStore
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -151,14 +153,16 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
     }
     /** Refresh only the session captured by the caller. Never substitute an API key. */
     private suspend fun token(id: String): String = mutex.withLock {
-        val record = records.optJSONObject(id) ?: throw ChatGPTException()
-        require(record.optString("access_token").isNotBlank() && record.optString("scope").split(' ').contains("chatgpt.tokens.use.direct"))
+        val record = records.optJSONObject(id) ?: throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
+        if (record.optString("access_token").isBlank() || !record.optString("scope").split(' ').contains("chatgpt.tokens.use.direct")) {
+            throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
+        }
         if (record.optLong("expires_at") <= System.currentTimeMillis() / 1000 + 60) {
             val renewed = try { request(ChatGPTProtocol.TOKEN, fields = mapOf("grant_type" to "refresh_token", "client_id" to id,
                 "refresh_token" to record.getString("refresh_token"), "resource" to ChatGPTProtocol.RESOURCE)) }
             catch (_: ChatGPTReauthentication) {
                 listOf("access_token", "refresh_token", "id_token").forEach(record::remove); save()
-                throw ChatGPTException()
+                throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
             }
             require(renewed.optString("access_token").isNotBlank() && renewed.optString("refresh_token").isNotBlank())
             require(renewed.optString("scope").split(' ').contains("chatgpt.tokens.use.direct"))
@@ -176,7 +180,7 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
             mutableState.value = mutableState.value.copy(failed = false)
             return response
         } catch (error: CancellationException) { throw error }
-        catch (_: Exception) { mutableState.value = status().copy(failed = true); throw ChatGPTException() }
+        catch (error: Exception) { mutableState.value = status().copy(failed = true); throw ChatGPTException(FailureDetails.from(error)) }
     }
     private suspend fun request(url: String, bearer: String? = null, fields: Map<String, String>? = null,
                                 body: JSONObject? = null, empty: Boolean = false): JSONObject = suspendCancellableCoroutine { continuation ->
@@ -187,7 +191,7 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
         val call = http.newCall(request.build())
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: java.io.IOException) { if (continuation.isActive) continuation.resumeWithException(ChatGPTException()) }
+            override fun onFailure(call: Call, e: java.io.IOException) { if (continuation.isActive) continuation.resumeWithException(ChatGPTException(FailureDetails.from(e))) }
             override fun onResponse(call: Call, response: Response) {
                 val result = runCatching {
                     response.use {
@@ -199,7 +203,7 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                                     if (error in setOf("invalid_grant", "invalid_refresh_token", "token_expired", "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused")) throw ChatGPTReauthentication()
                                 }
                             }
-                            throw ChatGPTException()
+                            throw ChatGPTException(FailureDetails.http(it.code))
                         }
                         if (body != null) {
                             val source = it.body.source(); val data = StringBuilder(); var size = 0; val stream = ChatGPTResponseAccumulator()
@@ -218,7 +222,7 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                         }
                     }
                 }
-                if (continuation.isActive) result.fold({ continuation.resume(it) }, { continuation.resumeWithException(if (it is ChatGPTReauthentication) it else ChatGPTException()) })
+                if (continuation.isActive) result.fold({ continuation.resume(it) }, { continuation.resumeWithException(if (it is ChatGPTReauthentication) it else ChatGPTException(if (it is IllegalArgumentException) FailureDetails(ErrorReason.INVALID_RESPONSE) else FailureDetails.from(it))) })
             }
         })
     }

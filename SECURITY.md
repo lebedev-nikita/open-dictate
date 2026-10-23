@@ -205,3 +205,13 @@ mode label remain local history metadata.
 They are excluded from Drive synchronization.
 Accurate timings use monotonic elapsed time around each full request, including
 upload and response. Recording and text delivery are excluded.
+
+Android keeps at most 100 dictation-error records in a separate app-private SQLite
+database, excluded from backup and Drive sync. Diagnostics accept only fixed
+reason/stage/route/model identifiers, local attempt UUIDs, app version, timestamps,
+HTTP status and elapsed duration. They never retain exception messages or stack
+traces, keys, account identifiers, audio, transcripts, field contents or raw
+provider responses. Cancellation is not an error; request timeouts are.
+History is available by holding the settings history button. Users can clear
+it and explicitly copy a record's safe metadata to the system clipboard.
+Recording diagnostics is best-effort and never changes session delivery.

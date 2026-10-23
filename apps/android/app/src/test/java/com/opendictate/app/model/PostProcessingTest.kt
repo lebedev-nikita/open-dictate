@@ -116,8 +116,8 @@ class PostProcessingTest {
     @Test fun valueInstructionsPermitChangesAndFailuresPreserveSourceButCancellationDoesNotDeliver() = runTest {
         val settings = values()
         assertEquals(PostProcessingResult("123 000"), PostProcessing.apply("сто двадцать три тысячи", settings) { "123 000" })
-        assertEquals(PostProcessingResult("source", true), PostProcessing.apply("source", settings) { " " })
-        assertEquals(PostProcessingResult("source", true), PostProcessing.apply("source", settings) { throw IOException() })
+        assertEquals(PostProcessingResult("source", FailureDetails(ErrorReason.EMPTY_RESULT)), PostProcessing.apply("source", settings) { " " })
+        assertEquals(PostProcessingResult("source", FailureDetails(ErrorReason.NETWORK)), PostProcessing.apply("source", settings) { throw IOException() })
         try { PostProcessing.apply("source", settings) { throw CancellationException() }; fail("Cancellation") }
         catch (_: CancellationException) { }
     }
@@ -141,7 +141,7 @@ class PostProcessingTest {
             val candidate = row.getString("candidate")
             val valid = row.getBoolean("valid")
             val result = PostProcessing.apply(source, values()) { candidate }
-            assertEquals("case $i", PostProcessingResult(if (valid) candidate else source, !valid), result)
+            assertEquals("case $i", PostProcessingResult(if (valid) candidate else source, if (valid) null else FailureDetails(ErrorReason.VALUE_CHANGED)), result)
         }
     }
 

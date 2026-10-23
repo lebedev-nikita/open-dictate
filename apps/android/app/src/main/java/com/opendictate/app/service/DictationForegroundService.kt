@@ -18,6 +18,11 @@ import com.opendictate.app.audio.LastDictationAudioStore
 import com.opendictate.app.audio.WavFile
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
+import com.opendictate.app.model.ErrorStage
+import com.opendictate.app.model.ErrorRoute
+import com.opendictate.app.model.ErrorOperation
+import com.opendictate.app.model.ErrorReason
+import com.opendictate.app.model.FailureDetails
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.network.OpenAiTranscriptionClient
 import kotlinx.coroutines.CompletableDeferred
@@ -40,6 +45,7 @@ class DictationForegroundService : Service() {
     private var activeSessionId = 0L
     private var stopSignal = CompletableDeferred<Unit>()
     private var activeOperation = DictationOperation.DICTATION
+    private var activeDiagnostics: DictationDiagnostics? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -84,7 +90,7 @@ class DictationForegroundService : Service() {
     ) {
         val apiKey = SecureApiKeyStore(this).get()
         if (apiKey.isNullOrBlank()) {
-            publishError(getString(R.string.error_add_api_key))
+            publishError(getString(R.string.error_add_api_key), reason = ErrorReason.MISSING_API_KEY)
             stopSelf()
             return
         }
@@ -104,6 +110,10 @@ class DictationForegroundService : Service() {
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val textProcessingServiceTier = settings.textProcessingServiceTier
+        val diagnostics = DictationDiagnostics((application as OpenDictateApplication).errorHistoryStore, model,
+            if (operation == DictationOperation.TRANSFORMATION) ErrorOperation.VOICE_EDIT else ErrorOperation.DICTATION)
+        activeDiagnostics = diagnostics
+        val textRoute = if (chatGPTAccount != null) ErrorRoute.CHATGPT else ErrorRoute.OPENAI_API
         val postProcessing = options.postProcessing
         activePostProcessingEnabled = operation == DictationOperation.DICTATION && postProcessing.shouldProcess
         val replacements = (application as OpenDictateApplication).replacementStore.engine()
@@ -143,6 +153,7 @@ class DictationForegroundService : Service() {
                 ensureActive()
                 val transcript = when (model) {
                     TranscriptionModel.LIVE -> {
+                        diagnostics.stage(ErrorStage.TRANSCRIPTION, ErrorRoute.OPENAI_API, liveModelId)
                         if (operation == DictationOperation.DICTATION) {
                             savedRecording = (application as OpenDictateApplication)
                                 .lastDictationAudioStore.begin(scope)
@@ -228,6 +239,7 @@ class DictationForegroundService : Service() {
                         }
                         publishProcessingStage(sessionId, operation, model, DictationProcessingStage.TRANSCRIPTION)
                         updateNotification(true, operation)
+                        diagnostics.stage(ErrorStage.TRANSCRIPTION, ErrorRoute.OPENAI_API, accurateModelId)
                         val timed = measureRequest(SystemClock::elapsedRealtime) {
                             apiClient.transcribeFile(apiKey, accurateModelId, file, languages, dictionary, responseTimeoutSeconds)
                         }
@@ -236,11 +248,12 @@ class DictationForegroundService : Service() {
                     }
                 }
                 if (transcript.isBlank()) {
-                    throw IllegalStateException(getString(R.string.error_speech_not_recognized))
+                    throw OpenAiTranscriptionFailure(getString(R.string.error_speech_not_recognized), ErrorReason.EMPTY_RESULT)
                 }
                 val result = if (operation == DictationOperation.TRANSFORMATION) {
                     publishProcessingStage(sessionId, operation, model, DictationProcessingStage.TRANSFORMATION)
                     updateNotification(true, operation)
+                    diagnostics.stage(ErrorStage.TRANSFORMATION, textRoute, textProcessingModel)
                     val transformation = apiClient.transformText(
                         apiKey = apiKey,
                         sourceText = requireNotNull(sourceText),
@@ -255,10 +268,12 @@ class DictationForegroundService : Service() {
                     if (postProcessing.shouldProcess) {
                         publishProcessingStage(sessionId, operation, model, DictationProcessingStage.POST_PROCESSING)
                     }
+                    diagnostics.stage(ErrorStage.POST_PROCESSING, textRoute, textProcessingModel)
                     val timed = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
                     if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
                     val processed = timed.value
                     ensureActive()
+                    processed.failure?.let { diagnostics.record(it) }
                     postProcessingFailed = processed.failed
                     replacements.apply(processed.text)
                 }
@@ -296,7 +311,9 @@ class DictationForegroundService : Service() {
                     runCatching { savedRecording?.finish() }
                     runCatching { wavFile?.close() }
                 }
+                if (error is kotlinx.coroutines.TimeoutCancellationException) diagnostics.record(FailureDetails.from(error))
                 if (error !is kotlinx.coroutines.CancellationException) {
+                    diagnostics.record(FailureDetails.from(error))
                     publishWhileActive(
                         sessionId,
                         DictationState(
@@ -322,7 +339,8 @@ class DictationForegroundService : Service() {
     private fun retryLastDictation() {
         val apiKey = SecureApiKeyStore(this).get()
         if (apiKey.isNullOrBlank()) {
-            publishError(getString(R.string.error_add_api_key))
+            publishError(getString(R.string.error_add_api_key), reason = ErrorReason.MISSING_API_KEY,
+                diagnosticMode = TranscriptionModel.ACCURATE, diagnosticOperation = ErrorOperation.RETRY)
             stopSelf()
             return
         }
@@ -339,6 +357,9 @@ class DictationForegroundService : Service() {
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val textProcessingServiceTier = settings.textProcessingServiceTier
+        val diagnostics = DictationDiagnostics((application as OpenDictateApplication).errorHistoryStore, model, ErrorOperation.RETRY)
+        activeDiagnostics = diagnostics
+        val textRoute = if (chatGPTAccount != null) ErrorRoute.CHATGPT else ErrorRoute.OPENAI_API
         val postProcessing = settings.postProcessing.forMode(model)
         activePostProcessingEnabled = postProcessing.shouldProcess
         activeOperation = DictationOperation.DICTATION
@@ -354,20 +375,23 @@ class DictationForegroundService : Service() {
                 ensureActive()
                 val file = withContext(Dispatchers.IO) {
                     (application as OpenDictateApplication).lastDictationAudioStore.latestFile()
-                } ?: throw IllegalStateException(getString(R.string.error_no_last_dictation))
+                } ?: throw OpenAiTranscriptionFailure(getString(R.string.error_no_last_dictation), ErrorReason.MISSING_RECORDING)
+                diagnostics.stage(ErrorStage.TRANSCRIPTION, ErrorRoute.OPENAI_API, accurateModelId)
                 val transcription = measureRequest(SystemClock::elapsedRealtime) {
                     apiClient.transcribeFile(apiKey, accurateModelId, file, languages, dictionary, responseTimeoutSeconds)
                 }
                 val transcript = transcription.value
                 if (transcript.isBlank()) {
-                    throw IllegalStateException(getString(R.string.error_speech_not_recognized))
+                    throw OpenAiTranscriptionFailure(getString(R.string.error_speech_not_recognized), ErrorReason.EMPTY_RESULT)
                 }
                 if (postProcessing.shouldProcess) {
                     publishProcessingStage(sessionId, DictationOperation.DICTATION, model, DictationProcessingStage.POST_PROCESSING)
                 }
+                diagnostics.stage(ErrorStage.POST_PROCESSING, textRoute, textProcessingModel)
                 val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
                 val processed = postProcessingAttempt.value
                 ensureActive()
+                processed.failure?.let { diagnostics.record(it) }
                 val result = replacements.apply(processed.text)
                 val completed = publishWhileActive(
                     sessionId,
@@ -392,7 +416,9 @@ class DictationForegroundService : Service() {
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {
+                if (error is kotlinx.coroutines.TimeoutCancellationException) diagnostics.record(FailureDetails.from(error))
                 if (error !is kotlinx.coroutines.CancellationException) {
+                    diagnostics.record(FailureDetails.from(error))
                     publishWhileActive(
                         sessionId,
                         DictationState(
@@ -436,7 +462,8 @@ class DictationForegroundService : Service() {
 
     private fun publishWhileActive(sessionId: Long, state: DictationState): Boolean {
         if (DictationStateBus.state.value.acceptsActiveUpdate(sessionId)) {
-            DictationStateBus.set(state.copy(postProcessingEnabled = activePostProcessingEnabled))
+            DictationStateBus.set(state.copy(postProcessingEnabled = activePostProcessingEnabled,
+                diagnostics = activeDiagnostics?.context))
             return true
         }
         return false
@@ -466,7 +493,13 @@ class DictationForegroundService : Service() {
         message: String,
         sessionId: Long = nextSession.get(),
         operation: DictationOperation = DictationOperation.DICTATION,
+        reason: ErrorReason = ErrorReason.UNKNOWN,
+        diagnosticMode: TranscriptionModel = SettingsStore(this).model,
+        diagnosticOperation: ErrorOperation = if (operation == DictationOperation.TRANSFORMATION) ErrorOperation.VOICE_EDIT else ErrorOperation.DICTATION,
     ) {
+        val diagnostics = DictationDiagnostics((application as OpenDictateApplication).errorHistoryStore,
+            diagnosticMode, diagnosticOperation)
+        (application as OpenDictateApplication).recordError(diagnostics.context, FailureDetails(reason))
         DictationStateBus.set(
             DictationState(
                 sessionId = sessionId,
@@ -595,4 +628,9 @@ class DictationForegroundService : Service() {
         private const val MODEL_MESSAGE_NOTIFICATION_ID = 42
         private val nextSession = AtomicLong(System.currentTimeMillis())
     }
+}
+
+private class OpenAiTranscriptionFailure(message: String, reason: ErrorReason) :
+    IllegalStateException(message), com.opendictate.app.model.DiagnosticFailure {
+    override val failureDetails = FailureDetails(reason)
 }

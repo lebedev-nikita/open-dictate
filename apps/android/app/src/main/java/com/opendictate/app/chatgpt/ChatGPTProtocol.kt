@@ -2,6 +2,9 @@ package com.opendictate.app.chatgpt
 
 import org.json.JSONArray
 import org.json.JSONObject
+import com.opendictate.app.model.DiagnosticFailure
+import com.opendictate.app.model.ErrorReason
+import com.opendictate.app.model.FailureDetails
 import java.net.URI
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -81,13 +84,17 @@ object ChatGPTProtocol {
         if (data == "[DONE]") return null
         val event = JSONObject(data)
         return when (event.optString("type")) {
-            "response.completed" -> event.getJSONObject("response").also { require(it.optString("status") == "completed") }
-            "response.failed", "response.incomplete", "error" -> throw ChatGPTException()
+            "response.completed" -> event.getJSONObject("response").also {
+                if (it.optString("status") != "completed") throw ChatGPTException(FailureDetails(ErrorReason.INVALID_RESPONSE))
+            }
+            "response.incomplete" -> throw ChatGPTException(FailureDetails(ErrorReason.STREAM_INCOMPLETE))
+            "response.failed", "error" -> throw ChatGPTException(FailureDetails(ErrorReason.PROVIDER))
             else -> null
         }
     }
 }
-class ChatGPTException : Exception("ChatGPT unavailable. Check your connection and plan usage. No API fallback was used.")
+class ChatGPTException(override val failureDetails: FailureDetails = FailureDetails(ErrorReason.UNKNOWN)) :
+    Exception("ChatGPT unavailable. Check your connection and plan usage. No API fallback was used."), DiagnosticFailure
 
 /** Some plan streams omit output snapshots from response.completed; retain finished items until then. */
 class ChatGPTResponseAccumulator {
@@ -115,7 +122,7 @@ class ChatGPTResponseAccumulator {
                     }
                     completed = response
                 }
-                "response.failed", "response.incomplete", "error" -> throw ChatGPTException()
+                "response.failed", "response.incomplete", "error" -> ChatGPTProtocol.completedEvent(data)
             }
         } catch (error: Exception) {
             failed = true; completed = null
@@ -125,6 +132,6 @@ class ChatGPTResponseAccumulator {
 
     fun result(): JSONObject {
         check(!failed)
-        return completed ?: throw ChatGPTException()
+        return completed ?: throw ChatGPTException(FailureDetails(ErrorReason.STREAM_INCOMPLETE))
     }
 }

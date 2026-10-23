@@ -4,6 +4,10 @@ package com.opendictate.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Box
@@ -82,7 +86,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.preferredFrameRate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -111,6 +114,7 @@ internal fun SettingsScreen(
     scrollState: ScrollState,
     maximumDisplayRefreshRate: Float,
     onHistory: () -> Unit,
+    onErrorHistory: () -> Unit = {},
     onApiKey: () -> Unit,
     onMicrophone: () -> Unit,
     onAccessibility: () -> Unit,
@@ -141,7 +145,12 @@ internal fun SettingsScreen(
                 Spacer(Modifier.width(10.dp))
                 Text("OpenDictate", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                IconButton(onClick = onHistory) {
+                Box(Modifier.size(48.dp).clip(CircleShape).combinedClickable(
+                    role = Role.Button,
+                    onClick = onHistory,
+                    onLongClickLabel = stringResource(R.string.error_history_open),
+                    onLongClick = onErrorHistory,
+                ), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Article, stringResource(R.string.history_open), tint = SettingsMuted)
                 }
                 AppThemeSwitcher(state.theme, viewModel::selectTheme)

@@ -9,6 +9,10 @@ import com.opendictate.app.data.transcriptionKeywords
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessing
+import com.opendictate.app.model.DiagnosticFailure
+import com.opendictate.app.model.DiagnosticException
+import com.opendictate.app.model.FailureDetails
+import com.opendictate.app.model.ErrorReason
 import com.opendictate.app.model.TextProcessingModel
 import com.opendictate.app.model.TextProcessingServiceTier
 import com.opendictate.app.model.PostProcessingSettings
@@ -41,8 +45,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 class OpenAiTranscriptionClient(
     private val resources: Resources? = null,
     private val chatGPT: com.opendictate.app.chatgpt.ChatGPTSession? = null,
+    httpClient: OkHttpClient? = null,
 ) {
-    private val client = OkHttpClient.Builder()
+    private val client = httpClient ?: OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS)
         .writeTimeout(45, TimeUnit.SECONDS)
@@ -55,7 +60,7 @@ class OpenAiTranscriptionClient(
         val request = authorizedRequest(apiKey, MODELS_URL).build()
         client.newCall(request).await().use { response ->
             if (!response.isSuccessful) {
-                throw OpenAiException(errorMessage(response.code, response.body.string()))
+                throw OpenAiException(errorMessage(response.code, response.body.string()), failureDetails = FailureDetails.http(response.code))
             }
             ModelCatalog.fromModelsResponse(response.body.string())
         }
@@ -77,7 +82,7 @@ class OpenAiTranscriptionClient(
         try {
             transcriptionClient.newCall(request).await().use { response ->
                 val body = response.body.string()
-                if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body))
+                if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body), failureDetails = FailureDetails.http(response.code))
                 JSONObject(body).optString("text").trim()
             }
         } catch (error: OpenAiException) {
@@ -166,13 +171,13 @@ class OpenAiTranscriptionClient(
         if (account != null) {
             try { return requireNotNull(chatGPT).response(account, body) }
             catch (error: kotlinx.coroutines.CancellationException) { throw error }
-            catch (_: Exception) { throw OpenAiException(localized(R.string.chatgpt_request_failed, "ChatGPT unavailable. Check plan usage. No API fallback was used.")) }
+            catch (error: Exception) { throw OpenAiException(localized(R.string.chatgpt_request_failed, "ChatGPT unavailable. Check plan usage. No API fallback was used."), error) }
         }
         val request = authorizedRequest(apiKey, RESPONSES_URL).header("Content-Type", "application/json")
             .post(body.toString().toRequestBody(JSON)).build()
         return client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
             val text = response.body.string()
-            if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, text))
+            if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, text), failureDetails = FailureDetails.http(response.code))
             JSONObject(text)
         }
     }
@@ -234,9 +239,9 @@ class OpenAiTranscriptionClient(
                     completed.complete(transcript)
                 }
                 "conversation.item.input_audio_transcription.failed" -> {
-                    fail(OpenAiException(readRealtimeError(event)))
+                    fail(OpenAiException(readRealtimeError(event), failureDetails = FailureDetails(ErrorReason.PROVIDER)))
                 }
-                "error" -> fail(OpenAiException(readRealtimeError(event)))
+                "error" -> fail(OpenAiException(readRealtimeError(event), failureDetails = FailureDetails(ErrorReason.PROVIDER)))
             }
         }
 
@@ -251,6 +256,7 @@ class OpenAiTranscriptionClient(
                         )
                     } ?: t.userMessage(),
                     t,
+                    response?.let { FailureDetails.http(it.code) },
                 ),
             )
         }
@@ -263,6 +269,7 @@ class OpenAiTranscriptionClient(
                             R.string.error_connection_closed,
                             "The connection closed before text was received",
                         ),
+                        failureDetails = FailureDetails(ErrorReason.STREAM_INCOMPLETE),
                     ),
                 )
             }
@@ -499,7 +506,9 @@ internal fun postProcessingRequest(source: String, settings: PostProcessingSetti
 }
 
 internal fun extractPostProcessingResult(response: JSONObject): String {
-    require(response.optString("status") == "completed")
+    if (response.optString("status") != "completed") {
+        throw DiagnosticException(FailureDetails(ErrorReason.STREAM_INCOMPLETE))
+    }
     return JSONObject(extractResponseText(response)).getString("transformed_text")
 }
 
@@ -564,4 +573,5 @@ internal fun realtimeTranscriptionSessionUpdate(
         )
 }
 
-class OpenAiException(message: String, cause: Throwable? = null) : IOException(message, cause)
+class OpenAiException(message: String, cause: Throwable? = null,
+                      override val failureDetails: FailureDetails? = null) : IOException(message, cause), DiagnosticFailure

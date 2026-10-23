@@ -39,6 +39,7 @@ data class DictationState(
     val message: String? = null,
     val processingStage: DictationProcessingStage? = null,
     val postProcessingEnabled: Boolean = false,
+    val diagnostics: com.opendictate.app.model.ErrorContext? = null,
 ) {
     init {
         require(!isActive || model != null) { "Active dictation requires a transcription model" }
