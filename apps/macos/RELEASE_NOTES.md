@@ -1,4 +1,4 @@
-OpenDictate for macOS **0.5.1-rc.1** fixes ChatGPT session recovery. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.5.1** fixes ChatGPT session recovery. Requires macOS 14+ on Apple Silicon or Intel.
 
 - Recover a saved ChatGPT account after a temporary Keychain read failure at startup without requiring another sign-in.
 - Finish and persist token rotation when dictation is cancelled, then stop before sending a text-processing request.
@@ -6,4 +6,4 @@ OpenDictate for macOS **0.5.1-rc.1** fixes ChatGPT session recovery. Requires ma
 - Recheck Keychain access on each credential operation. A cached session cannot bypass a locked or inaccessible Keychain.
 - Wait for an in-flight rotation before signing out and revoke the latest refresh token. Failed ChatGPT requests never silently fall back to API billing.
 
-Download the universal DMG and replace OpenDictate in Applications. This release candidate is ad-hoc signed and **not notarized**. Verify the attached SHA-256 checksum. The stable Homebrew release remains unchanged.
+Upgrade with Homebrew or download the universal DMG and replace OpenDictate in Applications. This release is ad-hoc signed and **not notarized**. Verify the attached SHA-256 checksum.
