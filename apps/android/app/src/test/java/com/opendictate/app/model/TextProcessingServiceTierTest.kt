@@ -3,7 +3,6 @@ package com.opendictate.app.model
 import com.opendictate.app.data.SettingsSyncDocument
 import com.opendictate.app.network.postProcessingRequest
 import com.opendictate.app.network.textTransformationRequest
-import com.opendictate.app.network.transcriptHistorySearchRequest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -24,12 +23,11 @@ class TextProcessingServiceTierTest {
         }
     }
 
-    @Test fun `text operations default to standard and preserve postprocessing reasoning and history search`() {
+    @Test fun `text operations default to standard and preserve postprocessing reasoning`() {
         assertEquals("default", textTransformationRequest("Draft", "Shorten").getString("service_tier"))
         val post = postProcessingRequest("Draft", PostProcessingSettings(enabled = true))
         assertEquals("default", post.getString("service_tier"))
         assertEquals("none", post.getJSONObject("reasoning").getString("effort"))
-        assertFalse(transcriptHistorySearchRequest("Draft", emptyList()).has("service_tier"))
     }
 
     @Test fun `legacy fast selection resolves to standard but history keeps its label`() {

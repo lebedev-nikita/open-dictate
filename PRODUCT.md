@@ -25,7 +25,7 @@ The app is used while an Android keyboard and editable field are visible. A fore
 ## Capabilities and Constraints
 
 - Live and accurate transcription modes use OpenAI directly from the device.
-- Voice-directed text transformation and explicit AI search over local transcript history are supported.
+- Voice-directed text transformation and on-device search over local transcript history are supported.
 - API keys are encrypted with Android Keystore; audio is temporary and cache-only.
 - No analytics, ads, backend, persistent audio storage, or logging of sensitive data.
 - The app targets Android 36, compiles with SDK 37, and requires Android 8.0 or later.

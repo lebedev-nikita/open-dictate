@@ -175,8 +175,7 @@ preferences. The model list API does not supply endpoint capabilities or prices,
 so recognition pickers keep only the transcription aliases. Text model offers
 GPT-6 Luna using the standard service tier for post-processing and voice editing.
 Saved and synchronized Fast selections resolve to standard mode; history keeps
-the model and tier captured for each earlier request. AI history
-search remains fixed to GPT-6 Luna; retired legacy selections cannot override it.
+the model and tier captured for each earlier request.
 The app picker queries launchable apps only. The filter mode and separate allowed
 and excluded package lists stay in app-private preferences, outside Drive sync.
 The accessibility service checks the filter before showing the overlay, starting
@@ -189,8 +188,8 @@ user explicitly adds to the dictionary. The Share action stores only the shared
 text. These actions do not log the text or read surrounding field contents.
 
 Transcript history is stored only in the app-private SQLite database. Android
-backup remains disabled. History search results are kept in memory, and AI
-history search requests use the OpenAI Responses API with storage disabled.
+backup remains disabled. History search runs entirely on-device; queries and
+saved transcripts are not uploaded for search.
 The latest dictation audio is kept in one app-private WAV file and replaced by
 the next dictation. It is excluded from Android backup with the rest of the app.
 
@@ -203,6 +202,6 @@ as shared device state.
 
 History request durations, model IDs, post-processing service tier and the Live
 mode label remain local history metadata.
-They are excluded from Drive synchronization and AI history-search payloads.
+They are excluded from Drive synchronization.
 Accurate timings use monotonic elapsed time around each full request, including
 upload and response. Recording and text delivery are excluded.

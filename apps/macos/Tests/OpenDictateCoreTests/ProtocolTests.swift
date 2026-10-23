@@ -70,10 +70,4 @@ final class ProtocolTests: XCTestCase {
         XCTAssertEqual(OpenAIRequest.responseText(["status": "incomplete", "output": output]), "")
         XCTAssertEqual(OpenAIRequest.responseText(["status": "completed", "output": output]), "partial")
     }
-    func testSearchBatchesBoundDisclosedHistory() {
-        let entries = (0..<101).map { _ in HistoryEntry(text: String(repeating: "a", count: 4000), mode: "live") }
-        let batches = OpenAIRequest.historyBatches(entries)
-        XCTAssertEqual(batches.flatMap { $0 }.count, 101)
-        XCTAssertTrue(batches.allSatisfy { $0.count <= 50 && $0.reduce(0) { $0 + min($1.text.count, 4000) } <= 40_000 })
-    }
 }

@@ -19,7 +19,6 @@ final class SettingsSyncTests: XCTestCase {
         XCTAssertEqual(selected, "test-text-model")
         XCTAssertEqual(OpenAIRequest.transform(source: "Text", instruction: "Edit", model: selected)["model"] as? String, selected)
         XCTAssertEqual(OpenAIRequest.postProcessing(source: "Text", settings: .init(enabled: true), model: selected)["model"] as? String, selected)
-        XCTAssertEqual(OpenAIRequest.search(query: "Find", entries: [])["model"] as? String, "gpt-6-luna")
     }
 
     func testLegacyCannotOverwriteOptionsAndSourceChoiceUsesMigratedValues() throws {
@@ -48,7 +47,6 @@ final class SettingsSyncTests: XCTestCase {
         XCTAssertNil(local.entries["textModel"])
         let settings = try PostProcessingSettings().applyingRules(local.entries["postprocessingRules"]!.value!)
         let requests = [OpenAIRequest.transform(source: "Text", instruction: "Edit"),
-                        OpenAIRequest.search(query: "Find", entries: []),
                         OpenAIRequest.postProcessing(source: "Text", settings: settings)]
         for request in requests { XCTAssertEqual(request["model"] as? String, "gpt-6-luna") }
         XCTAssertTrue(settings.punctuation)

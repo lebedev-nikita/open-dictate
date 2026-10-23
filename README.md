@@ -32,7 +32,7 @@ no backend, analytics or account to create.
   If all processing rules are off, the one-session **With post-processing** action uses punctuation correction.
 - Voice-directed editing of the selection, or the whole field without a selection,
   using the shared text model (GPT-6 Luna by default).
-- Configurable Accurate post-processing with punctuation and editable value-format examples, a transcription dictionary, local history with request durations, on-device search, and explicit AI search.
+- Configurable Accurate post-processing with punctuation and editable value-format examples, a transcription dictionary, local history with request durations and on-device search.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
 - Optional [ChatGPT plan usage](docs/chatgpt-plan.md) for Luna text processing; transcription still requires an API key.
@@ -186,9 +186,8 @@ permission testing, native smoke checks, shortcut configuration and packaging.
 ## Privacy and security
 
 The only external service is OpenAI. Voice editing sends only the selected
-text (or whole focused field) and the recorded instruction. AI history search
-sends history only when explicitly requested. Unrelated screen contents are
-not collected. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+text (or whole focused field) and the recorded instruction. History search runs
+entirely on-device. Unrelated screen contents are not collected. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 ## License
 

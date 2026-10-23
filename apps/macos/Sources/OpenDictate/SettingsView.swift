@@ -72,7 +72,7 @@ struct SettingsView: View {
         .background(AppThemeAppearance(theme: preferences.theme))
         .onAppear { model.refreshPermissions() }
         .alert(t("Delete all history?", "Удалить всю историю?"), isPresented: $confirmClear) {
-            Button(t("Delete", "Удалить"), role: .destructive) { model.cancelSearch(); history.clear() }
+            Button(t("Delete", "Удалить"), role: .destructive) { history.clear() }
             Button(t("Cancel", "Отмена"), role: .cancel) {}
         } message: { Text(t("This removes every saved transcript from this Mac.", "Все сохранённые расшифровки будут удалены с этого Mac.")) }
         .alert(t("Remove API key?", "Удалить ключ API?"), isPresented: $confirmDeleteKey) {
@@ -223,25 +223,14 @@ struct SettingsView: View {
     }
 
     private var displayedHistory: [HistoryEntry] {
-        if let ids = model.searchMatches { return ids.compactMap { id in history.entries.first { $0.id == id } } }
         return history.entries.filter { HistorySearch.matches($0.text, query: query) }
     }
     private var historyPage: some View {
         VStack(alignment: .leading, spacing: 20) {
             heading(t("Your recent words.", "Недавние слова."),
                     t("Saved on this Mac. Copy, search or delete them anytime.", "Хранятся на этом Mac. Можно скопировать, найти или удалить."))
-            HStack {
-                TextField(t("Search history", "Поиск по истории"), text: $query).textFieldStyle(.roundedBorder)
-                    .onChange(of: query) { model.cancelSearch() }
-                if model.isSearching { Button(t("Cancel", "Отмена"), action: model.cancelSearch) }
-                else { Button(t("AI search", "AI-поиск")) { model.searchHistory(query) }
-                    .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || history.entries.isEmpty) }
-            }
-            Text(t("Local search stays on your Mac. AI search sends the query and saved transcripts directly to OpenAI.",
-                   "Обычный поиск работает на Mac. AI-поиск отправляет запрос и сохранённые тексты в OpenAI."))
-                .font(.caption).foregroundStyle(.secondary)
+            TextField(t("Search history", "Поиск по истории"), text: $query).textFieldStyle(.roundedBorder)
             if let error = history.error { Text(error).font(.callout).foregroundStyle(.secondary) }
-            if model.isSearching { ProgressView().controlSize(.small).frame(maxWidth: .infinity) }
             if displayedHistory.isEmpty {
                 ContentUnavailableView {
                     Label(history.entries.isEmpty ? t("No dictations yet", "Пока нет диктовок") : t("No matches", "Ничего не найдено"), systemImage: "text.alignleft")
@@ -253,7 +242,7 @@ struct SettingsView: View {
                     ForEach(displayedHistory) { entry in
                         HistoryEntryView(entry: entry, russian: preferences.isRussian,
                             onCopy: { model.copy(entry.text) },
-                            onDelete: { model.cancelSearch(); history.delete(entry.id) })
+                            onDelete: { history.delete(entry.id) })
                     }
                 }
             }

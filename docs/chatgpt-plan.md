@@ -4,7 +4,7 @@ Save your OpenAI API key for transcription first. In Settings → Integrations,
 turn on **ChatGPT** and authorize plan usage in your system browser.
 Eligible accounts can use their plan allowance or credits for GPT-6 Luna text
 transformation and Accurate post-processing. The model list remains Luna only.
-Audio transcription and explicit AI history search still use your API key.
+Audio transcription still uses your API key.
 
 Review allowance, credits and app limits in
 [ChatGPT settings](https://chatgpt.com/settings/usage). Credentials stay on that

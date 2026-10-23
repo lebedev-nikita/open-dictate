@@ -11,12 +11,13 @@ Word replacement rules are stored locally on each device and applied on-device
 after recognition. Rules are not uploaded as transcription hints. Connecting Google Drive also
 synchronizes rules and their enabled states with your other devices.
 Completed text saved to history or copied to the clipboard includes replacements.
-An explicit AI history search may send that saved text to OpenAI.
+History search runs entirely on-device; search queries and saved transcripts
+are not uploaded for search.
 
 On both platforms, local history may also include request durations for Accurate
 transcription and optional post-processing, or a Live mode label. This metadata
 stays on the device and is removed with its history entry; it is not sent through
-Drive or AI search.
+Drive.
 History on both platforms also records the transcription and optional post-processing
 model IDs and the selected post-processing service tier under the same local-only rules.
 
@@ -50,8 +51,7 @@ Google Drive when connected; transcripts are never included in synchronization.
 
 After saving the transcription API key, you can connect ChatGPT in Settings to
 use an eligible plan or credits for GPT-6 Luna text transformation and
-post-processing. Audio transcription and AI history search continue to use the
-API key. Text requests go directly to OpenAI; there is no OpenDictate backend.
+post-processing. Audio transcription continues to use the API key. Text requests go directly to OpenAI; there is no OpenDictate backend.
 
 Sign-in opens your system browser and temporarily listens on IPv4 loopback for
 the OAuth callback. OpenDictate requests identity and ChatGPT plan-use scopes,
@@ -156,9 +156,8 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   saving future history and delete existing items or all history separately.
   The directory and file are owner-only. macOS backup software may include
   this folder according to your own backup configuration.
-- Ordinary history search runs on-device. Only explicit AI search sends its
-  query and saved transcript text directly to OpenAI. Search results are
-  held in memory, and Responses requests set `store: false`.
+- History search runs entirely on-device. Search queries and saved transcripts
+  are not uploaded for search.
 - Dictionary terms, excluded app bundle identifiers and preferences are saved in
   UserDefaults locally. With optional Drive sync, dictionary, replacement and recognition model settings
   also go to Google as described above. Dictionary terms are sent to OpenAI as transcription
@@ -182,10 +181,8 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
 - Successful dictation transcripts are stored in the application's private
   local database so you can review and delete them. They are not included in
   Android backups.
-- Fuzzy history search runs entirely on the device. AI history search runs only
-  when you explicitly tap its button and sends the search query and transcript
-  text directly to OpenAI. OpenDictate sets API response storage to off for these
-  requests and does not persist the response.
+- Fuzzy history search runs entirely on the device. Search queries and saved
+  transcripts are not uploaded for search.
 - If the original text field is no longer available when processing finishes,
   OpenDictate copies the completed result to the Android system clipboard so it
   is not lost. Clipboard access and retention are controlled by Android and

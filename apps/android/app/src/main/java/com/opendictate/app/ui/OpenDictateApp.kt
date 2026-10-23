@@ -145,7 +145,6 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                     state = historyState,
                     onBack = { showHistory = false },
                     onQueryChange = viewModel::updateHistoryQuery,
-                    onAiSearch = viewModel::runAiHistorySearch,
                     onCopy = { transcript ->
                         val clip = ClipData.newPlainText(
                             clipboardTranscriptLabel,

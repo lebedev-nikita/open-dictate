@@ -26,7 +26,6 @@ import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.network.OpenAiTranscriptionClient
-import com.opendictate.app.network.TranscriptSearchDocument
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -64,29 +63,14 @@ data class MainUiState(
 
 data class InstalledApp(val packageName: String, val label: String)
 
-enum class HistorySearchMode {
-    NONE,
-    FUZZY,
-    AI,
-}
-
 data class HistoryUiState(
     val entries: List<TranscriptHistoryItem> = emptyList(),
     val query: String = "",
-    val searchMode: HistorySearchMode = HistorySearchMode.NONE,
-    val aiMatchIds: List<Long> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
 ) {
     val visibleEntries: List<TranscriptHistoryItem>
-        get() = when (searchMode) {
-            HistorySearchMode.NONE -> entries
-            HistorySearchMode.FUZZY -> fuzzySearch(entries, query)
-            HistorySearchMode.AI -> {
-                val entriesById = entries.associateBy(TranscriptHistoryItem::id)
-                aiMatchIds.mapNotNull(entriesById::get)
-            }
-        }
+        get() = fuzzySearch(entries, query)
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -107,7 +91,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val mutableHistoryState = MutableStateFlow(HistoryUiState())
     val historyState = mutableHistoryState.asStateFlow()
     private var historyLoadJob: Job? = null
-    private var historySearchJob: Job? = null
     private var modelLoadJob: Job? = null
     private var appsLoadJob: Job? = null
 
@@ -362,57 +345,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateHistoryQuery(query: String) {
-        historySearchJob?.cancel()
         mutableHistoryState.update { it.withHistoryQuery(query) }
-    }
-
-    fun runAiHistorySearch() {
-        val state = mutableHistoryState.value
-        val query = state.query.trim()
-        if (query.isEmpty() || state.entries.isEmpty()) return
-        val apiKey = apiKeyStore.get()
-        if (apiKey.isNullOrBlank()) {
-            mutableHistoryState.update {
-                it.copy(errorMessage = getApplication<Application>().getString(R.string.error_add_api_key))
-            }
-            return
-        }
-
-        historySearchJob?.cancel()
-        historySearchJob = viewModelScope.launch {
-            mutableHistoryState.update {
-                it.copy(
-                    searchMode = HistorySearchMode.AI,
-                    aiMatchIds = emptyList(),
-                    isLoading = true,
-                    errorMessage = null,
-                )
-            }
-            try {
-                val matches = apiClient.searchTranscriptHistory(
-                    apiKey = apiKey,
-                    query = query,
-                    documents = state.entries.map {
-                        TranscriptSearchDocument(id = it.id, text = it.text)
-                    },
-                )
-                mutableHistoryState.update { current ->
-                    if (current.query.trim() == query) {
-                        current.copy(aiMatchIds = matches, isLoading = false)
-                    } else {
-                        current.copy(isLoading = false)
-                    }
-                }
-            } catch (error: Throwable) {
-                if (error is CancellationException) throw error
-                mutableHistoryState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = getApplication<Application>().getString(R.string.history_ai_search_error),
-                    )
-                }
-            }
-        }
     }
 
     fun deleteHistoryItem(id: Long) {
@@ -420,7 +353,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         mutableHistoryState.update { state ->
             state.copy(
                 entries = state.entries.filterNot { it.id == id },
-                aiMatchIds = state.aiMatchIds.filterNot { it == id },
                 errorMessage = null,
             )
         }
@@ -481,13 +413,6 @@ internal fun HistoryUiState.withHistoryQuery(query: String): HistoryUiState {
     val updatedQuery = query.take(MAX_HISTORY_QUERY_CHARS)
     return copy(
         query = updatedQuery,
-        searchMode = if (updatedQuery.isBlank()) {
-            HistorySearchMode.NONE
-        } else {
-            HistorySearchMode.FUZZY
-        },
-        aiMatchIds = emptyList(),
-        isLoading = false,
         errorMessage = null,
     )
 }
