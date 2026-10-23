@@ -4,6 +4,41 @@ import XCTest
 @testable import OpenDictate
 
 final class ChatGPTSettingsTests: XCTestCase {
+    @MainActor func testRetryableStartupFailureAndRecoveredLayouts() throws {
+        let suite = "chatgpt-recovery-ui-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for language in ["en", "ru"] {
+            let store = TestChatGPTPersistence()
+            store.denyReads(true)
+            let connection = ChatGPTConnection(defaults: defaults, localOnly: false, persistence: store.persistence)
+            for state in ["unavailable", "recovered"] {
+                if state == "recovered" {
+                    store.denyReads(false)
+                    XCTAssertEqual(connection.capturedAccount(), "oaiapp_test")
+                    XCTAssertFalse(connection.failed)
+                } else { XCTAssertTrue(connection.failed) }
+                let host = NSHostingView(rootView: ChatGPTSettingsView(connection: connection, hasKey: true,
+                    active: false, russian: language == "ru", connect: {})
+                    .padding(28).frame(width: 464, height: 350, alignment: .topLeading)
+                    .background(Color(nsColor: .windowBackgroundColor)))
+                host.appearance = NSAppearance(named: language == "ru" ? .darkAqua : .aqua)
+                host.frame = NSRect(x: 0, y: 0, width: 464, height: 350)
+                let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false; window.contentView = host; window.appearance = host.appearance
+                window.makeKeyAndOrderFront(nil)
+                defer { window.close() }
+                host.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+                if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {
+                    let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+                    host.cacheDisplay(in: host.bounds, to: bitmap)
+                    try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                        .write(to: URL(fileURLWithPath: output).appendingPathComponent("chatgpt-macos-\(language)-\(state).png"))
+                }
+            }
+        }
+    }
+
     @MainActor func testNativeKeyGatedConnectionLayouts() throws {
         let suite = "chatgpt-ui-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
