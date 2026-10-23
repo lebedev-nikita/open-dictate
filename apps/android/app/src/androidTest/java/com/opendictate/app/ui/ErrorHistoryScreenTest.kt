@@ -3,6 +3,7 @@ package com.opendictate.app.ui
 import android.content.ClipboardManager
 import android.graphics.Bitmap
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -23,6 +24,32 @@ class ErrorHistoryScreenTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private fun label(id: Int) = compose.activity.getString(id)
     private val store get() = (compose.activity.application as OpenDictateApplication).errorHistoryStore
+
+    @Test fun credentialStorageFailureHasItsOwnSafeDiagnosticAndReadableMessage() {
+        val args = InstrumentationRegistry.getArguments()
+        compose.runOnUiThread {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(args.getString("errorHistoryLocale", "en")))
+        }
+        compose.activityRule.scenario.recreate()
+        store.clear()
+        try {
+            store.add(ErrorContext(UUID.randomUUID().toString(), ErrorStage.POST_PROCESSING, ErrorRoute.CHATGPT,
+                ErrorOperation.DICTATION, TranscriptionModel.ACCURATE, DiagnosticModel.TEXT),
+                FailureDetails(ErrorReason.CREDENTIAL_STORAGE), 2)
+            compose.onNodeWithContentDescription(label(R.string.history_open)).performTouchInput { longClick() }
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText(label(R.string.error_reason_credential_storage)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(label(R.string.error_reason_credential_storage)).assertIsDisplayed()
+            args.getString("errorHistoryScreenshot")?.let { capture("$it-storage") }
+            compose.onNodeWithText(label(R.string.error_history_copy)).performClick()
+            compose.runOnIdle {
+                val report = compose.activity.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+                assertTrue(report.contains("Reason: CREDENTIAL_STORAGE"))
+                assertFalse(report.contains("Reason: AUTHENTICATION"))
+            }
+        } finally { store.clear() }
+    }
 
     @Test fun longPressOpensSeparatePersistentScreenAndCanCopyAndClear() {
         val arguments = InstrumentationRegistry.getArguments()
@@ -80,7 +107,7 @@ class ErrorHistoryScreenTest {
     }
 
     private fun capture(name: String) {
-        val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         File(compose.activity.getExternalFilesDir(null), "$name.png").outputStream().use {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
