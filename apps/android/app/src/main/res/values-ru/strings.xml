@@ -348,6 +348,7 @@
     <string name="error_reason_timeout">Превышено время ожидания</string>
     <string name="error_reason_http">Сервер отклонил запрос</string>
     <string name="error_reason_authentication">Ошибка входа или доступа</string>
+    <string name="error_reason_credential_storage">Не удалось прочитать или сохранить данные входа; повторите попытку</string>
     <string name="error_reason_provider">Сервис сообщил об ошибке</string>
     <string name="error_reason_stream_incomplete">Ответ прерван</string>
     <string name="error_reason_invalid_response">Не удалось прочитать ответ</string>

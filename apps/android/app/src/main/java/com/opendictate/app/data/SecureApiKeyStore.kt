@@ -14,7 +14,7 @@ import javax.crypto.spec.GCMParameterSpec
 class SecureApiKeyStore(context: Context, private val namespace: String = "") {
     private val prefs = context.getSharedPreferences(FILE_NAME + namespace, Context.MODE_PRIVATE)
 
-    fun save(apiKey: String) {
+    fun save(apiKey: String, durable: Boolean = false) {
         val normalized = apiKey.trim()
         if (normalized.isEmpty()) {
             clear()
@@ -23,10 +23,10 @@ class SecureApiKeyStore(context: Context, private val namespace: String = "") {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         val encrypted = cipher.doFinal(normalized.toByteArray(Charsets.UTF_8))
-        prefs.edit {
-            putString(KEY_CIPHERTEXT, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            putString(KEY_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
-        }
+        val editor = prefs.edit()
+            .putString(KEY_CIPHERTEXT, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putString(KEY_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+        if (durable) check(editor.commit()) { "Credential storage unavailable" } else editor.apply()
     }
 
     fun get(strict: Boolean = false): String? {
@@ -36,7 +36,7 @@ class SecureApiKeyStore(context: Context, private val namespace: String = "") {
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(
                 Cipher.DECRYPT_MODE,
-                getOrCreateKey(),
+                getOrCreateKey(create = false),
                 GCMParameterSpec(128, Base64.decode(iv, Base64.NO_WRAP)),
             )
             String(
@@ -56,9 +56,10 @@ class SecureApiKeyStore(context: Context, private val namespace: String = "") {
         prefs.edit { clear() }
     }
 
-    private fun getOrCreateKey(): SecretKey {
+    private fun getOrCreateKey(create: Boolean = true): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
         (keyStore.getKey(KEY_ALIAS + namespace, null) as? SecretKey)?.let { return it }
+        check(create) { "Credential storage unavailable" }
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE).run {
             init(
                 KeyGenParameterSpec.Builder(

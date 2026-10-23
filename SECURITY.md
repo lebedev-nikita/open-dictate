@@ -161,6 +161,10 @@ Refreshes are serialized per session, terminal refresh errors discard unusable
 tokens, and temporary errors retain credentials. A captured ChatGPT billing
 selection never silently falls back to the API key. Corrupt or locked credential
 storage fails closed. API-key transcription remains a prerequisite to sign-in.
+Android retries unreadable ChatGPT credentials before requests or authorization;
+failed reads never become an empty credential journal. Token replacements are
+committed on an I/O worker before inference. Cancelling dictation allows an
+in-flight token refresh and its save to finish, then stops before inference.
 Plan inference requires `store: false`, `stream: true`, array input and the
 terminal `response.completed`; deltas, incomplete streams and usage errors are
 not successful results. OAuth and SSE responses are bounded and never logged.

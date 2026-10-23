@@ -114,6 +114,7 @@ private fun ErrorHistoryRow(entry: ErrorHistoryEntry, onCopy: () -> Unit) {
         ErrorReason.TIMEOUT -> R.string.error_reason_timeout
         ErrorReason.HTTP -> R.string.error_reason_http
         ErrorReason.AUTHENTICATION -> R.string.error_reason_authentication
+        ErrorReason.CREDENTIAL_STORAGE -> R.string.error_reason_credential_storage
         ErrorReason.PROVIDER -> R.string.error_reason_provider
         ErrorReason.STREAM_INCOMPLETE -> R.string.error_reason_stream_incomplete
         ErrorReason.INVALID_RESPONSE -> R.string.error_reason_invalid_response

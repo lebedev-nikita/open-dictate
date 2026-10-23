@@ -31,8 +31,12 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
                      val failed: Boolean = false, val welcome: Boolean = false, val revocationUnconfirmed: Boolean = false, val accounts: List<Account> = emptyList())
     private val store = SecureApiKeyStore(context, "_chatgpt")
     private val preferences = context.getSharedPreferences("chatgpt_host", Context.MODE_PRIVATE)
-    private var records = runCatching { JSONObject(store.get(strict = true) ?: "{}") }.getOrDefault(JSONObject())
-    @Volatile private var selected: String? = if (preferences.getBoolean("use_plan", false)) records.optString("active").takeIf { it.isNotBlank() } ?: "unavailable" else null
+    // An unreadable store is not an empty journal. Retry it before using or changing credentials.
+    private var loadedRecords = runCatching { JSONObject(store.get(strict = true) ?: "{}") }.getOrNull()
+    private val records: JSONObject get() = loadedRecords ?: throw storageFailure()
+    private var unsaved = false
+    private var recoveredAccount: String? = null
+    @Volatile private var selected: String? = if (preferences.getBoolean("use_plan", false)) loadedRecords?.optString("active")?.takeIf { it.isNotBlank() } ?: UNAVAILABLE_ACCOUNT else null
     private val mutableState = MutableStateFlow(status())
     val state = mutableState.asStateFlow()
     private val mutex = Mutex()
@@ -40,17 +44,43 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
         .retryOnConnectionFailure(false).callTimeout(45, TimeUnit.SECONDS).build()
     private var socket: ServerSocket? = null
     private fun status(): State {
-        val accounts = records.keys().asSequence().mapNotNull { id ->
-            records.optJSONObject(id)?.takeIf { it.optString("sub").isNotBlank() }?.let {
+        val saved = loadedRecords
+        val accounts = saved?.keys()?.asSequence()?.mapNotNull { id ->
+            saved.optJSONObject(id)?.takeIf { it.optString("sub").isNotBlank() }?.let {
                 Account(id, it.optString("email").ifBlank { "ChatGPT" } + " · " + id.takeLast(6))
             }
-        }.sortedBy { it.label }.toList()
+        }?.sortedBy { it.label }?.toList().orEmpty()
         val id = activeAccount()
-        val record = id?.let { records.optJSONObject(it) }
-        return State(connected = id != null, email = record?.optString("email").orEmpty(), failed = id != null && record == null, accounts = accounts)
+        val record = id?.let { saved?.optJSONObject(it) }
+        val usable = record != null && record.optString("access_token").isNotBlank() &&
+            record.optString("scope").split(' ').contains("chatgpt.tokens.use.direct")
+        return State(connected = id != null, email = record?.optString("email").orEmpty(), failed = id != null && !usable, accounts = accounts)
     }
     fun activeAccount(): String? = selected
-    private fun save() { store.save(records.toString()); mutableState.value = status() }
+    /** Called under mutex. Failed writes keep the latest rotating token in memory for a durable retry. */
+    private suspend fun save() {
+        unsaved = true
+        try { withContext(Dispatchers.IO) { store.save(records.toString(), durable = true) } }
+        catch (error: CancellationException) { throw error }
+        catch (_: Exception) { throw storageFailure() }
+        unsaved = false
+        mutableState.value = status()
+    }
+    private suspend fun loadRecords() {
+        if (loadedRecords == null) {
+            val saved = try { withContext(Dispatchers.IO) { JSONObject(store.get(strict = true) ?: "{}") } }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) { throw storageFailure() }
+            loadedRecords = saved
+            if (selected == UNAVAILABLE_ACCOUNT) {
+                recoveredAccount = saved.optString("active").takeIf { it.isNotBlank() }
+                selected = recoveredAccount ?: UNAVAILABLE_ACCOUNT
+            }
+            mutableState.value = status()
+        }
+        if (unsaved) save()
+    }
+    private fun storageFailure() = ChatGPTException(FailureDetails(ErrorReason.CREDENTIAL_STORAGE))
     private fun random(): String = ByteArray(32).also { SecureRandom().nextBytes(it) }.let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
     fun dismissWelcome() { preferences.edit().putBoolean("welcomed", true).apply(); mutableState.value = mutableState.value.copy(welcome = false) }
     fun cancel() { runCatching { socket?.close() }; socket = null }
@@ -59,6 +89,7 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
         if (!hasTranscriptionKey() || mutableState.value.busy) return
         mutableState.value = status().copy(busy = true)
         try {
+            mutex.withLock { loadRecords() }
             val host = preferences.getString("host", null) ?: ("urn:uuid:" + UUID.randomUUID()).also {
                 preferences.edit().putString("host", it).commit()
             }
@@ -139,7 +170,11 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
         mutableState.value = status().copy(busy = true)
         var failed = false
         mutex.withLock {
-            val id = activeAccount()?.takeIf { records.has(it) }
+            // Signing out locally remains possible when the store is temporarily locked.
+            // Never replace an unreadable journal with an empty one.
+            try { loadRecords() } catch (error: CancellationException) { throw error }
+            catch (_: Exception) { failed = true }
+            val id = activeAccount()?.takeIf { loadedRecords?.has(it) == true }
             if (id != null) {
                 val record = records.getJSONObject(id)
                 try { request("https://auth.openai.com/api/accounts/oauth/revoke", fields = mapOf("token" to record.getString("refresh_token"), "token_type_hint" to "refresh_token", "client_id" to id), empty = true) }
@@ -153,24 +188,32 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
     }
     /** Refresh only the session captured by the caller. Never substitute an API key. */
     private suspend fun token(id: String): String = mutex.withLock {
-        val record = records.optJSONObject(id) ?: throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
+        loadRecords()
+        val account = if (id == UNAVAILABLE_ACCOUNT) recoveredAccount else id
+        val record = account?.let { records.optJSONObject(it) } ?: throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
         if (record.optString("access_token").isBlank() || !record.optString("scope").split(' ').contains("chatgpt.tokens.use.direct")) {
             throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
         }
         if (record.optLong("expires_at") <= System.currentTimeMillis() / 1000 + 60) {
-            val renewed = try { request(ChatGPTProtocol.TOKEN, fields = mapOf("grant_type" to "refresh_token", "client_id" to id,
-                "refresh_token" to record.getString("refresh_token"), "resource" to ChatGPTProtocol.RESOURCE)) }
-            catch (_: ChatGPTReauthentication) {
-                listOf("access_token", "refresh_token", "id_token").forEach(record::remove); save()
-                throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
+            currentCoroutineContext().ensureActive()
+            // The server may already have consumed a rotating token when dictation is cancelled.
+            // Finish the bounded refresh and its durable write, but never continue inference afterwards.
+            withContext(NonCancellable + Dispatchers.IO) {
+                val renewed = try { request(ChatGPTProtocol.TOKEN, fields = mapOf("grant_type" to "refresh_token", "client_id" to requireNotNull(account),
+                    "refresh_token" to record.getString("refresh_token"), "resource" to ChatGPTProtocol.RESOURCE)) }
+                catch (_: ChatGPTReauthentication) {
+                    listOf("access_token", "refresh_token", "id_token").forEach(record::remove); save()
+                    throw ChatGPTException(FailureDetails(ErrorReason.AUTHENTICATION))
+                }
+                require(renewed.optString("access_token").isNotBlank() && renewed.optString("refresh_token").isNotBlank())
+                require(renewed.optString("scope").split(' ').contains("chatgpt.tokens.use.direct"))
+                require(renewed.optString("token_type").equals("Bearer", true) && renewed.getLong("expires_in") in 1..86400)
+                record.put("access_token", renewed.getString("access_token")).put("refresh_token", renewed.getString("refresh_token"))
+                    .put("scope", renewed.getString("scope")).put("expires_at", System.currentTimeMillis() / 1000 + renewed.getLong("expires_in"))
+                save()
             }
-            require(renewed.optString("access_token").isNotBlank() && renewed.optString("refresh_token").isNotBlank())
-            require(renewed.optString("scope").split(' ').contains("chatgpt.tokens.use.direct"))
-            require(renewed.optString("token_type").equals("Bearer", true) && renewed.getLong("expires_in") in 1..86400)
-            record.put("access_token", renewed.getString("access_token")).put("refresh_token", renewed.getString("refresh_token"))
-                .put("scope", renewed.getString("scope")).put("expires_at", System.currentTimeMillis() / 1000 + renewed.getLong("expires_in"))
-            save()
         }
+        currentCoroutineContext().ensureActive()
         record.getString("access_token")
     }
     suspend fun response(id: String, body: JSONObject): JSONObject {
@@ -226,6 +269,8 @@ class ChatGPTSession(context: Context, httpClient: OkHttpClient? = null) {
             }
         })
     }
+
+    private companion object { const val UNAVAILABLE_ACCOUNT = "unavailable" }
 }
 
 private class ChatGPTReauthentication : Exception()

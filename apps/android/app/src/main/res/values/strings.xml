@@ -352,6 +352,7 @@
     <string name="error_reason_timeout">The request timed out</string>
     <string name="error_reason_http">The server rejected the request</string>
     <string name="error_reason_authentication">Sign-in or access was rejected</string>
+    <string name="error_reason_credential_storage">Saved sign-in could not be read or saved; try again</string>
     <string name="error_reason_provider">The provider reported an error</string>
     <string name="error_reason_stream_incomplete">The response was interrupted</string>
     <string name="error_reason_invalid_response">The response could not be read</string>
