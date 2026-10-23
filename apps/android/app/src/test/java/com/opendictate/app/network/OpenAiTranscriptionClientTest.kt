@@ -261,55 +261,6 @@ class OpenAiTranscriptionClientTest {
         )
     }
 
-    @Test
-    fun `history search request uses structured output without storage`() {
-        val request = transcriptHistorySearchRequest(
-
-            query = "project planning",
-            documents = listOf(
-                TranscriptSearchDocument(7, "Discuss the roadmap"),
-                TranscriptSearchDocument(9, "Buy coffee"),
-            ),
-        )
-
-        assertEquals("gpt-6-luna", request.getString("model"))
-        assertFalse(request.getBoolean("store"))
-        val format = request.getJSONObject("text").getJSONObject("format")
-        assertEquals("json_schema", format.getString("type"))
-        assertTrue(format.getBoolean("strict"))
-        val input = JSONObject(request.getString("input"))
-        assertEquals("project planning", input.getString("semantic_query"))
-        assertEquals(7, input.getJSONArray("documents").getJSONObject(0).getLong("id"))
-    }
-
-    @Test
-    fun `history search matches are extracted and deduplicated`() {
-        val response = JSONObject().put(
-            "output",
-            JSONArray().put(
-                JSONObject()
-                    .put("type", "message")
-                    .put(
-                        "content",
-                        JSONArray().put(
-                            JSONObject()
-                                .put("type", "output_text")
-                                .put("text", JSONObject().put("match_ids", JSONArray(listOf(9, 7, 9))).toString()),
-                        ),
-                    ),
-            ),
-        )
-
-        assertEquals(listOf(9L, 7L), extractTranscriptHistoryMatches(response))
-    }
-
-    @Test
-    fun `history search batches bound document count`() {
-        val documents = (1L..51L).map { TranscriptSearchDocument(it, "text") }
-
-        assertEquals(listOf(50, 1), historySearchBatches(documents).map(List<*>::size))
-    }
-
     private fun transformationResponse(
         transformedText: String,
         message: Any,

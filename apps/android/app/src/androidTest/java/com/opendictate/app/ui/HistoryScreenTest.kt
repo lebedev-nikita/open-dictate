@@ -26,14 +26,13 @@ class HistoryScreenTest {
             OpenDictateTheme {
                 TranscriptHistoryScreen(
                     HistoryUiState(isLoading = false, errorMessage = error),
-                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {},
+                    onBack = {}, onQueryChange = {}, onCopy = {}, onDelete = {},
                 )
             }
         }
         compose.onNodeWithText(context.getString(R.string.history_empty_title)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(error).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(context.getString(R.string.history_search_label)).assertDoesNotExist()
-        compose.onNodeWithText(context.getString(R.string.history_ai_search)).assertDoesNotExist()
         capture("history-empty")
     }
 
@@ -49,16 +48,17 @@ class HistoryScreenTest {
                     state.value,
                     onBack = {},
                     onQueryChange = { state.value = state.value.withHistoryQuery(it) },
-                    onAiSearch = { state.value = state.value.copy(errorMessage = context.getString(R.string.history_ai_search_error)) },
                     onCopy = { copied = it },
                     onDelete = { deleted = it },
                 )
             }
         }
-        compose.onNodeWithText(context.getString(R.string.history_ai_search)).assertIsNotEnabled()
         compose.onNodeWithText(context.getString(R.string.history_search_label)).performTextInput("sample")
-        compose.onNodeWithText(context.getString(R.string.history_ai_search)).performScrollTo().assertIsEnabled().performClick()
-        compose.onNodeWithText(context.getString(R.string.history_ai_search_error)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(entry.text).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.history_search_label)).performScrollTo().performTextReplacement("unrelated")
+        compose.onNodeWithText(context.getString(R.string.history_no_results_title)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription(context.getString(R.string.history_clear_search)).performScrollTo().performClick()
+        compose.onNodeWithText(entry.text).performScrollTo().assertIsDisplayed()
         capture("history-results")
         compose.onNodeWithText(entry.text).performScrollTo().performClick()
         assertEquals(entry.text, copied)
@@ -84,7 +84,7 @@ class HistoryScreenTest {
         compose.setContent {
             OpenDictateTheme {
                 TranscriptHistoryScreen(HistoryUiState(entries = entries, isLoading = false),
-                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {})
+                    onBack = {}, onQueryChange = {}, onCopy = {}, onDelete = {})
             }
         }
         val locale = context.resources.configuration.locales[0]
@@ -122,7 +122,7 @@ class HistoryScreenTest {
         compose.setContent {
             OpenDictateTheme {
                 TranscriptHistoryScreen(HistoryUiState(entries = entries, isLoading = false),
-                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {})
+                    onBack = {}, onQueryChange = {}, onCopy = {}, onDelete = {})
             }
         }
         fun show(entry: TranscriptHistoryItem) {
@@ -168,7 +168,7 @@ class HistoryScreenTest {
         compose.setContent {
             OpenDictateTheme {
                 TranscriptHistoryScreen(HistoryUiState(entries = listOf(entry), isLoading = false),
-                    onBack = {}, onQueryChange = {}, onAiSearch = {}, onCopy = {}, onDelete = {})
+                    onBack = {}, onQueryChange = {}, onCopy = {}, onDelete = {})
             }
         }
         compose.onNodeWithText(entry.text).assertIsDisplayed()

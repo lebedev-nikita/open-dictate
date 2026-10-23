@@ -25,8 +25,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var microphoneAllowed = false
     @Published private(set) var accessibilityAllowed = false
     @Published private(set) var shortcutError = ""
-    @Published var isSearching = false
-    @Published var searchMatches: [UUID]?
     @Published var loginEnabled = false
     let preferences: Preferences
     let history: HistoryStore
@@ -47,9 +45,7 @@ final class AppModel: ObservableObject {
     private var current: Session?
     private var timer: Timer?
     private var subscriptions = Set<AnyCancellable>()
-    private var searchTask: Task<Void, Never>?
     private var pasteTask: Task<Void, Never>?
-    private var searchID: UUID?
     private var recordingShortcut = false
     private var shuttingDown = false
     var onStateChange: (() -> Void)?
@@ -590,27 +586,6 @@ final class AppModel: ObservableObject {
         } catch { present(error) }
     }
 
-    func searchHistory(_ query: String) {
-        guard !localOnly else { return }
-        cancelSearch()
-        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        do {
-            guard let key = try APIKeyStore.load(), !key.isEmpty else { throw DictationError.missingKey }
-            let entries = history.entries
-            let id = UUID(); searchID = id
-            isSearching = true
-            searchTask = Task {
-                defer { if searchID == id { isSearching = false } }
-                do {
-                    let matches = try await client.search(query: query, entries: entries, key: key)
-                    try Task.checkCancellation()
-                    if searchID == id { searchMatches = matches }
-                } catch { if !Task.isCancelled && searchID == id { present(error) } }
-            }
-        } catch { present(error) }
-    }
-    func cancelSearch() { searchID = nil; searchTask?.cancel(); searchTask = nil; searchMatches = nil; isSearching = false }
-
     func setLoginEnabled(_ enabled: Bool) {
         do {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
@@ -639,5 +614,5 @@ final class AppModel: ObservableObject {
         onStateChange?()
     }
     func clearMessage() { message = "" }
-    func shutdown() { shuttingDown = true; cancel(); standbyRecorder = nil; lastDictationAudio = nil; cancelSearch(); pasteTask?.cancel(); timer?.invalidate(); hotKeys.shutdown() }
+    func shutdown() { shuttingDown = true; cancel(); standbyRecorder = nil; lastDictationAudio = nil; pasteTask?.cancel(); timer?.invalidate(); hotKeys.shutdown() }
 }

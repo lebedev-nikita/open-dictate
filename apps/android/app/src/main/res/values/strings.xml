@@ -24,14 +24,12 @@
     <string name="history_title">Transcript history</string>
     <string name="history_count">Saved: %1$d</string>
     <string name="history_search_label">Search history</string>
-    <string name="history_search_placeholder">Words, typos, or a description</string>
+    <string name="history_search_placeholder">Words or typos</string>
     <string name="history_clear_search">Clear search</string>
-    <string name="history_ai_search">AI search</string>
-    <string name="history_ai_privacy">Fuzzy search stays on this device. AI search sends your query and transcript text directly to OpenAI with response storage disabled.</string>
     <string name="history_empty_title">Nothing saved yet</string>
     <string name="history_empty_message">Successful dictations will appear here automatically.</string>
     <string name="history_no_results_title">No matches</string>
-    <string name="history_no_results_message">Try a shorter phrase, another spelling, or AI search.</string>
+    <string name="history_no_results_message">Try a shorter phrase or another spelling.</string>
     <string name="history_copy_item">Copy transcript</string>
     <string name="history_copied">Transcript copied</string>
     <string name="history_delete_item">Delete transcript</string>
@@ -40,7 +38,6 @@
     <string name="history_delete_action">Delete</string>
     <string name="history_load_error">Could not load transcript history</string>
     <string name="history_delete_error">Could not delete the transcript</string>
-    <string name="history_ai_search_error">Could not complete AI search</string>
 
     <string name="hero_active">Speak.\nI’m already typing.</string>
     <string name="hero_idle">Speak.\nThe text is already there.</string>
@@ -115,7 +112,7 @@
     <string name="transcription_timeout_range">1–600 seconds</string>
     <string name="test_field_label">Try it here</string>
     <string name="test_field_placeholder">Open the keyboard — the button will appear above it</string>
-    <string name="privacy_note">Your key, recordings, and text never pass through an OpenDictate server. The latest dictation audio and transcript history stay on this device. Audio and saved dictionary terms are sent directly to OpenAI during dictation. Text you transform and history you explicitly search with AI are also sent directly to OpenAI.</string>
+    <string name="privacy_note">Your key, recordings, and text never pass through an OpenDictate server. The latest dictation audio and transcript history stay on this device. Audio and saved dictionary terms are sent directly to OpenAI during dictation. Text you transform is also sent directly to OpenAI. History search runs entirely on this device.</string>
 
     <string name="api_key_dialog_replace">Replace API key</string>
     <string name="api_key_dialog_connect">Connect OpenAI</string>
@@ -187,8 +184,6 @@
     <string name="error_text_too_long">The selected text is too long to transform</string>
     <string name="error_transformation_empty">OpenAI returned no transformed text</string>
     <string name="error_transformation_timeout">Text transformation took too long</string>
-    <string name="error_ai_search_invalid_response">OpenAI returned an invalid search result</string>
-    <string name="error_ai_search_timeout">AI search took too long</string>
     <string name="error_openai_response_code">OpenAI returned %1$d</string>
     <string name="error_connection_closed">The connection closed before text was received</string>
     <string name="error_audio_send_failed">Could not send audio</string>

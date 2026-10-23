@@ -52,8 +52,8 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
 - `LiveTranscriptionSession` opens immediately, bounds early audio to 300 chunks,
   flushes after `session.updated`, serializes sends and explicitly commits.
   Overflow fails visibly instead of silently dropping speech.
-- `OpenAIClient` uses ephemeral HTTPS sessions. Voice edits and explicit AI
-  history searches use structured Responses output with `store: false`.
+- `OpenAIClient` uses ephemeral HTTPS sessions. Voice edits and post-processing
+  use structured Responses output with `store: false`. History search runs on-device.
 - `RecordingIndicator` owns a nonactivating panel that cannot become key/main.
   Settings choose Microphone (the existing 55 × 27.5 pt finish control) or Waveform
   (a black 62.5 × 28.32 pt capsule with ten white level bars, ranging from
@@ -277,7 +277,7 @@ Each new entry captures its actual transcription model and, when post-processing
 runs, its text model and service tier. Accurate includes separate request durations,
 including upload and the full response; Live shows its model without timings.
 Old entries and skipped stages have no invented models or durations. This metadata
-remains local and is excluded from Drive and AI history search.
+remains local and is excluded from Drive.
 Disable history to stop saving future results; delete existing
 history separately. Audio is never persisted on macOS.
 
@@ -291,7 +291,7 @@ menu and in Settings when you open them yourself.
 
 Unit tests exercise UTF-16 selections, cumulative updates, cursor guards,
 WAV/chunk boundaries, protocol payloads, ordered early-audio flush and commit,
-bounded queues, cancellation, local search and history batching. Mock transport
+bounded queues, cancellation and local search. Mock transport
 tests do not require a key or call OpenAI.
 
 For native smoke checks, run `scripts/build-smoke.sh` and

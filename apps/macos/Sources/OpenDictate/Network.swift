@@ -97,22 +97,6 @@ actor OpenAIClient {
         }
     }
 
-    func search(query: String, entries: [HistoryEntry], key: String) async throws -> [UUID] {
-        var matches = [UUID]()
-        let allowed = Set(entries.map(\.id))
-        for batch in OpenAIRequest.historyBatches(entries) {
-            try Task.checkCancellation()
-            let result = try await response(OpenAIRequest.search(query: query, entries: batch), key: key)
-            guard let data = OpenAIRequest.responseText(result).data(using: .utf8),
-                  let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let ids = object["match_ids"] as? [String] else { throw DictationError.invalidResponse }
-            for id in ids.compactMap(UUID.init(uuidString:)) where allowed.contains(id) && !matches.contains(id) {
-                matches.append(id)
-            }
-        }
-        return matches
-    }
-
     private func response(_ body: [String: Any], key: String, timeout: Int = 30, chatGPTAccount: String? = nil) async throws -> [String: Any] {
         if let chatGPTAccount { return try await ChatGPTSession.shared.response(account: chatGPTAccount, body: body) }
         var request = authorized(OpenAIRequest.responsesURL, key: key, timeout: timeout)

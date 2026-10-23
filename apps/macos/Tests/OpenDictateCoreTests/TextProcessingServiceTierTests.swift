@@ -23,7 +23,6 @@ final class TextProcessingServiceTierTests: XCTestCase {
         let postProcessing = OpenAIRequest.postProcessing(source: "Draft", settings: .init(enabled: true))
         XCTAssertEqual(postProcessing["service_tier"] as? String, "default")
         XCTAssertEqual((postProcessing["reasoning"] as? [String: String])?["effort"], "none")
-        XCTAssertNil(OpenAIRequest.search(query: "Draft", entries: [])["service_tier"])
         XCTAssertFalse(String(decoding: OpenAIRequest.multipart(wav: Data(), context: .init(), boundary: "test"), as: UTF8.self).contains("service_tier"))
     }
 

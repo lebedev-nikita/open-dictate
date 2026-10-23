@@ -14,7 +14,6 @@ class SettingsSyncDocumentTest {
         val selected = merged.entries.getValue("textProcessingModel").value!!
         assertEquals(selected, com.opendictate.app.network.textTransformationRequest("Text", "Edit", selected).getString("model"))
         assertEquals(selected, com.opendictate.app.network.postProcessingRequest("Text", com.opendictate.app.model.PostProcessingSettings(true), selected).getString("model"))
-        assertEquals("gpt-6-luna", com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()).getString("model"))
     }
 
     @Test fun legacyPostProcessingCannotOverwriteStructuredOptionsAndSourceChoiceUsesMigratedValues() {
@@ -45,7 +44,6 @@ class SettingsSyncDocumentTest {
         val settings = com.opendictate.app.model.PostProcessingSettings().applyingRules(merged.entries.getValue("postprocessingRules").value!!)
         val requests = listOf(
             com.opendictate.app.network.textTransformationRequest("Text", "Edit"),
-            com.opendictate.app.network.transcriptHistorySearchRequest("Find", emptyList()),
             com.opendictate.app.network.postProcessingRequest("Text", settings))
         requests.forEach { assertEquals("gpt-6-luna", it.getString("model")) }
         assertFalse(settings.enabled)

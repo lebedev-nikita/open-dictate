@@ -29,11 +29,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Article
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,8 +42,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -83,7 +79,6 @@ internal fun TranscriptHistoryScreen(
     state: HistoryUiState,
     onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
-    onAiSearch: () -> Unit,
     onCopy: (String) -> Unit,
     onDelete: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -148,49 +143,6 @@ internal fun TranscriptHistoryScreen(
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp),
                         )
-                        Spacer(Modifier.height(12.dp))
-                        SearchModeButton(
-                            text = stringResource(R.string.history_ai_search),
-                            selected = state.searchMode == HistorySearchMode.AI,
-                            enabled = state.query.isNotBlank() &&
-                                state.entries.isNotEmpty() &&
-                                !state.isLoading,
-                            icon = {
-                                if (state.isLoading && state.searchMode == HistorySearchMode.AI) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        color = LocalContentColor.current,
-                                        strokeWidth = 2.dp,
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Outlined.AutoAwesome,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                            },
-                            onClick = {
-                                focusManager.clearFocus()
-                                onAiSearch()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.Top) {
-                            Icon(
-                                Icons.Outlined.Lock,
-                                contentDescription = null,
-                                tint = SettingsMuted,
-                                modifier = Modifier.size(15.dp),
-                            )
-                            Spacer(Modifier.width(7.dp))
-                            Text(
-                                text = stringResource(R.string.history_ai_privacy),
-                                color = SettingsMuted,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
                     }
                     state.errorMessage?.let { message ->
                         Spacer(Modifier.height(12.dp))
@@ -279,41 +231,6 @@ private fun HistoryTopBar(entryCount: Int, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-    }
-}
-
-@Composable
-private fun SearchModeButton(
-    text: String,
-    selected: Boolean,
-    enabled: Boolean,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val content: @Composable () -> Unit = {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            icon()
-            Spacer(Modifier.width(7.dp))
-            Text(text, style = MaterialTheme.typography.labelLarge)
-        }
-    }
-    if (selected) {
-        Button(
-            onClick = onClick,
-            modifier = modifier.heightIn(min = 48.dp),
-            enabled = enabled,
-            colors = ButtonDefaults.buttonColors(containerColor = SettingsText, contentColor = SettingsCanvas),
-            content = { content() },
-        )
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier.heightIn(min = 48.dp),
-            enabled = enabled,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = SettingsText),
-            content = { content() },
-        )
     }
 }
 

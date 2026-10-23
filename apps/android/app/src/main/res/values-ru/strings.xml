@@ -22,14 +22,12 @@
     <string name="history_title">История транскриптов</string>
     <string name="history_count">Сохранено: %1$d</string>
     <string name="history_search_label">Поиск по истории</string>
-    <string name="history_search_placeholder">Слова, опечатки или описание</string>
+    <string name="history_search_placeholder">Слова или опечатки</string>
     <string name="history_clear_search">Очистить поиск</string>
-    <string name="history_ai_search">AI-поиск</string>
-    <string name="history_ai_privacy">Нечёткий поиск работает на устройстве. AI-поиск отправляет запрос и тексты транскриптов напрямую в OpenAI с отключённым хранением ответа.</string>
     <string name="history_empty_title">Здесь пока пусто</string>
     <string name="history_empty_message">Успешные диктовки будут автоматически появляться здесь.</string>
     <string name="history_no_results_title">Ничего не найдено</string>
-    <string name="history_no_results_message">Попробуйте более короткую фразу, другое написание или AI-поиск.</string>
+    <string name="history_no_results_message">Попробуйте более короткую фразу или другое написание.</string>
     <string name="history_copy_item">Скопировать транскрипт</string>
     <string name="history_copied">Транскрипт скопирован</string>
     <string name="history_delete_item">Удалить транскрипт</string>
@@ -38,7 +36,6 @@
     <string name="history_delete_action">Удалить</string>
     <string name="history_load_error">Не удалось загрузить историю транскриптов</string>
     <string name="history_delete_error">Не удалось удалить транскрипт</string>
-    <string name="history_ai_search_error">Не удалось выполнить AI-поиск</string>
 
     <string name="hero_active">Говорите.\nЯ уже пишу.</string>
     <string name="hero_idle">Говорите.\nТекст уже там.</string>
@@ -112,7 +109,7 @@
     <string name="transcription_timeout_range">От 1 до 600 секунд</string>
     <string name="test_field_label">Попробуйте здесь</string>
     <string name="test_field_placeholder">Откройте клавиатуру — кнопка появится над ней</string>
-    <string name="privacy_note">Ключ, записи и текст не проходят через сервер OpenDictate. Аудио последней диктовки и история транскрипций хранятся на устройстве. При диктовке аудио и сохранённые термины словаря отправляются напрямую в OpenAI. Преобразуемый текст и история, в которой вы явно запускаете AI-поиск, тоже отправляются напрямую в OpenAI.</string>
+    <string name="privacy_note">Ключ, записи и текст не проходят через сервер OpenDictate. Аудио последней диктовки и история транскрипций хранятся на устройстве. При диктовке аудио и сохранённые термины словаря отправляются напрямую в OpenAI. Преобразуемый текст тоже отправляется напрямую в OpenAI. Поиск по истории работает только на устройстве.</string>
 
     <string name="api_key_dialog_replace">Заменить API key</string>
     <string name="api_key_dialog_connect">Подключить OpenAI</string>
@@ -184,8 +181,6 @@
     <string name="error_text_too_long">Выбранный текст слишком длинный для преобразования</string>
     <string name="error_transformation_empty">OpenAI не вернул преобразованный текст</string>
     <string name="error_transformation_timeout">Преобразование текста заняло слишком много времени</string>
-    <string name="error_ai_search_invalid_response">OpenAI вернул некорректный результат поиска</string>
-    <string name="error_ai_search_timeout">AI-поиск занял слишком много времени</string>
     <string name="error_openai_response_code">OpenAI вернул %1$d</string>
     <string name="error_connection_closed">Соединение закрыто до получения текста</string>
     <string name="error_audio_send_failed">Не удалось отправить звук</string>
