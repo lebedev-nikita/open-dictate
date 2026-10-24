@@ -66,6 +66,42 @@ final class AudioCapturePipelineTests: XCTestCase {
         XCTAssertTrue(events.chunks.isEmpty)
     }
 
+    func testFormatChangeKeepsQueuedAudioConverterTailAndNetworkChunkBoundaries() throws {
+        let firstFormat = try pcmFormat()
+        let nextFormat = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
+        let events = CaptureEvents(), pipeline = try events.pipeline(format: firstFormat)
+        let first = try pcm(firstFormat, frames: 300, start: 1)
+        pipeline.buffer.write(frames: first.frameLength, from: first.audioBufferList)
+        // Reconfiguration must drain the old callback ring before replacing it.
+        try pipeline.reconfigure(format: nextFormat)
+        let next = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: nextFormat, frameCapacity: 1_920))
+        next.frameLength = 1_920
+        for index in 0..<1_920 {
+            next.floatChannelData![0][index] = Float(sin(Double(index) * 0.07) * 0.2)
+            next.floatChannelData![1][index] = next.floatChannelData![0][index]
+        }
+        pipeline.buffer.write(frames: next.frameLength, from: next.audioBufferList)
+        let reference = try CaptureEvents().pipeline(format: nextFormat)
+        reference.buffer.write(frames: next.frameLength, from: next.audioBufferList)
+        let expected = Data(bytes: first.int16ChannelData![0], count: 600) + (try reference.finish().0)
+        let (audio, bytes) = try pipeline.finish()
+        XCTAssertEqual(audio, expected)
+        XCTAssertEqual(bytes, expected.count)
+        XCTAssertEqual(events.chunks.reduce(Data(), +), expected)
+        XCTAssertTrue(events.chunks.dropLast().allSatisfy { $0.count == AudioConstants.chunkBytes })
+        XCTAssertEqual(events.readyCount, 1)
+    }
+
+    func testFormatChangesBeforeFirstSamplesDoNotAdvertiseReadinessOrAddPadding() throws {
+        let events = CaptureEvents(), pipeline = try events.pipeline(format: pcmFormat())
+        let nextFormat = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1))
+        try pipeline.reconfigure(format: nextFormat)
+        try pipeline.reconfigure(format: pcmFormat())
+        XCTAssertEqual(try pipeline.finish().1, 0)
+        XCTAssertEqual(events.readyCount, 0)
+        XCTAssertTrue(events.chunks.isEmpty)
+    }
+
     func testOverflowRejectsTruncatedRecording() throws {
         let format = try pcmFormat(), events = CaptureEvents(), pipeline = try events.pipeline(format: format)
         let input = try pcm(format, frames: 960)
@@ -82,7 +118,8 @@ final class AudioCapturePipelineTests: XCTestCase {
         let pipeline = try events.pipeline(format: format, keepAudio: false)
         let input = try pcm(format, frames: 4_096)
         var reachedLimit = false
-        for _ in 0..<3_000 {
+        for index in 0..<3_000 {
+            if index == 1_000 { try pipeline.reconfigure(format: format) }
             pipeline.buffer.write(frames: input.frameLength, from: input.audioBufferList)
             do { try pipeline.drain() }
             catch DictationError.tooLong { reachedLimit = true; break }
