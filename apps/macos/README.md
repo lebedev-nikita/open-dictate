@@ -47,7 +47,10 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   5 ms and converts to mono PCM16 at 24 kHz; network chunks remain 40 ms.
   Readiness follows the first converted samples. Stopping drains captured input
   and the converter's tail; overflow fails visibly. Idle preparation never starts
-  microphone capture. Live audio stays off disk; Accurate builds a WAV in memory.
+  microphone capture; Bluetooth graphs are opened only when dictation starts.
+  Hardware format changes rebuild capture while preserving accepted audio and
+  streaming chunk boundaries. Unrecoverable changes fail visibly and retain the
+  valid prefix for an explicit Accurate retry. Live audio stays off disk; Accurate builds a WAV in memory.
   Both stop below the provider's 25 MB upload limit.
 - `LiveTranscriptionSession` opens immediately, bounds early audio to 300 chunks,
   flushes after `session.updated`, serializes sends and explicitly commits.

@@ -122,6 +122,17 @@ private:
     }];
 }
 
+- (BOOL)connectInputOfEngine:(AVAudioEngine *)engine toSink:(AVAudioSinkNode *)sink {
+    @try {
+        [engine connect:engine.inputNode to:sink format:_format];
+        return YES;
+    } @catch (NSException *exception) {
+        // Never expose framework descriptions or payloads through app errors/logs.
+        (void)exception;
+        return NO;
+    }
+}
+
 - (void)writeFrames:(AVAudioFrameCount)frames fromBufferList:(const AudioBufferList *)buffers {
     _storage->write(frames, buffers);
 }
