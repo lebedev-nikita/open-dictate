@@ -1,0 +1,18 @@
+{
+  "utc": "2026-10-20T11:35:10.605758+00:00",
+  "git_commit": "386aac39f81354e2a9d0e40de7236a9d0896aa2d",
+  "transport": "Direct OpenAI HTTPS HTTP/1.1 SSE; reused authenticated TLS connections",
+  "model": "gpt-6-luna",
+  "service_tier": "default",
+  "reasoning": {
+    "effort": "none"
+  },
+  "smoke": false,
+  "prompt_sha256": {
+    "ru": "96c9a5b886fe718aef07bcea9545a6572695dac12c1fe446c35666a6333bf6e9",
+    "ru_en": "85b11ef989a138064aef3aeb01026e878ebfce4fe01ef0601b9bcb15a8da2627"
+  },
+  "runner_sha256": "bd6e90d36edc2e6cc226fd11f7299b7edb10f5de2c7bd750cd539d9b98044e25",
+  "template_generator_sha256": "63694d043a8599e3947810918aba8ec7374500b929bf2957b1830c7c5b430e30",
+  "runner_commit": "26d8cdbbe16c505154de218f2b7aad12076d3207"
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "blocks": 48,
+  "seed": 20261022,
+  "arms": [
+    "cold",
+    "completed",
+    "same_concurrent",
+    "unrelated_concurrent"
+  ],
+  "primary": "same_concurrent versus cold; paired median TTFT saving",
+  "reason": "Independent replication after exploratory lead=0 anomaly; not pooled with primary study",
+  "order": "All 24 permutations twice, shuffled",
+  "bootstrap_replicates": 10000
+}

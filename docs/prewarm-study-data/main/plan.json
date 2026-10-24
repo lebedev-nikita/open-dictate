@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "seed": 20261020,
+  "waves": 4,
+  "primary_per_wave": 32,
+  "ru_per_wave": 8,
+  "layout_pairs": 24,
+  "frequent_pairs": 24,
+  "long_pairs": 16,
+  "overlap_per_lead": 12,
+  "lead_seconds": [
+    0,
+    0.5,
+    1,
+    2,
+    5
+  ],
+  "practical_ms": 200,
+  "practical_fraction": 0.1,
+  "primary": "paired median cold minus prewarmed TTFT, ru_en short sources",
+  "bootstrap_replicates": 10000
+}
