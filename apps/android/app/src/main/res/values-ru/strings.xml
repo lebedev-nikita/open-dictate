@@ -169,7 +169,7 @@
     <string name="notification_transforming">OpenDictate преобразует текст</string>
     <string name="notification_text_instruction_recording">Нажмите ещё раз, когда закончите инструкцию</string>
     <string name="notification_text_transforming">Преобразованный текст скоро появится в поле</string>
-    <string name="notification_model_messages_channel">Сообщения преобразования</string>
+    <string name="notification_errors_channel">Ошибки</string>
     <string name="stop">Остановить</string>
 
     <string name="error_add_api_key">Добавьте OpenAI API key в приложении</string>

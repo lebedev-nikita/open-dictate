@@ -301,8 +301,7 @@ class DictationForegroundService : Service() {
                         }
                     }
                 }
-                modelMessage?.let(::showModelMessage)
-                if (completed && postProcessingFailed) showModelMessage(getString(R.string.postprocessing_failed))
+                if (completed && postProcessingFailed) showPostProcessingError()
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {
@@ -412,7 +411,7 @@ class DictationForegroundService : Service() {
                             postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                     }
                 }
-                if (completed && processed.failed) showModelMessage(getString(R.string.postprocessing_failed))
+                if (completed && processed.failed) showPostProcessingError()
                 delay(1_200)
                 clearSessionIfCurrent(sessionId)
             } catch (error: Throwable) {
@@ -511,7 +510,10 @@ class DictationForegroundService : Service() {
     }
 
     private fun createNotificationChannel() {
-        getSystemService(NotificationManager::class.java).createNotificationChannels(
+        val manager = getSystemService(NotificationManager::class.java)
+        // Remove the retired informational channel and any messages left by older versions.
+        manager.deleteNotificationChannel("transformation_messages")
+        manager.createNotificationChannels(
             listOf(
                 NotificationChannel(
                     CHANNEL_ID,
@@ -522,22 +524,23 @@ class DictationForegroundService : Service() {
                     setSound(null, null)
                 },
                 NotificationChannel(
-                    MODEL_MESSAGE_CHANNEL_ID,
-                    getString(R.string.notification_model_messages_channel),
+                    ERROR_CHANNEL_ID,
+                    getString(R.string.notification_errors_channel),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ),
             ),
         )
     }
 
-    private fun showModelMessage(message: String) {
+    private fun showPostProcessingError() {
+        val message = getString(R.string.postprocessing_failed)
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val notification = NotificationCompat.Builder(this, MODEL_MESSAGE_CHANNEL_ID)
+        val notification = NotificationCompat.Builder(this, ERROR_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_mic_chatgpt_24)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(message)
@@ -547,7 +550,7 @@ class DictationForegroundService : Service() {
             .setContentIntent(contentIntent)
             .build()
         getSystemService(NotificationManager::class.java).notify(
-            MODEL_MESSAGE_NOTIFICATION_ID,
+            ERROR_NOTIFICATION_ID,
             notification,
         )
     }
@@ -623,9 +626,9 @@ class DictationForegroundService : Service() {
         const val EXTRA_POST_PROCESSING_ENABLED = "com.opendictate.app.extra.POST_PROCESSING_ENABLED"
         const val EXTRA_SESSION_ID = "com.opendictate.app.extra.SESSION_ID"
         private const val CHANNEL_ID = "dictation"
-        private const val MODEL_MESSAGE_CHANNEL_ID = "transformation_messages"
+        private const val ERROR_CHANNEL_ID = "errors"
         private const val NOTIFICATION_ID = 41
-        private const val MODEL_MESSAGE_NOTIFICATION_ID = 42
+        private const val ERROR_NOTIFICATION_ID = 42
         private val nextSession = AtomicLong(System.currentTimeMillis())
     }
 }
