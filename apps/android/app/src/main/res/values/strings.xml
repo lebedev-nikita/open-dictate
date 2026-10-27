@@ -172,7 +172,7 @@
     <string name="notification_transforming">OpenDictate is transforming text</string>
     <string name="notification_text_instruction_recording">Tap again when the instruction is complete</string>
     <string name="notification_text_transforming">The transformed text will appear in the field shortly</string>
-    <string name="notification_model_messages_channel">Transformation messages</string>
+    <string name="notification_errors_channel">Errors</string>
     <string name="stop">Stop</string>
 
     <string name="error_add_api_key">Add an OpenAI API key in the app</string>
