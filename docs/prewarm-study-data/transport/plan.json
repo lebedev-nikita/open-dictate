@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "blocks": 24,
+  "seed": 20261021,
+  "arms": [
+    "fresh",
+    "get_warmed",
+    "prewarm_warmed"
+  ],
+  "bootstrap_replicates": 10000,
+  "primary": "supplementary connection-control study"
+}
