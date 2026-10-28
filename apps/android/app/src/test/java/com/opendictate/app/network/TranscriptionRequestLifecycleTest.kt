@@ -1,7 +1,7 @@
 package com.opendictate.app.network
 
-import com.opendictate.app.model.ErrorReason
-import com.opendictate.app.model.FailureDetails
+import arrow.core.Either
+import com.opendictate.app.model.DictationError
 import java.io.File
 import java.io.IOException
 import java.net.InetAddress
@@ -76,7 +76,7 @@ class TranscriptionRequestLifecycleTest {
                     previous.join()
                     client.transcribeFile("synthetic-key", "gpt-transcribe", file, emptySet(), "", timeoutSeconds)
                 }
-                assertEquals("synthetic result", withTimeout(1_000) { next.await() })
+                assertEquals(Either.Right("synthetic result"), withTimeout(1_000) { next.await() })
                 val cancellation = runCatching { previous.await() }.exceptionOrNull()
                 assertTrue("Cancellation must not become a network error", cancellation is CancellationException)
                 withContext(Dispatchers.IO) {
@@ -102,12 +102,10 @@ class TranscriptionRequestLifecycleTest {
                 }.build()
                 val file = File.createTempFile("synthetic-timeout-", ".wav")
                 try {
-                    val failure = runCatching {
-                        OpenAiTranscriptionClient(httpClient = http).transcribeFile(
-                            "synthetic-key", "gpt-transcribe", file, emptySet(), "", 1,
-                        )
-                    }.exceptionOrNull() ?: error("Expected timeout")
-                    assertEquals(ErrorReason.TIMEOUT, FailureDetails.from(failure).reason)
+                    val result = OpenAiTranscriptionClient(httpClient = http).transcribeFile(
+                        "synthetic-key", "gpt-transcribe", file, emptySet(), "", 1,
+                    )
+                    assertEquals(Either.Left(DictationError.Timeout), result)
                 } finally {
                     server.release.countDown()
                     file.delete()

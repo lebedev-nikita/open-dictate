@@ -1,8 +1,13 @@
 package com.opendictate.app.network
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
+import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.DictationLanguage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
@@ -33,25 +38,31 @@ class OpenAiTranscriptionClientTest {
 
     @Test
     fun `live final response times out after configured interval`() = runTest {
-        var timedOut = false
-        try {
-            awaitTranscriptionResponse(30) { awaitCancellation() }
-        } catch (_: TimeoutCancellationException) {
-            timedOut = true
-        }
+        assertEquals(DictationError.Timeout.left(), awaitTranscriptionResponse<Nothing>(30) { awaitCancellation() })
+    }
 
-        assertTrue(timedOut)
+    @Test
+    fun `parent timeout is cancellation instead of a live request failure`() = runTest {
+        var cancelled = false
+        try {
+            withTimeout(100) {
+                awaitTranscriptionResponse<Nothing>(30) { awaitCancellation() }
+            }
+        } catch (_: TimeoutCancellationException) {
+            cancelled = true
+        }
+        assertTrue(cancelled)
     }
 
     @Test
     fun `live final response can wait without an overall limit`() = runTest {
-        val response = CompletableDeferred<String>()
+        val response = CompletableDeferred<Either<DictationError, String>>()
         val waiting = async { awaitTranscriptionResponse(null) { response.await() } }
 
         delay(600_000)
         assertFalse(waiting.isCompleted)
-        response.complete("recognized")
-        assertEquals("recognized", waiting.await())
+        response.complete("recognized".right())
+        assertEquals("recognized".right(), waiting.await())
     }
 
     @Test

@@ -177,6 +177,12 @@ See [setup and protocol references](docs/chatgpt-plan.md).
 
 ## Android
 
+Expected dictation and text-processing failures use Arrow typed errors containing
+only fixed categories and HTTP status codes. User messages come from bundled
+translations; provider descriptions and exception messages are not displayed or
+retained in error values. Coroutine cancellation propagates separately from
+request timeouts and does not create an error record.
+
 OpenDictate intentionally never logs authorization headers, API keys, audio,
 transcript contents, transformation instructions, or focused-field text.
 Model discovery calls OpenAI directly and stores only model IDs in app-private

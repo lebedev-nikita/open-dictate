@@ -1,5 +1,13 @@
 # Third-party notices
 
+## Arrow Core — Android typed errors
+
+Source: https://github.com/arrow-kt/arrow
+
+Copyright (C) 2017 The Arrow Authors. Licensed under the Apache License, Version 2.0.
+The license text is included in
+`apps/android/app/src/main/assets/ARROW_LICENSE.txt`.
+
 ## Google Material Icons — menu_book icon
 
 Source: https://github.com/google/material-design-icons/blob/master/src/maps/menu_book/materialicons/24px.svg

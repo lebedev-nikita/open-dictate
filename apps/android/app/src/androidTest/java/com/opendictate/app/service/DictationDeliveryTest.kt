@@ -532,6 +532,15 @@ class DictationDeliveryTest {
             .putExtra(DictationForegroundService.EXTRA_SESSION_ID, session.sessionId))
         await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
         context.stopService(Intent(context, DictationForegroundService::class.java))
+        // Cancellation publishes IDLE before asynchronous recorder/service teardown finishes.
+        // Do not let the real onDestroy clear the synthetic provider state injected next.
+        @Suppress("DEPRECATION")
+        val manager = context.getSystemService(android.app.ActivityManager::class.java)
+        @Suppress("DEPRECATION")
+        fun hasDictationService() = manager.getRunningServices(Int.MAX_VALUE).any {
+            it.service.className == DictationForegroundService::class.java.name
+        }
+        await { !hasDictationService() }
         instrumentation.waitForIdleSync()
         return session
     }
@@ -568,7 +577,9 @@ class DictationDeliveryTest {
         val previousAppearance = settings.dictationButtonAppearance
         settings.dictationButtonAppearance = DictationButtonAppearance()
         val previousFilter = settings.appFilter
-        settings.appFilter = AppFilter()
+        // Another test may leave a focused Settings search behind the fixture activity.
+        // Teardown assertions concern this editor, so exclude unrelated background apps.
+        settings.appFilter = AppFilter(mode = AppFilterMode.ONLY_SELECTED, allowedPackages = setOf(context.packageName))
         settings.model = TranscriptionModel.ACCURATE
         // Recording is cancelled before injecting provider states; no OpenAI requests are made.
         SecureApiKeyStore(context).save("instrumentation-placeholder")
