@@ -159,7 +159,9 @@ those system interactions.
 ## Releases and secrets
 
 Create every Android and macOS release candidate as a draft GitHub release.
-Verify `draft: true` after the release workflow finishes.
+Publish stable releases, including patch releases, as non-draft GitHub releases.
+After the release workflow finishes, verify `draft: true` for release candidates
+and `draft: false` for stable releases.
 
 Release signing is configured only when `SIGNING_KEY`, `KEY_ALIAS`,
 `KEY_PASSWORD`, and `STORE_PASSWORD` are present. `SIGNING_KEY` is a base64 JKS.

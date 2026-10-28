@@ -58,7 +58,7 @@ class OpenAiTranscriptionClient(
 
     suspend fun listModels(apiKey: String): ModelCatalog = withContext(Dispatchers.IO) {
         val request = authorizedRequest(apiKey, MODELS_URL).build()
-        client.newCall(request).await().use { response ->
+        client.newCall(request).awaitResponse { response ->
             if (!response.isSuccessful) {
                 throw OpenAiException(errorMessage(response.code, response.body.string()), failureDetails = FailureDetails.http(response.code))
             }
@@ -80,7 +80,7 @@ class OpenAiTranscriptionClient(
             .build()
         val transcriptionClient = client.forTranscriptionResponse(responseTimeoutSeconds)
         try {
-            transcriptionClient.newCall(request).await().use { response ->
+            transcriptionClient.newCall(request).awaitResponse { response ->
                 val body = response.body.string()
                 if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body), failureDetails = FailureDetails.http(response.code))
                 JSONObject(body).optString("text").trim()
@@ -175,7 +175,7 @@ class OpenAiTranscriptionClient(
         }
         val request = authorizedRequest(apiKey, RESPONSES_URL).header("Content-Type", "application/json")
             .post(body.toString().toRequestBody(JSON)).build()
-        return client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).await().use { response ->
+        return client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).awaitResponse { response ->
             val text = response.body.string()
             if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, text), failureDetails = FailureDetails.http(response.code))
             JSONObject(text)
@@ -339,17 +339,25 @@ class OpenAiTranscriptionClient(
             ?: localized(R.string.error_openai_code, "OpenAI returned error $code", code)
     }
 
-    private suspend fun Call.await(): Response = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+    private suspend fun <T> Call.awaitResponse(readResponse: (Response) -> T): T = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+        // Headers do not finish a call. Keep cancellation attached while its body is read,
+        // otherwise a cancelled session can block the next one until the network timeout.
+        continuation.invokeOnCancellation { cancel() }
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (continuation.isActive) continuation.resumeWith(Result.failure(e))
             }
 
             override fun onResponse(call: Call, response: Response) {
-                continuation.resumeWith(Result.success(response))
+                val result = runCatching {
+                    response.use {
+                        if (!continuation.isActive) return
+                        readResponse(it)
+                    }
+                }
+                if (continuation.isActive) continuation.resumeWith(result)
             }
         })
-        continuation.invokeOnCancellation { cancel() }
     }
 
     private fun Throwable.userMessage(): String = when (this) {

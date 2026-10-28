@@ -11,10 +11,6 @@ on:
         description: Release tag to prepare
         required: true
         type: string
-      draft:
-        description: Keep the release unpublished as a draft
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -71,4 +67,4 @@ jobs:
           target_commitish: ${{ github.sha }}
           files: OpenDictate-${{ env.RELEASE_TAG }}.apk
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          draft: ${{ github.event_name != 'workflow_dispatch' || inputs.draft || contains(env.RELEASE_TAG, '-rc.') }}
+          draft: ${{ contains(env.RELEASE_TAG, '-rc.') }}
