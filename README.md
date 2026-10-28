@@ -174,6 +174,9 @@ permission testing, native smoke checks, shortcut configuration and packaging.
 
 ## Releases
 
+Stable releases, including patches, are published immediately. Release candidates
+remain draft prereleases until explicitly published.
+
 - Android: `v*` tags publish signed APKs through `release.yml`. Signing uses
   `SIGNING_KEY`, `KEY_ALIAS`, `KEY_PASSWORD` and `STORE_PASSWORD` Actions secrets.
   Preview builds retain the weekly/manual `preview.yml` workflow.
