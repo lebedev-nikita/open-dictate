@@ -1,6 +1,8 @@
 package com.opendictate.app.model
 
-import kotlinx.coroutines.CancellationException
+import arrow.core.Either
+import arrow.core.getOrElse
+import arrow.core.left
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
@@ -67,7 +69,7 @@ data class PostProcessingSettings(
     }
 }
 
-data class PostProcessingResult(val text: String, val failure: FailureDetails? = null) {
+data class PostProcessingResult(val text: String, val failure: DictationError? = null) {
     val failed: Boolean get() = failure != null
 }
 
@@ -78,25 +80,32 @@ object PostProcessing {
         "values, signs and precision when changing number notation. Return only the resulting text " +
         "in transformed_text, with no explanations, confirmations or markup added by you."
 
-    suspend fun apply(source: String, settings: PostProcessingSettings, request: suspend () -> String): PostProcessingResult {
+    suspend fun apply(source: String, settings: PostProcessingSettings, request: suspend () -> Either<DictationError, String>): PostProcessingResult {
         currentCoroutineContext().ensureActive()
         if (!settings.shouldProcess || source.isBlank()) return PostProcessingResult(source)
-        return try {
-            require(settings.isValid)
-            val candidate = request().trim()
-            currentCoroutineContext().ensureActive()
-            val reason = when {
-                candidate.isBlank() -> ErrorReason.EMPTY_RESULT
-                settings.hasValueFormatting && !ScaledIntegerGuard.preserves(source, candidate) -> ErrorReason.VALUE_CHANGED
-                settings.punctuation && !settings.hasValueFormatting -> punctuationFailure(candidate, source)
-                else -> null
-            }
-            if (reason != null) PostProcessingResult(source, FailureDetails(reason)) else PostProcessingResult(candidate)
-        } catch (error: CancellationException) { throw error }
-        catch (error: Exception) {
-            currentCoroutineContext().ensureActive()
-            PostProcessingResult(source, FailureDetails.from(error))
-        }
+        if (!settings.isValid) return PostProcessingResult(source, DictationError.InvalidResponse)
+        // Post-processing is optional: even an unexpected nonfatal failure retains the source.
+        // Arrow's catch deliberately lets cancellation and fatal errors propagate.
+        val result = Either.catch { request() }.getOrElse { DictationError.from(it).left() }
+        currentCoroutineContext().ensureActive()
+        return result.fold(
+            ifLeft = { PostProcessingResult(source, it) },
+            ifRight = { text ->
+                val candidate = text.trim()
+                currentCoroutineContext().ensureActive()
+                val reason = when {
+                    candidate.isBlank() -> ErrorReason.EMPTY_RESULT
+                    settings.hasValueFormatting && !ScaledIntegerGuard.preserves(source, candidate) -> ErrorReason.VALUE_CHANGED
+                    settings.punctuation && !settings.hasValueFormatting -> punctuationFailure(candidate, source)
+                    else -> null
+                }
+                when (reason) {
+                    null -> PostProcessingResult(candidate)
+                    ErrorReason.EMPTY_RESULT -> PostProcessingResult(source, DictationError.EmptyResult)
+                    else -> PostProcessingResult(source, DictationError.Rejected(reason))
+                }
+            },
+        )
     }
 
     private fun punctuationFailure(candidate: String, source: String): ErrorReason? {

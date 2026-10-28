@@ -1,14 +1,20 @@
 package com.opendictate.app.model
 
+import arrow.core.right
+import arrow.core.left
 import com.opendictate.app.network.postProcessingRequest
 import com.opendictate.app.network.extractPostProcessingResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
-import java.io.IOException
 import java.util.Locale
 
 class PostProcessingTest {
@@ -109,17 +115,32 @@ class PostProcessingTest {
         for (i in 0 until cases.length()) {
             val example = cases.getJSONObject(i)
             val settings = values().copy(formatValues = false)
-            val result = PostProcessing.apply(example.getString("source"), settings) { example.getString("candidate") }
+            val result = PostProcessing.apply(example.getString("source"), settings) { example.getString("candidate").right() }
             assertEquals(example.getString("expected"), result.text)
         }
     }
     @Test fun valueInstructionsPermitChangesAndFailuresPreserveSourceButCancellationDoesNotDeliver() = runTest {
         val settings = values()
-        assertEquals(PostProcessingResult("123 000"), PostProcessing.apply("сто двадцать три тысячи", settings) { "123 000" })
-        assertEquals(PostProcessingResult("source", FailureDetails(ErrorReason.EMPTY_RESULT)), PostProcessing.apply("source", settings) { " " })
-        assertEquals(PostProcessingResult("source", FailureDetails(ErrorReason.NETWORK)), PostProcessing.apply("source", settings) { throw IOException() })
+        assertEquals(PostProcessingResult("123 000"), PostProcessing.apply("сто двадцать три тысячи", settings) { "123 000".right() })
+        assertEquals(PostProcessingResult("source", DictationError.EmptyResult), PostProcessing.apply("source", settings) { " ".right() })
+        assertEquals(PostProcessingResult("source", DictationError.Network), PostProcessing.apply("source", settings) { DictationError.Network.left() })
+        assertEquals(PostProcessingResult("source", DictationError.Unexpected), PostProcessing.apply("source", settings) { error("synthetic defect") })
         try { PostProcessing.apply("source", settings) { throw CancellationException() }; fail("Cancellation") }
         catch (_: CancellationException) { }
+    }
+    @Test fun cancellationRacingWithTypedFailureCannotDeliverTheFallback() = runTest {
+        supervisorScope {
+            val processing = async(start = CoroutineStart.UNDISPATCHED) {
+                PostProcessing.apply("synthetic source", values()) {
+                    currentCoroutineContext()[Job]!!.cancel()
+                    DictationError.Timeout.left()
+                }
+            }
+            try {
+                processing.await()
+                fail("A cancelled session must not return fallback text")
+            } catch (_: CancellationException) { }
+        }
     }
     @Test fun structuredRequestSeparatesSourceAndGeneratedInstructions() {
         val settings = values()
@@ -140,8 +161,8 @@ class PostProcessingTest {
             val source = row.getString("source")
             val candidate = row.getString("candidate")
             val valid = row.getBoolean("valid")
-            val result = PostProcessing.apply(source, values()) { candidate }
-            assertEquals("case $i", PostProcessingResult(if (valid) candidate else source, if (valid) null else FailureDetails(ErrorReason.VALUE_CHANGED)), result)
+            val result = PostProcessing.apply(source, values()) { candidate.right() }
+            assertEquals("case $i", PostProcessingResult(if (valid) candidate else source, if (valid) null else DictationError.Rejected(ErrorReason.VALUE_CHANGED)), result)
         }
     }
 

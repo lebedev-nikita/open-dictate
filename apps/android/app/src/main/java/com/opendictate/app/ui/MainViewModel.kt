@@ -11,17 +11,18 @@ import android.view.accessibility.AccessibilityManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import arrow.core.getOrElse
 import com.opendictate.app.OpenDictateApplication
 import com.opendictate.app.R
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.data.fuzzySearch
-import com.opendictate.app.model.DictationLanguage
-import com.opendictate.app.model.DictationButtonAppearance
-import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
+import com.opendictate.app.model.AppTheme
+import com.opendictate.app.model.DictationButtonAppearance
+import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
@@ -85,7 +86,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var chatGPTJob: Job? = null
     val driveSync = (application as OpenDictateApplication).driveSync
     private val historyStore = (application as OpenDictateApplication).transcriptHistoryStore
-    private val apiClient = OpenAiTranscriptionClient(application.resources)
+    private val apiClient = OpenAiTranscriptionClient()
     private val mutableState = MutableStateFlow(loadState())
     val state = mutableState.asStateFlow()
     private val mutableHistoryState = MutableStateFlow(HistoryUiState())
@@ -235,7 +236,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         modelLoadJob = viewModelScope.launch {
             mutableState.update { it.copy(modelsLoading = true, modelsError = false) }
             try {
-                val catalog = apiClient.listModels(key)
+                val catalog = apiClient.listModels(key).getOrElse {
+                    mutableState.update { it.copy(modelsLoading = false, modelsError = true) }
+                    return@launch
+                }
                 val previous = mutableState.value.modelCatalog
                 val hadCatalog = settings.modelCatalogUpdatedAt > 0L
                 settings.modelCatalog = catalog
@@ -250,7 +254,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         newModelCount = if (hadCatalog) added.size else 0,
                     )
                 }
-            } catch (error: Throwable) {
+            } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 mutableState.update { it.copy(modelsLoading = false, modelsError = true) }
             }

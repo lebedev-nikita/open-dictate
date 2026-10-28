@@ -29,7 +29,7 @@ class ChatGPTSessionTest {
             val captured = requireNotNull(session.activeAccount())
             assertTrue(session.state.value.failed)
             val api = OkHttpClient.Builder().addInterceptor { error("API fallback must not run") }.build()
-            val result = com.opendictate.app.network.OpenAiTranscriptionClient(transient.resources, session, api)
+            val result = com.opendictate.app.network.OpenAiTranscriptionClient(chatGPT = session, httpClient = api)
                 .postProcess("must-not-be-used", "Synthetic", com.opendictate.app.model.PostProcessingSettings(true),
                     emptySet(), chatGPTAccount = captured)
             assertFalse(result.failed)
@@ -243,11 +243,12 @@ class ChatGPTSessionTest {
             }.build()
             val api = OkHttpClient.Builder().addInterceptor { error("API fallback must not run") }.build()
             val result = com.opendictate.app.network.OpenAiTranscriptionClient(
-                context.resources, ChatGPTSession(context, http), api,
+                chatGPT = ChatGPTSession(context, http), httpClient = api,
             ).postProcess("synthetic-key", "synthetic source", com.opendictate.app.model.PostProcessingSettings(true),
                 emptySet(), chatGPTAccount = "oaiapp_test")
             assertEquals("synthetic source", result.text)
-            assertEquals(com.opendictate.app.model.FailureDetails(com.opendictate.app.model.ErrorReason.HTTP, 429), result.failure)
+            assertTrue(result.failure is com.opendictate.app.model.DictationError.ChatGPT)
+            assertEquals(com.opendictate.app.model.FailureDetails(com.opendictate.app.model.ErrorReason.HTTP, 429), result.failure?.failureDetails)
         } finally { cleanup() }
     }
 

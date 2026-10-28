@@ -37,6 +37,7 @@ data class DictationState(
     val model: TranscriptionModel? = null,
     val transcript: String = "",
     val message: String? = null,
+    val failure: com.opendictate.app.model.DictationError? = null,
     val processingStage: DictationProcessingStage? = null,
     val postProcessingEnabled: Boolean = false,
     val diagnostics: com.opendictate.app.model.ErrorContext? = null,

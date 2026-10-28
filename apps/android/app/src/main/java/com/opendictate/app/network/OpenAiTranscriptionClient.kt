@@ -1,49 +1,50 @@
 package com.opendictate.app.network
 
-import android.content.res.Resources
 import android.util.Base64
-import androidx.annotation.StringRes
-import com.opendictate.app.R
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.raise.either
+import arrow.core.raise.ensure
+import arrow.core.right
 import com.opendictate.app.audio.PcmAudioRecorder
 import com.opendictate.app.data.transcriptionKeywords
+import com.opendictate.app.model.DiagnosticException
+import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.DictationLanguage
+import com.opendictate.app.model.ErrorReason
+import com.opendictate.app.model.FailureDetails
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessing
-import com.opendictate.app.model.DiagnosticFailure
-import com.opendictate.app.model.DiagnosticException
-import com.opendictate.app.model.FailureDetails
-import com.opendictate.app.model.ErrorReason
+import com.opendictate.app.model.PostProcessingResult
+import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.TextProcessingModel
 import com.opendictate.app.model.TextProcessingServiceTier
-import com.opendictate.app.model.PostProcessingSettings
-import com.opendictate.app.model.PostProcessingResult
+import java.io.File
+import java.io.IOException
+import java.util.ArrayDeque
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
-import java.io.IOException
-import java.util.ArrayDeque
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 class OpenAiTranscriptionClient(
-    private val resources: Resources? = null,
     private val chatGPT: com.opendictate.app.chatgpt.ChatGPTSession? = null,
     httpClient: OkHttpClient? = null,
 ) {
@@ -56,13 +57,13 @@ class OpenAiTranscriptionClient(
         .retryOnConnectionFailure(true)
         .build()
 
-    suspend fun listModels(apiKey: String): ModelCatalog = withContext(Dispatchers.IO) {
+    suspend fun listModels(apiKey: String): Either<DictationError, ModelCatalog> = withContext(Dispatchers.IO) {
         val request = authorizedRequest(apiKey, MODELS_URL).build()
         client.newCall(request).awaitResponse { response ->
-            if (!response.isSuccessful) {
-                throw OpenAiException(errorMessage(response.code, response.body.string()), failureDetails = FailureDetails.http(response.code))
+            either {
+                ensure(response.isSuccessful) { DictationError.Http(response.code) }
+                ModelCatalog.fromModelsResponse(response.body.string())
             }
-            ModelCatalog.fromModelsResponse(response.body.string())
         }
     }
 
@@ -73,22 +74,19 @@ class OpenAiTranscriptionClient(
         languages: Set<DictationLanguage>,
         dictionary: String,
         responseTimeoutSeconds: Int?,
-    ): String = withContext(Dispatchers.IO) {
-        val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary)
-        val request = authorizedRequest(apiKey, TRANSCRIPTIONS_URL)
-            .post(multipart)
-            .build()
-        val transcriptionClient = client.forTranscriptionResponse(responseTimeoutSeconds)
-        try {
+    ): Either<DictationError, String> = withContext(Dispatchers.IO) {
+        either {
+            val multipart = transcriptionMultipartBody(modelId, audioFile, languages, dictionary)
+            val request = authorizedRequest(apiKey, TRANSCRIPTIONS_URL)
+                .post(multipart)
+                .build()
+            val transcriptionClient = client.forTranscriptionResponse(responseTimeoutSeconds)
             transcriptionClient.newCall(request).awaitResponse { response ->
-                val body = response.body.string()
-                if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, body), failureDetails = FailureDetails.http(response.code))
-                JSONObject(body).optString("text").trim()
-            }
-        } catch (error: OpenAiException) {
-            throw error
-        } catch (error: IOException) {
-            throw OpenAiException(error.userMessage(), error)
+                either {
+                    ensure(response.isSuccessful) { DictationError.Http(response.code) }
+                    JSONObject(response.body.string()).getString("text").trim()
+                }
+            }.bind().also { ensure(it.isNotBlank()) { DictationError.EmptyResult } }
         }
     }
 
@@ -104,7 +102,7 @@ class OpenAiTranscriptionClient(
         onReady: () -> Unit,
         onPartial: (String) -> Unit,
         onAudio: (ByteArray) -> Unit = {},
-    ): String {
+    ): Either<DictationError, String> = either {
         val session = LiveSession(apiKey, modelId, languages, dictionary, onPartial)
         try {
             session.connect()
@@ -112,22 +110,19 @@ class OpenAiTranscriptionClient(
                 onAudio(chunk)
                 session.sendAudio(chunk)
             }
-            withTimeout(CONNECT_TIMEOUT_MS) { session.ready.await() }
+            val ready = withTimeoutOrNull(CONNECT_TIMEOUT_MS) { session.ready.await() }
+                ?: DictationError.Timeout.left()
+            ready.bind()
             onReady()
             waitForStop()
             recorder.stop()
-            session.commit()
-            return try {
-                awaitTranscriptionResponse(responseTimeoutSeconds) { session.completed.await() }.trim()
-            } catch (error: TimeoutCancellationException) {
-                throw OpenAiException(
-                    localized(R.string.error_openai_timeout, "OpenAI did not respond in time"),
-                    error,
-                )
-            }
+            session.commit().bind()
+            val result = awaitTranscriptionResponse(responseTimeoutSeconds) { session.completed.await() }
+            result.bind().trim().also { ensure(it.isNotBlank()) { DictationError.EmptyResult } }
         } finally {
-            recorder.stop()
-            session.close()
+            withContext(NonCancellable) {
+                try { recorder.stop() } finally { session.close() }
+            }
         }
     }
 
@@ -138,59 +133,51 @@ class OpenAiTranscriptionClient(
         modelId: String = TextProcessingModel.ID,
         chatGPTAccount: String? = null,
         serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD,
-    ): TextTransformationResult = try {
-        withTimeout(TRANSFORMATION_TIMEOUT_MS) {
+    ): Either<DictationError, TextTransformationResult> =
+        withTimeoutOrNull(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
-                val body = textResponse(apiKey, textTransformationRequest(sourceText, instruction, modelId, serviceTier), chatGPTAccount)
-                runCatching { extractTransformationResult(body) }
-                    .getOrElse { throw OpenAiException(localized(R.string.error_transformation_empty, "OpenAI returned no transformed text")) }
+                either {
+                    val body = textResponse(apiKey, textTransformationRequest(sourceText, instruction, modelId, serviceTier), chatGPTAccount).bind()
+                    requestAttempt { extractTransformationResult(body) }
+                        .mapLeft { if (it == DictationError.EmptyResult) DictationError.EmptyTransformation else it }.bind()
+                }
             }
-        }
-    } catch (error: TimeoutCancellationException) {
-        throw OpenAiException(
-            localized(
-                R.string.error_transformation_timeout,
-                "Text transformation took too long",
-            ),
-            error,
-        )
-    } catch (error: OpenAiException) {
-        throw error
-    } catch (error: IOException) {
-        throw OpenAiException(error.userMessage(), error)
-    }
+        } ?: DictationError.Timeout.left()
 
     internal suspend fun postProcess(apiKey: String, source: String, settings: PostProcessingSettings, languages: Set<DictationLanguage>, modelId: String = TextProcessingModel.ID, chatGPTAccount: String? = null, serviceTier: TextProcessingServiceTier = TextProcessingServiceTier.STANDARD): PostProcessingResult =
         PostProcessing.apply(source, settings) {
             withContext(Dispatchers.IO) {
-                extractPostProcessingResult(textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }, serviceTier), chatGPTAccount))
+                either {
+                    val body = textResponse(apiKey, postProcessingRequest(source, settings, modelId, languages.map { it.code }, serviceTier), chatGPTAccount).bind()
+                    requestAttempt { extractPostProcessingResult(body) }.bind()
+                }
             }
         }
 
-    private suspend fun textResponse(apiKey: String, body: JSONObject, account: String?): JSONObject {
+    private suspend fun textResponse(apiKey: String, body: JSONObject, account: String?): Either<DictationError, JSONObject> {
         if (account != null) {
-            try { return requireNotNull(chatGPT).response(account, body) }
-            catch (error: kotlinx.coroutines.CancellationException) { throw error }
-            catch (error: Exception) { throw OpenAiException(localized(R.string.chatgpt_request_failed, "ChatGPT unavailable. Check plan usage. No API fallback was used."), error) }
+            return requestAttempt { requireNotNull(chatGPT).response(account, body) }
+                .mapLeft { DictationError.ChatGPT(it.failureDetails) }
         }
         val request = authorizedRequest(apiKey, RESPONSES_URL).header("Content-Type", "application/json")
             .post(body.toString().toRequestBody(JSON)).build()
         return client.newBuilder().callTimeout(30, TimeUnit.SECONDS).build().newCall(request).awaitResponse { response ->
-            val text = response.body.string()
-            if (!response.isSuccessful) throw OpenAiException(errorMessage(response.code, text), failureDetails = FailureDetails.http(response.code))
-            JSONObject(text)
+            either {
+                ensure(response.isSuccessful) { DictationError.Http(response.code) }
+                JSONObject(response.body.string())
+            }
         }
     }
 
-    private inner class LiveSession(
+    internal inner class LiveSession(
         private val apiKey: String,
         private val modelId: String,
         private val languages: Set<DictationLanguage>,
         private val dictionary: String,
         private val onPartial: (String) -> Unit,
     ) : WebSocketListener() {
-        val ready = CompletableDeferred<Unit>()
-        val completed = CompletableDeferred<String>()
+        val ready = CompletableDeferred<Either<DictationError, Unit>>()
+        val completed = CompletableDeferred<Either<DictationError, String>>()
         private val lock = Any()
         private val pendingAudio = ArrayDeque<ByteArray>()
         private val aggregate = StringBuilder()
@@ -206,11 +193,16 @@ class OpenAiTranscriptionClient(
         }
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary).toString())
+            if (!webSocket.send(realtimeTranscriptionSessionUpdate(modelId, languages, dictionary).toString())) {
+                fail(DictationError.Network)
+            }
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            val event = runCatching { JSONObject(text) }.getOrNull() ?: return
+            val event = requestAttempt { JSONObject(text) }.fold(
+                { fail(it); return },
+                { it },
+            )
             when (event.optString("type")) {
                 "session.updated", "transcription_session.updated" -> {
                     configured.set(true)
@@ -220,7 +212,7 @@ class OpenAiTranscriptionClient(
                         }
                     }
                     queued.forEach(::sendNow)
-                    ready.complete(Unit)
+                    ready.complete(Unit.right())
                 }
                 "conversation.item.input_audio_transcription.delta" -> {
                     val delta = event.optString("delta")
@@ -236,43 +228,21 @@ class OpenAiTranscriptionClient(
                         synchronized(aggregate) { aggregate.toString() }
                     }
                     onPartial(transcript)
-                    completed.complete(transcript)
+                    completed.complete(transcript.right())
                 }
                 "conversation.item.input_audio_transcription.failed" -> {
-                    fail(OpenAiException(readRealtimeError(event), failureDetails = FailureDetails(ErrorReason.PROVIDER)))
+                    fail(DictationError.Provider())
                 }
-                "error" -> fail(OpenAiException(readRealtimeError(event), failureDetails = FailureDetails(ErrorReason.PROVIDER)))
+                "error" -> fail(DictationError.Provider())
             }
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            fail(
-                OpenAiException(
-                    response?.let {
-                        localized(
-                            R.string.error_openai_response_code,
-                            "OpenAI returned ${it.code}",
-                            it.code,
-                        )
-                    } ?: t.userMessage(),
-                    t,
-                    response?.let { FailureDetails.http(it.code) },
-                ),
-            )
+            fail(response?.let { DictationError.Http(it.code) } ?: DictationError.from(t))
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            if (!completed.isCompleted) {
-                fail(
-                    OpenAiException(
-                        localized(
-                            R.string.error_connection_closed,
-                            "The connection closed before text was received",
-                        ),
-                        failureDetails = FailureDetails(ErrorReason.STREAM_INCOMPLETE),
-                    ),
-                )
-            }
+            if (!completed.isCompleted) fail(DictationError.StreamIncomplete)
         }
 
         fun sendAudio(bytes: ByteArray) {
@@ -291,31 +261,22 @@ class OpenAiTranscriptionClient(
                 .put("type", "input_audio_buffer.append")
                 .put("audio", Base64.encodeToString(bytes, Base64.NO_WRAP))
             if (socket?.send(event.toString()) != true) {
-                fail(
-                    OpenAiException(
-                        localized(R.string.error_audio_send_failed, "Could not send audio"),
-                    ),
-                )
+                fail(DictationError.Network)
             }
         }
 
-        fun commit() {
-            check(socket?.send("{\"type\":\"input_audio_buffer.commit\"}") == true) {
-                localized(
-                    R.string.error_connection_already_closed,
-                    "The connection is already closed",
-                )
-            }
-        }
+        fun commit(): Either<DictationError, Unit> =
+            if (socket?.send("{\"type\":\"input_audio_buffer.commit\"}") == true) Unit.right()
+            else DictationError.StreamIncomplete.left()
 
         fun close() {
             socket?.close(1000, "dictation complete")
             socket = null
         }
 
-        private fun fail(error: Throwable) {
-            ready.completeExceptionally(error)
-            completed.completeExceptionally(error)
+        private fun fail(error: DictationError) {
+            ready.complete(error.left())
+            completed.complete(error.left())
         }
     }
 
@@ -325,58 +286,26 @@ class OpenAiTranscriptionClient(
             .header("Authorization", "Bearer $apiKey")
             .header("User-Agent", "OpenDictate-Android/0.1.0")
 
-    private fun readRealtimeError(event: JSONObject): String {
-        val error = event.optJSONObject("error")
-        return error?.optString("message")?.takeIf { it.isNotBlank() }
-            ?: localized(R.string.error_stream_rejected, "OpenAI rejected the audio stream")
-    }
-
-    private fun errorMessage(code: Int, body: String): String {
-        val apiMessage = runCatching {
-            JSONObject(body).optJSONObject("error")?.optString("message")
-        }.getOrNull()
-        return apiMessage?.takeIf { it.isNotBlank() }
-            ?: localized(R.string.error_openai_code, "OpenAI returned error $code", code)
-    }
-
-    private suspend fun <T> Call.awaitResponse(readResponse: (Response) -> T): T = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+    private suspend fun <T> Call.awaitResponse(readResponse: (Response) -> Either<DictationError, T>): Either<DictationError, T> = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
         // Headers do not finish a call. Keep cancellation attached while its body is read,
         // otherwise a cancelled session can block the next one until the network timeout.
         continuation.invokeOnCancellation { cancel() }
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isActive) continuation.resumeWith(Result.failure(e))
+                if (continuation.isActive) continuation.resumeWith(Result.success(DictationError.from(e).left()))
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val result = runCatching {
                     response.use {
                         if (!continuation.isActive) return
-                        readResponse(it)
+                        requestAttempt { readResponse(it) }.fold({ error -> error.left() }, { value -> value })
                     }
                 }
                 if (continuation.isActive) continuation.resumeWith(result)
             }
         })
     }
-
-    private fun Throwable.userMessage(): String = when (this) {
-        is java.net.UnknownHostException -> localized(
-            R.string.error_no_internet,
-            "No internet connection",
-        )
-        is java.io.InterruptedIOException -> localized(
-            R.string.error_openai_timeout,
-            "OpenAI did not respond in time",
-        )
-        else -> message ?: localized(R.string.error_network, "Network error")
-    }
-
-    private fun localized(
-        @StringRes id: Int,
-        fallback: String,
-        vararg formatArgs: Any,
-    ): String = resources?.getString(id, *formatArgs) ?: fallback
 
     companion object {
         private const val TRANSCRIPTIONS_URL = "https://api.openai.com/v1/audio/transcriptions"
@@ -397,11 +326,12 @@ internal fun OkHttpClient.forTranscriptionResponse(timeoutSeconds: Int?): OkHttp
 
 internal suspend fun <T> awaitTranscriptionResponse(
     timeoutSeconds: Int?,
-    response: suspend () -> T,
-): T = if (timeoutSeconds == null) {
+    response: suspend () -> Either<DictationError, T>,
+): Either<DictationError, T> = if (timeoutSeconds == null) {
     response()
 } else {
-    withTimeout(TimeUnit.SECONDS.toMillis(timeoutSeconds.toLong())) { response() }
+    withTimeoutOrNull(TimeUnit.SECONDS.toMillis(timeoutSeconds.toLong())) { response() }
+        ?: DictationError.Timeout.left()
 }
 
 internal fun textTransformationRequest(
@@ -483,10 +413,10 @@ internal data class TextTransformationResult(
 
 internal fun extractTransformationResult(response: JSONObject): TextTransformationResult {
     val output = extractResponseText(response)
-    if (output.isBlank()) throw IllegalArgumentException("Missing transformation output")
+    if (output.isBlank()) throw DiagnosticException(FailureDetails(ErrorReason.EMPTY_RESULT))
     val result = JSONObject(output)
     val text = result.optString("transformed_text")
-    if (text.isBlank()) throw IllegalArgumentException("Missing transformed text")
+    if (text.isBlank()) throw DiagnosticException(FailureDetails(ErrorReason.EMPTY_RESULT))
     val message = if (result.isNull("message")) {
         null
     } else {
@@ -580,6 +510,3 @@ internal fun realtimeTranscriptionSessionUpdate(
                 .put("audio", JSONObject().put("input", input)),
         )
 }
-
-class OpenAiException(message: String, cause: Throwable? = null,
-                      override val failureDetails: FailureDetails? = null) : IOException(message, cause), DiagnosticFailure

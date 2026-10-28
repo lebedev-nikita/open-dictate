@@ -1,7 +1,7 @@
 package com.opendictate.app.model
 
 import com.opendictate.app.chatgpt.ChatGPTResponseAccumulator
-import com.opendictate.app.network.OpenAiException
+import arrow.core.right
 import com.opendictate.app.network.OpenAiTranscriptionClient
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -23,11 +23,11 @@ class ErrorDiagnosticsTest {
             Triple("open foo.bar", "Open foobar.", ErrorReason.WORDS_CHANGED),
             Triple("цена 1.5 рубля", "Цена 15 рубля.", ErrorReason.NUMBERS_CHANGED),
         )) {
-            val result = PostProcessing.apply(source, settings) { candidate }
+            val result = PostProcessing.apply(source, settings) { candidate.right() }
             assertEquals(source, result.text)
-            assertEquals(FailureDetails(reason), result.failure)
+            assertEquals(FailureDetails(reason), result.failure?.failureDetails)
         }
-        assertFalse(PostProcessing.apply("да конечно", settings) { "Да, конечно." }.failed)
+        assertFalse(PostProcessing.apply("да конечно", settings) { "Да, конечно.".right() }.failed)
     }
 
     @Test fun requestFailuresReachPostProcessingWithoutProviderText() = runTest {
@@ -52,17 +52,17 @@ class ErrorDiagnosticsTest {
                 2 -> FailureDetails(ErrorReason.INVALID_RESPONSE)
                 else -> FailureDetails(ErrorReason.STREAM_INCOMPLETE)
             }
-            assertEquals(expected, result.failure)
+            assertEquals(expected, result.failure?.failureDetails)
             assertEquals("synthetic source", result.text)
             assertFalse(result.failure.toString().contains("sensitive"))
         }
     }
 
     @Test fun wrappedNetworkAndTimeoutErrorsKeepTheirSafeCategory() {
-        assertEquals(ErrorReason.NETWORK, FailureDetails.from(OpenAiException("private", IOException("private"))).reason)
-        assertEquals(ErrorReason.TIMEOUT, FailureDetails.from(OpenAiException("private", InterruptedIOException("private"))).reason)
+        assertEquals(ErrorReason.NETWORK, FailureDetails.from(IOException("private")).reason)
+        assertEquals(ErrorReason.TIMEOUT, FailureDetails.from(InterruptedIOException("private")).reason)
         assertEquals(FailureDetails(ErrorReason.HTTP, 503), FailureDetails.from(
-            OpenAiException("private", failureDetails = FailureDetails.http(503))))
+            DiagnosticException(FailureDetails.http(503))))
         assertEquals(DiagnosticModel.OTHER, DiagnosticModel.fromId("sk-synthetic-private-value"))
     }
 
