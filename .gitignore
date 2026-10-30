@@ -19,3 +19,4 @@ dist/
 *.xcarchive
 *.p12
 .impeccable/review/
+.claude/settings.local.json
