@@ -10,6 +10,18 @@ struct OpenDictateApp {
             catch { fputs("Bundled resource verification failed.\n", stderr); exit(1) }
             return
         }
+        #if DEBUG
+        let arguments = CommandLine.arguments
+        if let index = arguments.firstIndex(where: { $0 == "--capture-benchmark" || $0 == "--capture-soak" }) {
+            let value = arguments.dropFirst(index + 1).first.flatMap(Double.init)
+            let soak = arguments[index] == "--capture-soak"
+            Task.detached {
+                await CaptureBenchmark.run(rounds: soak ? 0 : Int(value ?? 10), soakSeconds: soak ? value ?? 30 : nil)
+                exit(0)
+            }
+            dispatchMain()
+        }
+        #endif
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate

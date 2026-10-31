@@ -3,6 +3,20 @@ import OpenDictateAudio
 import XCTest
 
 final class AudioCaptureBufferTests: XCTestCase {
+    func testFirstWriteTimeIsRecordedOnceForDiagnostics() throws {
+        let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1))
+        let capture = try XCTUnwrap(ODAudioCaptureBuffer(format: format, capacityFrames: 1_024))
+        XCTAssertEqual(capture.firstWriteHostTime, 0)
+        let before = mach_absolute_time()
+        let input = try samples(format, frames: 128, start: 1)
+        capture.write(frames: input.frameLength, from: input.audioBufferList)
+        let first = capture.firstWriteHostTime
+        XCTAssertGreaterThanOrEqual(first, before)
+        XCTAssertLessThanOrEqual(first, mach_absolute_time())
+        capture.write(frames: input.frameLength, from: input.audioBufferList)
+        XCTAssertEqual(capture.firstWriteHostTime, first)
+    }
+
     func testShortFirstBufferIsReadableWithoutWaitingForFortyMilliseconds() throws {
         let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1))
         let capture = try XCTUnwrap(ODAudioCaptureBuffer(format: format, capacityFrames: 1_024))

@@ -9,6 +9,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable instancetype)initWithFormat:(AVAudioFormat *)format
                         capacityFrames:(AVAudioFrameCount)capacityFrames NS_DESIGNATED_INITIALIZER;
 @property(nonatomic, readonly) BOOL hasFailed;
+/// mach_absolute_time() of the first stored frames, or 0. Diagnostics only.
+@property(nonatomic, readonly) uint64_t firstWriteHostTime;
 - (AVAudioSinkNode *)makeSinkNode;
 /// Hardware may change between reading its format and connecting. Contain AVFAudio's
 /// Objective-C format exception so Swift can retry with a fresh graph.
