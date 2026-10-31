@@ -1,5 +1,6 @@
 #import "ODAudioCaptureBuffer.h"
 #include <atomic>
+#include <mach/mach_time.h>
 #include <cstring>
 #include <memory>
 #include <vector>
@@ -7,6 +8,7 @@
 namespace {
 // Both supported architectures provide native lock-free counters; never fall back to a mutex.
 static_assert(std::atomic<uint32_t>::is_always_lock_free);
+static_assert(std::atomic<uint64_t>::is_always_lock_free);
 constexpr size_t maximumStorageBytes = 16 * 1024 * 1024;
 
 class CaptureStorage {
@@ -24,6 +26,7 @@ public:
             return;
         }
         copy(input, nullptr, end, frames);
+        if (end == 0) firstWrite.store(mach_absolute_time(), std::memory_order_relaxed);
         written.store(end + frames, std::memory_order_release);
     }
 
@@ -42,6 +45,7 @@ public:
     }
 
     bool hasFailed() const noexcept { return failed.load(std::memory_order_acquire) != 0; }
+    uint64_t firstWriteTime() const noexcept { return firstWrite.load(std::memory_order_relaxed); }
 
 private:
     const uint32_t capacity, bufferCount, channelsPerBuffer, bytesPerFrame;
@@ -49,6 +53,7 @@ private:
     alignas(64) std::atomic<uint32_t> written{0};
     alignas(64) std::atomic<uint32_t> read{0};
     alignas(64) std::atomic<uint32_t> failed{0};
+    std::atomic<uint64_t> firstWrite{0};
 
     bool valid(const AudioBufferList *buffers, uint32_t frames) const noexcept {
         if (!buffers || buffers->mNumberBuffers != bufferCount) return false;
@@ -110,6 +115,7 @@ private:
 }
 
 - (BOOL)hasFailed { return _storage->hasFailed(); }
+- (uint64_t)firstWriteHostTime { return _storage->firstWriteTime(); }
 
 - (AVAudioSinkNode *)makeSinkNode {
     auto storage = _storage;

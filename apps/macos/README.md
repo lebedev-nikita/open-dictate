@@ -319,6 +319,14 @@ After a local recording, “Local check: retranscribe last recording in 3 second
 exercises the production retry lifecycle and delivery with synthetic text, without
 reading credentials or calling OpenAI. The delay lets the fixture regain focus.
 
+To measure capture, run the debug binary directly:
+`.build/debug/OpenDictate --capture-benchmark 10` runs cold, warm and cancel
+cycles through the production recorder; `--capture-soak 60` records once while
+you switch inputs or Bluetooth profiles. Output is JSON lines and a
+p50/p90/max summary of engine start, first callback, first PCM, first chunk,
+chunk gaps, coverage and configuration changes. It reports only timings, counts
+and the input transport, never audio or device names.
+
 Use a disposable editor document to check final clipboard insertion, cancellation before
 delivery, cursor movement, switching fields/apps, secure fields and clipboard restoration.
 Test permissions granted/denied, startup, menu actions, both languages, Spaces,
