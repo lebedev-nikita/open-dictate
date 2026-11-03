@@ -10,6 +10,8 @@ data class ReplacementState(
     val storageError: Boolean = false,
 )
 
+enum class ReplacementError { Invalid, Pattern, Storage }
+
 class ReplacementStore(context: Context, preferencesName: String = "word_replacements") {
     private val prefs = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
     private val mutableState = MutableStateFlow(load())
@@ -19,14 +21,23 @@ class ReplacementStore(context: Context, preferencesName: String = "word_replace
     fun engine(): WordReplacementEngine = state.value.let {
         WordReplacementEngine(if (it.enabled) it.document.rules else emptyList())
     }
-    fun save(id: String?, source: String, replacement: String): Boolean {
-        val source = java.text.Normalizer.normalize(source.trim(), java.text.Normalizer.Form.NFC)
+    /** Returns null when saved, otherwise the reason the rule was rejected. */
+    fun save(id: String?, source: String, replacement: String, regex: Boolean = false): ReplacementError? {
+        // Pattern whitespace is significant; an empty pattern replacement deletes the match.
+        val source = java.text.Normalizer.normalize(if (regex) source else source.trim(), java.text.Normalizer.Form.NFC)
+        val replacement = if (regex) replacement else replacement.trim()
         val current = state.value
-        if (current.storageError || current.document.rules.any { it.id != id && it.source.equals(source, ignoreCase = true) }) return false
+        if (current.storageError) return ReplacementError.Storage
+        if (current.document.rules.any { it.id != id && it.regex == regex && it.source.equals(source, ignoreCase = !regex) }) return ReplacementError.Invalid
         val previous = current.document.rules.firstOrNull { it.id == id }
-        val rule = WordReplacement(id ?: java.util.UUID.randomUUID().toString(), source, replacement.trim(), previous?.enabled ?: true)
+        val rule = WordReplacement(id ?: java.util.UUID.randomUUID().toString(), source, replacement, previous?.enabled ?: true, regex)
         val next = ReplacementDocument(current.document.rules.filterNot { it.id == rule.id } + rule)
-        return next.isValid && persist(next)
+        return when {
+            !next.isValid -> ReplacementError.Invalid
+            !rule.isUsable -> ReplacementError.Pattern
+            !persist(next) -> ReplacementError.Storage
+            else -> null
+        }
     }
     fun setEnabled(enabled: Boolean) {
         if (prefs.edit().putBoolean("enabled", enabled).commit()) {

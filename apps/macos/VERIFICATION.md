@@ -1,5 +1,23 @@
 # macOS verification
 
+## 0.6.0 — regular expression word replacements
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-03.
+
+- All Swift tests pass. Shared fixtures run identically on ICU (macOS), desktop
+  Java and Android's ICU-backed regex: groups, `${n}`/`$$` templates, empty
+  replacements, earliest/longest precedence across literal and pattern rules,
+  live trailing matches, Unicode `\w`/`\b`, skipped uncompilable patterns.
+- Store tests cover significant pattern whitespace, invalid/empty-matching
+  patterns, missing group references, per-kind duplicates and version 2 sync.
+- Native renders cover English (Aqua) and Russian (Dark Aqua). The isolated smoke
+  bundle showed the checked pattern editor with monospaced input and pattern
+  placeholders; the invalid-pattern message was exercised on the Android emulator.
+- Android emulator tests pass for the replacement store, sync and settings sheet in
+  English and Russian. Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.4.0 — choose settings when connecting Google Drive
 
 Verified on macOS 26.6.2, Apple Silicon, on 2026-10-04.

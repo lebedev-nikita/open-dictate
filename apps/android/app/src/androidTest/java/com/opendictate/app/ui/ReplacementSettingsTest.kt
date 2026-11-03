@@ -16,6 +16,8 @@ class ReplacementSettingsTest {
     @Test fun addEditDisableAndDeleteReplacement() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         fun label(id: Int) = context.getString(id)
+        // The sheet is lazy: scroll its list so rows below the editor are composed before matching them.
+        fun sheet(matcher: SemanticsMatcher) = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(isDialog())).performScrollToNode(matcher)
         // The debug app is disposable; test data is cleared before this UI scenario.
         compose.runOnIdle {
             val store = (context.applicationContext as OpenDictateApplication).replacementStore
@@ -27,16 +29,19 @@ class ReplacementSettingsTest {
         compose.onNodeWithText(label(R.string.replacements_source)).performTextInput("open dictate")
         compose.onNodeWithText(label(R.string.replacements_target)).performTextInput("OpenDictate")
         compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performScrollTo().performClick()
-        compose.onNode(hasText("OpenDictate") and hasAnyAncestor(isDialog()), useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        sheet(hasContentDescription(context.getString(R.string.replacements_toggle_rule, "open dictate")))
+        compose.onNode(hasText("OpenDictate") and hasAnyAncestor(isDialog()), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_toggle_rule, "open dictate")).performClick()
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         androidx.test.espresso.Espresso.pressBack()
         compose.onNodeWithText(context.getString(R.string.replacements_summary, 1)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(label(R.string.replacements_title)).performClick()
+        sheet(hasContentDescription(context.getString(R.string.replacements_edit_rule, "open dictate")))
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_edit_rule, "open dictate")).performClick()
         compose.onNodeWithText(label(R.string.replacements_target)).performScrollTo().performTextReplacement("OpenDictate App")
         compose.onNodeWithText(label(R.string.action_save)).performScrollTo().performClick()
-        compose.onNodeWithText("OpenDictate App", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        sheet(hasText("OpenDictate App"))
+        compose.onNodeWithText("OpenDictate App", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_toggle_rule, "open dictate")).performClick()
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         // Keep evidence of the actual Compose surface before deleting the disposable rule.
@@ -46,9 +51,47 @@ class ReplacementSettingsTest {
         File(context.getExternalFilesDir(null), "replacement-phone.png").outputStream().use {
             screenshot.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
-        compose.onNodeWithContentDescription(context.getString(R.string.replacements_delete_rule, "open dictate")).performScrollTo().performClick()
-        compose.onNodeWithText(label(R.string.replacements_empty)).performScrollTo().assertIsDisplayed()
+        sheet(hasContentDescription(context.getString(R.string.replacements_delete_rule, "open dictate")))
+        compose.onNodeWithContentDescription(context.getString(R.string.replacements_delete_rule, "open dictate")).performClick()
+        sheet(hasText(label(R.string.replacements_empty)))
+        compose.onNodeWithText(label(R.string.replacements_empty)).assertIsDisplayed()
         androidx.test.espresso.Espresso.pressBack()
         compose.onNodeWithText(context.getString(R.string.replacements_summary, 0)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun patternRuleRejectsInvalidPatternAndShowsMonospaceSource() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        fun label(id: Int) = context.getString(id)
+        fun sheet(matcher: SemanticsMatcher) = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(isDialog())).performScrollToNode(matcher)
+        val store = (context.applicationContext as OpenDictateApplication).replacementStore
+        compose.runOnIdle { store.state.value.document.rules.forEach(store::delete); store.setEnabled(true) }
+        compose.onNodeWithText(label(R.string.replacements_title)).performScrollTo().performClick()
+        sheet(hasText(label(R.string.replacements_regex)))
+        compose.onNodeWithText(label(R.string.replacements_regex)).performClick()
+        compose.onNodeWithText(label(R.string.replacements_pattern)).performTextInput("(a)")
+        compose.onNodeWithText(label(R.string.replacements_target_pattern)).performTextInput("$2")
+        compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performScrollTo().performClick()
+        sheet(hasText(label(R.string.replacements_invalid_pattern)))
+        compose.onNodeWithText(label(R.string.replacements_invalid_pattern)).assertIsDisplayed()
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
+        capture(context, "replacement-pattern-error")
+        compose.onNodeWithText("$2").performTextReplacement("$1 ₽")
+        compose.onNodeWithText("(a)").performTextReplacement("(\\d+) ?руб\\w*")
+        compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performScrollTo().performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals("250 ₽", store.engine().apply("250 рублей")) }
+        sheet(hasText("/(\\d+) ?руб\\w*/"))
+        compose.onNodeWithText("/(\\d+) ?руб\\w*/", useUnmergedTree = true).assertIsDisplayed()
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
+        capture(context, "replacement-pattern-list")
+        compose.runOnIdle { store.state.value.document.rules.forEach(store::delete) }
+    }
+    private fun capture(context: android.content.Context, name: String) {
+        val screenshot = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        val locale = context.resources.configuration.locales[0].language
+        File(context.getExternalFilesDir(null), "$name-$locale.png").outputStream().use {
+            screenshot.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
     }
 }

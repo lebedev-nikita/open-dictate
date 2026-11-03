@@ -202,7 +202,12 @@ Both Android and macOS support local word and phrase replacements in Settings.
 Add a recognized phrase and its preferred spelling, edit or delete it, disable
 individual rules, or turn replacements off. Live and Accurate dictation apply
 the same case-insensitive, whole-word rules; longer phrases win and replacements
-do not cascade. Changes take effect with the next recording. Android retry also
+do not cascade. A rule can instead be a case-insensitive regular expression
+without implicit word boundaries (use `\b`). Its replacement may insert groups
+with `$1` or `${12}`, use `$$` for a literal dollar sign, or be empty to delete
+the match. The earliest match wins, then the longer one, then phrase rules.
+Documents containing regular expressions use replacement schema version 2;
+older app versions reject them and stop syncing until updated. Changes take effect with the next recording. Android retry also
 applies the current rules. Voice editing is unchanged. Rules are separate from
 the recognition dictionary and are not sent to OpenAI. Connecting Google Drive
 syncs the rule list, each rule’s enabled state and the master switch across devices.

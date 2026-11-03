@@ -4,7 +4,10 @@ Please report vulnerabilities privately through GitHub Security Advisories.
 Do not include API keys, recordings, or other sensitive data in public issues.
 
 Word replacements use literal, case-insensitive matches with Unicode word
-boundaries. Rules are compiled once per dictation, operate only on recognized
+boundaries, or user-written regular expressions compiled by the platform
+regex engine. Patterns that fail to compile or can match empty text are
+rejected when saved; synced patterns another platform cannot compile are
+skipped. Rules are compiled once per dictation, operate only on recognized
 text, and never alter the captured original field or voice-edit instructions.
 Rules are applied on-device. Optional Drive sync uses the same app-data scope
 for the rule list and enabled states.

@@ -4,7 +4,7 @@ import OpenDictateCore
 
 @MainActor
 final class ReplacementStore: ObservableObject {
-    enum Status { case local, invalid, storageError }
+    enum Status { case local, invalid, invalidPattern, storageError }
     @Published private(set) var document: ReplacementDocument
     @Published var enabled: Bool {
         didSet { defaults.set(enabled, forKey: "wordReplacementEnabled"); onChange?() }
@@ -24,16 +24,20 @@ final class ReplacementStore: ObservableObject {
         } else { document = ReplacementDocument() }
     }
     func engine() -> WordReplacementEngine { WordReplacementEngine(rules: enabled ? document.rules : []) }
-    @discardableResult func save(id: String? = nil, source: String, replacement: String) -> Bool {
-        let source = source.trimmingCharacters(in: .whitespacesAndNewlines).precomposedStringWithCanonicalMapping
-        let replacement = replacement.trimmingCharacters(in: .whitespacesAndNewlines)
+    @discardableResult func save(id: String? = nil, source: String, replacement: String, regex: Bool = false) -> Bool {
+        // Pattern whitespace is significant; an empty pattern replacement deletes the match.
+        let source = (regex ? source : source.trimmingCharacters(in: .whitespacesAndNewlines)).precomposedStringWithCanonicalMapping
+        let replacement = regex ? replacement : replacement.trimmingCharacters(in: .whitespacesAndNewlines)
         guard storageAvailable else { status = .storageError; return false }
-        guard !rules.contains(where: { $0.id != id && $0.source.compare(source, options: [.caseInsensitive, .literal]) == .orderedSame }) else { status = .invalid; return false }
+        guard !rules.contains(where: { $0.id != id && $0.regex == regex &&
+            (regex ? $0.source == source : $0.source.compare(source, options: [.caseInsensitive, .literal]) == .orderedSame) })
+        else { status = .invalid; return false }
         let previous = document.rules.first { $0.id == id }
         let rule = WordReplacement(id: id ?? UUID().uuidString.lowercased(), source: source, replacement: replacement,
-                                   enabled: previous?.enabled ?? true)
+                                   enabled: previous?.enabled ?? true, regex: regex)
         var next = document; next.rules.removeAll { $0.id == rule.id }; next.rules.append(rule)
         guard next.isValid else { status = .invalid; return false }
+        guard rule.isUsable else { status = .invalidPattern; return false }
         persist(next); status = .local; return true
     }
     func update(_ rule: WordReplacement, enabled: Bool) {

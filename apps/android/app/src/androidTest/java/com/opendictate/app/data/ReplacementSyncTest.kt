@@ -67,7 +67,7 @@ class ReplacementSyncTest {
         settings.prompt = "Local edit"
         settings.model = if (settings.model == com.opendictate.app.model.TranscriptionModel.LIVE)
             com.opendictate.app.model.TranscriptionModel.ACCURATE else com.opendictate.app.model.TranscriptionModel.LIVE
-        assertTrue(store.save(null, "cat", "dog"))
+        assertNull(store.save(null, "cat", "dog"))
         store.setEnabled(false)
         assertEquals(4L, revision())
         val remote = settings.syncDocument().copy(entries = settings.syncDocument().entries +
@@ -93,7 +93,7 @@ class ReplacementSyncTest {
         settings.mergeSyncDocument(remote, store)
         val active = store.engine()
         val rule = store.state.value.document.rules.single()
-        assertTrue(store.save(rule.id, "cat", "bird"))
+        assertNull(store.save(rule.id, "cat", "bird"))
         settings.mergeSyncDocument(remote, store)
         assertEquals("bird", store.engine().apply("cat"))
         assertEquals("dog", active.apply("cat"))

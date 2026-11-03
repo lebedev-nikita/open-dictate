@@ -15,7 +15,8 @@ class WordReplacementTest {
             val entries = fixture.getJSONArray("rules")
             val rules = (0 until entries.length()).map {
                 val rule = entries.getJSONObject(it)
-                WordReplacement(source = rule.getString("source"), replacement = rule.getString("replacement"), enabled = rule.optBoolean("enabled", true))
+                WordReplacement(source = rule.getString("source"), replacement = rule.getString("replacement"),
+                    enabled = rule.optBoolean("enabled", true), regex = rule.optBoolean("regex", false))
             }
             assertEquals(fixture.getString("name"), fixture.getString("expected"),
                 WordReplacementEngine(rules).apply(fixture.getString("text"), fixture.optBoolean("final", true)))
@@ -36,7 +37,32 @@ class WordReplacementTest {
         assertFalse(WordReplacement(source = " ", replacement = "Test").isValid)
         assertFalse(WordReplacement(source = "test", replacement = "").isValid)
         assertFalse(WordReplacement(source = "x".repeat(257), replacement = "Test").isValid)
-        assertFalse(document.copy(schemaVersion = 2).isValid)
+        listOf("""{"schemaVersion":2,"rules":[]}""", """{"schemaVersion":3,"rules":[]}""").forEach {
+            assertThrows(Exception::class.java) { ReplacementDocument.fromJson(it) }
+        }
+    }
+    @Test fun patternRulesUseVersionTwoAndLiteralRulesKeepVersionOneBytes() {
+        val id = "00000000-0000-0000-0000-000000000001"
+        val literal = ReplacementDocument(listOf(WordReplacement(id, "cat", "dog"))).toJson()
+        assertEquals("""{"schemaVersion":1,"rules":[{"id":"$id","source":"cat","replacement":"dog","enabled":true}]}""", literal)
+        val pattern = ReplacementDocument(listOf(WordReplacement(id, "c.t", "", regex = true)))
+        assertEquals(2, pattern.schemaVersion)
+        assertEquals(pattern, ReplacementDocument.fromJson(pattern.toJson()))
+        assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"schemaVersion\":2", "\"schemaVersion\":1")) }
+        assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"regex\":true", "\"regex\":\"true\"")) }
+    }
+    @Test fun patternUsability() {
+        fun usable(source: String, replacement: String = "x") = WordReplacement(source = source, replacement = replacement, regex = true).isUsable
+        assertTrue(usable("(\\d+) руб", "$1 ₽"))
+        assertTrue(usable(" +", " "))
+        assertTrue(usable("um", ""))
+        assertFalse(usable("("))
+        assertFalse(usable("a*"))
+        assertFalse(usable("(a)", "$2"))
+        assertFalse(usable("(a)", "\${2}"))
+        assertTrue(usable("(a)", "$$2 \$x"))
+        assertFalse(usable(""))
+        assertFalse(WordReplacement(source = "cat", replacement = "").isUsable)
     }
     @Test fun malformedWireTypesAndFutureVersionsAreRejected() {
         val document = ReplacementDocument(listOf(WordReplacement(source = "cat", replacement = "dog"))).toJson()
