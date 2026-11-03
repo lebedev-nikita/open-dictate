@@ -225,9 +225,13 @@
     <string name="replacements_source">Recognized word or phrase</string>
     <string name="replacements_target">Replace with</string>
     <string name="replacements_invalid">Use a unique phrase (up to 256 characters) and a replacement (up to 2,048). Maximum 500 rules.</string>
+    <string name="replacements_pattern">Pattern</string>
+    <string name="replacements_target_pattern">Replace with, $1 for a group</string>
+    <string name="replacements_regex">Regular expression</string>
+    <string name="replacements_invalid_pattern">Invalid pattern. It must not match empty text, and $n must refer to an existing group.</string>
     <string name="replacements_storage_error">Could not read or save replacements. Your saved data was kept. Restore your preferences before editing.</string>
     <string name="replacements_empty">No replacements yet. Example: open dictate → OpenDictate.</string>
-    <string name="replacements_note">Whole words and phrases, ignoring case. Replacement spelling stays exactly as entered. Connect Google Drive to sync rules across devices. Rules are not sent to OpenAI. Voice editing commands are unchanged.</string>
+    <string name="replacements_note">Whole words and phrases, ignoring case. Replacement spelling stays exactly as entered. Regular expressions also ignore case: use \\b for word boundaries and $1 for groups. Connect Google Drive to sync rules across devices. Rules are not sent to OpenAI. Voice editing commands are unchanged.</string>
     <string name="replacements_edit_rule">Edit replacement for %1$s</string>
     <string name="replacements_delete_rule">Delete replacement for %1$s</string>
     <string name="replacements_toggle_rule">Enable replacement for %1$s</string>

@@ -14,5 +14,22 @@
   {"name":"literal dots","rules":[{"source":"a.b","replacement":"Term"}],"text":"a.b axb a.bx","expected":"Term axb a.bx"},
   {"name":"empty dictionary","rules":[],"text":"Leave this 🙂 alone","expected":"Leave this 🙂 alone"},
   {"name":"replacement multiline","rules":[{"source":"my address","replacement":"First line\nSecond line"}],"text":"my address.","expected":"First line\nSecond line."},
-  {"name":"repeated cumulative text","rules":[{"source":"open dictate","replacement":"OpenDictate"}],"text":"open dictate and open dictate.","expected":"OpenDictate and OpenDictate."}
+  {"name":"repeated cumulative text","rules":[{"source":"open dictate","replacement":"OpenDictate"}],"text":"open dictate and open dictate.","expected":"OpenDictate and OpenDictate."},
+  {"name":"regex groups","rules":[{"source":"(\\d+) ?руб\\w*","replacement":"$1 ₽","regex":true}],"text":"Итого 250 рублей и 3руб.","expected":"Итого 250 ₽ и 3 ₽."},
+  {"name":"regex ignores case","rules":[{"source":"open ?dictate","replacement":"OpenDictate","regex":true}],"text":"OPEN DICTATE and opendictate","expected":"OpenDictate and OpenDictate"},
+  {"name":"regex has no implicit boundaries","rules":[{"source":"\\s+([,.!?])","replacement":"$1","regex":true}],"text":"Hello , world !","expected":"Hello, world!"},
+  {"name":"regex explicit boundary","rules":[{"source":"\\bcat\\b","replacement":"dog","regex":true}],"text":"cat catalog","expected":"dog catalog"},
+  {"name":"regex empty replacement deletes","rules":[{"source":"\\s*\\b(?:um|uh)\\b","replacement":"","regex":true}],"text":"So um I think uh yes","expected":"So I think yes"},
+  {"name":"regex template escapes","rules":[{"source":"(a)(b)","replacement":"$$ ${2}$1 $x $","regex":true}],"text":"ab","expected":"$ ba $x $"},
+  {"name":"regex two-digit braced group","rules":[{"source":"(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)","replacement":"${12}$12","regex":true}],"text":"abcdefghijkl","expected":"la2"},
+  {"name":"regex unmatched group is empty","rules":[{"source":"x(y)?","replacement":"[$1]","regex":true}],"text":"x xy","expected":"[] [y]"},
+  {"name":"regex result does not cascade","rules":[{"source":"a","replacement":"b","regex":true},{"source":"b","replacement":"c"}],"text":"a b","expected":"b c"},
+  {"name":"earliest match wins across kinds","rules":[{"source":"new york","replacement":"NYC"},{"source":"york city","replacement":"YC","regex":true}],"text":"new york city","expected":"NYC city"},
+  {"name":"longer match wins at same start","rules":[{"source":"new","replacement":"fresh"},{"source":"new \\w+","replacement":"X","regex":true}],"text":"new day","expected":"X"},
+  {"name":"literal wins equal regex match","rules":[{"source":"c.t","replacement":"regex","regex":true},{"source":"cat","replacement":"literal"}],"text":"cat cut","expected":"literal regex"},
+  {"name":"invalid regex is skipped","rules":[{"source":"(","replacement":"x","regex":true},{"source":"cat","replacement":"dog"}],"text":"( cat","expected":"( dog"},
+  {"name":"regex live trailing match waits","rules":[{"source":"\\d+","replacement":"#","regex":true}],"text":"call 12 34","final":false,"expected":"call # 34"},
+  {"name":"regex final trailing match","rules":[{"source":"\\d+","replacement":"#","regex":true}],"text":"call 12 34","expected":"call # #"},
+  {"name":"regex Unicode classes","rules":[{"source":"\\w+ий\\b","replacement":"X","regex":true}],"text":"синий СИНИЙ","expected":"X X"},
+  {"name":"regex disabled","rules":[{"source":"cat","replacement":"dog","regex":true,"enabled":false}],"text":"cat","expected":"cat"}
 ]
