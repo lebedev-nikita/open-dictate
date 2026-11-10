@@ -44,10 +44,10 @@
     <string name="hero_subtitle">One button above the keyboard — dictation and text editing in any app.</string>
 
     <string name="model_live_title">Instant</string>
-    <string name="model_live_description">Shows words as you speak.</string>
+    <string name="model_live_description">Words appear as you speak.</string>
     <string name="model_live_badge">WHILE SPEAKING</string>
     <string name="model_accurate_title">More accurate</string>
-    <string name="model_accurate_description">Listens first, then inserts the finished text.</string>
+    <string name="model_accurate_description">Text appears when you finish.</string>
     <string name="model_accurate_badge">DEFAULT</string>
     <string name="models_refresh">Refresh OpenAI models</string>
     <string name="models_loading">Refreshing models…</string>
@@ -218,10 +218,9 @@
     <string name="settings_mode_live">Live</string>
     <string name="replacements_title">Word replacements</string>
     <string name="replacements_summary">Configured replacements: %1$d</string>
-    <string name="replacements_description">Apply your preferred spelling to Live and Accurate dictation. Changes apply to the next recording.</string>
-    <string name="replacements_enable">Enable word replacements</string>
+        <string name="replacements_enable">Enable word replacements</string>
     <string name="replacements_plain_typography">Plain typography</string>
-    <string name="replacements_plain_typography_summary" translatable="false">— → -, «» “” → \"\", … → ...</string>
+    <string name="replacements_plain_typography_summary">Replace dashes, curly quotes and ellipses with keyboard characters.</string>
     <string name="replacements_add">Add replacement</string>
     <string name="replacements_edit">Edit replacement</string>
     <string name="replacements_source">Recognized word or phrase</string>
@@ -234,7 +233,7 @@
     <string name="replacements_invalid_pattern">Invalid pattern. It must not match empty text, and $n must refer to an existing group.</string>
     <string name="replacements_storage_error">Could not read or save replacements. Your saved data was kept. Restore your preferences before editing.</string>
     <string name="replacements_empty">No replacements yet. Example: open dictate → OpenDictate.</string>
-    <string name="replacements_note">Whole words and phrases. Case is ignored unless “Match case” is on. Replacement spelling stays exactly as entered. In regular expressions, use \\b for word boundaries and $1 for groups. Connect Google Drive to sync rules across devices. Rules are not sent to OpenAI. Voice editing commands are unchanged.</string>
+    <string name="replacements_note">Whole words and phrases. Case is ignored unless “Match case” is on. Replacement spelling stays exactly as entered. In regular expressions, use \\b for word boundaries and $1 for groups. Changes apply to the next recording. Connect Google Drive to sync rules across devices. Rules are not sent to OpenAI. Voice editing commands are unchanged.</string>
     <string name="replacements_edit_rule">Edit replacement for %1$s</string>
     <string name="replacements_delete_rule">Delete replacement for %1$s</string>
     <string name="replacements_toggle_rule">Enable replacement for %1$s</string>

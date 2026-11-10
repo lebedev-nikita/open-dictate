@@ -47,7 +47,6 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
         LazyColumn(Modifier.fillMaxWidth().imePadding().padding(horizontal = 24.dp), state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Text(stringResource(R.string.replacements_title), style = MaterialTheme.typography.headlineSmall)
-                Text(stringResource(R.string.replacements_description), Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
