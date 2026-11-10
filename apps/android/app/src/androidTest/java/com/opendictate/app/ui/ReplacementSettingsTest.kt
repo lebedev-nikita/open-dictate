@@ -19,6 +19,9 @@ class ReplacementSettingsTest {
         // The sheet is lazy: scroll its list so rows below the editor are composed before matching them.
         fun sheet(matcher: SemanticsMatcher) = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(isDialog())).performScrollToNode(matcher)
         fun addRule() {
+            // An open keyboard brings the focused field back into view and can scroll the button away.
+            androidx.test.espresso.Espresso.closeSoftKeyboard()
+            compose.waitForIdle()
             sheet(hasText(label(R.string.replacements_add)) and hasClickAction())
             compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performClick()
         }
@@ -43,7 +46,8 @@ class ReplacementSettingsTest {
         sheet(hasContentDescription(context.getString(R.string.replacements_edit_rule, "open dictate")))
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_edit_rule, "open dictate")).performClick()
         compose.onNodeWithText(label(R.string.replacements_target)).performScrollTo().performTextReplacement("OpenDictate App")
-        compose.onNodeWithText(label(R.string.action_save)).performScrollTo().performClick()
+        sheet(hasText(label(R.string.action_save)) and hasClickAction())
+        compose.onNodeWithText(label(R.string.action_save)).performClick()
         sheet(hasText("OpenDictate App"))
         compose.onNodeWithText("OpenDictate App", useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_toggle_rule, "open dictate")).performClick()
@@ -68,6 +72,9 @@ class ReplacementSettingsTest {
         fun label(id: Int) = context.getString(id)
         fun sheet(matcher: SemanticsMatcher) = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(isDialog())).performScrollToNode(matcher)
         fun addRule() {
+            // An open keyboard brings the focused field back into view and can scroll the button away.
+            androidx.test.espresso.Espresso.closeSoftKeyboard()
+            compose.waitForIdle()
             sheet(hasText(label(R.string.replacements_add)) and hasClickAction())
             compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performClick()
         }

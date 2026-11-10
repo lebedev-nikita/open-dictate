@@ -84,6 +84,11 @@ final class ReplacementStoreTests: XCTestCase {
             XCTAssertEqual(ReplacementStore(defaults: defaults).engine().apply("cat"), "cat")
             store.delete(rule)
             XCTAssertTrue(ReplacementStore(defaults: defaults).rules.isEmpty)
+            XCTAssertFalse(store.plainTypography)
+            XCTAssertEqual(store.engine().apply("ещё — «да»"), "ещё — «да»")
+            // Plain typography stays active while word replacements are off.
+            store.enabled = false; store.plainTypography = true
+            XCTAssertEqual(ReplacementStore(defaults: defaults).engine().apply("ещё — «да»"), "ещё - \"да\"")
         }
     }
     func testCorruptDocumentCannotBeOverwritten() async {
@@ -110,6 +115,7 @@ final class ReplacementSettingsLayoutTests: XCTestCase {
         XCTAssertTrue(store.save(source: "open dictate", replacement: "OpenDictate"))
         XCTAssertTrue(store.save(source: "(\\d+) ?руб\\w*", replacement: "$1 ₽", regex: true))
         XCTAssertTrue(store.save(source: "\\s+([,.!?])", replacement: "$1", regex: true))
+        store.plainTypography = true
         for (language, dark, width) in [("en", false, 568.0), ("ru", true, 464.0)] {
             preferences.interfaceLanguage = language
             let host = NSHostingView(rootView: ReplacementSettingsView(store: store, preferences: preferences).padding(28)

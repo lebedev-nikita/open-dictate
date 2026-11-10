@@ -36,7 +36,7 @@ public struct SettingsSyncDocument: Codable, Equatable, Sendable {
     }
     public var entries: [String: Entry] = [:]
     public init() {}
-    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "postprocessingRules", "textProcessingModel", "textProcessingServiceTier"]
+    public static let keys = ["dictionary", "mode", "liveModel", "accurateModel", "wordReplacements", "wordReplacementsEnabled", "plainTypography", "postprocessingRules", "textProcessingModel", "textProcessingServiceTier"]
     // Retired fields are decoded for compatibility, then removed from journals and replicas.
     private static let retiredKeys: Set<String> = ["postprocessing", "postprocessingOptions", "accuratePunctuationEnabled", "transcriptionPrompt", "textModel"]
     private var syncEntries: [String: Entry] {

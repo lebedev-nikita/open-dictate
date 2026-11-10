@@ -213,3 +213,9 @@ older app versions reject them and stop syncing until updated. Changes take effe
 applies the current rules. Voice editing is unchanged. Rules are separate from
 the recognition dictionary and are not sent to OpenAI. Connecting Google Drive
 syncs the rule list, each rule’s enabled state and the master switch across devices.
+
+The separate “Plain typography” switch, off by default, replaces characters that
+rarely appear in typed messages after the rules run: em and en dashes → a spaced
+hyphen (`10–15` → `10-15`), `«»`, `“”` and `„` → `"`, `‘’` → `'` and `…` → `...`.
+It works even when word replacements are off, never changes letters, and syncs as
+`plainTypography`. Replace `ё` with the pattern rules described above.

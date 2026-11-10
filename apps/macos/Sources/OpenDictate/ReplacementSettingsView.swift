@@ -23,6 +23,12 @@ struct ReplacementSettingsView: View {
                     Toggle(t("Enable word replacements", "Включить автозамену"), isOn: $store.enabled)
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
+                RowDivider()
+                SettingsRow(title: t("Plain typography", "Простая типографика"),
+                            detail: "— → -, «» “” → \"\", … → ...") {
+                    Toggle(t("Plain typography", "Простая типографика"), isOn: $store.plainTypography)
+                        .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                }
             }
             SettingsSection(title: editingID == nil ? t("Add a replacement", "Добавить замену") : t("Edit replacement", "Изменить замену")) {
                 VStack(alignment: .leading, spacing: Space.sm) {

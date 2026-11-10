@@ -220,6 +220,8 @@
     <string name="replacements_summary">Configured replacements: %1$d</string>
     <string name="replacements_description">Apply your preferred spelling to Live and Accurate dictation. Changes apply to the next recording.</string>
     <string name="replacements_enable">Enable word replacements</string>
+    <string name="replacements_plain_typography">Plain typography</string>
+    <string name="replacements_plain_typography_summary" translatable="false">— → -, «» “” → \"\", … → ...</string>
     <string name="replacements_add">Add replacement</string>
     <string name="replacements_edit">Edit replacement</string>
     <string name="replacements_source">Recognized word or phrase</string>

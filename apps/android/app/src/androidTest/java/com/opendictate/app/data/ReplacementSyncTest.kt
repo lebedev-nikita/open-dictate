@@ -107,7 +107,7 @@ class ReplacementSyncTest {
     @Test fun invalidReplacementDocumentOrSwitchDoesNotPartiallyApply() = scoped { _, settings, store ->
         val initial = settings.prompt
         listOf("wordReplacements" to """{"schemaVersion":2,"rules":[]}""",
-            "wordReplacementsEnabled" to "invalid").forEach { (key, value) ->
+            "wordReplacementsEnabled" to "invalid", "plainTypography" to "yes").forEach { (key, value) ->
             val remote = remote().copy(entries = remote().entries + (key to SettingsSyncEntry(value, 42, "mac")))
             val before = settings.syncDocument()
             assertThrows(Exception::class.java) { settings.mergeSyncDocument(remote, store) }
@@ -127,6 +127,22 @@ class ReplacementSyncTest {
         assertEquals(old.entries["future.preference"], migrated.entries["future.preference"])
         assertEquals(0L, migrated.entries["wordReplacements"]?.modifiedAt)
         assertEquals(0L, migrated.entries["wordReplacementsEnabled"]?.modifiedAt)
+        assertEquals(SettingsSyncEntry("false", 0, ""), migrated.entries["plainTypography"])
+    }
+
+    @Test fun plainTypographySyncsIndependentlyOfWordReplacements() = scoped { context, settings, store ->
+        val prefs = context.getSharedPreferences("opendictate_settings", Context.MODE_PRIVATE)
+        fun revision() = prefs.getLong("sync_local_revision", 0)
+        store.setEnabled(false); store.setPlainTypography(true)
+        assertEquals(2L, revision())
+        assertEquals("true", settings.syncDocument().entries["plainTypography"]?.value)
+        assertEquals("ещё - \"да\"", store.engine().apply("ещё — «да»"))
+        val remote = settings.syncDocument().copy(entries = settings.syncDocument().entries +
+            ("plainTypography" to SettingsSyncEntry("false", Long.MAX_VALUE - 10, "remote")))
+        settings.mergeSyncDocument(remote, store)
+        assertFalse(store.state.value.plainTypography)
+        assertFalse(ReplacementStore(context).state.value.plainTypography)
+        assertEquals(2L, revision())
     }
 
     @Test fun oversizedLocalEditStopsSyncAndCanBeCorrectedWithoutLosingTheNextEdit() = scoped { _, settings, _ ->

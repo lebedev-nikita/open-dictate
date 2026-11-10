@@ -189,6 +189,7 @@ class SettingsStore(context: Context) {
         "textProcessingServiceTier" to textProcessingServiceTier.apiValue,
         "wordReplacements" to replacements,
         "wordReplacementsEnabled" to replacementPrefs.getBoolean("enabled", true).toString(),
+        "plainTypography" to replacementPrefs.getBoolean("plain_typography", false).toString(),
         ).also { values ->
             require(values.values.all { it == null || it.toByteArray().size <= 262_144 })
         }
@@ -233,7 +234,9 @@ class SettingsStore(context: Context) {
         val values = merged.entries
         val replacementJSON = values["wordReplacements"]?.value
         val enabled = values["wordReplacementsEnabled"]?.value
-        if (replacementJSON != null || enabled != null) replacements.applySync(replacementJSON, enabled?.toBooleanStrict())
+        val plainTypography = values["plainTypography"]?.value
+        if (replacementJSON != null || enabled != null || plainTypography != null)
+            replacements.applySync(replacementJSON, enabled?.toBooleanStrict(), plainTypography?.toBooleanStrict())
         prefs.edit {
             values["dictionary"]?.let { putString(KEY_PROMPT, it.value) }
             values["mode"]?.let { putString(KEY_MODEL, requireNotNull(it.value).uppercase()) }
@@ -259,8 +262,9 @@ class SettingsStore(context: Context) {
         }
         val replacementJSON = values["wordReplacements"]?.value
         replacementJSON?.let(ReplacementDocument::fromJson)
-        val enabled = values["wordReplacementsEnabled"]?.value
-        require(enabled in listOf(null, "true", "false"))
+        listOf("wordReplacementsEnabled", "plainTypography").forEach { key ->
+            require(values[key]?.value in listOf(null, "true", "false"))
+        }
     }
 
     companion object {
