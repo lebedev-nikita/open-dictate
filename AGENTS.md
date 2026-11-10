@@ -150,6 +150,14 @@ especially helper text, and check that it fits without clipping, truncation,
 or awkward wrapping. Fix translation, visual, and interaction inconsistencies
 before handing the changes to a human.
 
+Run Android emulators only in Boat sandboxes (`boat` CLI), never on the
+developer's Mac. Each sandbox has `/dev/kvm`; use one headless x86_64 emulator
+per sandbox, preferably Android 14 (`android-34;google_apis;x86_64`) as in
+<https://docs.boat.dev/machines/virtualization.md>. Copy the APK in with
+`boat scp`, and drive it with `boat exec … adb`. Sandboxes bill while they run:
+delete every sandbox with `boat delete <id> --yes` as soon as testing ends, and
+confirm with `boat list` that none remain.
+
 The work is complete when required commands pass, no generated build output is
 committed, and behavior-specific coverage exists for pure logic. Exercise
 overlay visibility, focus changes, cancellation, and transcript insertion on a
