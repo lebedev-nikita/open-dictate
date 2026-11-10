@@ -1,12 +1,14 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.opendictate.app.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
@@ -27,7 +29,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.opendictate.app.R
 import com.opendictate.app.data.ReplacementError
 import com.opendictate.app.data.ReplacementStore
-import com.opendictate.app.data.WordReplacement
 
 @Composable
 internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
@@ -36,10 +37,11 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
     var source by rememberSaveable { mutableStateOf("") }
     var replacement by rememberSaveable { mutableStateOf("") }
     var regex by rememberSaveable { mutableStateOf(false) }
+    var matchCase by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<ReplacementError?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    fun reset() { editingID = null; source = ""; replacement = ""; regex = false; error = null }
+    fun reset() { editingID = null; source = ""; replacement = ""; regex = false; matchCase = false; error = null }
     val monospace = LocalTextStyle.current.merge(TextStyle(fontFamily = FontFamily.Monospace))
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         LazyColumn(Modifier.fillMaxWidth().imePadding().padding(horizontal = 24.dp), state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -70,17 +72,16 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
                     keyboardOptions = KeyboardOptions(autoCorrectEnabled = false), enabled = !state.storageError)
             }
             item {
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(regex, enabled = !state.storageError, role = Role.Checkbox) {
-                    regex = it; error = null
-                }, verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(regex, null, enabled = !state.storageError)
-                    Text(stringResource(R.string.replacements_regex), Modifier.weight(1f).padding(start = 12.dp))
+                // Both options share a line where the labels fit.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    LabeledCheckbox(stringResource(R.string.replacements_regex), regex, !state.storageError) { regex = it; error = null }
+                    LabeledCheckbox(stringResource(R.string.replacements_match_case), matchCase, !state.storageError) { matchCase = it; error = null }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = {
-                        error = store.save(editingID, source, replacement, regex)
+                        error = store.save(editingID, source, replacement, regex, matchCase)
                         if (error == null) reset()
                     }, enabled = (if (regex) source.isNotEmpty() else source.isNotBlank() && replacement.isNotBlank()) && !state.storageError) {
                         Text(stringResource(if (editingID == null) R.string.replacements_add else R.string.action_save))
@@ -103,11 +104,15 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
                     val toggleLabel = stringResource(R.string.replacements_toggle_rule, rule.source)
                     Checkbox(rule.enabled, { store.toggle(rule, it) }, Modifier.semantics { contentDescription = toggleLabel })
                     Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                        if (rule.regex) Text(rule.displaySource, style = monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        else Text(rule.source, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(rule.source, Modifier.weight(1f, fill = false), style = if (rule.regex) monospace else LocalTextStyle.current,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (rule.regex) RuleBadge(".*", stringResource(R.string.replacements_regex))
+                            if (rule.matchCase) RuleBadge("Aa", stringResource(R.string.replacements_match_case))
+                        }
                         Text(rule.replacement)
                     }
-                    IconButton(onClick = { editingID = rule.id; source = rule.source; replacement = rule.replacement; regex = rule.regex; error = null; scope.launch { listState.animateScrollToItem(2) } }) {
+                    IconButton(onClick = { editingID = rule.id; source = rule.source; replacement = rule.replacement; regex = rule.regex; matchCase = rule.matchCase; error = null; scope.launch { listState.animateScrollToItem(2) } }) {
                         Icon(Icons.Outlined.Edit, stringResource(R.string.replacements_edit_rule, rule.source))
                     }
                     IconButton(onClick = { store.delete(rule); if (editingID == rule.id) reset() }) {
@@ -125,5 +130,19 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
     }
 }
 
-/** Pattern rules read as `/pattern/`, distinct from phrases without a translated badge. */
-private val WordReplacement.displaySource get() = "/$source/"
+@Composable
+private fun LabeledCheckbox(label: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.heightIn(min = 48.dp).toggleable(checked, enabled = enabled, role = Role.Checkbox, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked, null, enabled = enabled)
+        Text(label, Modifier.padding(start = 12.dp))
+    }
+}
+
+/** Marks a rule option with the glyph find-and-replace fields use for it, so the list needs no translated tag. */
+@Composable
+private fun RuleBadge(glyph: String, description: String) {
+    Text(glyph, Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp)
+        .semantics { contentDescription = description },
+        style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}

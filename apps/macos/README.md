@@ -212,8 +212,8 @@ disabled while busy or when there is no recording to retry.
 
 Settings → Word replacements manages local “recognized phrase → replacement”
 rules. Add, edit, delete, enable individual rules or turn all replacements off.
-Matching ignores case, respects Unicode word boundaries, prefers longer phrases
-and never cascades into another rule. Replacement spelling is preserved exactly.
+Matching ignores case unless the rule has “Match case” enabled, respects Unicode
+word boundaries, prefers longer phrases and never cascades into another rule. Replacement spelling is preserved exactly.
 Live applies completed words immediately; an unfinished trailing token waits for
 a boundary or the final result. Accurate applies rules before delivery.
 Each session captures its rules at startup, and history/copy use the same result.
@@ -221,12 +221,13 @@ Voice editing instructions and results are not modified. Up to 500 rules, with
 256 UTF-16 units per phrase and 2,048 per replacement.
 
 Enable “Regular expression” to save an ICU pattern instead of a phrase. Patterns
-ignore case, have no implicit word boundaries (use `\b`), keep their whitespace
-and must not match empty text. Replacements may use `$1`, `${12}` and `$$`, or be
+have no implicit word boundaries (use `\b`), keep their whitespace and must not
+match empty text. Replacements may use `$1`, `${12}` and `$$`, or be
 empty to delete the match. The earliest match wins, then the longer one, then
 phrase rules. Android compiles the same patterns with its own regex engine; a
 synced pattern it cannot compile is skipped there. Pattern rules sync as schema
-version 2, which older app versions reject.
+version 2 and case-sensitive rules as version 3, which older app versions reject.
+The list marks patterns with `.*` and case-sensitive rules with `Aa`.
 
 Rules are applied locally and remain separate from dictionary hints sent to OpenAI.
 Connect Google Drive in Settings to sync the rule list, individual rule states and

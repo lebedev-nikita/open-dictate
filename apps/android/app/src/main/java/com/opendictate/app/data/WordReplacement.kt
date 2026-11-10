@@ -14,6 +14,8 @@ data class WordReplacement(
     val enabled: Boolean = true,
     /** Pattern rules match as written and may reference groups with `$1` or `${12}`. */
     val regex: Boolean = false,
+    /** Matches the source's exact letter case instead of ignoring case. */
+    val matchCase: Boolean = false,
 ) {
     /** Structural validity only. Patterns compile per platform, so synced rules never invalidate a document. */
     val isValid: Boolean get() = runCatching { UUID.fromString(id).toString() == id }.getOrDefault(false) &&
@@ -24,33 +26,33 @@ data class WordReplacement(
     val isUsable: Boolean get() {
         if (!isValid) return false
         if (!regex) return true
-        val pattern = WordReplacementEngine.compile(source) ?: return false
+        val pattern = WordReplacementEngine.compile(source, matchCase) ?: return false
         val groups = pattern.matcher("").groupCount()
         return !pattern.matcher("").find() && WordReplacementEngine.groupReferences(replacement).all { it <= groups }
     }
 }
 
 data class ReplacementDocument(val rules: List<WordReplacement> = emptyList()) {
-    /** Version 2 marks documents with pattern rules, so older clients reject rather than misread them. */
-    val schemaVersion: Int get() = if (rules.any { it.regex }) 2 else 1
+    /** Versions 2 and 3 mark documents with pattern and case-sensitive rules, so older clients reject rather than misread them. */
+    val schemaVersion: Int get() = if (rules.any { it.matchCase }) 3 else if (rules.any { it.regex }) 2 else 1
     val isValid: Boolean get() = rules.size <= 500 && rules.all { it.isValid } && rules.map { it.id }.toSet().size == rules.size
     fun toJson(): String = JSONObject().put("schemaVersion", schemaVersion).put("rules", JSONArray().apply {
         rules.forEach { rule -> put(JSONObject().put("id", rule.id).put("source", rule.source).put("replacement", rule.replacement)
-            .put("enabled", rule.enabled).apply { if (rule.regex) put("regex", true) }) }
+            .put("enabled", rule.enabled).apply { if (rule.regex) put("regex", true); if (rule.matchCase) put("matchCase", true) }) }
     }).toString()
     companion object {
         fun fromJson(json: String): ReplacementDocument {
             val value = JSONObject(json)
             val version = value.get("schemaVersion")
-            require(version is Number && version.toDouble() in listOf(1.0, 2.0))
+            require(version is Number && version.toDouble() in listOf(1.0, 2.0, 3.0))
             val entries = value.getJSONArray("rules")
             require(entries.length() <= 500)
             return ReplacementDocument((0 until entries.length()).map { index ->
                 val rule = entries.getJSONObject(index)
                 require(listOf("id", "source", "replacement").all { rule.get(it) is String } && rule.get("enabled") is Boolean)
-                require(!rule.has("regex") || rule.get("regex") is Boolean)
+                require(listOf("regex", "matchCase").all { !rule.has(it) || rule.get(it) is Boolean })
                 WordReplacement(rule.getString("id"), rule.getString("source"), rule.getString("replacement"),
-                    rule.getBoolean("enabled"), rule.optBoolean("regex", false))
+                    rule.getBoolean("enabled"), rule.optBoolean("regex", false), rule.optBoolean("matchCase", false))
             }).also { require(it.isValid && version.toDouble() == it.schemaVersion.toDouble()) }
         }
     }
@@ -67,10 +69,11 @@ class WordReplacementEngine(rules: List<WordReplacement>) {
         )
         val literals = active.filterNot { it.regex }
         val literal = literals.takeIf { it.isNotEmpty() }?.joinToString("|") {
-            "(${Pattern.quote(Normalizer.normalize(it.source, Normalizer.Form.NFC))})"
+            val quoted = Pattern.quote(Normalizer.normalize(it.source, Normalizer.Form.NFC))
+            if (it.matchCase) "((?-i:$quoted))" else "($quoted)"
         }?.let { Matcher(Pattern.compile("(?<![\\p{L}\\p{M}\\p{N}_])(?:$it)(?![\\p{L}\\p{M}\\p{N}_])", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE), literals, true) }
         // A pattern this platform cannot compile is skipped instead of disabling other rules.
-        matchers = listOfNotNull(literal) + active.filter { it.regex }.mapNotNull { rule -> compile(rule.source)?.let { Matcher(it, listOf(rule), false) } }
+        matchers = listOfNotNull(literal) + active.filter { it.regex }.mapNotNull { rule -> compile(rule.source, rule.matchCase)?.let { Matcher(it, listOf(rule), false) } }
     }
 
     fun apply(text: String, final: Boolean = true): String {
@@ -116,9 +119,9 @@ class WordReplacementEngine(rules: List<WordReplacement>) {
         // Android's ICU regex is always Unicode-aware and rejects this flag; desktop Java needs it for \w and \b.
         private val unicodeClasses = runCatching { Pattern.compile("a", Pattern.UNICODE_CHARACTER_CLASS) }.isSuccess
 
-        internal fun compile(pattern: String): Pattern? = runCatching {
+        internal fun compile(pattern: String, matchCase: Boolean = false): Pattern? = runCatching {
             Pattern.compile(Normalizer.normalize(pattern, Normalizer.Form.NFC),
-                Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE or if (unicodeClasses) Pattern.UNICODE_CHARACTER_CLASS else 0)
+                (if (matchCase) 0 else Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE) or if (unicodeClasses) Pattern.UNICODE_CHARACTER_CLASS else 0)
         }.getOrNull()
 
         internal fun groupReferences(template: String): List<Int> = tokens(template).mapNotNull { (it as? Token.Group)?.number }

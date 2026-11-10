@@ -3,8 +3,7 @@
 Please report vulnerabilities privately through GitHub Security Advisories.
 Do not include API keys, recordings, or other sensitive data in public issues.
 
-Word replacements use literal, case-insensitive matches with Unicode word
-boundaries, or user-written regular expressions compiled by the platform
+Word replacements use literal matches with Unicode word boundaries, or user-written regular expressions compiled by the platform
 regex engine. Patterns that fail to compile or can match empty text are
 rejected when saved; synced patterns another platform cannot compile are
 skipped. Rules are compiled once per dictation, operate only on recognized
