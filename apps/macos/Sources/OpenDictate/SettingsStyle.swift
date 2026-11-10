@@ -16,8 +16,9 @@ enum Surface {
     static let page = adaptive(light: 0xF5F5F7, dark: 0x1C1C1E)
     static let sidebar = adaptive(light: 0xECECEF, dark: 0x161618)
     static let card = adaptive(light: 0xFFFFFF, dark: 0x2A2A2D)
-    /// Inputs are one step lighter than cards in dark mode, so they never match the window background.
-    static let field = adaptive(light: 0xFFFFFF, dark: 0x3A3A3D)
+    /// Inputs sit on cards and are inset: one step darker than a light card, one step lighter
+    /// than a dark card, so they never match the card or the window background.
+    static let field = adaptive(light: 0xF5F5F7, dark: 0x3A3A3D)
     static let fieldBorder = Color.primary.opacity(0.14)
     static let hairline = Color.primary.opacity(0.08)
     static let selection = Color.primary.opacity(0.08)
@@ -70,12 +71,12 @@ struct SettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: Space.xs) {
             if let title {
                 Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.secondary)
-                    .padding(.horizontal, Space.xxs).accessibilityAddTraits(.isHeader)
+                    .accessibilityAddTraits(.isHeader)
             }
             SettingsCard { content }
             if let footer {
                 Text(footer).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true).padding(.horizontal, Space.xxs)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -118,13 +119,14 @@ struct RowDivider: View {
     var body: some View { Divider().padding(.horizontal, Space.md) }
 }
 
-/// A short status beside a row's label, such as a granted permission.
+/// A short status beside a row's label, such as a granted permission. A settled state stays quiet;
+/// color is left for states that need action.
 struct StatusLabel: View {
     let title: String
 
     var body: some View {
         HStack(spacing: Space.xxs) {
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.secondary)
             Text(title).foregroundStyle(.secondary)
         }.font(.callout)
     }
@@ -139,7 +141,9 @@ struct SettingsField: ViewModifier {
         let focused = focus ?? $ownFocus
         content.textFieldStyle(.plain).focused(focused)
             .padding(.horizontal, Space.xs).padding(.vertical, 6)
-            .background(Surface.field, in: RoundedRectangle(cornerRadius: 6))
+            // Light comes from above: an inset field casts a small shadow along its top edge.
+            .background(RoundedRectangle(cornerRadius: 6)
+                .fill(Surface.field.shadow(.inner(color: .black.opacity(0.1), radius: 1, y: 1))))
             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Surface.fieldBorder))
             .overlay(RoundedRectangle(cornerRadius: 6).inset(by: -1)
                 .strokeBorder(Color.accentColor.opacity(focused.wrappedValue ? 0.6 : 0), lineWidth: 3))

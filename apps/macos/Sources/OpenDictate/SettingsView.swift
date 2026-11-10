@@ -240,7 +240,8 @@ struct SettingsView: View {
             TextEditor(text: $preferences.dictionary).font(.body)
                 .scrollContentBackground(.hidden).padding(Space.xs)
                 .frame(minHeight: 200, maxHeight: .infinity)
-                .background(Surface.field, in: RoundedRectangle(cornerRadius: 10))
+                // The editor is the page's content, so it takes the card surface rather than an inset field.
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Surface.fieldBorder))
                 .accessibilityLabel(t("Dictionary terms", "Слова в словаре"))
         }.frame(maxHeight: .infinity, alignment: .top)
@@ -259,27 +260,27 @@ struct SettingsView: View {
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
             }
-            VStack(alignment: .leading, spacing: Space.sm) {
+            if let error = history.error { Text(error).font(.callout).foregroundStyle(.secondary) }
+            SettingsCard {
+                // Search and bulk deletion head the list they act on, so the field sits on a card like every input.
                 HStack(spacing: Space.xs) {
                     TextField(t("Search history", "Поиск по истории"), text: $query).settingsField()
                     Button(t("Delete all…", "Удалить всё…"), role: .destructive) { confirmClear = true }.disabled(history.entries.isEmpty)
-                }.controlSize(.large)
-                if let error = history.error { Text(error).font(.callout).foregroundStyle(.secondary) }
-                SettingsCard {
-                    if displayedHistory.isEmpty {
-                        ContentUnavailableView {
-                            Label(history.entries.isEmpty ? t("No dictations yet", "Пока нет диктовок") : t("No matches", "Ничего не найдено"), systemImage: "text.alignleft")
-                        } description: {
-                            Text(history.entries.isEmpty ? t("Your completed dictations will appear here.", "Завершённые диктовки появятся здесь.") : t("Try another search.", "Попробуйте другой запрос."))
-                        }.frame(minHeight: 200)
-                    } else {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(displayedHistory.enumerated()), id: \.element.id) { index, entry in
-                                if index > 0 { RowDivider() }
-                                HistoryEntryView(entry: entry, russian: preferences.isRussian,
-                                    onCopy: { model.copy(entry.text) },
-                                    onDelete: { history.delete(entry.id) })
-                            }
+                }.controlSize(.large).padding(Space.md)
+                RowDivider()
+                if displayedHistory.isEmpty {
+                    ContentUnavailableView {
+                        Label(history.entries.isEmpty ? t("No dictations yet", "Пока нет диктовок") : t("No matches", "Ничего не найдено"), systemImage: "text.alignleft")
+                    } description: {
+                        Text(history.entries.isEmpty ? t("Your completed dictations will appear here.", "Завершённые диктовки появятся здесь.") : t("Try another search.", "Попробуйте другой запрос."))
+                    }.frame(minHeight: 200)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(displayedHistory.enumerated()), id: \.element.id) { index, entry in
+                            if index > 0 { RowDivider() }
+                            HistoryEntryView(entry: entry, russian: preferences.isRussian,
+                                onCopy: { model.copy(entry.text) },
+                                onDelete: { history.delete(entry.id) })
                         }
                     }
                 }

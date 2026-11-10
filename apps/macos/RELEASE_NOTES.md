@@ -1,7 +1,8 @@
-OpenDictate for macOS **0.8.0-rc.3** redesigns the settings window and adds plain typography. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.8.0-rc.4** redesigns the settings window and adds plain typography. Requires macOS 14+ on Apple Silicon or Intel.
 
 - Each page is titled by its name, and related settings are grouped on cards with consistent spacing.
-- Text fields have their own surface, lighter than cards in the dark theme, with a focus ring.
+- Text fields are inset on their cards, darker in the light theme and lighter in the dark theme, with a focus ring. No field is focused when Settings opens.
+- Granted permissions and the saved key show a quiet grey check.
 - The sidebar shows dictionary and replacement counts beside each page and extends under the title bar.
 - History keeps “Save history” at the top and “Delete all…” beside search. Dates follow the interface language.
 - The dictionary editor fills its page with a single scroll; “Clean up” sits beside the title.
