@@ -23,22 +23,6 @@ class WordReplacementTest {
                 WordReplacementEngine(rules).apply(fixture.getString("text"), fixture.optBoolean("final", true)))
         }
     }
-    @Test fun sharedPlainTypographyCases() {
-        val root = generateSequence(File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
-            .first { File(it, "shared/plain-typography-cases.json").isFile }
-        val cases = JSONArray(File(root, "shared/plain-typography-cases.json").readText())
-        for (index in 0 until cases.length()) {
-            val fixture = cases.getJSONObject(index)
-            assertEquals(fixture.getString("name"), fixture.getString("expected"), PlainTypography.apply(fixture.getString("text")))
-        }
-    }
-    @Test fun plainTypographyAppliesAfterRulesAndToLivePartials() {
-        val engine = WordReplacementEngine(listOf(WordReplacement(source = "ёлка", replacement = "Ёлка — ель")), plainTypography = true)
-        assertEquals("Ёлка - ель \"зелёная\"", engine.apply("ёлка «зелёная»"))
-        assertEquals("Это -", engine.apply("Это —", final = false))
-        assertEquals("Это - ёлка", engine.apply("Это — ёлка", final = false))
-        assertEquals("ещё — «да»", WordReplacementEngine(emptyList()).apply("ещё — «да»"))
-    }
     @Test fun sessionSnapshotAndCumulativeUpdates() {
         val rule = WordReplacement(source = "cat", replacement = "dog")
         val session = WordReplacementEngine(listOf(rule))

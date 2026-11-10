@@ -146,8 +146,7 @@ final class Preferences: ObservableObject {
         let encoded = try JSONEncoder().encode(merged)
         applyingSync = true
         defer { applyingSync = false }
-        try replacements.applySync(json: replacementJSON, enabled: replacementEnabled.map { $0 == "true" },
-                                   plainTypography: merged.entries["plainTypography"]?.value.map { $0 == "true" })
+        try replacements.applySync(json: replacementJSON, enabled: replacementEnabled.map { $0 == "true" })
         if let value = merged.entries["dictionary"]?.value, dictionary != value { dictionary = value }
         if let value = merged.entries["mode"]?.value, let next = DictationMode(rawValue: value), mode != next { mode = next }
         if let value = merged.entries["liveModel"]?.value, liveModel != value { liveModel = value }
@@ -175,10 +174,8 @@ final class Preferences: ObservableObject {
            TextProcessingServiceTier(rawValue: value) == nil { throw SyncFormatError.invalid }
         let replacementJSON = merged.entries["wordReplacements"]?.value
         try replacements.validateSync(json: replacementJSON)
-        for key in ["wordReplacementsEnabled", "plainTypography"] {
-            let value = merged.entries[key]?.value
-            guard value == nil || value == "true" || value == "false" else { throw SyncFormatError.invalid }
-        }
+        let replacementEnabled = merged.entries["wordReplacementsEnabled"]?.value
+        guard replacementEnabled == nil || replacementEnabled == "true" || replacementEnabled == "false" else { throw SyncFormatError.invalid }
         let encoded = try JSONEncoder().encode(merged)
         _ = try SettingsSyncDocument.decode(encoded)
     }

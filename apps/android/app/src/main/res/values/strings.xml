@@ -218,9 +218,7 @@
     <string name="settings_mode_live">Live</string>
     <string name="replacements_title">Word replacements</string>
     <string name="replacements_summary">Configured replacements: %1$d</string>
-        <string name="replacements_enable">Enable word replacements</string>
-    <string name="replacements_plain_typography">Plain typography</string>
-    <string name="replacements_plain_typography_summary">Replace dashes, curly quotes and ellipses with keyboard characters.</string>
+    <string name="replacements_enable">Enable word replacements</string>
     <string name="replacements_add">Add replacement</string>
     <string name="replacements_edit">Edit replacement</string>
     <string name="replacements_source">Recognized word or phrase</string>

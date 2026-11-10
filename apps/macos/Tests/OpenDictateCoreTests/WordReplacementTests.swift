@@ -15,20 +15,6 @@ final class WordReplacementTests: XCTestCase {
             XCTAssertEqual(WordReplacementEngine(rules: rules).apply(fixture.text, final: fixture.final ?? true), fixture.expected, fixture.name)
         }
     }
-    func testSharedPlainTypographyCases() throws {
-        struct Fixture: Decodable { let name: String; let text: String; let expected: String }
-        var root = URL(fileURLWithPath: #filePath)
-        for _ in 0..<5 { root.deleteLastPathComponent() }
-        let cases = try JSONDecoder().decode([Fixture].self, from: Data(contentsOf: root.appendingPathComponent("shared/plain-typography-cases.json")))
-        for fixture in cases { XCTAssertEqual(PlainTypography.apply(fixture.text), fixture.expected, fixture.name) }
-    }
-    func testPlainTypographyAppliesAfterRulesAndToLivePartials() {
-        let engine = WordReplacementEngine(rules: [WordReplacement(source: "ёлка", replacement: "Ёлка — ель")], plainTypography: true)
-        XCTAssertEqual(engine.apply("ёлка «зелёная»"), "Ёлка - ель \"зелёная\"")
-        XCTAssertEqual(engine.apply("Это —", final: false), "Это -")
-        XCTAssertEqual(engine.apply("Это — ёлка", final: false), "Это - ёлка")
-        XCTAssertEqual(WordReplacementEngine(rules: []).apply("ещё — «да»"), "ещё — «да»")
-    }
     func testSessionSnapshotAndCumulativeUpdates() {
         var rule = WordReplacement(source: "cat", replacement: "dog")
         let session = WordReplacementEngine(rules: [rule])

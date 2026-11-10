@@ -1,13 +1,12 @@
 # macOS verification
 
-## 0.8.0-rc.5 — plain typography hint and replacements header
+## 0.8.0-rc.6 — replacements header
 
-Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-11.
 
 - All Swift tests pass.
 - `ReplacementSettingsLayoutTests` captures showed the Word replacements page
-  without a subtitle and the plain typography hint as a sentence, in English
-  (Aqua) and Russian (Dark Aqua), without clipping.
+  without a subtitle in English (Aqua) and Russian (Dark Aqua).
 - Universal packaging verified the DMG and signature.
 
 No dictation, provider request or Drive sync was exercised for this change.
@@ -24,19 +23,6 @@ Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
 - Closing Settings and reopening it left no field focused. The same check on
   0.8.0-rc.2 also showed no focus, so automatic focus was not reproduced; the
   window now clears its first responder on opening.
-- Universal packaging verified the DMG and signature.
-
-No dictation, provider request or Drive sync was exercised for this change.
-
-## 0.8.0-rc.3 — plain typography
-
-Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
-
-- All Swift tests pass, including the shared plain typography cases, the switch
-  surviving with word replacements off, and its sync validation and import.
-- `ReplacementSettingsLayoutTests` captures showed the new switch row and its
-  `— → -, «» “” → "", … → ...` hint without clipping in English (Aqua) and
-  Russian (Dark Aqua).
 - Universal packaging verified the DMG and signature.
 
 No dictation, provider request or Drive sync was exercised for this change.

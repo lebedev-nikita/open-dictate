@@ -59,7 +59,7 @@ data class ReplacementDocument(val rules: List<WordReplacement> = emptyList()) {
 }
 
 /** Compiled once per session. Matches the original transcript once; replacements never cascade. */
-class WordReplacementEngine(rules: List<WordReplacement>, private val plainTypography: Boolean = false) {
+class WordReplacementEngine(rules: List<WordReplacement>) {
     private class Matcher(val pattern: Pattern, val rules: List<WordReplacement>, val literal: Boolean)
     private val matchers: List<Matcher>
 
@@ -76,11 +76,7 @@ class WordReplacementEngine(rules: List<WordReplacement>, private val plainTypog
         matchers = listOfNotNull(literal) + active.filter { it.regex }.mapNotNull { rule -> compile(rule.source, rule.matchCase)?.let { Matcher(it, listOf(rule), false) } }
     }
 
-    /** Rules run first, so plain typography also covers replacement text. */
-    fun apply(text: String, final: Boolean = true): String =
-        applyRules(text, final).let { if (plainTypography) PlainTypography.apply(it) else it }
-
-    private fun applyRules(text: String, final: Boolean): String {
+    fun apply(text: String, final: Boolean = true): String {
         if (matchers.isEmpty()) return text
         val normalized = Normalizer.normalize(text, Normalizer.Form.NFC)
         // Each rule set is enumerated once; empty matches never replace text.
