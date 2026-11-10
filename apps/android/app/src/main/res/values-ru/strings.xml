@@ -42,10 +42,10 @@
     <string name="hero_subtitle">Одна кнопка над клавиатурой — диктовка и правка текста в любом приложении.</string>
 
     <string name="model_live_title">Мгновенно</string>
-    <string name="model_live_description">Показывает слова прямо во время речи.</string>
+    <string name="model_live_description">Слова появляются прямо во время речи.</string>
     <string name="model_live_badge">ВО ВРЕМЯ РЕЧИ</string>
     <string name="model_accurate_title">Точнее</string>
-    <string name="model_accurate_description">Сначала слушает, затем вставляет готовый текст.</string>
+    <string name="model_accurate_description">Текст появляется после записи.</string>
     <string name="model_accurate_badge">ПО УМОЛЧАНИЮ</string>
     <string name="models_refresh">Обновить модели OpenAI</string>
     <string name="models_loading">Обновление моделей…</string>
@@ -215,9 +215,9 @@
     <string name="settings_mode_live">Сразу</string>
     <string name="replacements_title">Автозамена</string>
     <string name="replacements_summary">Настроено автозамен: %1$d</string>
-    <string name="replacements_description">Нужное написание в Live и Accurate. Изменения действуют со следующей записи.</string>
     <string name="replacements_enable">Включить автозамену</string>
     <string name="replacements_plain_typography">Простая типографика</string>
+    <string name="replacements_plain_typography_summary">Заменять тире, типографские кавычки и многоточие символами с клавиатуры.</string>
     <string name="replacements_add">Добавить замену</string>
     <string name="replacements_edit">Изменить замену</string>
     <string name="replacements_source">Распознанное слово или фраза</string>
@@ -230,7 +230,7 @@
     <string name="replacements_invalid_pattern">Неверный шаблон. Он не должен совпадать с пустым текстом, а $n — ссылаться на существующую группу.</string>
     <string name="replacements_storage_error">Не удалось прочитать или сохранить автозамены. Данные сохранены. Восстановите настройки перед редактированием.</string>
     <string name="replacements_empty">Пока нет замен. Например: опен диктейт → OpenDictate.</string>
-    <string name="replacements_note">Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». Написание замены сохраняется как введено. В регулярных выражениях \\b — граница слова, $1 — группа. Подключите Google Drive для синхронизации правил между устройствами. Правила не отправляются в OpenAI. Команды голосовой правки не меняются.</string>
+    <string name="replacements_note">Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». Написание замены сохраняется как введено. В регулярных выражениях \\b — граница слова, $1 — группа. Изменения действуют со следующей записи. Подключите Google Drive для синхронизации правил между устройствами. Правила не отправляются в OpenAI. Команды голосовой правки не меняются.</string>
     <string name="replacements_edit_rule">Изменить замену для %1$s</string>
     <string name="replacements_delete_rule">Удалить замену для %1$s</string>
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>

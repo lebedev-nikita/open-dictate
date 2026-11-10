@@ -15,9 +15,7 @@ struct ReplacementSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
-            PageHeader(title: t("Word replacements", "Автозамена"),
-                       subtitle: t("Replace recognized words and phrases with your preferred spelling in Live and Accurate dictation.",
-                                   "Заменяйте распознанные слова и фразы на нужное написание в Live и Accurate."))
+            PageHeader(title: t("Word replacements", "Автозамена"))
             SettingsCard {
                 SettingsRow(title: t("Enable word replacements", "Включить автозамену")) {
                     Toggle(t("Enable word replacements", "Включить автозамену"), isOn: $store.enabled)
@@ -25,7 +23,8 @@ struct ReplacementSettingsView: View {
                 }
                 RowDivider()
                 SettingsRow(title: t("Plain typography", "Простая типографика"),
-                            detail: "— → -, «» “” → \"\", … → ...") {
+                            detail: t("Replace dashes, curly quotes and ellipses with keyboard characters.",
+                                      "Заменять тире, типографские кавычки и многоточие символами с клавиатуры.")) {
                     Toggle(t("Plain typography", "Простая типографика"), isOn: $store.plainTypography)
                         .labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }

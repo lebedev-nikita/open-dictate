@@ -1,5 +1,17 @@
 # macOS verification
 
+## 0.8.0-rc.5 — plain typography hint and replacements header
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+
+- All Swift tests pass.
+- `ReplacementSettingsLayoutTests` captures showed the Word replacements page
+  without a subtitle and the plain typography hint as a sentence, in English
+  (Aqua) and Russian (Dark Aqua), without clipping.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.0-rc.4 — settings hierarchy and inset fields
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
