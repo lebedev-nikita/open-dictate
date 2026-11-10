@@ -16,7 +16,8 @@ class WordReplacementTest {
             val rules = (0 until entries.length()).map {
                 val rule = entries.getJSONObject(it)
                 WordReplacement(source = rule.getString("source"), replacement = rule.getString("replacement"),
-                    enabled = rule.optBoolean("enabled", true), regex = rule.optBoolean("regex", false))
+                    enabled = rule.optBoolean("enabled", true), regex = rule.optBoolean("regex", false),
+                    matchCase = rule.optBoolean("matchCase", false))
             }
             assertEquals(fixture.getString("name"), fixture.getString("expected"),
                 WordReplacementEngine(rules).apply(fixture.getString("text"), fixture.optBoolean("final", true)))
@@ -37,7 +38,7 @@ class WordReplacementTest {
         assertFalse(WordReplacement(source = " ", replacement = "Test").isValid)
         assertFalse(WordReplacement(source = "test", replacement = "").isValid)
         assertFalse(WordReplacement(source = "x".repeat(257), replacement = "Test").isValid)
-        listOf("""{"schemaVersion":2,"rules":[]}""", """{"schemaVersion":3,"rules":[]}""").forEach {
+        listOf("""{"schemaVersion":2,"rules":[]}""", """{"schemaVersion":3,"rules":[]}""", """{"schemaVersion":4,"rules":[]}""").forEach {
             assertThrows(Exception::class.java) { ReplacementDocument.fromJson(it) }
         }
     }
@@ -50,6 +51,19 @@ class WordReplacementTest {
         assertEquals(pattern, ReplacementDocument.fromJson(pattern.toJson()))
         assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"schemaVersion\":2", "\"schemaVersion\":1")) }
         assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"regex\":true", "\"regex\":\"true\"")) }
+    }
+    @Test fun caseSensitiveRulesUseVersionThree() {
+        val id = "00000000-0000-0000-0000-000000000001"
+        val document = ReplacementDocument(listOf(WordReplacement(id, "ИП", "предприниматель", matchCase = true)))
+        assertEquals(3, document.schemaVersion)
+        assertTrue(document.toJson().contains("\"matchCase\":true"))
+        assertFalse(document.toJson().contains("regex"))
+        assertEquals(document, ReplacementDocument.fromJson(document.toJson()))
+        val pattern = ReplacementDocument(listOf(WordReplacement(id, "ё", "е", regex = true, matchCase = true)))
+        assertEquals(3, pattern.schemaVersion)
+        assertEquals(pattern, ReplacementDocument.fromJson(pattern.toJson()))
+        assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"schemaVersion\":3", "\"schemaVersion\":2")) }
+        assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"matchCase\":true", "\"matchCase\":1")) }
     }
     @Test fun patternUsability() {
         fun usable(source: String, replacement: String = "x") = WordReplacement(source = source, replacement = replacement, regex = true).isUsable

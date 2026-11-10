@@ -254,8 +254,9 @@ Add namespaced keys to the explicit export allowlists and storage adapters on bo
 platforms for new settings. Unknown entries survive merges and round trips.
 Unsupported schema versions fail closed rather than being overwritten. Values
 are strings, except an explicit prompt reset, which uses JSON null and schema version 2. Structured future sections can encode JSON inside their value.
-The `wordReplacements` value contains the shared version-1 replacement JSON
-(`schemaVersion` and `rules` with `id`, `source`, `replacement`, `enabled`).
+The `wordReplacements` value contains the shared replacement JSON
+(`schemaVersion` and `rules` with `id`, `source`, `replacement`, `enabled` and
+the optional `regex` and `matchCase`).
 `wordReplacementsEnabled` is the string `true` or `false`. Invalid boolean
 values reject the import before any setting is applied. Existing five-field
 journals seed replacement settings at timestamp zero so new defaults yield to

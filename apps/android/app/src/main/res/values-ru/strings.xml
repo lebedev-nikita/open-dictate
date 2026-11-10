@@ -225,10 +225,11 @@
     <string name="replacements_pattern">Шаблон</string>
     <string name="replacements_target_pattern">Заменить на, $1 — группа</string>
     <string name="replacements_regex">Регулярное выражение</string>
+    <string name="replacements_match_case">Учитывать регистр</string>
     <string name="replacements_invalid_pattern">Неверный шаблон. Он не должен совпадать с пустым текстом, а $n — ссылаться на существующую группу.</string>
     <string name="replacements_storage_error">Не удалось прочитать или сохранить автозамены. Данные сохранены. Восстановите настройки перед редактированием.</string>
     <string name="replacements_empty">Пока нет замен. Например: опен диктейт → OpenDictate.</string>
-    <string name="replacements_note">Целые слова и фразы без учёта регистра. Написание замены сохраняется как введено. Регулярные выражения тоже без учёта регистра: \\b — граница слова, $1 — группа. Подключите Google Drive для синхронизации правил между устройствами. Правила не отправляются в OpenAI. Команды голосовой правки не меняются.</string>
+    <string name="replacements_note">Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». Написание замены сохраняется как введено. В регулярных выражениях \\b — граница слова, $1 — группа. Подключите Google Drive для синхронизации правил между устройствами. Правила не отправляются в OpenAI. Команды голосовой правки не меняются.</string>
     <string name="replacements_edit_rule">Изменить замену для %1$s</string>
     <string name="replacements_delete_rule">Удалить замену для %1$s</string>
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>

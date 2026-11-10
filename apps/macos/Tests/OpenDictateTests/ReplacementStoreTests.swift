@@ -43,6 +43,29 @@ final class ReplacementStoreTests: XCTestCase {
         }
     }
 
+    func testCaseSensitiveRulesCoexistKeepTheOptionOnEditAndSyncAsVersionThree() async throws {
+        try await MainActor.run {
+            let suite = "com.opendictate.tests.replacements.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let store = ReplacementStore(defaults: defaults)
+            XCTAssertTrue(store.save(source: "ё", replacement: "е", regex: true, matchCase: true))
+            XCTAssertTrue(store.save(source: "Ё", replacement: "Е", regex: true, matchCase: true))
+            XCTAssertFalse(store.save(source: "ё", replacement: "duplicate", regex: true))
+            XCTAssertTrue(store.save(source: "ИП", replacement: "upper", matchCase: true))
+            XCTAssertTrue(store.save(source: "ип", replacement: "lower", matchCase: true))
+            XCTAssertFalse(store.save(source: "Ип", replacement: "duplicate"))
+            XCTAssertEqual(store.status, .invalid)
+            XCTAssertEqual(ReplacementStore(defaults: defaults).engine().apply("Ёжик всё, ИП ип Ип"), "Ежик все, upper lower Ип")
+            let rule = try XCTUnwrap(store.rules.first { $0.source == "ИП" })
+            XCTAssertTrue(store.save(id: rule.id, source: "ИП", replacement: "edited", matchCase: rule.matchCase))
+            XCTAssertEqual(store.rules.first { $0.id == rule.id }?.matchCase, true)
+            let json = try XCTUnwrap(store.syncValues["wordReplacements"])
+            XCTAssertTrue(json.contains(#""schemaVersion":3"#))
+            XCTAssertNoThrow(try store.validateSync(json: json))
+        }
+    }
+
     func testEditsPersistAndSessionRulesAreImmutable() async {
         await MainActor.run {
             let suite = "com.opendictate.tests.replacements.\(UUID().uuidString)"

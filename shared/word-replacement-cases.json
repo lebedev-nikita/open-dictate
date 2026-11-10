@@ -31,5 +31,10 @@
   {"name":"regex live trailing match waits","rules":[{"source":"\\d+","replacement":"#","regex":true}],"text":"call 12 34","final":false,"expected":"call # 34"},
   {"name":"regex final trailing match","rules":[{"source":"\\d+","replacement":"#","regex":true}],"text":"call 12 34","expected":"call # #"},
   {"name":"regex Unicode classes","rules":[{"source":"\\w+ий\\b","replacement":"X","regex":true}],"text":"синий СИНИЙ","expected":"X X"},
-  {"name":"regex disabled","rules":[{"source":"cat","replacement":"dog","regex":true,"enabled":false}],"text":"cat","expected":"cat"}
+  {"name":"regex disabled","rules":[{"source":"cat","replacement":"dog","regex":true,"enabled":false}],"text":"cat","expected":"cat"},
+  {"name":"match case phrase","rules":[{"source":"ИП","replacement":"предприниматель","matchCase":true}],"text":"ИП, ип и Ип.","expected":"предприниматель, ип и Ип."},
+  {"name":"match case applies per phrase","rules":[{"source":"US","replacement":"United States","matchCase":true},{"source":"cat","replacement":"dog"}],"text":"US us CAT","expected":"United States us dog"},
+  {"name":"match case regex inside words","rules":[{"source":"ё","replacement":"е","regex":true,"matchCase":true},{"source":"Ё","replacement":"Е","regex":true,"matchCase":true}],"text":"Ёжик всё ещё у ЁЛКИ.","expected":"Ежик все еще у ЕЛКИ."},
+  {"name":"match case regex classes","rules":[{"source":"[A-Z]{2,}","replacement":"#","regex":true,"matchCase":true}],"text":"NASA nasa Nasa","expected":"# nasa Nasa"},
+  {"name":"regex dashes and quotes","rules":[{"source":"\\s*[—–]\\s*","replacement":" - ","regex":true},{"source":"[«»“”„]","replacement":"\"","regex":true}],"text":"Он сказал — «да» – “нет”.","expected":"Он сказал - \"да\" - \"нет\"."}
 ]

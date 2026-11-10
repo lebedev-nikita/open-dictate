@@ -18,6 +18,10 @@ class ReplacementSettingsTest {
         fun label(id: Int) = context.getString(id)
         // The sheet is lazy: scroll its list so rows below the editor are composed before matching them.
         fun sheet(matcher: SemanticsMatcher) = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(isDialog())).performScrollToNode(matcher)
+        fun addRule() {
+            sheet(hasText(label(R.string.replacements_add)) and hasClickAction())
+            compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performClick()
+        }
         // The debug app is disposable; test data is cleared before this UI scenario.
         compose.runOnIdle {
             val store = (context.applicationContext as OpenDictateApplication).replacementStore
@@ -28,7 +32,7 @@ class ReplacementSettingsTest {
         compose.onNodeWithText(label(R.string.replacements_title)).performScrollTo().performClick()
         compose.onNodeWithText(label(R.string.replacements_source)).performTextInput("open dictate")
         compose.onNodeWithText(label(R.string.replacements_target)).performTextInput("OpenDictate")
-        compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performScrollTo().performClick()
+        addRule()
         sheet(hasContentDescription(context.getString(R.string.replacements_toggle_rule, "open dictate")))
         compose.onNode(hasText("OpenDictate") and hasAnyAncestor(isDialog()), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_toggle_rule, "open dictate")).performClick()
@@ -59,10 +63,14 @@ class ReplacementSettingsTest {
         compose.onNodeWithText(context.getString(R.string.replacements_summary, 0)).performScrollTo().assertIsDisplayed()
     }
 
-    @Test fun patternRuleRejectsInvalidPatternAndShowsMonospaceSource() {
+    @Test fun patternRuleRejectsInvalidPatternAndListsItsOptions() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         fun label(id: Int) = context.getString(id)
         fun sheet(matcher: SemanticsMatcher) = compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(isDialog())).performScrollToNode(matcher)
+        fun addRule() {
+            sheet(hasText(label(R.string.replacements_add)) and hasClickAction())
+            compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performClick()
+        }
         val store = (context.applicationContext as OpenDictateApplication).replacementStore
         compose.runOnIdle { store.state.value.document.rules.forEach(store::delete); store.setEnabled(true) }
         compose.onNodeWithText(label(R.string.replacements_title)).performScrollTo().performClick()
@@ -70,7 +78,7 @@ class ReplacementSettingsTest {
         compose.onNodeWithText(label(R.string.replacements_regex)).performClick()
         compose.onNodeWithText(label(R.string.replacements_pattern)).performTextInput("(a)")
         compose.onNodeWithText(label(R.string.replacements_target_pattern)).performTextInput("$2")
-        compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performScrollTo().performClick()
+        addRule()
         sheet(hasText(label(R.string.replacements_invalid_pattern)))
         compose.onNodeWithText(label(R.string.replacements_invalid_pattern)).assertIsDisplayed()
         androidx.test.espresso.Espresso.closeSoftKeyboard()
@@ -78,10 +86,23 @@ class ReplacementSettingsTest {
         capture(context, "replacement-pattern-error")
         compose.onNodeWithText("$2").performTextReplacement("$1 ₽")
         compose.onNodeWithText("(a)").performTextReplacement("(\\d+) ?руб\\w*")
-        compose.onNode(hasText(label(R.string.replacements_add)) and hasClickAction()).performScrollTo().performClick()
+        addRule()
         compose.runOnIdle { org.junit.Assert.assertEquals("250 ₽", store.engine().apply("250 рублей")) }
-        sheet(hasText("/(\\d+) ?руб\\w*/"))
-        compose.onNodeWithText("/(\\d+) ?руб\\w*/", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithText(label(R.string.replacements_regex)).performScrollTo().performClick()
+        compose.onNodeWithText(label(R.string.replacements_match_case)).performScrollTo().performClick()
+        compose.onNodeWithText(label(R.string.replacements_pattern)).performTextInput("ё")
+        compose.onNodeWithText(label(R.string.replacements_target_pattern)).performTextInput("е")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
+        capture(context, "replacement-pattern-editor")
+        addRule()
+        compose.runOnIdle { org.junit.Assert.assertEquals("Ёж все", store.engine().apply("Ёж всё")) }
+        sheet(hasText("(\\d+) ?руб\\w*"))
+        compose.onNodeWithText("(\\d+) ?руб\\w*", useUnmergedTree = true).assertIsDisplayed()
+        // Both rules are patterns; only the second matches case.
+        sheet(hasContentDescription(label(R.string.replacements_match_case)))
+        compose.onAllNodesWithContentDescription(label(R.string.replacements_regex), useUnmergedTree = true).assertCountEquals(2)
+        compose.onAllNodesWithContentDescription(label(R.string.replacements_match_case), useUnmergedTree = true).assertCountEquals(1)
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.waitForIdle()
         capture(context, "replacement-pattern-list")

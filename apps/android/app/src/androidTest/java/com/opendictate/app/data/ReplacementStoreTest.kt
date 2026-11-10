@@ -45,6 +45,22 @@ class ReplacementStoreTest {
                 .getString("document", null)!!).schemaVersion)
         } finally { context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit() }
     }
+    @Test fun caseSensitiveRulesCoexistAndUseDeviceRegex() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val name = "replacement-test-${UUID.randomUUID()}"
+        try {
+            val store = ReplacementStore(context, name)
+            assertNull(store.save(null, "ё", "е", regex = true, matchCase = true))
+            assertNull(store.save(null, "Ё", "Е", regex = true, matchCase = true))
+            assertEquals(ReplacementError.Invalid, store.save(null, "ё", "duplicate", regex = true))
+            assertNull(store.save(null, "ИП", "upper", matchCase = true))
+            assertNull(store.save(null, "ип", "lower", matchCase = true))
+            assertEquals(ReplacementError.Invalid, store.save(null, "Ип", "duplicate"))
+            assertEquals("Ежик все, upper lower Ип", ReplacementStore(context, name).engine().apply("Ёжик всё, ИП ип Ип"))
+            assertEquals(3, ReplacementDocument.fromJson(context.getSharedPreferences(name, Context.MODE_PRIVATE)
+                .getString("document", null)!!).schemaVersion)
+        } finally { context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit() }
+    }
     @Test fun corruptDataIsKeptAndCannotBeOverwritten() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val name = "replacement-test-${UUID.randomUUID()}"

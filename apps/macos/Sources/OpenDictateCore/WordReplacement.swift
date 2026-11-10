@@ -7,13 +7,15 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
     public var enabled: Bool
     /// Pattern rules match as written and may reference groups with `$1` or `${12}`.
     public var regex: Bool
+    /// Matches the source's exact letter case instead of ignoring case.
+    public var matchCase: Bool
 
-    private enum CodingKeys: String, CodingKey { case id, source, replacement, enabled, regex }
+    private enum CodingKeys: String, CodingKey { case id, source, replacement, enabled, regex, matchCase }
 
     public init(id: String = UUID().uuidString.lowercased(), source: String, replacement: String,
-                enabled: Bool = true, regex: Bool = false) {
+                enabled: Bool = true, regex: Bool = false, matchCase: Bool = false) {
         self.id = id; self.source = source; self.replacement = replacement
-        self.enabled = enabled; self.regex = regex
+        self.enabled = enabled; self.regex = regex; self.matchCase = matchCase
     }
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -22,6 +24,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
         replacement = try container.decode(String.self, forKey: .replacement)
         enabled = try container.decode(Bool.self, forKey: .enabled)
         regex = try container.decodeIfPresent(Bool.self, forKey: .regex) ?? false
+        matchCase = try container.decodeIfPresent(Bool.self, forKey: .matchCase) ?? false
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -31,6 +34,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
         try container.encode(enabled, forKey: .enabled)
         // Literal rules keep the version 1 wire format.
         if regex { try container.encode(true, forKey: .regex) }
+        if matchCase { try container.encode(true, forKey: .matchCase) }
     }
     /// Structural validity only. Patterns compile per platform, so synced rules never invalidate a document.
     public var isValid: Bool {
@@ -42,7 +46,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
     public var isUsable: Bool {
         guard isValid else { return false }
         guard regex else { return true }
-        guard let pattern = WordReplacementEngine.compile(source),
+        guard let pattern = WordReplacementEngine.compile(source, matchCase: matchCase),
               pattern.firstMatch(in: "", range: NSRange(location: 0, length: 0)) == nil else { return false }
         return WordReplacementEngine.groupReferences(replacement).allSatisfy { $0 <= pattern.numberOfCaptureGroups }
     }
@@ -51,8 +55,8 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
 public struct ReplacementDocument: Codable, Equatable, Sendable {
     public var rules: [WordReplacement]
     public init(rules: [WordReplacement] = []) { self.rules = rules }
-    /// Version 2 marks documents with pattern rules, so older clients reject rather than misread them.
-    public var schemaVersion: Int { rules.contains(where: \.regex) ? 2 : 1 }
+    /// Versions 2 and 3 mark documents with pattern and case-sensitive rules, so older clients reject rather than misread them.
+    public var schemaVersion: Int { rules.contains(where: \.matchCase) ? 3 : rules.contains(where: \.regex) ? 2 : 1 }
     private enum CodingKeys: String, CodingKey { case schemaVersion, rules }
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -82,20 +86,23 @@ public struct WordReplacementEngine: @unchecked Sendable {
             return $0.id < $1.id
         }
         let literals = active.filter { !$0.regex }
-        let alternatives = literals.map { "(" + NSRegularExpression.escapedPattern(for: $0.source.precomposedStringWithCanonicalMapping) + ")" }.joined(separator: "|")
+        let alternatives = literals.map {
+            let escaped = NSRegularExpression.escapedPattern(for: $0.source.precomposedStringWithCanonicalMapping)
+            return $0.matchCase ? "((?-i:" + escaped + "))" : "(" + escaped + ")"
+        }.joined(separator: "|")
         var matchers: [Matcher] = []
         if !alternatives.isEmpty, let regex = try? NSRegularExpression(pattern: "(?<![\\p{L}\\p{M}\\p{N}_])(?:" + alternatives + ")(?![\\p{L}\\p{M}\\p{N}_])", options: [.caseInsensitive]) {
             matchers.append(Matcher(regex: regex, rules: literals, literal: true))
         }
         // A pattern this platform cannot compile is skipped instead of disabling other rules.
         for rule in active where rule.regex {
-            if let regex = Self.compile(rule.source) { matchers.append(Matcher(regex: regex, rules: [rule], literal: false)) }
+            if let regex = Self.compile(rule.source, matchCase: rule.matchCase) { matchers.append(Matcher(regex: regex, rules: [rule], literal: false)) }
         }
         self.matchers = matchers
     }
 
-    static func compile(_ pattern: String) -> NSRegularExpression? {
-        try? NSRegularExpression(pattern: pattern.precomposedStringWithCanonicalMapping, options: [.caseInsensitive])
+    static func compile(_ pattern: String, matchCase: Bool = false) -> NSRegularExpression? {
+        try? NSRegularExpression(pattern: pattern.precomposedStringWithCanonicalMapping, options: matchCase ? [] : [.caseInsensitive])
     }
 
     public func apply(_ text: String, final: Bool = true) -> String {

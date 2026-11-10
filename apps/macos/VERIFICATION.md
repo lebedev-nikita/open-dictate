@@ -1,5 +1,22 @@
 # macOS verification
 
+## 0.7.0-rc.1 — case-sensitive word replacements
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+
+- All Swift tests pass. Shared fixtures run identically on ICU (macOS) and desktop
+  Java: case-sensitive phrases beside case-insensitive ones, case-sensitive
+  patterns inside words, and dash and quote patterns.
+- Store tests cover case-sensitive rules that differ only in case, duplicates,
+  editing and version 3 sync. The Android emulator store test runs the same
+  rules on its ICU-backed regex.
+- Native renders cover English (Aqua) and Russian (Dark Aqua): both options on one
+  line and `.*`/`Aa` marks in the list. Android emulator tests pass for the
+  replacement store, sync and settings sheet in English and Russian.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.6.0 — regular expression word replacements
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-03.

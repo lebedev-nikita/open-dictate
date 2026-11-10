@@ -24,17 +24,18 @@ final class ReplacementStore: ObservableObject {
         } else { document = ReplacementDocument() }
     }
     func engine() -> WordReplacementEngine { WordReplacementEngine(rules: enabled ? document.rules : []) }
-    @discardableResult func save(id: String? = nil, source: String, replacement: String, regex: Bool = false) -> Bool {
+    @discardableResult func save(id: String? = nil, source: String, replacement: String, regex: Bool = false, matchCase: Bool = false) -> Bool {
         // Pattern whitespace is significant; an empty pattern replacement deletes the match.
         let source = (regex ? source : source.trimmingCharacters(in: .whitespacesAndNewlines)).precomposedStringWithCanonicalMapping
         let replacement = regex ? replacement : replacement.trimmingCharacters(in: .whitespacesAndNewlines)
         guard storageAvailable else { status = .storageError; return false }
+        // Phrases differing only in case can coexist when both match case.
         guard !rules.contains(where: { $0.id != id && $0.regex == regex &&
-            (regex ? $0.source == source : $0.source.compare(source, options: [.caseInsensitive, .literal]) == .orderedSame) })
+            (regex || ($0.matchCase && matchCase) ? $0.source == source : $0.source.compare(source, options: [.caseInsensitive, .literal]) == .orderedSame) })
         else { status = .invalid; return false }
         let previous = document.rules.first { $0.id == id }
         let rule = WordReplacement(id: id ?? UUID().uuidString.lowercased(), source: source, replacement: replacement,
-                                   enabled: previous?.enabled ?? true, regex: regex)
+                                   enabled: previous?.enabled ?? true, regex: regex, matchCase: matchCase)
         var next = document; next.rules.removeAll { $0.id == rule.id }; next.rules.append(rule)
         guard next.isValid else { status = .invalid; return false }
         guard rule.isUsable else { status = .invalidPattern; return false }
