@@ -239,8 +239,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let compact = false
             #endif
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: compact ? 740 : 790, height: compact ? 590 : 650),
-                                  styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+                                  styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+                                  backing: .buffered, defer: false)
             window.title = "OpenDictate"; window.isReleasedWhenClosed = false
+            // The sidebar already names the app, so the title bar only hosts the window controls.
+            window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
             window.contentView = NSHostingView(rootView: SettingsView(model: model, preferences: model.preferences, history: model.history, replacements: model.replacements))
             window.minSize = NSSize(width: 740, height: 620)
             window.center(); settingsWindow = window

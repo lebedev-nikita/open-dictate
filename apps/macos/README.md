@@ -140,8 +140,8 @@ Punctuation is the initial rule. The shared Text model selection controls both
 post-processing and voice editing. Ordinary dictation always skips post-processing,
 including when older preferences had its global switch enabled.
 
-Enable **Format values** for automatic language/regional styles. The native
-popover lists only custom rules, grouped by value type; **All languages** comes
+Enable **Format values** for automatic language/regional styles; **Customize…**
+opens the native popover. It lists only custom rules, grouped by value type; **All languages** comes
 first, followed by languages alphabetically. **Add rule** asks for a type,
 language or All languages, and the desired result for a fixed source value.
 The language picker offers only selected dictation languages; automatic detection
@@ -239,6 +239,12 @@ The theme button beside the version at the bottom of the sidebar offers System, 
 The choice is saved locally and applies across all settings pages. Dark preserves
 the previous default; System follows macOS. The recording indicator remains dark.
 
+Settings pages share `SettingsStyle.swift`: one spacing scale (4–32 pt), a
+page title naming the page, and related rows grouped on raised cards with
+secondary section titles. Inputs use their own surface, lighter than cards in
+Dark, with an accent focus ring. The sidebar shows dictionary and replacement
+counts as secondary numbers and extends under the transparent title bar.
+
 ### Keyboard shortcuts
 
 Command-W closes the current settings window. Command-Shift-W closes all regular
@@ -290,8 +296,8 @@ runs, its text model and service tier. Accurate includes separate request durati
 including upload and the full response; Live shows its model without timings.
 Old entries and skipped stages have no invented models or durations. This metadata
 remains local and is excluded from Drive.
-Disable history to stop saving future results; delete existing
-history separately. Audio is never persisted on macOS.
+Disable history at the top of the History page to stop saving future results;
+**Delete all…** beside the search field removes existing history. Audio is never persisted on macOS.
 
 Errors use native macOS notifications without opening Settings or taking focus.
 Allow notifications when macOS first asks; banners follow System Settings →

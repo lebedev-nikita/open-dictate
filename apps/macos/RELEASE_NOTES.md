@@ -1,8 +1,9 @@
-OpenDictate for macOS **0.7.0-rc.2** adds case-sensitive word replacements. Requires macOS 14+ on Apple Silicon or Intel.
+OpenDictate for macOS **0.8.0-rc.1** redesigns the settings window. Requires macOS 14+ on Apple Silicon or Intel.
 
-- Turn on “Match case” for a phrase or regular expression to match its exact letter case.
-- Replace characters inside words while keeping capitals with two case-sensitive regular expressions, such as `ё` → `е` and `Ё` → `Е`.
-- The rule list tags regular expressions with `.*` and case-sensitive rules with `Aa`.
-- Case-sensitive rules sync with Android 0.16.0. Older app versions stop syncing replacements until updated once such a rule exists.
+- Each page is titled by its name, and related settings are grouped on cards with consistent spacing.
+- Text fields have their own surface, lighter than cards in the dark theme, with a focus ring.
+- The sidebar shows dictionary and replacement counts beside each page and extends under the title bar.
+- History keeps “Save history” at the top and “Delete all…” beside search. Dates follow the interface language.
+- Includes case-sensitive word replacements from 0.7.0-rc.2.
 
 Upgrade with Homebrew or download the universal DMG and replace OpenDictate in Applications. This release is ad-hoc signed and **not notarized**. Verify the attached SHA-256 checksum.
