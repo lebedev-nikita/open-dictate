@@ -7,8 +7,6 @@ import kotlinx.coroutines.flow.asStateFlow
 data class ReplacementState(
     val document: ReplacementDocument = ReplacementDocument(),
     val enabled: Boolean = true,
-    /** Independent of [enabled]: it changes characters, not words. */
-    val plainTypography: Boolean = false,
     val storageError: Boolean = false,
 )
 
@@ -21,7 +19,7 @@ class ReplacementStore(context: Context, preferencesName: String = "word_replace
     var onChange: (() -> Unit)? = null
 
     fun engine(): WordReplacementEngine = state.value.let {
-        WordReplacementEngine(if (it.enabled) it.document.rules else emptyList(), it.plainTypography)
+        WordReplacementEngine(if (it.enabled) it.document.rules else emptyList())
     }
     /** Returns null when saved, otherwise the reason the rule was rejected. */
     fun save(id: String?, source: String, replacement: String, regex: Boolean = false, matchCase: Boolean = false): ReplacementError? {
@@ -50,13 +48,6 @@ class ReplacementStore(context: Context, preferencesName: String = "word_replace
         }
         else mutableState.value = state.value.copy(storageError = true)
     }
-    fun setPlainTypography(enabled: Boolean) {
-        if (prefs.edit().putBoolean("plain_typography", enabled).commit()) {
-            mutableState.value = state.value.copy(plainTypography = enabled)
-            onChange?.invoke()
-        }
-        else mutableState.value = state.value.copy(storageError = true)
-    }
     fun toggle(rule: WordReplacement, enabled: Boolean) {
         if (!state.value.storageError) persist(ReplacementDocument(state.value.document.rules.map { if (it.id == rule.id) it.copy(enabled = enabled) else it }))
     }
@@ -70,26 +61,23 @@ class ReplacementStore(context: Context, preferencesName: String = "word_replace
         return saved
     }
     /** Keep the incoming JSON verbatim so platform-specific encoding never creates a new edit. */
-    fun applySync(json: String?, enabled: Boolean?, plainTypography: Boolean? = null) {
+    fun applySync(json: String?, enabled: Boolean?) {
         require(!state.value.storageError)
         val document = json?.let(ReplacementDocument::fromJson) ?: state.value.document
         val nextEnabled = enabled ?: state.value.enabled
-        val nextPlainTypography = plainTypography ?: state.value.plainTypography
         if (!prefs.edit().apply {
                 if (json != null) putString("document", json)
                 putBoolean("enabled", nextEnabled)
-                putBoolean("plain_typography", nextPlainTypography)
             }.commit()) {
             mutableState.value = state.value.copy(storageError = true)
             throw IllegalStateException("Could not save synchronized replacements")
         }
-        mutableState.value = ReplacementState(document, nextEnabled, nextPlainTypography)
+        mutableState.value = ReplacementState(document, nextEnabled)
     }
     private fun load(): ReplacementState {
         val enabled = prefs.getBoolean("enabled", true)
-        val plainTypography = prefs.getBoolean("plain_typography", false)
-        val saved = prefs.getString("document", null) ?: return ReplacementState(enabled = enabled, plainTypography = plainTypography)
-        return runCatching { ReplacementState(ReplacementDocument.fromJson(saved), enabled, plainTypography) }
-            .getOrElse { ReplacementState(enabled = enabled, plainTypography = plainTypography, storageError = true) }
+        val saved = prefs.getString("document", null) ?: return ReplacementState(enabled = enabled)
+        return runCatching { ReplacementState(ReplacementDocument.fromJson(saved), enabled) }
+            .getOrElse { ReplacementState(enabled = enabled, storageError = true) }
     }
 }

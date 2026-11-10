@@ -216,8 +216,6 @@
     <string name="replacements_title">Автозамена</string>
     <string name="replacements_summary">Настроено автозамен: %1$d</string>
     <string name="replacements_enable">Включить автозамену</string>
-    <string name="replacements_plain_typography">Простая типографика</string>
-    <string name="replacements_plain_typography_summary">Заменять тире, типографские кавычки и многоточие символами с клавиатуры.</string>
     <string name="replacements_add">Добавить замену</string>
     <string name="replacements_edit">Изменить замену</string>
     <string name="replacements_source">Распознанное слово или фраза</string>

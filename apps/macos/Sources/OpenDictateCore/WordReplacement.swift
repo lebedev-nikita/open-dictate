@@ -79,10 +79,8 @@ public struct ReplacementDocument: Codable, Equatable, Sendable {
 public struct WordReplacementEngine: @unchecked Sendable {
     private struct Matcher { let regex: NSRegularExpression; let rules: [WordReplacement]; let literal: Bool }
     private let matchers: [Matcher]
-    private let plainTypography: Bool
 
-    public init(rules: [WordReplacement], plainTypography: Bool = false) {
-        self.plainTypography = plainTypography
+    public init(rules: [WordReplacement]) {
         let active = rules.filter { $0.isValid && $0.enabled }.sorted {
             if $0.source.utf16.count != $1.source.utf16.count { return $0.source.utf16.count > $1.source.utf16.count }
             return $0.id < $1.id
@@ -107,13 +105,7 @@ public struct WordReplacementEngine: @unchecked Sendable {
         try? NSRegularExpression(pattern: pattern.precomposedStringWithCanonicalMapping, options: matchCase ? [] : [.caseInsensitive])
     }
 
-    /// Rules run first, so plain typography also covers replacement text.
     public func apply(_ text: String, final: Bool = true) -> String {
-        let replaced = applyRules(text, final: final)
-        return plainTypography ? PlainTypography.apply(replaced) : replaced
-    }
-
-    private func applyRules(_ text: String, final: Bool) -> String {
         guard !matchers.isEmpty else { return text }
         let normalized = text.precomposedStringWithCanonicalMapping
         let value = normalized as NSString

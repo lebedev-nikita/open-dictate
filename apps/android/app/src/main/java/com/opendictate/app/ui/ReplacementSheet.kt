@@ -54,16 +54,7 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
                     val enableLabel = stringResource(R.string.replacements_enable)
                     Switch(state.enabled, store::setEnabled, Modifier.semantics { contentDescription = enableLabel })
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f).padding(end = 16.dp)) {
-                        Text(stringResource(R.string.replacements_plain_typography))
-                        Text(stringResource(R.string.replacements_plain_typography_summary), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    val plainLabel = stringResource(R.string.replacements_plain_typography)
-                    Switch(state.plainTypography, store::setPlainTypography, Modifier.semantics { contentDescription = plainLabel })
-                }
-                HorizontalDivider(Modifier.padding(top = 12.dp))
+                HorizontalDivider()
             }
             item {
                 Text(stringResource(if (editingID == null) R.string.replacements_add else R.string.replacements_edit), style = MaterialTheme.typography.titleMedium)

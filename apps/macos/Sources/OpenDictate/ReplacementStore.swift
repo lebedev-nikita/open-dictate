@@ -9,10 +9,6 @@ final class ReplacementStore: ObservableObject {
     @Published var enabled: Bool {
         didSet { defaults.set(enabled, forKey: "wordReplacementEnabled"); onChange?() }
     }
-    /// Independent of `enabled`: it changes characters, not words.
-    @Published var plainTypography: Bool {
-        didSet { defaults.set(plainTypography, forKey: "plainTypographyEnabled"); onChange?() }
-    }
     @Published private(set) var status: Status = .local
     private let defaults: UserDefaults
     private var storageAvailable = true
@@ -22,13 +18,12 @@ final class ReplacementStore: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         enabled = defaults.object(forKey: "wordReplacementEnabled") as? Bool ?? true
-        plainTypography = defaults.bool(forKey: "plainTypographyEnabled")
         if let data = defaults.data(forKey: "wordReplacementDocument") {
             if let saved = try? JSONDecoder().decode(ReplacementDocument.self, from: data), saved.isValid { document = saved }
             else { document = ReplacementDocument(); storageAvailable = false; status = .storageError }
         } else { document = ReplacementDocument() }
     }
-    func engine() -> WordReplacementEngine { WordReplacementEngine(rules: enabled ? document.rules : [], plainTypography: plainTypography) }
+    func engine() -> WordReplacementEngine { WordReplacementEngine(rules: enabled ? document.rules : []) }
     @discardableResult func save(id: String? = nil, source: String, replacement: String, regex: Bool = false, matchCase: Bool = false) -> Bool {
         // Pattern whitespace is significant; an empty pattern replacement deletes the match.
         let source = (regex ? source : source.trimmingCharacters(in: .whitespacesAndNewlines)).precomposedStringWithCanonicalMapping
@@ -68,8 +63,7 @@ final class ReplacementStore: ObservableObject {
             let data = defaults.data(forKey: "wordReplacementDocument") ?? Data(#"{"schemaVersion":1,"rules":[]}"#.utf8)
             let saved = try JSONDecoder().decode(ReplacementDocument.self, from: data)
             guard saved.isValid, let json = String(data: data, encoding: .utf8) else { throw SyncFormatError.invalid }
-            return ["wordReplacements": json, "wordReplacementsEnabled": enabled ? "true" : "false",
-                    "plainTypography": plainTypography ? "true" : "false"]
+            return ["wordReplacements": json, "wordReplacementsEnabled": enabled ? "true" : "false"]
         }
     }
     /// Validate before any preference is changed. Preserve incoming JSON to avoid restamping it.
@@ -80,7 +74,7 @@ final class ReplacementStore: ObservableObject {
             guard document.isValid else { throw SyncFormatError.invalid }
         }
     }
-    func applySync(json: String?, enabled nextEnabled: Bool?, plainTypography nextPlainTypography: Bool? = nil) throws {
+    func applySync(json: String?, enabled nextEnabled: Bool?) throws {
         try validateSync(json: json)
         if let json {
             let data = Data(json.utf8)
@@ -88,7 +82,6 @@ final class ReplacementStore: ObservableObject {
             defaults.set(data, forKey: "wordReplacementDocument"); document = next
         }
         if let nextEnabled, enabled != nextEnabled { enabled = nextEnabled }
-        if let nextPlainTypography, plainTypography != nextPlainTypography { plainTypography = nextPlainTypography }
         status = .local
     }
 }

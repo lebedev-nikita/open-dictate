@@ -90,10 +90,10 @@ final class ReplacementSyncTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suite) }
         let preferences = Preferences(defaults: defaults)
         for (key, value) in [("wordReplacements", #"{"schemaVersion":2,"rules":[]}"#),
-                             ("wordReplacementsEnabled", "invalid"), ("plainTypography", "yes")] {
+                             ("wordReplacementsEnabled", "invalid")] {
             var remote = try fixture()
             remote.entries["dictionary"]?.value = "Must not apply"
-            remote.entries[key] = .init(value: value, modifiedAt: remote.entries["dictionary"]!.modifiedAt, deviceId: "remote")
+            remote.entries[key]?.value = value
             let before = try preferences.syncDocument()
             XCTAssertThrowsError(try preferences.mergeSync(remote))
             XCTAssertEqual(preferences.dictionary, "OpenDictate")
@@ -115,26 +115,8 @@ final class ReplacementSyncTests: XCTestCase {
         XCTAssertEqual(migrated.entries["future.preference"], old.entries["future.preference"])
         XCTAssertEqual(migrated.entries["wordReplacements"]?.modifiedAt, 0)
         XCTAssertEqual(migrated.entries["wordReplacementsEnabled"]?.modifiedAt, 0)
-        XCTAssertEqual(migrated.entries["plainTypography"], .init(value: "false", modifiedAt: 0, deviceId: ""))
         _ = try preferences.mergeSync(fixture())
         XCTAssertEqual(preferences.replacements.rules.count, 2)
-    }
-
-    @MainActor func testPlainTypographySyncsIndependentlyOfWordReplacements() throws {
-        let suite = "replacement-sync-\(UUID().uuidString)", defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let preferences = Preferences(defaults: defaults)
-        var events = 0
-        let subscription = preferences.syncChanges.sink { events += 1 }
-        defer { subscription.cancel() }
-        preferences.replacements.plainTypography = true
-        XCTAssertEqual(events, 1)
-        XCTAssertEqual(try preferences.syncDocument().entries["plainTypography"]?.value, "true")
-        var remote = try preferences.syncDocument()
-        remote.entries["plainTypography"] = .init(value: "false", modifiedAt: Int64.max - 10, deviceId: "remote")
-        _ = try preferences.mergeSync(remote)
-        XCTAssertFalse(preferences.replacements.plainTypography)
-        XCTAssertEqual(events, 1)
     }
 
     @MainActor func testOversizedReplacementListCanBeReducedAndSyncedWithoutRestart() throws {
