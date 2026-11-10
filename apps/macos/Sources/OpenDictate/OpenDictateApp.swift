@@ -253,6 +253,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+        // AppKit focuses the first text field of a newly key window. No field needs input on
+        // opening, so clear the focus after SwiftUI installs its views; a click still focuses a field.
+        DispatchQueue.main.async { [weak self] in self?.settingsWindow?.makeFirstResponder(nil) }
     }
 
     func windowWillClose(_ notification: Notification) {

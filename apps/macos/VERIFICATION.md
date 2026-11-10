@@ -1,5 +1,21 @@
 # macOS verification
 
+## 0.8.0-rc.4 — settings hierarchy and inset fields
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+
+- All Swift tests pass.
+- The isolated smoke bundle was captured on every page in English (Aqua) and
+  Russian (Dark Aqua). Section titles share the card edge, permission statuses
+  use grey checks, light-mode fields are darker than their card, and History
+  search sits on the list card.
+- Closing Settings and reopening it left no field focused. The same check on
+  0.8.0-rc.2 also showed no focus, so automatic focus was not reproduced; the
+  window now clears its first responder on opening.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.0-rc.3 — plain typography
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.

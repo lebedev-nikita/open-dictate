@@ -245,8 +245,10 @@ the previous default; System follows macOS. The recording indicator remains dark
 
 Settings pages share `SettingsStyle.swift`: one spacing scale (4–32 pt), a
 page title naming the page, and related rows grouped on raised cards with
-secondary section titles. Inputs use their own surface, lighter than cards in
-Dark, with an accent focus ring. The sidebar shows dictionary and replacement
+secondary section titles. Inputs are inset on their card: darker than the card in
+Light, lighter in Dark, with an accent focus ring. No field takes focus when
+Settings opens. Settled statuses such as Allowed use a grey check; color is
+reserved for states that need action. The sidebar shows dictionary and replacement
 counts as secondary numbers and extends under the transparent title bar. The
 Dictionary page has a single scroll: its editor fills the window, with **Clean up**
 beside the title.
