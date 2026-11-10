@@ -61,10 +61,15 @@ struct ReplacementSettingsView: View {
                             Toggle(t("Enable replacement", "Включить замену"), isOn: Binding(get: { rule.enabled }, set: { store.update(rule, enabled: $0) }))
                                 .labelsHidden().toggleStyle(.checkbox).accessibilityLabel("\(rule.source): " + t("Enable replacement", "Включить замену"))
                             VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 6) {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Text(rule.source).foregroundStyle(.secondary).font(rule.regex ? .body.monospaced() : .body)
-                                    if rule.regex { badge(".*", t("Regular expression", "Регулярное выражение")) }
-                                    if rule.matchCase { badge("Aa", t("Match case", "Учитывать регистр")) }
+                                    // The tags sit further from the source than from each other, so they read as one group.
+                                    if rule.regex || rule.matchCase {
+                                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                            if rule.regex { badge(".*", t("Regular expression", "Регулярное выражение"), design: .monospaced) }
+                                            if rule.matchCase { badge("Aa", t("Match case", "Учитывать регистр")) }
+                                        }
+                                    }
                                 }
                                 Text(rule.replacement).textSelection(.enabled)
                             }.frame(maxWidth: .infinity, alignment: .leading)
@@ -97,8 +102,10 @@ struct ReplacementSettingsView: View {
     }
     private func reset() { editingID = nil; source = ""; replacement = ""; regex = false; matchCase = false; invalid = false }
     /// Marks a rule option with the glyph find-and-replace fields use for it, so the list needs no translated tag.
-    private func badge(_ glyph: String, _ label: String) -> some View {
-        Text(glyph).font(.caption.monospaced()).foregroundStyle(.secondary).padding(.horizontal, 4)
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(.separator)).help(label).accessibilityLabel(label)
+    private func badge(_ glyph: String, _ label: String, design: Font.Design = .default) -> some View {
+        // A tint rather than an outline: the tag is a label, not a control.
+        Text(glyph).font(.system(size: 11, weight: .medium, design: design)).foregroundStyle(.secondary)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4)).help(label).accessibilityLabel(label)
     }
 }

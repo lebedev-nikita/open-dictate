@@ -1,6 +1,6 @@
 # macOS verification
 
-## 0.7.0-rc.1 — case-sensitive word replacements
+## 0.7.0-rc.2 — case-sensitive word replacements
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
 
@@ -11,7 +11,7 @@ Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
   editing and version 3 sync. The Android emulator store test runs the same
   rules on its ICU-backed regex.
 - Native renders cover English (Aqua) and Russian (Dark Aqua): both options on one
-  line and `.*`/`Aa` marks in the list. Android emulator tests pass for the
+  line and tinted `.*`/`Aa` tags in the list. Android emulator tests pass for the
   replacement store, sync and settings sheet in English and Russian.
 - Universal packaging verified the DMG and signature.
 
