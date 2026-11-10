@@ -1,5 +1,22 @@
 # macOS verification
 
+## 0.8.0-rc.1 — redesigned settings window
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+
+- All Swift tests pass, including the theme sampling and scroll-position layout
+  tests against the new surfaces.
+- `SettingsCaptureTests` renders every page in English (Aqua) and Russian
+  (Dark Aqua) when `OPENDICTATE_VIEW_CAPTURES` is set.
+- The isolated smoke bundle and a build of the previous commit were captured on
+  every page in English and Russian, light and dark, with identical local data.
+  Labels fit without clipping; the sidebar no longer truncates Keyboard shortcuts.
+  History dates follow the interface language. Typing into a replacement field
+  showed the accent focus ring on the lighter dark-mode input surface.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.7.0-rc.2 — case-sensitive word replacements
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.

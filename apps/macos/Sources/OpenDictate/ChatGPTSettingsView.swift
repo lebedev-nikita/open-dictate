@@ -18,7 +18,8 @@ struct ChatGPTSettingsView: View {
                         Text("ChatGPT").fontWeight(.medium)
                         Text(t("Use subscription limits. Only for working with text, not for transcription.",
                                "Использовать лимиты подписки. Только для работы с текстом, не для транскрипции."))
-                            .font(.caption).foregroundStyle(.primary)
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 12)
                 }

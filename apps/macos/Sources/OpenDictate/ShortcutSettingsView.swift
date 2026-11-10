@@ -9,25 +9,27 @@ struct ShortcutSettingsView: View {
     @State private var showsVoiceEditingHelp = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(t("Keyboard shortcuts", "Горячие клавиши"))
-                .font(.system(size: 27, weight: .semibold))
+        VStack(alignment: .leading, spacing: Space.lg) {
+            PageHeader(title: t("Keyboard shortcuts", "Горячие клавиши"),
+                       subtitle: t("Work in any app.", "Работают в любом приложении."))
 
-            VStack(alignment: .leading, spacing: 0) {
+            SettingsSection(title: t("Actions", "Действия")) {
                 shortcutSetting(t("Dictation", "Диктовка"), binding: \.dictate)
+                RowDivider()
                 shortcutSetting(t("Dictation with post-processing", "Диктовка с постобработкой"),
                     binding: \.dictateWithPostProcessing)
+                RowDivider()
                 shortcutSetting(t("Voice editing", "Голосовая правка"),
                     help: t("Select text first. With no selection, the whole field is edited.",
                             "Сначала выделите текст. Без выделения изменится всё поле."), binding: \.transform)
-                Divider().padding(.vertical, 8)
-                HStack(spacing: 12) {
+                RowDivider()
+                HStack(spacing: Space.sm) {
                     Text(t("Cancel dictation", "Отменить диктовку"))
-                    Spacer(minLength: 8)
+                    Spacer(minLength: Space.xs)
                     Text("Esc").font(.system(.body, design: .monospaced))
-                        .foregroundStyle(.secondary).frame(width: 175)
+                        .foregroundStyle(.secondary).frame(width: 160)
                     Color.clear.frame(width: 32, height: 1).accessibilityHidden(true)
-                }.frame(minHeight: 44)
+                }.settingsRowPadding()
             }
 
             if model.isActive {
@@ -51,9 +53,9 @@ struct ShortcutSettingsView: View {
             bindings[keyPath: binding] = value
             model.setShortcuts(bindings)
         }
-        return HStack(spacing: 12) {
+        return HStack(spacing: Space.sm) {
             HStack(spacing: 6) {
-                Text(label).fontWeight(.medium).fixedSize(horizontal: false, vertical: true)
+                Text(label).fixedSize(horizontal: false, vertical: true)
                 if let help {
                     Button { showsVoiceEditingHelp.toggle() } label: {
                         Image(systemName: "info.circle").foregroundStyle(.secondary)
@@ -71,7 +73,7 @@ struct ShortcutSettingsView: View {
             ShortcutRecorder(shortcut: shortcut, title: label, emptyLabel: t("Not set", "Не задано"),
                 prompt: t("Press and release…", "Нажмите и отпустите…"), enabled: !model.isActive,
                 onRecording: model.recordShortcut, onSave: save)
-                .frame(width: 175, height: 28)
+                .frame(width: 160, height: 28)
             Menu {
                 Button(t("Turn off shortcut", "Отключить сочетание")) { save(.disabled) }
                     .disabled(!shortcut.isEnabled)
@@ -87,6 +89,6 @@ struct ShortcutSettingsView: View {
                 .accessibilityLabel(t("Choose a key for \(label)", "Выбрать клавишу: \(label)"))
                 .help(t("Choose a key or turn off this shortcut", "Выбрать клавишу или отключить сочетание"))
                 .disabled(model.isActive)
-        }.frame(minHeight: 44)
+        }.settingsRowPadding()
     }
 }

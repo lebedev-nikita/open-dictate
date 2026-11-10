@@ -10,7 +10,7 @@ struct HistoryEntryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(entry.date, format: .dateTime.day().month().hour().minute()).foregroundStyle(.secondary)
+                Text(entry.date.formatted(.dateTime.day().month().hour().minute().locale(Locale(identifier: russian ? "ru_RU" : "en_US")))).foregroundStyle(.secondary).monospacedDigit()
                 Spacer()
                 Button(action: onCopy) { Image(systemName: "doc.on.doc") }
                     .help(russian ? "Скопировать текст" : "Copy transcript")
@@ -27,15 +27,14 @@ struct HistoryEntryView: View {
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text(detail.title).fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
-                            if let duration = detail.duration { Text(duration).fixedSize() }
+                            if let duration = detail.duration { Text(duration).monospacedDigit().fixedSize() }
                         }
                     }
                 }
-                    .font(.caption).foregroundStyle(.primary).padding(.top, 4)
+                    .font(.caption).foregroundStyle(.secondary)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(HistoryTiming.labels(for: entry, russian: russian, abbreviated: false).joined(separator: ", "))
             }
-            Divider().padding(.top, 8)
-        }
+        }.padding(Space.md)
     }
 }
