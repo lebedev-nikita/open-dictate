@@ -1,5 +1,19 @@
 # macOS verification
 
+## 0.8.0-rc.2 — settings layout fixes and Dock presence
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+
+- All Swift tests pass.
+- The isolated smoke bundle showed the API key field and its buttons at one
+  height, card dividers inset on both sides, and the Dictionary page with 40 terms
+  scrolling only inside its editor, in English (Dark Aqua) and Russian (Aqua).
+- `lsappinfo` reported the app as Foreground while Settings was open and as
+  UIElement after Command-W closed it, in both languages.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.0-rc.1 — redesigned settings window
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.

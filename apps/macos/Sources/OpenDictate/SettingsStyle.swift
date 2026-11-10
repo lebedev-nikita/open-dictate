@@ -34,17 +34,29 @@ enum Surface {
 }
 
 /// Page title and one line of context. The title names the page; the subtitle stays secondary.
-struct PageHeader: View {
+/// An optional page action sits beside the title, leaving the subtitle the full width.
+struct PageHeader<Action: View>: View {
     let title: String
     var subtitle: String?
+    @ViewBuilder var action: Action
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xxs) {
-            Text(title).font(.system(size: 22, weight: .semibold)).accessibilityAddTraits(.isHeader)
+            HStack(alignment: .firstTextBaseline, spacing: Space.md) {
+                Text(title).font(.system(size: 22, weight: .semibold)).accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                action
+            }
             if let subtitle {
                 Text(subtitle).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+}
+
+extension PageHeader where Action == EmptyView {
+    init(title: String, subtitle: String? = nil) {
+        self.init(title: title, subtitle: subtitle) { EmptyView() }
     }
 }
 
@@ -101,9 +113,9 @@ struct SettingsRow<Accessory: View>: View {
     }
 }
 
-/// Separates rows inside a card, inset to the row content.
+/// Separates rows inside a card, inset to the row content on both sides.
 struct RowDivider: View {
-    var body: some View { Divider().padding(.leading, Space.md) }
+    var body: some View { Divider().padding(.horizontal, Space.md) }
 }
 
 /// A short status beside a row's label, such as a granted permission.

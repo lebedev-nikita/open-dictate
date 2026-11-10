@@ -32,7 +32,7 @@ struct OpenDictateApp {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private var model: AppModel!
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
@@ -246,10 +246,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
             window.contentView = NSHostingView(rootView: SettingsView(model: model, preferences: model.preferences, history: model.history, replacements: model.replacements))
             window.minSize = NSSize(width: 740, height: 620)
+            window.delegate = self
             window.center(); settingsWindow = window
         }
+        // A menu bar app; Settings alone appears in the Dock and app switcher while it is open.
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === settingsWindow else { return }
+        NSApp.setActivationPolicy(.accessory)
     }
 
     // Menu actions run after the menu releases focus, before capturing the frontmost field.
