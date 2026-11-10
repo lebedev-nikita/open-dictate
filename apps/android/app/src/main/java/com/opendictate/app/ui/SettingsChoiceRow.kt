@@ -23,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
@@ -41,23 +44,26 @@ internal fun SettingsChoiceRow(
     ) {
         options.forEachIndexed { index, label ->
             val selected = index == selectedIndex
+            val shape = RoundedCornerShape(8.dp)
             Row(
                 Modifier.weight(1f).fillMaxHeight()
-                    .background(if (selected) colors.primary else SettingsInset, RoundedCornerShape(9.dp))
+                    .then(if (selected) Modifier.shadow(1.dp, shape).background(colors.surfaceBright, shape) else Modifier)
+                    .clip(shape)
                     .selectable(selected, role = Role.RadioButton, onClick = { onSelect(index) })
                     .heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (selected) {
-                    Icon(Icons.Outlined.Check, null, Modifier.size(16.dp), tint = colors.onPrimary)
-                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Outlined.Check, null, Modifier.size(16.dp), tint = SettingsText)
+                    Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     label,
                     modifier = Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (selected) colors.onPrimary else SettingsMuted,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (selected) SettingsText else SettingsMuted,
                 )
             }
         }

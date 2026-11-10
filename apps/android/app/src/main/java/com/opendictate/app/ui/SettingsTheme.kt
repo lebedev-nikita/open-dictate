@@ -11,6 +11,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.opendictate.app.model.AppTheme
 
 internal val SettingsCanvas: Color @Composable get() = MaterialTheme.colorScheme.background
@@ -19,6 +20,9 @@ internal val SettingsInset: Color @Composable get() = MaterialTheme.colorScheme.
 internal val SettingsText: Color @Composable get() = MaterialTheme.colorScheme.onSurface
 internal val SettingsSecondary: Color @Composable get() = MaterialTheme.colorScheme.secondary
 internal val SettingsMuted: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+
+/** Leading icon (24) plus the gaps around it; row text and inset dividers start here. */
+internal val SettingsRowTextStart = 56.dp
 
 private val LightSettingsColors = lightColorScheme(
     primary = Color(0xFF22252B), onPrimary = Color.White,
@@ -31,6 +35,7 @@ private val LightSettingsColors = lightColorScheme(
     surfaceContainer = Color.White, surfaceContainerLow = Color(0xFFF8F9FA),
     surfaceContainerHigh = Color(0xFFEEF0F3), surfaceContainerHighest = Color(0xFFE6E9EE),
     outline = Color(0xFF848B96), outlineVariant = Color(0xFFE4E7EC),
+    surfaceBright = Color.White,
     surfaceTint = Color.Transparent,
 )
 
@@ -45,6 +50,7 @@ private val DarkSettingsColors = darkColorScheme(
     surfaceContainer = Color(0xFF1B1D22), surfaceContainerLow = Color(0xFF16181C),
     surfaceContainerHigh = Color(0xFF282B32), surfaceContainerHighest = Color(0xFF32363E),
     outline = Color(0xFF757D89), outlineVariant = Color(0xFF30343C),
+    surfaceBright = Color(0xFF3A3F48),
     surfaceTint = Color.Transparent,
 )
 

@@ -35,7 +35,7 @@ import com.opendictate.app.R
             .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(R.drawable.ic_chatgpt_24), null, Modifier.size(24.dp), tint = SettingsText)
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("ChatGPT", style = MaterialTheme.typography.bodyLarge)
                 Text(stringResource(R.string.chatgpt_text_hint), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
@@ -43,7 +43,7 @@ import com.opendictate.app.R
             Spacer(Modifier.width(12.dp))
             Switch(checked = checked, onCheckedChange = null, enabled = enabled)
         }
-        if (!hasKey || connection.busy || connection.failed || connection.revocationUnconfirmed) Column(Modifier.padding(start = 54.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!hasKey || connection.busy || connection.failed || connection.revocationUnconfirmed) Column(Modifier.padding(start = SettingsRowTextStart, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (connection.busy) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(stringResource(R.string.chatgpt_waiting), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)

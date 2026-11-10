@@ -86,7 +86,7 @@ internal fun GoogleDriveSyncSettings() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(R.drawable.ic_google_drive_24), null, Modifier.size(24.dp), tint = Color.Unspecified)
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.drive_sync_provider), style = MaterialTheme.typography.bodyLarge)
             Text(stringResource(R.string.drive_sync_hint), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)

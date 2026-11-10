@@ -36,6 +36,8 @@ import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -91,9 +93,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.BuildConfig
 import com.opendictate.app.R
@@ -122,7 +124,7 @@ internal fun SettingsScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
 ) {
-    var setupExpanded by rememberSaveable { mutableStateOf(false) }
+    var setupToggled by rememberSaveable { mutableStateOf<Boolean?>(null) }
     var replacementsOpen by rememberSaveable { mutableStateOf(false) }
     var dictionaryOpen by rememberSaveable { mutableStateOf(false) }
     var languagesOpen by rememberSaveable { mutableStateOf(false) }
@@ -134,15 +136,16 @@ internal fun SettingsScreen(
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
     val missingSteps = listOf(state.hasApiKey, state.microphoneGranted, state.accessibilityEnabled).count { !it }
     val colors = MaterialTheme.colorScheme
+    val setupExpanded = setupToggled ?: !ready
 
     Box(modifier.fillMaxSize().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 680.dp).fillMaxSize()) {
             Row(
-                Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                Modifier.fillMaxWidth().padding(start = 32.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(painterResource(R.drawable.ic_mic_chatgpt_24), null, Modifier.size(24.dp), tint = SettingsText)
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Text("OpenDictate", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Box(Modifier.size(48.dp).clip(CircleShape).combinedClickable(
@@ -161,50 +164,47 @@ internal fun SettingsScreen(
                 Column(
                     Modifier.fillMaxSize().verticalScroll(scrollState)
                         .preferredFrameRate(if (scrollState.isScrollInProgress) maximumDisplayRefreshRate else 0f)
-                        .padding(horizontal = 20.dp),
+                        .padding(horizontal = 16.dp),
                 ) {
-                    Spacer(Modifier.height(16.dp))
-                    Surface(
-                        onClick = { setupExpanded = !setupExpanded },
-                        shape = RoundedCornerShape(16.dp),
-                        color = colors.surface,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (ready) Icons.Outlined.CheckCircle else Icons.Outlined.Tune, null, tint = colors.primary)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                val status = when (dictation.phase) {
-                                    DictationPhase.CONNECTING -> R.string.settings_connecting
-                                    DictationPhase.LISTENING -> R.string.settings_listening
-                                    DictationPhase.PROCESSING -> R.string.settings_processing
-                                    else -> if (ready) R.string.settings_ready else R.string.settings_setup
+                    Spacer(Modifier.height(8.dp))
+                    SettingsGroup {
+                        Surface(onClick = { setupToggled = !setupExpanded }, color = SettingsSurface) {
+                            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (ready) Icons.Outlined.CheckCircle else Icons.Outlined.Tune, null, Modifier.size(24.dp), tint = colors.primary)
+                                Spacer(Modifier.width(16.dp))
+                                Column(Modifier.weight(1f)) {
+                                    val status = when (dictation.phase) {
+                                        DictationPhase.CONNECTING -> R.string.settings_connecting
+                                        DictationPhase.LISTENING -> R.string.settings_listening
+                                        DictationPhase.PROCESSING -> R.string.settings_processing
+                                        else -> if (ready) R.string.settings_ready else R.string.settings_setup
+                                    }
+                                    Text(stringResource(status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        when (dictation.phase) {
+                                            DictationPhase.CONNECTING, DictationPhase.LISTENING -> stringResource(R.string.settings_active_hint)
+                                            DictationPhase.PROCESSING -> stringResource(R.string.settings_processing_hint)
+                                            else -> if (ready) stringResource(R.string.settings_ready_hint)
+                                                else stringResource(R.string.settings_setup_steps, missingSteps)
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
+                                    )
                                 }
-                                Text(stringResource(status), style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    when (dictation.phase) {
-                                        DictationPhase.CONNECTING, DictationPhase.LISTENING -> stringResource(R.string.settings_active_hint)
-                                        DictationPhase.PROCESSING -> stringResource(R.string.settings_processing_hint)
-                                        else -> if (ready) stringResource(R.string.settings_ready_hint)
-                                            else stringResource(R.string.settings_setup_steps, missingSteps)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall, color = SettingsMuted,
-                                )
+                                Spacer(Modifier.width(8.dp))
+                                Icon(if (setupExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = SettingsMuted)
                             }
-                            Spacer(Modifier.width(8.dp))
-                            Icon(if (setupExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = SettingsMuted)
                         }
-                    }
-                    AnimatedVisibility(setupExpanded) {
-                        Column(Modifier.padding(top = 8.dp)) {
-                            SettingsGroup {
-                                ActionRow(Icons.Outlined.Key, stringResource(R.string.api_key_title),
+                        AnimatedVisibility(setupExpanded) {
+                            Column {
+                                SettingsDivider()
+                                SetupStepRow(Icons.Outlined.Key, state.hasApiKey, stringResource(R.string.api_key_title),
                                     stringResource(if (state.hasApiKey) R.string.api_key_saved else R.string.api_key_needed), onApiKey)
                                 SettingsDivider()
-                                ActionRow(Icons.Outlined.MicNone, stringResource(R.string.microphone_title),
+                                SetupStepRow(Icons.Outlined.MicNone, state.microphoneGranted, stringResource(R.string.microphone_title),
                                     stringResource(if (state.microphoneGranted) R.string.microphone_granted else R.string.microphone_usage), onMicrophone)
                                 SettingsDivider()
-                                ActionRow(Icons.Outlined.SettingsAccessibility, stringResource(R.string.keyboard_button_title),
+                                SetupStepRow(Icons.Outlined.SettingsAccessibility, state.accessibilityEnabled, stringResource(R.string.keyboard_button_title),
                                     stringResource(if (state.accessibilityEnabled) R.string.accessibility_enabled else R.string.accessibility_enable_hint), onAccessibility)
                             }
                         }
@@ -218,9 +218,10 @@ internal fun SettingsScreen(
                             Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                             style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
                         )
-                        SettingsDivider()
+                        SettingsDivider(startInset = 16.dp)
                         val live = state.model == TranscriptionModel.LIVE
                         ModelPicker(
+                            icon = Icons.Outlined.GraphicEq,
                             label = stringResource(R.string.settings_recognition_model),
                             selected = if (live) state.liveModelId else state.accurateModelId,
                             options = if (live) modelOptions(state.modelCatalog.live, ModelCatalog.DEFAULT.live)
@@ -229,6 +230,7 @@ internal fun SettingsScreen(
                         )
                         SettingsDivider()
                         ModelPicker(
+                            icon = Icons.Outlined.TextFields,
                             label = stringResource(R.string.settings_text_model),
                             selected = com.opendictate.app.model.TextProcessingModel.selection(state.textProcessingModel, state.textProcessingServiceTier),
                             options = com.opendictate.app.model.TextProcessingModel.defaults,
@@ -295,10 +297,10 @@ internal fun SettingsScreen(
                             enabled = state.hasApiKey && !state.modelsLoading,
                             color = SettingsSurface,
                         ) {
-                            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                if (state.modelsLoading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                                else Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp), tint = SettingsMuted)
-                                Spacer(Modifier.width(14.dp))
+                            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (state.modelsLoading) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.Outlined.Refresh, null, Modifier.size(24.dp), tint = SettingsMuted)
+                                Spacer(Modifier.width(16.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(stringResource(R.string.settings_refresh_models), style = MaterialTheme.typography.bodyLarge)
                                     Text(stringResource(when {
@@ -330,15 +332,16 @@ internal fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth().keepFullBoundsInView().semantics { contentDescription = testFieldLabel },
                         placeholder = { Text(stringResource(R.string.test_field_placeholder)) },
                         minLines = 3, maxLines = 5, shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = SettingsSurface, focusedContainerColor = SettingsSurface),
+                        colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = SettingsSurface, focusedContainerColor = SettingsSurface,
+                            unfocusedBorderColor = colors.outlineVariant),
                     )
-                    Row(Modifier.padding(top = 24.dp, bottom = 12.dp), verticalAlignment = Alignment.Top) {
+                    Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 8.dp), verticalAlignment = Alignment.Top) {
                         Icon(Icons.Outlined.Lock, null, Modifier.padding(top = 2.dp).size(16.dp), tint = SettingsMuted)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.privacy_note), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
                     }
                     Text("OpenDictate · ${BuildConfig.VERSION_NAME}",
-                        Modifier.fillMaxWidth().padding(bottom = 28.dp), style = MaterialTheme.typography.labelSmall, color = SettingsMuted)
+                        Modifier.fillMaxWidth().padding(start = 40.dp, bottom = 32.dp), style = MaterialTheme.typography.labelSmall, color = SettingsMuted)
                 }
             }
         }
@@ -393,8 +396,8 @@ private fun AppTheme.icon(): ImageVector = when (this) {
 
 @Composable
 private fun SectionTitle(title: String) {
-    Text(title, Modifier.padding(start = 4.dp, top = 28.dp, bottom = 10.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall, color = SettingsMuted, fontWeight = FontWeight.Medium)
+    Text(title, Modifier.padding(start = 16.dp, top = 32.dp, bottom = 8.dp).semantics { heading() },
+        style = MaterialTheme.typography.labelLarge, color = SettingsMuted, fontWeight = FontWeight.SemiBold)
 }
 
 @Composable
@@ -405,8 +408,8 @@ private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-internal fun SettingsDivider() {
-    HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+internal fun SettingsDivider(startInset: Dp = SettingsRowTextStart) {
+    HorizontalDivider(Modifier.padding(start = startInset, end = 16.dp), color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 }
 
 @Composable
@@ -420,9 +423,9 @@ private fun RowCopy(title: String, subtitle: String, modifier: Modifier = Modifi
 @Composable
 internal fun ActionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
     Surface(onClick = onClick, color = SettingsSurface) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 76.dp).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, Modifier.size(22.dp), tint = SettingsMuted)
-            Spacer(Modifier.width(14.dp))
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, Modifier.size(24.dp), tint = SettingsMuted)
+            Spacer(Modifier.width(16.dp))
             RowCopy(title, subtitle, Modifier.weight(1f))
             Spacer(Modifier.width(12.dp))
             Icon(Icons.Outlined.ChevronRight, null, Modifier.size(20.dp), tint = SettingsMuted)
@@ -435,14 +438,32 @@ internal fun ToggleRow(icon: ImageVector, title: String, subtitle: String, check
     onCheckedChange: (Boolean) -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier) {
     Row(
         modifier.fillMaxWidth().toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
-            .heightIn(min = 80.dp).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+            .heightIn(min = 72.dp).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, Modifier.size(22.dp), tint = SettingsMuted)
-        Spacer(Modifier.width(14.dp))
+        Icon(icon, null, Modifier.size(24.dp), tint = SettingsMuted)
+        Spacer(Modifier.width(16.dp))
         RowCopy(title, subtitle, Modifier.weight(1f))
         Spacer(Modifier.width(12.dp))
         Switch(checked, onCheckedChange = null, enabled = enabled)
+    }
+}
+
+/** Setup steps show completion in the icon slot so pending work stands out from finished work. */
+@Composable
+private fun SetupStepRow(icon: ImageVector, done: Boolean, title: String, subtitle: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, color = SettingsSurface) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (done) Icons.Outlined.CheckCircle else icon, null, Modifier.size(24.dp),
+                tint = if (done) MaterialTheme.colorScheme.primary else SettingsMuted)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = if (done) SettingsMuted else SettingsText)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+            }
+            Spacer(Modifier.width(12.dp))
+            if (!done) Icon(Icons.Outlined.ChevronRight, null, Modifier.size(20.dp), tint = SettingsMuted)
+        }
     }
 }
 
@@ -458,21 +479,21 @@ private fun ModeSelector(selected: TranscriptionModel, onSelect: (TranscriptionM
 }
 
 @Composable
-private fun ModelPicker(label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true, displayName: (String) -> String = { it }) {
+private fun ModelPicker(icon: ImageVector, label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true, displayName: (String) -> String = { it }) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         Surface(onClick = { expanded = true }, enabled = enabled, color = SettingsSurface) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(label, style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
-                    Text(displayName(selected), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
-                }
+            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, Modifier.size(24.dp), tint = SettingsMuted)
+                Spacer(Modifier.width(16.dp))
+                RowCopy(label, displayName(selected), Modifier.weight(1f))
+                Spacer(Modifier.width(12.dp))
                 Icon(Icons.Outlined.UnfoldMore, null, Modifier.size(20.dp), tint = SettingsMuted)
             }
         }
         DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
             options.forEach { id ->
-                DropdownMenuItem(text = { Text(displayName(id), fontFamily = FontFamily.Monospace) },
+                DropdownMenuItem(text = { Text(displayName(id)) },
                     onClick = { onSelect(id); expanded = false },
                     leadingIcon = { if (id == selected) Icon(Icons.Outlined.Check, null) else Spacer(Modifier.size(24.dp)) })
             }
