@@ -1,7 +1,7 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.opendictate.app.ui
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import kotlinx.coroutines.launch
@@ -104,11 +104,14 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
                     val toggleLabel = stringResource(R.string.replacements_toggle_rule, rule.source)
                     Checkbox(rule.enabled, { store.toggle(rule, it) }, Modifier.semantics { contentDescription = toggleLabel })
                     Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(rule.source, Modifier.weight(1f, fill = false), style = if (rule.regex) monospace else LocalTextStyle.current,
+                        Row {
+                            Text(rule.source, Modifier.weight(1f, fill = false).alignByBaseline(), style = if (rule.regex) monospace else LocalTextStyle.current,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (rule.regex) RuleBadge(".*", stringResource(R.string.replacements_regex))
-                            if (rule.matchCase) RuleBadge("Aa", stringResource(R.string.replacements_match_case))
+                            // The tags sit further from the source than from each other, so they read as one group.
+                            if (rule.regex) RuleBadge(".*", stringResource(R.string.replacements_regex),
+                                Modifier.padding(start = 8.dp).alignByBaseline(), FontFamily.Monospace)
+                            if (rule.matchCase) RuleBadge("Aa", stringResource(R.string.replacements_match_case),
+                                Modifier.padding(start = if (rule.regex) 4.dp else 8.dp).alignByBaseline())
                         }
                         Text(rule.replacement)
                     }
@@ -141,8 +144,9 @@ private fun LabeledCheckbox(label: String, checked: Boolean, enabled: Boolean, o
 
 /** Marks a rule option with the glyph find-and-replace fields use for it, so the list needs no translated tag. */
 @Composable
-private fun RuleBadge(glyph: String, description: String) {
-    Text(glyph, Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)).padding(horizontal = 4.dp)
-        .semantics { contentDescription = description },
-        style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun RuleBadge(glyph: String, description: String, modifier: Modifier = Modifier, fontFamily: FontFamily? = null) {
+    // A tint rather than an outline: the tag is a label, not a control.
+    Text(glyph, modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
+        .padding(horizontal = 6.dp, vertical = 2.dp).semantics { contentDescription = description },
+        style = MaterialTheme.typography.labelSmall, fontFamily = fontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

@@ -227,7 +227,7 @@ empty to delete the match. The earliest match wins, then the longer one, then
 phrase rules. Android compiles the same patterns with its own regex engine; a
 synced pattern it cannot compile is skipped there. Pattern rules sync as schema
 version 2 and case-sensitive rules as version 3, which older app versions reject.
-The list marks patterns with `.*` and case-sensitive rules with `Aa`.
+The list tags patterns with `.*` and case-sensitive rules with `Aa`.
 
 Rules are applied locally and remain separate from dictionary hints sent to OpenAI.
 Connect Google Drive in Settings to sync the rule list, individual rule states and
