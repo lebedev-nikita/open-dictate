@@ -229,6 +229,10 @@ synced pattern it cannot compile is skipped there. Pattern rules sync as schema
 version 2 and case-sensitive rules as version 3, which older app versions reject.
 The list tags patterns with `.*` and case-sensitive rules with `Aa`.
 
+“Plain typography”, off by default and independent of the master switch,
+replaces em and en dashes, typographic quotes and `…` with keyboard
+characters after the rules run, including in Live partials and post-processed text.
+
 Rules are applied locally and remain separate from dictionary hints sent to OpenAI.
 Connect Google Drive in Settings to sync the rule list, individual rule states and
 the master switch with Android.

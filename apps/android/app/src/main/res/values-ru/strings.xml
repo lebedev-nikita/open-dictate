@@ -217,6 +217,7 @@
     <string name="replacements_summary">Настроено автозамен: %1$d</string>
     <string name="replacements_description">Нужное написание в Live и Accurate. Изменения действуют со следующей записи.</string>
     <string name="replacements_enable">Включить автозамену</string>
+    <string name="replacements_plain_typography">Простая типографика</string>
     <string name="replacements_add">Добавить замену</string>
     <string name="replacements_edit">Изменить замену</string>
     <string name="replacements_source">Распознанное слово или фраза</string>

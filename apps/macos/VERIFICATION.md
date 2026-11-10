@@ -1,5 +1,18 @@
 # macOS verification
 
+## 0.8.0-rc.3 — plain typography
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.
+
+- All Swift tests pass, including the shared plain typography cases, the switch
+  surviving with word replacements off, and its sync validation and import.
+- `ReplacementSettingsLayoutTests` captures showed the new switch row and its
+  `— → -, «» “” → "", … → ...` hint without clipping in English (Aqua) and
+  Russian (Dark Aqua).
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.0-rc.2 — settings layout fixes and Dock presence
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-10.

@@ -234,8 +234,8 @@ Delete hidden app data.
 ## Extending the format
 
 Both supported versions use an `entries` map. Synced keys are `dictionary`, `mode`,
-`liveModel`, `accurateModel`, `wordReplacements` and
-`wordReplacementsEnabled`, `postprocessingRules` and `textProcessingModel`:
+`liveModel`, `accurateModel`, `wordReplacements`, `wordReplacementsEnabled`,
+`plainTypography`, `postprocessingRules` and `textProcessingModel`:
 
 ```json
 {
@@ -257,7 +257,7 @@ are strings, except an explicit prompt reset, which uses JSON null and schema ve
 The `wordReplacements` value contains the shared replacement JSON
 (`schemaVersion` and `rules` with `id`, `source`, `replacement`, `enabled` and
 the optional `regex` and `matchCase`).
-`wordReplacementsEnabled` is the string `true` or `false`. Invalid boolean
+`wordReplacementsEnabled` and `plainTypography` are the strings `true` or `false`. Invalid boolean
 values reject the import before any setting is applied. Existing five-field
 journals seed replacement settings at timestamp zero so new defaults yield to
 cloud values. The former `accuratePunctuationEnabled` sync field is discarded
