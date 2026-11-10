@@ -243,13 +243,17 @@ Settings pages share `SettingsStyle.swift`: one spacing scale (4–32 pt), a
 page title naming the page, and related rows grouped on raised cards with
 secondary section titles. Inputs use their own surface, lighter than cards in
 Dark, with an accent focus ring. The sidebar shows dictionary and replacement
-counts as secondary numbers and extends under the transparent title bar.
+counts as secondary numbers and extends under the transparent title bar. The
+Dictionary page has a single scroll: its editor fills the window, with **Clean up**
+beside the title.
 
 ### Keyboard shortcuts
 
 Command-W closes the current settings window. Command-Shift-W closes all regular
 application windows while preserving the recording indicator. Reopen Settings
-from the menu bar or with Command-comma while the app is active.
+from the menu bar or with Command-comma while the app is active. OpenDictate
+appears in the Dock and app switcher only while Settings is open, and returns to
+the menu bar when the window closes.
 
 Settings → Keyboard shortcuts groups global dictation and voice-editing bindings,
 a separate binding for dictation with post-processing, and the fixed Escape

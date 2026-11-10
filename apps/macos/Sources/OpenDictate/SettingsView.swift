@@ -26,20 +26,21 @@ struct SettingsView: View {
             sidebar
             Divider()
             VStack(alignment: .leading, spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Space.lg) {
-                        switch selection {
-                        case "dictionary": dictionaryPage
-                        case "replacements": ReplacementSettingsView(store: model.replacements, preferences: preferences)
-                        case "history": historyPage
-                        case "shortcuts": ShortcutSettingsView(model: model, preferences: preferences)
-                        case "general": generalPage
-                        default: dictationPage
+                // The dictionary editor scrolls itself, so its page fills the window instead of nesting scroll views.
+                if selection == "dictionary" {
+                    page { dictionaryPage }.frame(maxHeight: .infinity, alignment: .top)
+                } else {
+                    ScrollView {
+                        page {
+                            switch selection {
+                            case "replacements": ReplacementSettingsView(store: model.replacements, preferences: preferences)
+                            case "history": historyPage
+                            case "shortcuts": ShortcutSettingsView(model: model, preferences: preferences)
+                            case "general": generalPage
+                            default: dictationPage
+                            }
                         }
                     }
-                    .frame(maxWidth: 600, alignment: .leading)
-                    .padding(.horizontal, Space.xl).padding(.top, Self.titleBarClearance).padding(.bottom, Space.xl)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if !model.message.isEmpty {
                     Divider()
@@ -65,6 +66,13 @@ struct SettingsView: View {
             Button(t("Remove", "Удалить"), role: .destructive) { model.deleteKey() }
             Button(t("Cancel", "Отмена"), role: .cancel) {}
         }
+    }
+
+    private func page<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Space.lg) { content() }
+            .frame(maxWidth: 600, alignment: .leading)
+            .padding(.horizontal, Space.xl).padding(.top, Self.titleBarClearance).padding(.bottom, Space.xl)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var sidebar: some View {
@@ -163,7 +171,7 @@ struct SettingsView: View {
                             .accessibilityLabel(t("Copy API key", "Скопировать ключ API"))
                             .disabled(!model.hasKey && apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         Button(t("Save", "Сохранить"), action: saveKey).disabled(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isActive)
-                    }
+                    }.controlSize(.large)
                     Text(t("Stored in your Mac's Keychain. Audio goes directly to OpenAI.",
                            "Хранится в Keychain. Звук отправляется напрямую в OpenAI."))
                         .font(.caption).foregroundStyle(.secondary)
@@ -225,26 +233,17 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: Space.lg) {
             PageHeader(title: t("Dictionary", "Словарь"),
                        subtitle: t("Names, products and terms you want OpenAI to recognize. One per line.",
-                                   "Имена, продукты и термины для распознавания. По одному на строку."))
-            VStack(alignment: .leading, spacing: Space.xs) {
-                TextEditor(text: $preferences.dictionary).font(.body)
-                    .scrollContentBackground(.hidden).padding(Space.xs)
-                    .frame(minHeight: 280)
-                    .background(Surface.field, in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Surface.fieldBorder))
-                    .accessibilityLabel(t("Dictionary terms", "Слова в словаре"))
-                HStack {
-                    Text(t("\(DictionaryTerms.normalize(preferences.dictionary).count) \(DictionaryTerms.normalize(preferences.dictionary).count == 1 ? "term" : "terms") · saved automatically", "Слов в словаре: \(DictionaryTerms.normalize(preferences.dictionary).count) · сохранено автоматически"))
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button(t("Clean up", "Упорядочить")) { preferences.dictionary = DictionaryTerms.normalize(preferences.dictionary).joined(separator: "\n") }
-                }.padding(.leading, Space.xxs)
+                                   "Имена, продукты и термины для распознавания. По одному на строку.")) {
+                Button(t("Clean up", "Упорядочить")) { preferences.dictionary = DictionaryTerms.normalize(preferences.dictionary).joined(separator: "\n") }
+                    .help(t("Remove duplicates and empty lines", "Убрать повторы и пустые строки"))
             }
-            Text(t("You can also add a selection from the menu bar. The dictionary is sent to OpenAI only during transcription.",
-                   "Выделенный текст можно добавить из строки меню. Словарь отправляется в OpenAI только при распознавании."))
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, Space.xxs)
-        }
+            TextEditor(text: $preferences.dictionary).font(.body)
+                .scrollContentBackground(.hidden).padding(Space.xs)
+                .frame(minHeight: 200, maxHeight: .infinity)
+                .background(Surface.field, in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Surface.fieldBorder))
+                .accessibilityLabel(t("Dictionary terms", "Слова в словаре"))
+        }.frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var displayedHistory: [HistoryEntry] {
@@ -264,7 +263,7 @@ struct SettingsView: View {
                 HStack(spacing: Space.xs) {
                     TextField(t("Search history", "Поиск по истории"), text: $query).settingsField()
                     Button(t("Delete all…", "Удалить всё…"), role: .destructive) { confirmClear = true }.disabled(history.entries.isEmpty)
-                }
+                }.controlSize(.large)
                 if let error = history.error { Text(error).font(.callout).foregroundStyle(.secondary) }
                 SettingsCard {
                     if displayedHistory.isEmpty {
