@@ -41,8 +41,8 @@ struct ChatGPTSettingsView: View {
                         }.controlSize(.small)
                     }
                     if !hasKey {
-                        Text(t("First save an API key for transcription. ChatGPT plan usage covers text requests only.",
-                               "Сначала сохраните API-ключ для транскрипции. Подписка ChatGPT используется только для текста."))
+                        Text(t("First save an API key for transcription.",
+                               "Сначала сохраните API-ключ для транскрипции."))
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     if connection.connected && connection.failed {
@@ -64,8 +64,8 @@ struct ChatGPTSettingsView: View {
         .alert(t("You're using your ChatGPT plan", "Используется ваша подписка ChatGPT"), isPresented: $connection.welcome) {
             Button(t("Got it", "Понятно"), action: connection.dismissWelcome)
         } message: {
-            Text(t("Eligible text requests use your ChatGPT plan or credits. Manage limits in ChatGPT settings. Transcription still uses your API key.",
-                   "Текстовые запросы используют лимиты подписки ChatGPT или кредиты. Управляйте лимитами в настройках ChatGPT. Для транскрипции по-прежнему нужен API-ключ."))
+            Text(t("Eligible text requests use your ChatGPT plan or credits. Manage limits in ChatGPT settings.",
+                   "Текстовые запросы используют лимиты подписки ChatGPT или кредиты. Управляйте лимитами в настройках ChatGPT."))
         }
     }
 }

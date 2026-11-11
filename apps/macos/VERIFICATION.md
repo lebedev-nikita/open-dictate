@@ -1,5 +1,17 @@
 # macOS verification
 
+## 0.8.0 — shorter helper text
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-11.
+
+- All Swift tests pass.
+- Captures of the Dictation, History, Keyboard shortcuts, Settings and Word
+  replacements pages in English (Aqua) and Russian (Dark Aqua) showed titles
+  without subtitles and the shortened helper text, without clipping.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.0-rc.6 — replacements header
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-11.

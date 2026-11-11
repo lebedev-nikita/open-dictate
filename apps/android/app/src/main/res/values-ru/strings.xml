@@ -24,8 +24,8 @@
     <string name="history_search_label">Поиск по истории</string>
     <string name="history_search_placeholder">Слова или опечатки</string>
     <string name="history_clear_search">Очистить поиск</string>
-    <string name="history_empty_title">Здесь пока пусто</string>
-    <string name="history_empty_message">Успешные диктовки будут автоматически появляться здесь.</string>
+    <string name="history_empty_title">Пока ничего не сохранено</string>
+    <string name="history_empty_message">Новые диктовки появятся в этом списке.</string>
     <string name="history_no_results_title">Ничего не найдено</string>
     <string name="history_no_results_message">Попробуйте более короткую фразу или другое написание.</string>
     <string name="history_copy_item">Скопировать транскрипт</string>
@@ -103,13 +103,13 @@
     <string name="transcription_timeout_subtitle">Максимум после остановки записи</string>
     <string name="transcription_timeout_value">%1$d с</string>
     <string name="transcription_timeout_unlimited">Без ограничения</string>
-    <string name="transcription_timeout_explanation">Если OpenAI не вернёт транскрипцию вовремя, ожидание прекратится. Уже вставленный промежуточный текст останется в поле.</string>
+    <string name="transcription_timeout_explanation">Уже вставленный текст Live останется в поле.</string>
     <string name="transcription_timeout_limit">Ограничить время</string>
     <string name="transcription_timeout_seconds">Секунды</string>
     <string name="transcription_timeout_range">От 1 до 600 секунд</string>
     <string name="test_field_label">Попробуйте здесь</string>
     <string name="test_field_placeholder">Откройте клавиатуру — кнопка появится над ней</string>
-    <string name="privacy_note">Ключ, записи и текст не проходят через сервер OpenDictate. Аудио последней диктовки и история транскрипций хранятся на устройстве. При диктовке аудио и сохранённые термины словаря отправляются напрямую в OpenAI. Преобразуемый текст тоже отправляется напрямую в OpenAI. Поиск по истории работает только на устройстве.</string>
+    <string name="privacy_note">Ключ, записи и текст не проходят через сервер OpenDictate. Аудио, термины словаря и редактируемый текст отправляются напрямую в OpenAI. История и последняя запись хранятся на устройстве.</string>
 
     <string name="api_key_dialog_replace">Заменить API key</string>
     <string name="api_key_dialog_connect">Подключить OpenAI</string>
@@ -228,7 +228,7 @@
     <string name="replacements_invalid_pattern">Неверный шаблон. Он не должен совпадать с пустым текстом, а $n — ссылаться на существующую группу.</string>
     <string name="replacements_storage_error">Не удалось прочитать или сохранить автозамены. Данные сохранены. Восстановите настройки перед редактированием.</string>
     <string name="replacements_empty">Пока нет замен. Например: опен диктейт → OpenDictate.</string>
-    <string name="replacements_note">Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». Написание замены сохраняется как введено. В регулярных выражениях \\b — граница слова, $1 — группа. Изменения действуют со следующей записи. Подключите Google Drive для синхронизации правил между устройствами. Правила не отправляются в OpenAI. Команды голосовой правки не меняются.</string>
+    <string name="replacements_note">Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». В регулярных выражениях \\b — граница слова, $1 — группа.</string>
     <string name="replacements_edit_rule">Изменить замену для %1$s</string>
     <string name="replacements_delete_rule">Удалить замену для %1$s</string>
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>
@@ -242,7 +242,7 @@
     <string name="drive_sync_disconnect">Отключить</string>
     <string name="drive_sync_privacy">В Google отправляются только эти настройки. API-ключи, звук и история не синхронизируются. Отключение сохраняет локальные и облачные настройки.</string>
     <string name="drive_sync_source_title">Источник настроек</string>
-    <string name="drive_sync_source_message">Настройки в облаке и на устройстве различаются. Выберите источник словаря, постобработки, автозамен, режима диктовки и моделей.</string>
+    <string name="drive_sync_source_message">Настройки в облаке и на устройстве различаются. Выберите, какие оставить.</string>
     <string name="drive_sync_source_cloud">Облачные настройки</string>
     <string name="drive_sync_source_cloud_description">Заменить настройки на этом устройстве облачными.</string>
     <string name="drive_sync_source_local">Локальные настройки</string>
@@ -302,10 +302,10 @@
     <string name="settings_text_model">Текстовая модель</string>
     <string name="chatgpt_connect">Подключить ChatGPT</string>
     <string name="chatgpt_disconnect">Отключить</string>
-    <string name="chatgpt_key_required">Сначала сохраните API-ключ для транскрипции. Подписка ChatGPT используется только для текста.</string>
+    <string name="chatgpt_key_required">Сначала сохраните API-ключ для транскрипции.</string>
     <string name="chatgpt_request_failed">ChatGPT недоступен. Проверьте вход, доступ к Luna и лимиты подписки. Платный API не использован.</string>
     <string name="chatgpt_welcome">Используется ваша подписка ChatGPT</string>
-    <string name="chatgpt_welcome_body">Текстовые запросы используют лимиты подписки ChatGPT или кредиты. Управляйте лимитами в настройках ChatGPT. Для транскрипции по-прежнему нужен API-ключ.</string>
+    <string name="chatgpt_welcome_body">Текстовые запросы используют лимиты подписки ChatGPT или кредиты. Управляйте лимитами в настройках ChatGPT.</string>
     <string name="chatgpt_reconnect">Войти в ChatGPT снова</string>
     <string name="chatgpt_revoke_failed">На этом устройстве выполнен выход. Отзыв доступа не подтверждён; отключите приложение в настройках ChatGPT.</string>
     <string name="chatgpt_waiting">Ожидание ChatGPT…</string>

@@ -53,8 +53,8 @@ struct ReplacementSettingsView: View {
                     .foregroundStyle(.red)
             }
             SettingsSection(title: t("Rules", "Правила"),
-                            footer: t("Whole words and phrases. Case is ignored unless “Match case” is on. Replacements keep exactly the spelling you enter. In regular expressions, use \\b for word boundaries and $1 for groups. Changes apply to the next dictation. Connect Google Drive in Settings to sync rules across devices.",
-                                      "Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». Написание замены сохраняется как введено. В регулярных выражениях \\b — граница слова, $1 — группа. Изменения действуют со следующей диктовки. Подключите Google Drive в настройках для синхронизации правил между устройствами.")) {
+                            footer: t("Whole words and phrases. Case is ignored unless “Match case” is on. In regular expressions, \\b is a word boundary and $1 is a group.",
+                                      "Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». В регулярных выражениях \\b — граница слова, $1 — группа.")) {
                 if store.rules.isEmpty {
                     Text(t("No replacements yet. For example: “open dictate” → “OpenDictate”.", "Пока нет замен. Например: «опен диктейт» → «OpenDictate»."))
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).settingsRowPadding()
