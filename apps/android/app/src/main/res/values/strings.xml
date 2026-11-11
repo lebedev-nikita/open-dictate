@@ -27,7 +27,7 @@
     <string name="history_search_placeholder">Words or typos</string>
     <string name="history_clear_search">Clear search</string>
     <string name="history_empty_title">Nothing saved yet</string>
-    <string name="history_empty_message">Successful dictations will appear here automatically.</string>
+    <string name="history_empty_message">Dictations will appear here.</string>
     <string name="history_no_results_title">No matches</string>
     <string name="history_no_results_message">Try a shorter phrase or another spelling.</string>
     <string name="history_copy_item">Copy transcript</string>
@@ -106,13 +106,13 @@
     <string name="transcription_timeout_subtitle">Maximum wait after you stop recording</string>
     <string name="transcription_timeout_value">%1$d s</string>
     <string name="transcription_timeout_unlimited">No limit</string>
-    <string name="transcription_timeout_explanation">Stop waiting if OpenAI has not returned the transcription. Live partial text already inserted remains in the field.</string>
+    <string name="transcription_timeout_explanation">Live text already inserted remains in the field.</string>
     <string name="transcription_timeout_limit">Set a time limit</string>
     <string name="transcription_timeout_seconds">Seconds</string>
     <string name="transcription_timeout_range">1–600 seconds</string>
     <string name="test_field_label">Try it here</string>
     <string name="test_field_placeholder">Open the keyboard — the button will appear above it</string>
-    <string name="privacy_note">Your key, recordings, and text never pass through an OpenDictate server. The latest dictation audio and transcript history stay on this device. Audio and saved dictionary terms are sent directly to OpenAI during dictation. Text you transform is also sent directly to OpenAI. History search runs entirely on this device.</string>
+    <string name="privacy_note">Your key, recordings and text never pass through an OpenDictate server. Audio, dictionary terms and text you edit go directly to OpenAI. History and the latest recording stay on this device.</string>
 
     <string name="api_key_dialog_replace">Replace API key</string>
     <string name="api_key_dialog_connect">Connect OpenAI</string>
@@ -231,7 +231,7 @@
     <string name="replacements_invalid_pattern">Invalid pattern. It must not match empty text, and $n must refer to an existing group.</string>
     <string name="replacements_storage_error">Could not read or save replacements. Your saved data was kept. Restore your preferences before editing.</string>
     <string name="replacements_empty">No replacements yet. Example: open dictate → OpenDictate.</string>
-    <string name="replacements_note">Whole words and phrases. Case is ignored unless “Match case” is on. Replacement spelling stays exactly as entered. In regular expressions, use \\b for word boundaries and $1 for groups. Changes apply to the next recording. Connect Google Drive to sync rules across devices. Rules are not sent to OpenAI. Voice editing commands are unchanged.</string>
+    <string name="replacements_note">Whole words and phrases. Case is ignored unless “Match case” is on. In regular expressions, \\b is a word boundary and $1 is a group.</string>
     <string name="replacements_edit_rule">Edit replacement for %1$s</string>
     <string name="replacements_delete_rule">Delete replacement for %1$s</string>
     <string name="replacements_toggle_rule">Enable replacement for %1$s</string>
@@ -246,7 +246,7 @@
     <string name="drive_sync_disconnect">Disconnect</string>
     <string name="drive_sync_privacy">Only these settings are sent to Google. API keys, audio and history stay out of sync. Disconnecting keeps local and cloud settings.</string>
     <string name="drive_sync_source_title">Choose a settings source</string>
-    <string name="drive_sync_source_message">Cloud and local settings differ. Choose which dictionary, post-processing, word replacements, dictation mode and models to use.</string>
+    <string name="drive_sync_source_message">Cloud and local settings differ. Choose which settings to keep.</string>
     <string name="drive_sync_source_cloud">Cloud settings</string>
     <string name="drive_sync_source_cloud_description">Replace this device’s settings with cloud settings.</string>
     <string name="drive_sync_source_local">Local settings</string>
@@ -306,10 +306,10 @@
     <string name="settings_text_model">Text model</string>
     <string name="chatgpt_connect">Continue with ChatGPT</string>
     <string name="chatgpt_disconnect">Disconnect</string>
-    <string name="chatgpt_key_required">First save an API key for transcription. ChatGPT plan usage covers text requests only.</string>
+    <string name="chatgpt_key_required">First save an API key for transcription.</string>
     <string name="chatgpt_request_failed">ChatGPT unavailable. Check sign-in, Luna access and plan usage. No API fallback was used.</string>
     <string name="chatgpt_welcome">You are using your ChatGPT plan</string>
-    <string name="chatgpt_welcome_body">Eligible text requests use your ChatGPT plan or credits. Manage limits in ChatGPT settings. Transcription still uses your API key.</string>
+    <string name="chatgpt_welcome_body">Eligible text requests use your ChatGPT plan or credits. Manage limits in ChatGPT settings.</string>
     <string name="chatgpt_reconnect">Reconnect ChatGPT</string>
     <string name="chatgpt_revoke_failed">Signed out on this device. Remote sign-out was not confirmed; disconnect the app in ChatGPT settings.</string>
     <string name="chatgpt_waiting">Waiting for ChatGPT…</string>

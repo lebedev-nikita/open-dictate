@@ -52,8 +52,8 @@ struct SpeechLanguageList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(t("Speech languages", "Языки речи")).font(.headline)
-            Text(t("Select the languages you speak. Changes save automatically.",
-                   "Отметьте языки, на которых говорите. Выбор сохраняется автоматически."))
+            Text(t("Select the languages you speak.",
+                   "Отметьте языки, на которых говорите."))
                 .font(.callout).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(t("Search languages", "Поиск языков")).font(.caption).foregroundStyle(.primary)

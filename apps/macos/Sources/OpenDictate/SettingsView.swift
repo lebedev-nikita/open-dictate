@@ -152,8 +152,7 @@ struct SettingsView: View {
 
     private var dictationPage: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
-            PageHeader(title: t("Dictation", "Диктовка"),
-                       subtitle: t("Your words appear where you're typing.", "Ваши слова появятся там, где вы печатаете."))
+            PageHeader(title: t("Dictation", "Диктовка"))
 
             SettingsSection(title: t("Access", "Доступ")) {
                 VStack(alignment: .leading, spacing: Space.xs) {
@@ -252,8 +251,7 @@ struct SettingsView: View {
     }
     private var historyPage: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
-            PageHeader(title: t("History", "История"),
-                       subtitle: t("Saved on this Mac. Copy, search or delete them anytime.", "Хранятся на этом Mac. Можно скопировать, найти или удалить."))
+            PageHeader(title: t("History", "История"))
             SettingsCard {
                 SettingsRow(title: t("Save history", "Сохранять историю")) {
                     Toggle(t("Save history", "Сохранять историю"), isOn: $preferences.saveHistory)
@@ -290,7 +288,7 @@ struct SettingsView: View {
 
     private var generalPage: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
-            PageHeader(title: t("Settings", "Настройки"), subtitle: t("A few preferences. Nothing in your way.", "Всё нужное. Ничего лишнего."))
+            PageHeader(title: t("Settings", "Настройки"))
             SettingsSection(title: t("General", "Общие")) {
                 settingToggle(t("Launch at login", "Запускать при входе"), Binding(get: { model.loginEnabled }, set: model.setLoginEnabled))
                 RowDivider()
@@ -307,8 +305,8 @@ struct SettingsView: View {
                 }
             }
             SettingsSection(title: t("Recording indicator", "Индикатор записи"),
-                            footer: t("Waveform bars show recent microphone volume. Click the indicator to finish, or use your shortcut.",
-                                      "Полоски показывают изменение громкости микрофона. Нажмите на индикатор или сочетание клавиш, чтобы завершить.")) {
+                            footer: t("Click the indicator or press your shortcut to finish.",
+                                      "Нажмите на индикатор или сочетание клавиш, чтобы завершить.")) {
                 settingToggle(t("Show recording status", "Показывать состояние записи"), $preferences.showStatus)
                 RowDivider()
                 SettingsRow(title: t("Style", "Вид")) {
@@ -339,8 +337,8 @@ struct SettingsView: View {
                     connect: { model.chatGPT.connect(hasKey: { model.hasKey }) }).padding(Space.md)
             }
             SettingsSection(title: t("Privacy", "Приватность")) {
-                Text(t("No backend or analytics. Audio stays in memory and is discarded after transcription. Password fields are excluded. Insertion briefly uses the clipboard; its previous contents are restored if unchanged.",
-                       "Без сервера и аналитики. Звук хранится в памяти и удаляется после распознавания. Поля паролей исключены. Для вставки кратко используется буфер обмена; прежнее содержимое восстанавливается, если оно не изменилось."))
+                Text(t("No backend or analytics. Audio stays in memory only. Password fields are excluded. Insertion briefly uses the clipboard.",
+                       "Без сервера и аналитики. Звук хранится только в памяти. Поля паролей исключены. Для вставки ненадолго используется буфер обмена."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     .padding(Space.md)
                 RowDivider()

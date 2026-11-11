@@ -10,8 +10,7 @@ struct ShortcutSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
-            PageHeader(title: t("Keyboard shortcuts", "Горячие клавиши"),
-                       subtitle: t("Work in any app.", "Работают в любом приложении."))
+            PageHeader(title: t("Keyboard shortcuts", "Горячие клавиши"))
 
             SettingsSection(title: t("Actions", "Действия")) {
                 shortcutSetting(t("Dictation", "Диктовка"), binding: \.dictate)
