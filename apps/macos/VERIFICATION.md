@@ -1,5 +1,15 @@
 # macOS verification
 
+## 0.8.1 — in-place replacement editing
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-13.
+
+- Same code as 0.8.1-rc.1, which was installed from its release DMG and
+  launched after checksum and signature verification.
+- All Swift tests pass, and universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.1-rc.1 — in-place replacement editing
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-13.
