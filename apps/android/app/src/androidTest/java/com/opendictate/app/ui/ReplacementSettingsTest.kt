@@ -45,7 +45,9 @@ class ReplacementSettingsTest {
         compose.onNodeWithText(label(R.string.replacements_title)).performClick()
         sheet(hasContentDescription(context.getString(R.string.replacements_edit_rule, "open dictate")))
         compose.onNodeWithContentDescription(context.getString(R.string.replacements_edit_rule, "open dictate")).performClick()
-        compose.onNodeWithText(label(R.string.replacements_target)).performScrollTo().performTextReplacement("OpenDictate App")
+        // The rule opens in its own row while the add form above stays empty.
+        compose.onNode(hasSetTextAction() and hasText("OpenDictate")).assertIsDisplayed().performTextReplacement("OpenDictate App")
+        compose.onAllNodes(hasSetTextAction() and hasText(label(R.string.replacements_target))).assertCountEquals(2)
         sheet(hasText(label(R.string.action_save)) and hasClickAction())
         compose.onNodeWithText(label(R.string.action_save)).performClick()
         sheet(hasText("OpenDictate App"))

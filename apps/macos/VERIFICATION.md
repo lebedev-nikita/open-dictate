@@ -1,5 +1,18 @@
 # macOS verification
 
+## 0.8.1-rc.1 — in-place replacement editing
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-13.
+
+- All Swift tests pass.
+- In the local smoke bundle, the pencil button opened the rule in its own row
+  with the source field focused, without scrolling the page. Escape restored
+  the row, and Return saved the edit. Captures in English and Russian (Dark
+  Aqua) showed no clipping; in Russian the buttons move below the options.
+- Universal packaging verified the DMG and signature.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.0 — shorter helper text
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-11.
