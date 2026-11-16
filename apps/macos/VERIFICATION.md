@@ -1,5 +1,12 @@
 # macOS verification
 
+## 0.9.0-rc.2 — new meetings start at zero
+
+Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-16. rc.1 kept the
+shared meeting clock across meetings, so a second meeting's timer and timestamps
+continued from the first. A controller test records two meetings in a row and
+checks the second one's timestamps and duration from zero; all Swift tests pass.
+
 ## 0.9.0-rc.1 — meeting transcription
 
 Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-16.

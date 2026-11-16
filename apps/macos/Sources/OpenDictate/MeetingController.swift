@@ -11,6 +11,8 @@ final class MeetingClock: @unchecked Sendable {
 
     init(now: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now }) { self.now = now }
 
+    /// Starts the next meeting at zero.
+    func reset() { lock.withLock { accumulated = .zero; resumedAt = nil } }
     func run() { lock.withLock { if resumedAt == nil { resumedAt = now() } } }
     func pause() {
         lock.withLock {
@@ -219,7 +221,7 @@ final class MeetingController: ObservableObject {
         channels = [MeetingChannel(speaker: Meeting.meID, recorder: makeMicrophone(), clock: clock),
                     MeetingChannel(speaker: Meeting.otherID, recorder: makeCallAudio(source), clock: clock)]
         phase = .recording
-        clock.run()
+        clock.reset(); clock.run()
         startChannels()
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
