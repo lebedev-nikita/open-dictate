@@ -22,6 +22,8 @@ struct ShortcutSettingsView: View {
                     help: t("Select text first. With no selection, the whole field is edited.",
                             "Сначала выделите текст. Без выделения изменится всё поле."), binding: \.transform)
                 RowDivider()
+                shortcutSetting(t("Meeting recording", "Запись встречи"), binding: \.meeting)
+                RowDivider()
                 HStack(spacing: Space.sm) {
                     Text(t("Cancel dictation", "Отменить диктовку"))
                     Spacer(minLength: Space.xs)

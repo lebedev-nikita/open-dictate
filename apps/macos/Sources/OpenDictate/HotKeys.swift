@@ -3,7 +3,7 @@ import Carbon
 
 @MainActor
 final class HotKeys {
-    enum Action: UInt32 { case dictate = 1, transform, cancel, dictateWithPostProcessing }
+    enum Action: UInt32 { case dictate = 1, transform, cancel, dictateWithPostProcessing, meeting }
     private var registrations = [Action: EventHotKeyRef]()
     private var handler: EventHandlerRef?
     private var pressed = Set<Action>()
@@ -56,8 +56,7 @@ final class HotKeys {
         unregister(.cancel)
         // If Escape itself is assigned, its existing registration routes to cancel.
         let escape = KeyboardShortcut(keyCode: 53, flags: [], keyLabel: "Esc")
-        if enabled && bindings?.dictate.matches(escape) != true && bindings?.transform.matches(escape) != true &&
-            bindings?.dictateWithPostProcessing.matches(escape) != true {
+        if enabled && bindings.map({ value in actionBindings(value).allSatisfy { !$0.1.matches(escape) } }) != false {
             try? register(.cancel, shortcut: escape)
         }
     }
@@ -105,14 +104,15 @@ final class HotKeys {
     }
 
     private func clearShortcuts() {
-        unregister(.dictate); unregister(.transform); unregister(.dictateWithPostProcessing)
+        unregister(.dictate); unregister(.transform); unregister(.dictateWithPostProcessing); unregister(.meeting)
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }; globalMonitor = nil
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }; localMonitor = nil
         gestures.removeAll()
     }
 
     private func actionBindings(_ bindings: ShortcutBindings) -> [(Action, KeyboardShortcut)] {
-        [(.dictate, bindings.dictate), (.transform, bindings.transform), (.dictateWithPostProcessing, bindings.dictateWithPostProcessing)]
+        [(.dictate, bindings.dictate), (.transform, bindings.transform), (.dictateWithPostProcessing, bindings.dictateWithPostProcessing),
+         (.meeting, bindings.meeting)]
     }
 
     private func register(_ action: Action, shortcut: KeyboardShortcut) throws {

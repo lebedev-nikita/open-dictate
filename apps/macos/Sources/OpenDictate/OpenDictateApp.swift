@@ -34,8 +34,12 @@ struct OpenDictateApp {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private var model: AppModel!
+    private var meetings: MeetingController!
+    private var meetingWindow: MeetingWindowController!
+    private let navigation = SettingsNavigation()
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
+    private var dictationActive = false
     private var accessibilityActivationObserver: NSObjectProtocol?
     private let recordingIndicator = RecordingIndicator()
     private lazy var errorNotifications = ErrorNotifications()
@@ -51,13 +55,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         model = AppModel(localOnly: localOnly, notifyError: errorNotifications.post)
         #else
         model = AppModel(notifyError: errorNotifications.post)
+        let localOnly = false
         #endif
+        let meetingStore = MeetingStore(inMemory: localOnly)
+        #if DEBUG
+        // Local checks record real audio but never read the API key or call OpenAI.
+        meetings = localOnly ? MeetingController(store: meetingStore, preferences: model.preferences, replacements: model.replacements,
+            transcribe: { pcm, _, _, _ in try await Task.sleep(for: .milliseconds(400)); return "Локальная проверка встречи (\(pcm.count / 48_000) с)" },
+            loadKey: { "local" }, notify: errorNotifications.post)
+            : MeetingController(store: meetingStore, preferences: model.preferences, replacements: model.replacements, notify: errorNotifications.post)
+        #else
+        meetings = MeetingController(store: meetingStore, preferences: model.preferences, replacements: model.replacements,
+                                     notify: errorNotifications.post)
+        #endif
+        meetings.onStateChange = { [weak self] in self?.updateState() }
+        #if DEBUG
+        meetings.localOnly = localOnly
+        #endif
+        meetingWindow = MeetingWindowController(controller: meetings, model: model,
+            openSettings: { [weak self] page, meeting in self?.openSettings(page: page, meeting: meeting) },
+            onClose: { [weak self] in self?.windowClosed() })
+        model.onMeetingAction = { [weak self] in self?.toggleMeeting(activate: false) }
         #if DEBUG
         if localOnly {
             let checks = LocalSmokeChecks(model: model); localChecks = checks
             model.hotKeys.onAction = { action in
                 switch action {
                 case .dictate, .transform, .dictateWithPostProcessing: Task { await checks.toggle() }
+                case .meeting: self.toggleMeeting(activate: false)
                 case .cancel: self.model.cancel(); Task { await checks.cancel() }
                 }
             }
@@ -90,11 +115,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         openSettings(); return true
     }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard meetings.isActive else { return .terminateNow }
+        let p = model.preferences
+        let alert = NSAlert()
+        alert.messageText = p.t("A meeting is being recorded", "Идёт запись встречи")
+        alert.informativeText = p.t("Finish it first to keep the rest of the transcript. Quitting now keeps only the text already recognized.",
+                                    "Завершите встречу, чтобы сохранить расшифровку полностью. При выходе сейчас сохранится только уже распознанный текст.")
+        alert.addButton(withTitle: p.t("Finish Meeting", "Завершить встречу"))
+        alert.addButton(withTitle: p.t("Quit Anyway", "Всё равно выйти"))
+        alert.addButton(withTitle: p.t("Cancel", "Отмена"))
+        NSApp.activate(ignoringOtherApps: true)
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            meetings.finish(); meetingWindow.show(activate: true); return .terminateCancel
+        case .alertSecondButtonReturn:
+            meetings.abandonForQuit(); return .terminateNow
+        default: return .terminateCancel
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         if let accessibilityActivationObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(accessibilityActivationObserver)
         }
         model.shutdown()
+        meetings.shutdown()
     }
 
     private func prepareAccessibility() {
@@ -117,6 +163,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             #selector(processedDictation), key: p.shortcuts.dictateWithPostProcessing.label, enabled: !model.isActive)
         add(menu, p.t("Edit text by voice", "Изменить текст голосом"), #selector(transform), key: p.editShortcutLabel, enabled: !model.isActive)
         if model.isActive { add(menu, p.t("Cancel", "Отменить"), #selector(cancel), key: "Esc") }
+        menu.addItem(.separator())
+        if meetings.isActive {
+            let status = meetings.phase == .paused ? p.t("Meeting paused", "Встреча на паузе")
+                : meetings.phase == .finishing ? p.t("Finishing meeting…", "Завершение встречи…")
+                : p.t("Recording meeting", "Идёт запись встречи")
+            menu.addItem(NSMenuItem(title: "\(status) · \(MeetingFormat.elapsed(meetings.elapsedMillis))", action: nil, keyEquivalent: ""))
+            add(menu, p.t("Finish meeting", "Завершить встречу"), #selector(toggleMeetingFromMenu),
+                key: p.shortcuts.meeting.label, enabled: meetings.phase != .finishing)
+            add(menu, p.t("Show meeting", "Показать встречу"), #selector(showMeeting))
+        } else {
+            add(menu, p.t("Record meeting", "Записать встречу"), #selector(toggleMeetingFromMenu), key: p.shortcuts.meeting.label)
+        }
+        add(menu, p.t("Copy last meeting", "Скопировать последнюю встречу"), #selector(copyLastMeeting),
+            enabled: meetings.latestMeeting != nil)
         menu.addItem(.separator())
         add(menu, p.t("Retranscribe last recording", "Перетранскрибировать последнюю запись"), #selector(retranscribeLast), enabled: model.canRetranscribe)
         add(menu, p.t("Copy last transcript", "Скопировать последний текст"), #selector(copyLast), enabled: !model.lastTranscript.isEmpty)
@@ -209,9 +269,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         #else
         let phase = model.phase
         #endif
-        statusItem.button?.image = MenuBarIcon.image(for: phase)
+        let meetingIcon: MenuBarIcon.Meeting = meetings.phase == .recording ? .recording : meetings.phase == .paused ? .paused : .none
+        statusItem.button?.image = MenuBarIcon.image(for: phase, meeting: meetingIcon)
+        let dictating = model.phase == .preparing || model.phase == .recording
+        if dictating != dictationActive { dictationActive = dictating; meetings.noteDictation(active: dictating) }
         statusItem.button?.title = ""
         statusItem.button?.toolTip = "OpenDictate · \(model.stateLabel) · \(model.preferences.shortcutLabel)"
+            + (meetings.isActive ? " · " + model.preferences.t("Meeting", "Встреча") : "")
         #if DEBUG
         if let phase = hudPreviewPhase {
             recordingIndicator.show(phase: phase, style: model.preferences.indicatorStyle,
@@ -228,7 +292,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         } else { recordingIndicator.hide() }
     }
 
-    private func openSettings() {
+    private func openSettings(page: String? = nil, meeting: UUID? = nil) {
+        if let page { navigation.page = page; navigation.meeting = meeting }
         model.refreshPermissions()
         model.chatGPT.capturedAccount()
         model.driveSync.refreshIfStale()
@@ -244,7 +309,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             window.title = "OpenDictate"; window.isReleasedWhenClosed = false
             // The sidebar already names the app, so the title bar only hosts the window controls.
             window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
-            window.contentView = NSHostingView(rootView: SettingsView(model: model, preferences: model.preferences, history: model.history, replacements: model.replacements))
+            window.contentView = NSHostingView(rootView: SettingsView(model: model, preferences: model.preferences, history: model.history,
+                replacements: model.replacements, meetings: meetings, navigation: navigation,
+                recordMeeting: { [weak self] in self?.meetingWindow.show(activate: true) }))
             window.minSize = NSSize(width: 740, height: 620)
             window.delegate = self
             window.center(); settingsWindow = window
@@ -260,7 +327,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
 
     func windowWillClose(_ notification: Notification) {
         guard notification.object as? NSWindow === settingsWindow else { return }
-        NSApp.setActivationPolicy(.accessory)
+        windowClosed(except: settingsWindow)
+    }
+
+    /// OpenDictate appears in the Dock only while Settings or the meeting window is open.
+    private func windowClosed(except closing: NSWindow? = nil) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let settingsOpen = self.settingsWindow?.isVisible == true && self.settingsWindow !== closing
+            if !settingsOpen && !self.meetingWindow.isVisible { NSApp.setActivationPolicy(.accessory) }
+        }
+    }
+
+    /// Starts a meeting with the remembered source, or finishes the current one. Missing setup
+    /// opens the meeting window instead. A shortcut leaves keyboard focus in the call app.
+    private func toggleMeeting(activate: Bool) {
+        if meetings.isActive {
+            if meetings.phase != .finishing { meetings.finish() }
+            meetingWindow.show(activate: activate)
+            return
+        }
+        model.refreshPermissions()
+        let p = model.preferences
+        let sourceReady: Bool = {
+            guard let id = p.meetingSource.bundleID else { return true }
+            return !NSRunningApplication.runningApplications(withBundleIdentifier: id).isEmpty
+        }()
+        guard p.meetingNoticeAccepted, sourceReady else { meetingWindow.show(activate: true); return }
+        do {
+            try meetings.start(source: p.meetingSource)
+            meetingWindow.show(activate: activate, finished: nil)
+        } catch { meetingWindow.show(activate: true) }
+    }
+    @objc private func toggleMeetingFromMenu() { afterMenu { self.toggleMeeting(activate: true) } }
+    @objc private func showMeeting() { meetingWindow.show(activate: true) }
+    @objc private func copyLastMeeting() {
+        if meetings.copyLatest() { model.showMessage(model.preferences.t("Meeting copied as Markdown.", "Встреча скопирована как Markdown.")) }
     }
 
     // Menu actions run after the menu releases focus, before capturing the frontmost field.

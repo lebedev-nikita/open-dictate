@@ -70,11 +70,13 @@ struct ShortcutBindings: Codable, Equatable {
     var dictate: KeyboardShortcut
     var transform: KeyboardShortcut
     var dictateWithPostProcessing: KeyboardShortcut
-    private enum CodingKeys: String, CodingKey { case dictate, transform, dictateWithPostProcessing }
+    var meeting: KeyboardShortcut
+    private enum CodingKeys: String, CodingKey { case dictate, transform, dictateWithPostProcessing, meeting }
 
-    init(dictate: KeyboardShortcut, transform: KeyboardShortcut, dictateWithPostProcessing: KeyboardShortcut = .disabled) {
+    init(dictate: KeyboardShortcut, transform: KeyboardShortcut, dictateWithPostProcessing: KeyboardShortcut = .disabled,
+         meeting: KeyboardShortcut = .disabled) {
         self.dictate = dictate; self.transform = transform
-        self.dictateWithPostProcessing = dictateWithPostProcessing
+        self.dictateWithPostProcessing = dictateWithPostProcessing; self.meeting = meeting
     }
 
     init(from decoder: Decoder) throws {
@@ -83,6 +85,7 @@ struct ShortcutBindings: Codable, Equatable {
         transform = try values.decode(KeyboardShortcut.self, forKey: .transform)
         // Preserve existing assignments without reserving another key on upgrade.
         dictateWithPostProcessing = try values.decodeIfPresent(KeyboardShortcut.self, forKey: .dictateWithPostProcessing) ?? .disabled
+        meeting = try values.decodeIfPresent(KeyboardShortcut.self, forKey: .meeting) ?? .disabled
     }
     static let defaults = legacy(modifiers: "option", key: "space")
 
@@ -96,7 +99,7 @@ struct ShortcutBindings: Codable, Equatable {
                     transform: .init(keyCode: code, flags: flags.union(.shift), keyLabel: label))
     }
     var isValid: Bool {
-        let shortcuts = [dictate, transform, dictateWithPostProcessing]
+        let shortcuts = [dictate, transform, dictateWithPostProcessing, meeting]
         guard shortcuts.allSatisfy(\.isValid) else { return false }
         let enabled = shortcuts.filter(\.isEnabled)
         return !enabled.enumerated().contains { index, shortcut in
