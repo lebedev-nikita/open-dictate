@@ -358,7 +358,7 @@
     },
     "nativeSurfaces": {
       "macos": {
-        "platform": "macOS 14+",
+        "platform": "macOS 14.2+",
         "technology": "SwiftUI/AppKit; no third-party UI dependency",
         "surfaceBrief": ".impeccable/surfaces/apps-macos.md",
         "colorScheme": "Saved System/Light/Dark choice from the native menu button beside the version at the bottom of the sidebar; Dark by default. The saved choice applies across all five pages. Recording HUD stays dark.",

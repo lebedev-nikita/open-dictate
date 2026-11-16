@@ -30,6 +30,14 @@ final class Preferences: ObservableObject {
     @Published var indicatorStyle: RecordingIndicatorStyle {
         didSet { defaults.set(indicatorStyle.rawValue, forKey: "indicatorStyle") }
     }
+    /// The last meeting source: one application or all system audio. Local only.
+    @Published var meetingSource: MeetingAudioSource {
+        didSet { defaults.set(try? JSONEncoder().encode(meetingSource), forKey: "meetingSource") }
+    }
+    /// The one-time notice about recording other people has been acknowledged.
+    @Published var meetingNoticeAccepted: Bool { didSet { defaults.set(meetingNoticeAccepted, forKey: "meetingNoticeAccepted") } }
+    /// Finished meetings are also written here as Markdown when set. Local only.
+    @Published var meetingExportFolder: String? { didSet { defaults.set(meetingExportFolder, forKey: "meetingExportFolder") } }
 
     @Published var textProcessingModel: String { didSet { defaults.set(textProcessingModel, forKey: "textProcessingModel"); recordSyncChange() } }
     // Retain the sync key and history tiers for compatibility, but never enable Fast.
@@ -91,6 +99,9 @@ final class Preferences: ObservableObject {
         excludedApps = defaults.stringArray(forKey: "excludedApps") ?? []
         showStatus = defaults.object(forKey: "showStatus") as? Bool ?? true
         indicatorStyle = RecordingIndicatorStyle(rawValue: defaults.string(forKey: "indicatorStyle") ?? "") ?? .compact
+        meetingSource = defaults.data(forKey: "meetingSource").flatMap { try? JSONDecoder().decode(MeetingAudioSource.self, from: $0) } ?? .system
+        meetingNoticeAccepted = defaults.bool(forKey: "meetingNoticeAccepted")
+        meetingExportFolder = defaults.string(forKey: "meetingExportFolder")
         defaults.set(try? postProcessing.encoded(), forKey: "postprocessingOptions")
         defaults.removeObject(forKey: "accuratePunctuationEnabled")
         do {

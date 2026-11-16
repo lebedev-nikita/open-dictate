@@ -1,7 +1,7 @@
 # OpenDictate for macOS
 
-A native menu bar application built with SwiftUI, AppKit, AVAudioEngine,
-Accessibility, Keychain and URLSession. No third-party dependencies or backend.
+A native menu bar application built with SwiftUI, AppKit, AVAudioEngine, Core Audio
+process taps, Accessibility, Keychain and URLSession. No third-party dependencies or backend.
 
 ## Installation
 
@@ -14,7 +14,8 @@ upgrades, migration from a manually installed DMG and manual installation.
 
 ## Development
 
-Requires macOS 14+ and Xcode 16+ (Swift 5.9 package, compatible with Swift 6).
+Requires macOS 14.2+ and Xcode 16+ (Swift 5.9 package, compatible with Swift 6).
+Meeting recording uses Core Audio process taps, available from macOS 14.2.
 
 ```bash
 swift test --package-path apps/macos
@@ -24,12 +25,17 @@ open dist/macos/OpenDictate.app
 
 Open `Package.swift` in Xcode for source editing and debugging. Run the bundled
 app for permission testing: a bare Swift executable has a different TCC identity.
-The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment target.
+The universal build targets `arm64` and `x86_64`, with a macOS 14.2 deployment target.
 
 ## Runtime
 
 - `AppModel` owns a single session, immutable settings, cancellation, permissions
   and result delivery. Session UUIDs discard late callbacks.
+- `MeetingController` owns a meeting next to dictation, never inside `AppModel`'s
+  session: two capture channels, the shared meeting clock, the recognition queue,
+  pause/resume, finishing and cancellation. `MeetingStore` persists transcripts.
+  Segmentation, channel merging, echo removal, the stored model and Markdown live in
+  `OpenDictateCore` (`MeetingSegmentation.swift`, `Meeting.swift`, `MeetingEcho.swift`).
 - `TextTarget` captures the focused Accessibility element, process, value and
   UTF-16 selection. Every insertion rechecks focus, text and caret. Both modes
   capture the active eligible field when ordinary dictation stops, then paste
@@ -51,7 +57,13 @@ The universal build targets `arm64` and `x86_64`, with a macOS 14 deployment tar
   Hardware format changes rebuild capture while preserving accepted audio and
   streaming chunk boundaries. Unrecoverable changes fail visibly and retain the
   valid prefix for an explicit Accurate retry. Live audio stays off disk; Accurate builds a WAV in memory.
-  Both stop below the provider's 25 MB upload limit.
+  Both stop below the provider's 25 MB upload limit. Meeting channels pass no limit:
+  they keep no recording and cut utterances themselves.
+- `ProcessTapCaptureEngine` is a second capture engine for `AudioRecorder`: a private
+  Core Audio process tap read through a private aggregate device that contains only
+  the tap. It never opens an output device's microphone, so AirPods keep their
+  playback profile. Its IOProc writes into the same lock-free ring as the
+  microphone, so conversion, chunking and levels are shared.
 - `LiveTranscriptionSession` opens immediately, bounds early audio to 300 chunks,
   flushes after `session.updated`, serializes sends and explicitly commits.
   Overflow fails visibly instead of silently dropping speech.
@@ -103,6 +115,91 @@ are never retried. The previous clipboard items and types are restored if unchan
 Temporary transcript items are marked confidential for compatible clipboard utilities.
 Editors without usable Accessibility metadata need manual Copy last transcript.
 Password fields are deliberately excluded.
+
+### Meetings
+
+**Record meeting** in the menu bar (or its own shortcut, unassigned by default)
+records the microphone as **Me** and call audio as **Other speaker**. The same
+item finishes the meeting; **Show meeting** reopens its window. **Copy last
+meeting** puts the newest transcript on the clipboard as Markdown. The first
+recording shows a one-time notice that other participants' speech is sent to
+OpenAI and that their consent is the user's responsibility.
+
+The meeting window chooses the call audio: one running application (apps playing
+audio are listed first) or all system audio. The choice is remembered. An app tap
+includes the app's helper processes (same bundle prefix or descendants of its main
+process) and follows processes that start later, such as a browser tab joining
+audio. Closing the window does not stop recording. It shows the live transcript,
+elapsed time, channel levels, Pause/Resume, Finish and a confirmed **Cancel
+meeting**, which deletes the meeting. Starting from the shortcut leaves keyboard
+focus in the call app. There is no floating indicator for meetings.
+
+macOS asks for **System Audio Recording** (not Screen Recording) the first time a
+tap starts; until it is allowed, the tap stays silent and macOS can hold the tap's
+start. The microphone channel never waits for it. After 15 seconds without call
+audio, the window offers System Settings. The grant follows the stable signing
+identifier, so it survives ad-hoc rebuilds like Accessibility.
+
+Each channel is cut into utterances at pauses. Measured on Russian and English
+read speech, 700 ms pauses gave the lowest divergence from whole-file recognition
+(2.3% RU, 1.8% EN word differences; 300 ms: 5.1% and 2.8%), with a median utterance
+of about 7 seconds. Utterances keep 300 ms before and after speech, need 300 ms of
+speech, accept a 300 ms pause after 20 seconds and are cut at the quietest frame
+before 30 seconds. The noise floor is the quietest 100 ms over 10 seconds, capped at
+−45 dBFS; speech is 12 dB above it and at least −50 dBFS. Silence is never sent.
+
+Every utterance is stamped by its speech start on one meeting clock (pauses
+excluded) and sent alone to `/v1/audio/transcriptions` with the Accurate model,
+speech languages, dictionary, timeout and word replacements captured at start. Up
+to three requests run at once; a 7-second utterance took about one second, so text
+appears a few seconds after a phrase ends.
+Network, timeout, rate-limit, 401/403 and server failures retry the same utterance
+(1, 2, 4, 8, 16, then every 30 seconds); waiting utterances are shown as waiting for
+recognition. Other client errors mark the utterance **not recognized**, keeping its
+timestamp. Empty results, such as noise, are dropped.
+
+Memory stays bounded for any length: an utterance's audio is released once
+recognized, an utterance is at most 30 seconds, and untranscribed audio is capped at
+15 minutes (43 MB). Reaching the cap during an outage pauses capture with a visible
+notice and notification instead of dropping speech; recording can resume once
+recognition catches up. Finishing stops capture and waits for queued utterances;
+**Finish now** marks the rest as not recognized. Sleep pauses the meeting; resume it
+after waking. Quitting asks first; quitting anyway keeps the text already recognized.
+
+Without headphones the microphone also hears the call. Microphone text waits for
+the call text around it (±1.5 s) and loses word runs that repeat it; a sentence that
+is at least half echo is removed. In a simulation with the far end at −6, −12 and
+−24 dB, no echoed words remained under Me and every recognized own sentence was
+kept, but strong echo during double talk masked short replies before recognition
+(9 of 9 own sentences survived at −24 dB, 7 of 9 at −12 dB, 5 of 9 at −6 dB). Words
+you repeat after the other side within 1.5 s may be removed. Headphones avoid echo.
+
+Dictation, post-processed dictation and voice editing keep working during a meeting
+with their own microphone recorder; their speech is addressed to a text field and is
+left out of the meeting transcript. The menu bar microphone gains a red badge while
+a meeting records and a monochrome dot while it is paused; dictation recording keeps
+its red circle, also during a meeting.
+
+Meetings are stored as one JSON file each in
+`~/Library/Application Support/OpenDictate/Meetings/` (folder 0700, files 0600),
+excluded from Drive and history. A meeting being recorded is saved as it goes; one
+left unfinished by a crash becomes **interrupted** on the next launch. Settings →
+Meetings lists date, source and duration; each meeting offers search, speaker
+renaming for the whole transcript, Copy as Markdown, Save as `.md` and Delete, and
+the list offers Delete all. An optional auto-export folder receives every finished
+meeting as Markdown and never replaces an existing file. Markdown is the only
+export format:
+
+```markdown
+# Meeting 2026-11-16, Zoom, 47 min
+
+**[00:00:04] Me:** Let's start with the release plan.
+
+**[00:00:11] Other speaker:** Agreed, channels first.
+```
+
+Blank lines keep one line per utterance in Markdown renderers. Not recognized
+utterances appear as `*(not recognized)*`. Russian uses «Встреча», «Я» and «Собеседник».
 
 ### Speech languages
 
@@ -258,8 +355,9 @@ appears in the Dock and app switcher only while Settings is open, and returns to
 the menu bar when the window closes.
 
 Settings → Keyboard shortcuts groups global dictation and voice-editing bindings,
-a separate binding for dictation with post-processing, and the fixed Escape
-cancellation key in one compact list. Restore defaults follows the list; the
+separate bindings for dictation with post-processing and meeting recording, and the
+fixed Escape cancellation key in one compact list. The meeting binding starts
+unassigned and toggles recording; Escape never cancels a meeting. Restore defaults follows the list; the
 information button beside Voice editing explains its selection behavior.
 Bindings are local to this Mac and do not sync through Drive.
 
@@ -303,7 +401,8 @@ including upload and the full response; Live shows its model without timings.
 Old entries and skipped stages have no invented models or durations. This metadata
 remains local and is excluded from Drive.
 Disable history at the top of the History page to stop saving future results;
-**Delete all…** beside the search field removes existing history. Audio is never persisted on macOS.
+**Delete all…** beside the search field removes existing history. Meeting transcripts
+are stored separately (see Meetings). Audio is never persisted on macOS.
 
 Errors use native macOS notifications without opening Settings or taking focus.
 Allow notifications when macOS first asks; banners follow System Settings →
@@ -315,8 +414,12 @@ menu and in Settings when you open them yourself.
 
 Unit tests exercise UTF-16 selections, cumulative updates, cursor guards,
 WAV/chunk boundaries, protocol payloads, ordered early-audio flush and commit,
-bounded queues, cancellation and local search. Mock transport
-tests do not require a key or call OpenAI.
+bounded queues, cancellation and local search. Meeting tests cover segmentation,
+time-ordered merging, echo removal on recognized simulation texts, Markdown, storage,
+retries, the backlog pause, pauses, cancellation and a call channel held by the
+permission prompt, with scripted recorders. Mock transport
+tests do not require a key or call OpenAI. `MeetingCaptureViewsTests` renders every
+meeting surface in both languages when `OPENDICTATE_VIEW_CAPTURES` is set.
 
 For native smoke checks, run `scripts/build-smoke.sh` and
 `scripts/build-editor-fixture.sh`, then launch the printed app paths. The smoke
@@ -449,6 +552,11 @@ DMG filename and `macos-v*` tag. The Apple bundle short version contains only
 increment the numeric bundle build for each distribution. Release CI
 marks RC tags as GitHub prereleases and leaves the stable download unchanged.
 `scripts/test-release-version.sh` verifies accepted/rejected version strings.
+
+[Core Audio taps](https://developer.apple.com/documentation/coreaudio/capturing-system-audio-with-core-audio-taps)
+(checked on 2026-11-16): taps need macOS 14.2 and `NSAudioCaptureUsageDescription`;
+macOS asks the first time recording starts from an aggregate device with a tap.
+Meetings reuse the file transcription request below unchanged.
 
 Protocol references checked on 2026-09-30:
 [Realtime transcription](https://developers.openai.com/api/docs/guides/realtime-transcription),

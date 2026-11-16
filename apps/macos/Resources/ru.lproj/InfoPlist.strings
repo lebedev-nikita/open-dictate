@@ -1,1 +1,2 @@
-"NSMicrophoneUsageDescription" = "OpenDictate записывает голос только после запуска диктовки. Звук отправляется напрямую в OpenAI для распознавания.";
+"NSMicrophoneUsageDescription" = "OpenDictate записывает голос только после запуска диктовки или записи встречи. Звук отправляется напрямую в OpenAI для распознавания.";
+"NSAudioCaptureUsageDescription" = "OpenDictate записывает звук звонка только во время записи встречи. Речь отправляется напрямую в OpenAI для распознавания.";

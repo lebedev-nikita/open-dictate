@@ -49,6 +49,8 @@ final class AppModel: ObservableObject {
     private var recordingShortcut = false
     private var shuttingDown = false
     var onStateChange: (() -> Void)?
+    /// The meeting shortcut; meetings are owned by `MeetingController`, not this dictation session.
+    var onMeetingAction: (() -> Void)?
 
     @MainActor private final class Session {
         let id = UUID()
@@ -132,6 +134,7 @@ final class AppModel: ObservableObject {
             case .transform: self?.toggle(transform: true)
             case .dictateWithPostProcessing: self?.toggle(transform: false, withPostProcessing: true)
             case .cancel: self?.cancel()
+            case .meeting: self?.onMeetingAction?()
             }
         }
         configureHotKeys()
@@ -614,5 +617,10 @@ final class AppModel: ObservableObject {
         onStateChange?()
     }
     func clearMessage() { message = "" }
+    func showMessage(_ text: String) { message = text; onStateChange?() }
+    #if DEBUG
+    /// Native UI review of ready and missing setup states without Keychain or TCC.
+    func previewSetup(hasKey: Bool, microphone: Bool) { self.hasKey = hasKey; microphoneAllowed = microphone }
+    #endif
     func shutdown() { shuttingDown = true; cancel(); standbyRecorder = nil; lastDictationAudio = nil; pasteTask?.cancel(); timer?.invalidate(); hotKeys.shutdown() }
 }

@@ -6,9 +6,53 @@ enum MenuBarIcon {
     private static let microphoneHeight: CGFloat = 14
     private static let templateImage = makeImage(recording: false)
     private static let recordingImage = makeImage(recording: true)
+    private static let meetingImage = makeMeetingImage(paused: false)
+    private static let pausedMeetingImage = makeMeetingImage(paused: true)
 
-    static func image(for phase: AppModel.Phase) -> NSImage? {
-        phase == .recording ? recordingImage : templateImage
+    /// A meeting's state in the menu bar, independent of dictation.
+    enum Meeting { case none, recording, paused }
+
+    /// Dictation recording keeps its red circle, also during a meeting; a meeting otherwise
+    /// adds a badge to the microphone for its whole duration: red while recording, a
+    /// monochrome dot while paused.
+    static func image(for phase: AppModel.Phase, meeting: Meeting = .none) -> NSImage? {
+        if phase == .recording { return recordingImage }
+        switch meeting {
+        case .recording: return meetingImage
+        case .paused: return pausedMeetingImage
+        case .none: return templateImage
+        }
+    }
+
+    /// Badge geometry on the 20 × 20 canvas: a 7 pt dot in the top-right corner, clear of the
+    /// microphone head by a 1.5 pt gap drawn in the menu bar's own color.
+    static let badge = NSRect(x: 13, y: 13, width: 7, height: 7)
+
+    private static func makeMeetingImage(paused: Bool) -> NSImage? {
+        guard let microphone = trimmedMicrophone("mic") else { return nil }
+        let image = NSImage(size: size, flipped: false) { bounds in
+            let rect = NSRect(x: bounds.midX - microphone.size.width / 2 - 2, y: bounds.midY - microphone.size.height / 2,
+                              width: microphone.size.width, height: microphone.size.height)
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.beginTransparencyLayer(auxiliaryInfo: nil)
+            microphone.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1,
+                            respectFlipped: false, hints: [.interpolation: NSImageInterpolation.high])
+            // Tint the white glyph with the label color of the appearance it is drawn in.
+            (paused ? NSColor.black : NSColor.labelColor).setFill()
+            rect.fill(using: .sourceIn)
+            // Clear a ring around the badge so it stays legible over the microphone.
+            NSGraphicsContext.current?.compositingOperation = .clear
+            NSBezierPath(ovalIn: badge.insetBy(dx: -1.5, dy: -1.5)).fill()
+            NSGraphicsContext.current?.compositingOperation = .sourceOver
+            (paused ? NSColor.black : NSColor.systemRed).setFill()
+            NSBezierPath(ovalIn: badge).fill()
+            context.endTransparencyLayer()
+            return true
+        }
+        // Paused is monochrome and adapts like the idle icon; recording keeps its red badge.
+        image.isTemplate = paused
+        image.accessibilityDescription = "OpenDictate"
+        return image
     }
 
     private static func makeImage(recording: Bool) -> NSImage? {

@@ -6,16 +6,27 @@ struct SettingsView: View {
     @ObservedObject var preferences: Preferences
     @ObservedObject var history: HistoryStore
     @ObservedObject var replacements: ReplacementStore
-    @State private var selection: String
+    @ObservedObject var meetings: MeetingController
+    @ObservedObject private var meetingStore: MeetingStore
+    @ObservedObject var navigation: SettingsNavigation
+    var recordMeeting: () -> Void
     @State private var apiKey = ""
     @State private var query = ""
     @State private var confirmClear = false
     @State private var confirmDeleteKey = false
 
-    init(model: AppModel, preferences: Preferences, history: HistoryStore, replacements: ReplacementStore, page: String = "dictation") {
+    init(model: AppModel, preferences: Preferences, history: HistoryStore, replacements: ReplacementStore, page: String = "dictation",
+         meetings: MeetingController? = nil, navigation: SettingsNavigation? = nil, recordMeeting: @escaping () -> Void = {}) {
         self.model = model; self.preferences = preferences; self.history = history; self.replacements = replacements
-        _selection = State(initialValue: page)
+        let meetings = meetings ?? MeetingController(store: MeetingStore(inMemory: true), preferences: preferences,
+                                                     replacements: replacements)
+        self.meetings = meetings
+        self.meetingStore = meetings.store
+        self.navigation = navigation ?? SettingsNavigation(page: page)
+        self.recordMeeting = recordMeeting
     }
+
+    private var selection: String { navigation.page }
 
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
     /// Clears the 28 pt title bar with the window controls, then the page's own top margin.
@@ -35,6 +46,8 @@ struct SettingsView: View {
                             switch selection {
                             case "replacements": ReplacementSettingsView(store: model.replacements, preferences: preferences)
                             case "history": historyPage
+                            case "meetings": MeetingsSettingsView(controller: meetings, store: meetings.store, preferences: preferences,
+                                                                  navigation: navigation, recordMeeting: recordMeeting)
                             case "shortcuts": ShortcutSettingsView(model: model, preferences: preferences)
                             case "general": generalPage
                             default: dictationPage
@@ -87,6 +100,7 @@ struct SettingsView: View {
                 navigation("dictionary", t("Dictionary", "Словарь"), "book.closed", count: DictionaryTerms.normalize(preferences.dictionary).count)
                 navigation("replacements", t("Replacements", "Автозамена"), "arrow.left.arrow.right", count: replacements.document.rules.count)
                 navigation("history", t("History", "История"), "clock")
+                navigation("meetings", t("Meetings", "Встречи"), "person.2", count: meetingStore.meetings.isEmpty ? nil : meetingStore.meetings.count)
                 navigation("shortcuts", t("Keyboard shortcuts", "Горячие клавиши"), "keyboard")
                 navigation("general", t("Settings", "Настройки"), "slider.horizontal.3")
             }
@@ -133,7 +147,7 @@ struct SettingsView: View {
 
     private func navigation(_ id: String, _ title: String, _ symbol: String, count: Int? = nil) -> some View {
         let selected = selection == id
-        return Button { selection = id } label: {
+        return Button { navigation.page = id; if id == "meetings" { navigation.meeting = nil } } label: {
             HStack(spacing: Space.xs) {
                 Image(systemName: symbol).frame(width: 18)
                     .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))

@@ -52,7 +52,7 @@ final class ShortcutSettingsTests: XCTestCase {
             window.makeKeyAndOrderFront(nil); host.layoutSubtreeIfNeeded()
             RunLoop.main.run(until: Date().addingTimeInterval(0.2))
             let recorders = descendants(of: host).compactMap { $0 as? ShortcutRecorderButton }
-            XCTAssertEqual(recorders.count, 3)
+            XCTAssertEqual(recorders.count, 4)
             let recorder = try XCTUnwrap(recorders.first)
             XCTAssertFalse(recorder.recording)
             if let output = ProcessInfo.processInfo.environment["OPENDICTATE_VIEW_CAPTURES"] {

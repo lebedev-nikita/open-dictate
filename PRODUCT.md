@@ -26,6 +26,7 @@ The app is used while an Android keyboard and editable field are visible. A fore
 
 - Live and accurate transcription modes use OpenAI directly from the device.
 - Voice-directed text transformation and on-device search over local transcript history are supported.
+- macOS records meetings into local, timestamped transcripts: the microphone is "Me" and the chosen call app's audio is "Other speaker". It is a capture tool for handing transcripts to other tools, without summaries. Other participants' speech goes to OpenAI, so the user is told that their consent is the user's responsibility.
 - API keys are encrypted with Android Keystore; audio is temporary and cache-only.
 - No analytics, ads, backend, persistent audio storage, or logging of sensitive data.
 - The app targets Android 36, compiles with SDK 37, and requires Android 8.0 or later.
@@ -34,7 +35,9 @@ The app is used while an Android keyboard and editable field are visible. A fore
 macOS uses a global shortcut and menu bar utility instead of a keyboard overlay.
 Its native SwiftUI/AppKit settings are clean, compact and fast, with advanced
 features on separate screens. Keys stay in Keychain; audio stays in memory.
-The app requires macOS 14+, ships a universal DMG for Apple Silicon and Intel,
+Meetings have their own menu action, shortcut, window and settings page, and work
+alongside dictation; transcripts export as Markdown only.
+The app requires macOS 14.2+, ships a universal DMG for Apple Silicon and Intel,
 and uses independent `macos-v*` releases.
 
 ## Brand Commitments

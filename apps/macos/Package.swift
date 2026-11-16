@@ -3,13 +3,13 @@ import PackageDescription
 
 let package = Package(
     name: "OpenDictate",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("14.2")],
     products: [
         .executable(name: "OpenDictate", targets: ["OpenDictate"])
     ],
     targets: [
         .target(name: "OpenDictateCore", resources: [.process("Resources")]),
-        .target(name: "OpenDictateAudio", linkerSettings: [.linkedFramework("AVFAudio")]),
+        .target(name: "OpenDictateAudio", linkerSettings: [.linkedFramework("AVFAudio"), .linkedFramework("CoreAudio")]),
         .executableTarget(name: "OpenDictate", dependencies: ["OpenDictateCore", "OpenDictateAudio"],
                           linkerSettings: [.linkedFramework("Carbon")]),
         .testTarget(name: "OpenDictateCoreTests", dependencies: ["OpenDictateCore"]),
