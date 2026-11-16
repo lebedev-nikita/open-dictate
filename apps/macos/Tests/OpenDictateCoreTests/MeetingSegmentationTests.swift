@@ -19,9 +19,13 @@ enum SyntheticAudio {
     /// Deterministic pseudo-random noise at a fixed RMS level.
     static func noise(_ millis: Int, amplitude: Double) -> Data {
         var state: UInt32 = 12_345
-        let samples = (0..<(rate * millis / 1_000)).map { _ -> Int16 in
+        // Explicit steps: Xcode 16 cannot type-check this as one expression.
+        var samples = [Int16](repeating: 0, count: rate * millis / 1_000)
+        for index in samples.indices {
             state = state &* 1_664_525 &+ 1_013_904_223
-            return Int16((Double(state) / Double(UInt32.max) * 2 - 1) * amplitude * 32_767)
+            let unit: Double = Double(state) / Double(UInt32.max)
+            let scaled: Double = (unit * 2 - 1) * amplitude * 32_767
+            samples[index] = Int16(scaled)
         }
         return samples.withUnsafeBytes { Data($0) }
     }

@@ -47,8 +47,14 @@ private final class ScriptedRecorder: AudioRecording, @unchecked Sendable {
 private enum Speech {
     static func tone(_ millis: Int, _ amplitude: Double) -> Data {
         let count = AudioConstants.sampleRate * millis / 1_000
-        return (0..<count).map { Int16(amplitude * 32_767 * sin(2 * .pi * 440 * Double($0) / Double(AudioConstants.sampleRate))) }
-            .withUnsafeBytes { Data($0) }
+        // Explicit steps: Xcode 16 cannot type-check this as one expression.
+        var samples = [Int16](repeating: 0, count: count)
+        for index in samples.indices {
+            let phase: Double = 2 * Double.pi * 440 * Double(index) / Double(AudioConstants.sampleRate)
+            let value: Double = amplitude * 32_767 * sin(phase)
+            samples[index] = Int16(value)
+        }
+        return samples.withUnsafeBytes { Data($0) }
     }
     static func silence(_ millis: Int) -> Data { Data(count: AudioConstants.sampleRate * millis / 1_000 * 2) }
     static func peak(_ pcm: Data) -> Double {
