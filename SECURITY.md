@@ -147,6 +147,34 @@ Developer ID identities and notary profiles are supported for local packaging
 but their certificates, private keys and credentials must stay outside Git.
 Debug-only local smoke checks do not call OpenAI and are absent from release builds.
 
+### macOS meeting recording
+
+Meeting recording captures call audio with a private Core Audio process tap of the
+chosen application (or all system audio, excluding OpenDictate) read through a
+private aggregate device that contains only the tap. It requires macOS 14.2+, the
+`NSAudioCaptureUsageDescription` string and the user's System Audio Recording
+grant; no Screen Recording permission or new entitlement is requested. The grant
+is bound to the stable signing identifier, like Accessibility. Taps do not mute or
+alter the call. Capture runs only between Record meeting and Finish, Pause, Cancel,
+sleep or quit.
+
+Meeting audio is never written to disk. Utterances wait in memory only until
+recognized, bounded to 30 seconds each and 15 minutes in total; reaching the bound
+pauses capture visibly rather than dropping audio silently. Each utterance goes
+directly to OpenAI's transcription endpoint over the existing ephemeral HTTPS client
+with the user's API key. Provider errors map to curated messages; keys, audio,
+transcripts and raw payloads are never logged or put in notifications. Other
+participants' speech leaves the device; a one-time notice states that consent is
+the user's responsibility.
+
+Transcripts are stored as owner-only JSON files (folder 0700, files 0600) in
+Application Support, outside Drive synchronization and dictation history, and are
+deletable individually or all at once. A meeting interrupted by a crash keeps its
+recognized text and is marked interrupted. The optional auto-export folder receives
+a Markdown copy of each finished meeting; OpenDictate never overwrites or deletes
+files there, and their protection follows that folder. Echo removal compares only
+recognized text in memory.
+
 ## ChatGPT plan credentials
 
 Optional Sign in with ChatGPT uses the public-client OAuth code flow with PKCE,

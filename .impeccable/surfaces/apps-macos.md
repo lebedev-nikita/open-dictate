@@ -1,6 +1,6 @@
 # macOS application
 
-Mode: Operate. Native SwiftUI settings and AppKit menu bar utility for macOS 14+,
+Mode: Operate. Native SwiftUI settings and AppKit menu bar utility for macOS 14.2+,
 with no third-party UI dependency. Inherit OpenDictate's black, graphite, white
 microphone identity through system typography, SF Symbols, native controls,
 keyboard navigation and English/Russian copy. The user's instruction delegates
@@ -17,7 +17,7 @@ accent is blue; this is a native control state, not an added brand color.
 
 STORY: The first Dictation page presents the API key, microphone and Accessibility
 permissions, Live/Accurate mode, transcription and shared text models, speech language,
-and post-processing rules. Dictionary, Replacements, History, Keyboard shortcuts, and Settings are secondary pages. The
+and post-processing rules. Dictionary, Replacements, History, Meetings, Keyboard shortcuts, and Settings are secondary pages. The
 rail keeps the current shortcut and version visible. Settings groups Google Drive and ChatGPT in the localized Integrations subsection.
 
 FIRST VIEWPORT: Default settings content is 790 × 650pt, with a fixed 190pt
@@ -241,3 +241,9 @@ Mode remains Operate in the established SwiftUI/AppKit world. `SettingsView.swif
 Three rows provide independent recorder controls for Dictation, Dictation with post-processing / Диктовка с постобработкой, and Voice editing. Ordinary Dictation explicitly skips post-processing; the dedicated action explains its one-session Accurate path and saved rules. Its binding starts unassigned, preserving saved ordinary and voice-edit bindings. Each key menu offers explicit disable, Globe/Fn, F1–F20 and Escape. Controls disable during active dictation; inline conflict guidance preserves the saved bindings. Restore defaults and the fixed Esc cancellation reference follow the recording guidance. Native disclosures cover modifier taps, Fn and function-key setup with a Keyboard Settings link and an Accessibility action when permission is missing, then app-window commands ⌘, / ⌘W / ⇧⌘W / ⌘Q.
 
 `HotKeys.swift`, `KeyboardShortcut.swift`, `AppModel.swift` and `OpenDictateApp.swift` are binding and action authority. The menu permanently offers ordinary and processed dictation alongside voice editing. Current page evidence is `.impeccable/review/dedicated-postprocessing/shortcuts-macos-{en,ru}.png`; the same **ship** review and 241-test verification cover the shortcut page and rules section. These isolated production `NSHostingView` captures cover the page, not the full sidebar, expanded disclosures or live OS permissions. No HTML detector applies; no new visual world, token or shipping raster asset is introduced.
+
+## Meeting recording extension
+
+Mode remains Operate in the established SwiftUI/AppKit world. Meetings add no floating indicator: the menu bar microphone carries a red 7pt badge while a meeting records and a monochrome template dot while it is paused, and dictation recording keeps its red circle during a meeting. The status menu adds Record meeting (Finish meeting and Show meeting while active, with the elapsed status line) and Copy last meeting. `MeetingViews.swift` owns the meeting window: a settings-style setup page with the one-time consent card, the Sources card (call-audio picker, microphone, missing API key) and Start Recording; a live header with status, elapsed time, source, channel meters and notices above the transcript ledger; a sidebar-toned footer with Pause/Resume, Finish/Finish Now and a confirmed Cancel Meeting…; and the saved state with Copy as Markdown, Open in Meetings and New Meeting. `MeetingsSettingsView.swift` owns the Meetings page (export folder, saved list, Delete All…) and the in-place detail (search, speaker names, Copy as Markdown, Save as…, Delete…). `ShortcutSettingsView.swift` adds the Meeting recording row, unassigned by default.
+
+Review used production `NSHostingView` captures from `MeetingCaptureViewsTests` for every state in English and Russian, in light and dark: setup first use and ready, recording with waiting and not-recognized rows and the missing-call-audio notice, backlog pause with a retry notice, finishing, starting at the 440 × 420pt minimum, saved with a renamed speaker, the Meetings list, detail, empty state at the 740 × 590pt minimum and the shortcut page. Captures are ignored review evidence under `.impeccable/review/meetings/`. Two findings were fixed before handoff: the missing-key message moved into the Sources card as a row, and the finishing count moved from the footer, where Russian truncated, into the header notices. The local-only smoke bundle was driven through Accessibility in English and Russian: setup, recording with live rows, the no-call-audio hint, the confirmed cancel, the saved view, the Meetings detail with live renaming, the menu items and the shortcut row. Menu bar icon states are rendered from the production images (`menubar-light.png`, `menubar-dark.png`). No HTML detector applies; no new tokens or shipping raster assets are introduced.

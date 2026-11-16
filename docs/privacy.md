@@ -128,7 +128,24 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   clears it; cancelled recordings and voice-edit instructions are not retained
   for retry. Cancelling a retranscription keeps the existing recording available.
   Retranscribing sends that audio directly to OpenAI again using current settings.
-- Microphone access is used only for a session you start. Accessibility reads
+- Meeting recording is a separate action you start from the menu or its shortcut.
+  It records your microphone as "Me" and the audio of the call app you choose (or
+  all system audio) as "Other speaker", using macOS System Audio Recording
+  permission. **Other participants' speech is sent to OpenAI for transcription;
+  getting their consent is your responsibility.** OpenDictate shows this notice
+  before your first meeting. Each phrase is sent as its own request when it ends;
+  silence is not sent. Audio stays in memory, is never written to disk and is
+  discarded after recognition (up to 15 minutes may wait in memory during a
+  network outage). Speech you dictate into another app during a meeting is not
+  added to the meeting transcript.
+- Meeting transcripts (text, timestamps, speaker names and the call app's name)
+  are stored locally in `~/Library/Application Support/OpenDictate/Meetings/` with
+  owner-only permissions, separately from history. They are not synchronized
+  through Google Drive. Delete meetings individually or all at once in Settings →
+  Meetings. If you choose an auto-export folder, each finished meeting is also
+  written there as a Markdown file, which OpenDictate does not delete; that copy is
+  yours to manage. Copying or saving a meeting puts its text where you choose.
+- Microphone access is used only for a dictation or meeting you start. Accessibility reads
   the focused editable control and its selection, and inserts transcription
   there. Secure text fields are excluded; unrelated screen contents are not collected.
 - Ordinary global shortcuts use registered hotkeys. When you choose Globe/Fn

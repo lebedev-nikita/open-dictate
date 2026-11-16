@@ -24,6 +24,13 @@ On macOS, the app lives in the menu bar. A global shortcut toggles dictation;
 Shift plus the same shortcut starts voice editing. A nonactivating status HUD
 never takes keyboard focus. Secure fields and excluded apps are rejected.
 
+macOS also records meetings into local transcripts for the user to hand to other
+tools; it captures and transcribes, without summaries. Roles come from channels:
+the microphone is "Me", a Core Audio process tap of the chosen call app (or all
+system audio) is "Other speaker". Other participants' speech goes to OpenAI, so
+keep the one-time consent notice and the System Audio Recording permission flow.
+Meeting audio never touches disk; transcripts stay local, outside Drive.
+
 ## Android runtime flow and ownership
 
 1. `OpenDictateAccessibilityService` detects the keyboard and focused editable
@@ -81,8 +88,9 @@ remains 36; changing the target opts the app into new runtime behavior and must
 be reviewed separately.
 
 - `apps/macos/Sources/OpenDictate/`: native UI, hotkeys, Keychain, Accessibility,
-  audio capture and session ownership.
-- `apps/macos/Sources/OpenDictateCore/`: pure text, WAV and OpenAI protocol logic.
+  audio capture (microphone and process taps) and session ownership.
+- `apps/macos/Sources/OpenDictateCore/`: pure text, WAV, meeting segmentation,
+  transcript, echo and Markdown logic, and OpenAI protocol logic.
 - `apps/macos/Tests/`: pure logic and mock transport tests.
 - `apps/macos/scripts/package.sh`: universal app, signature and DMG verification.
 - `.github/workflows/macos-build.yml` and `macos-release.yml`: macOS verification
@@ -108,6 +116,18 @@ recording. Voice-edit audio is not retained for retry. Retry captures delivery
 at invocation and uses the same focus guards, cancellation and final-result path.
 Keep audio and request encoding off the main actor. History is an existing
 product capability, stored locally with explicit deletion and an off switch.
+
+`MeetingController` owns meetings beside `AppModel`, never inside its dictation
+session; dictation and voice editing keep their own microphone recorder during a
+meeting, and their speech stays out of the transcript. Each channel is an
+`AudioRecorder` without the dictation size limit (`ProcessTapCaptureEngine` for call
+audio), cut at measured pauses into utterances stamped on one meeting clock, sent
+one per `/v1/audio/transcriptions` request with the Accurate settings captured at
+start, and merged by time. Recognized audio is released; untranscribed audio is
+bounded and pauses capture visibly when full; failures retry one utterance. Echo
+removal compares recognized text only. The tap's start can wait on the permission
+prompt, so nothing waits on the call channel. Pure logic lives in
+`OpenDictateCore` with behavior tests; `MeetingStore` keeps owner-only JSON per meeting.
 Read `apps/macos/README.md` for protocol references, native smoke checks and
 packaging before changing capture, delivery, permissions or release behavior.
 
@@ -139,7 +159,9 @@ Run the smallest relevant tests while iterating, then finish with:
 For macOS changes, also run `swift test --package-path apps/macos` and
 `apps/macos/scripts/package.sh`. Exercise hotkeys, secure fields, cursor edits,
 focus changes, cancellation, microphone permissions and insertion on macOS.
-Mock tests cannot verify TCC, Accessibility or actual OpenAI model access.
+For meetings, also exercise System Audio Recording, a real call app, and echo
+with speakers. Mock tests cannot verify TCC, Accessibility, process taps or actual
+OpenAI model access.
 
 For UI changes, inspect the result yourself in the running app in both Russian
 and English, capture and review screenshots of the affected screens and states

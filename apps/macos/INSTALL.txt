@@ -1,4 +1,4 @@
-OpenDictate for macOS 14 or later · Apple Silicon and Intel
+OpenDictate for macOS 14.2 or later · Apple Silicon and Intel
 
 1. Drag OpenDictate.app to Applications. When copying finishes, press
    Command + E in the disk image's Finder window to eject it.
@@ -12,10 +12,13 @@ OpenDictate for macOS 14 or later · Apple Silicon and Intel
 5. Focus a text field in another app. Press Option + Space to start speaking;
    press it again to finish. Escape cancels. Option + Shift + Space records
    a voice instruction to edit selected text, or the entire field without a selection.
+6. To transcribe a call, choose Record meeting in the menu bar. Allow System Audio
+   Recording when macOS asks. Your microphone is "Me", the call is "Other speaker".
+   Other participants' speech is sent to OpenAI; ask for their consent.
 
 OpenDictate lives in the menu bar. Click its microphone to open Settings or Quit.
 Recordings remain in memory and are discarded after use. Your API key stays
-in Keychain. History is stored locally and can be disabled or deleted.
+in Keychain. History and meeting transcripts are stored locally and can be deleted.
 API usage is billed by OpenAI separately from a ChatGPT subscription.
 
 Установка
@@ -28,5 +31,8 @@ Command + E в окне образа в Finder, чтобы извлечь его
 доступу. Приложение работает из строки меню.
 Option + Space — начать / завершить диктовку; Escape — отменить;
 Option + Shift + Space — изменить выделенный текст голосом.
+«Записать встречу» в меню расшифровывает звонок: микрофон — «Я», звук звонка —
+«Собеседник». Разрешите запись системного звука, когда macOS спросит. Речь
+собеседников отправляется в OpenAI; спросите их согласия.
 
 https://github.com/OpenDictate/open-dictate

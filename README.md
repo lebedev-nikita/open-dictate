@@ -16,7 +16,7 @@ no backend, analytics or account to create.
 | Start / finish | Tap the keyboard overlay | **Option + Space** |
 | Voice editing | Long-press → Edit text | **Option + Shift + Space** |
 | Installation | Signed APK | Universal DMG, Apple Silicon + Intel |
-| Requires | Android 8+ | macOS 14+ |
+| Requires | Android 8+ | macOS 14.2+ |
 | Downloads | [Android releases](https://github.com/lebedev-nikita/open-dictate/releases/latest) | [macOS releases](https://github.com/lebedev-nikita/open-dictate/releases?q=macos-v) |
 
 ## Features
@@ -36,6 +36,10 @@ no backend, analytics or account to create.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
 - Optional [ChatGPT plan usage](docs/chatgpt-plan.md) for Luna text processing; transcription still requires an API key.
+- macOS meeting transcripts: the microphone is "Me", the call app's audio is "Other speaker".
+  Each phrase is transcribed with `gpt-transcribe` as it ends and saved locally as a
+  timestamped transcript you can copy or export as Markdown. Other participants' speech
+  goes to OpenAI; getting their consent is your responsibility.
 - Encrypted credentials: Android Keystore on Android, Keychain on macOS.
 - Optional Google Drive sync for the dictionary, post-processing, word replacements, dictation
   mode and selected recognition/text models. [Setup and conflict behavior](docs/google-drive-sync.md).
@@ -158,7 +162,7 @@ Release signing requires the environment variables listed below.
 
 ### macOS
 
-Build on macOS 14+ with Xcode 16+:
+Build on macOS 14.2+ with Xcode 16+:
 
 ```bash
 swift test --package-path apps/macos

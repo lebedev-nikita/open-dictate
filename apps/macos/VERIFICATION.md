@@ -1,5 +1,48 @@
 # macOS verification
 
+## 0.9.0-rc.1 — meeting transcription
+
+Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-16.
+
+- All Swift tests pass, including segmentation, merging, echo removal, Markdown,
+  storage, retries, the backlog pause, pauses, cancellation, dictation exclusion and
+  a call channel held by the permission prompt. Universal packaging verified both
+  slices at a macOS 14.2 minimum, the signature and the DMG.
+- Measurements, all through production code: pause thresholds of 300–1000 ms on four
+  minutes each of Russian and English read speech and on synthetic speech with known
+  text, each utterance transcribed by `gpt-transcribe` and compared with the whole
+  file; 700 ms was best (2.3% RU, 1.8% EN word differences). Single words ("Да",
+  "Yes") were recognized; noise-only clips returned empty text.
+- The first tap start showed macOS's "record your system audio" prompt with the app's
+  usage text (not Screen Recording); the owner allowed it, and TCC recorded the grant.
+  Until then, HAL calls for the tap waited on the prompt. With access: an all-audio
+  tap captured and transcribed `afplay` speech; a QuickTime-only tap returned digital
+  silence while `afplay` played and only QuickTime's speech while both played; a tap
+  created before QuickTime played picked it up once it started. Chrome resolved to
+  its main process and both helpers. `Privacy_AudioCapture` opened System Audio
+  Recording Only, listing OpenDictate.
+- Two `AudioRecorder`s ran on the microphone at once without gaps (40 ms chunks,
+  ≤ 80 ms jitter) while the second started and stopped. `ioreg` reported the lid
+  closed and the built-in microphone delivered digital silence, so microphone content
+  and real echo were not measured. Echo removal was measured on simulated speaker echo (−6/−12/−24 dB,
+  60 ms delay, reverb) transcribed by `gpt-transcribe`: no echoed words remained under
+  Me; 9/9, 7/9 and 5/9 own sentences survived, losses coming from recognition during
+  double talk.
+- The local-only smoke bundle recorded a meeting from all system audio with synthetic
+  recognition: utterances appeared at their meeting times, Pause/Resume/Finish, the
+  saved view, Open in Meetings and live speaker renaming worked. In Russian it showed
+  the menu items, the shortcut row, setup, a Chrome-source recording with the
+  no-call-audio hint after 15 seconds, and the confirmed cancel. Production-view
+  captures covered every meeting state in both languages and appearances at default
+  and minimum sizes; menu bar icon states were rendered from the production images.
+
+Not verified: a real Zoom, Google Meet or Teams call; acoustic echo and AirPods; the
+meeting shortcut and status menu clicked by hand (the menu bar icon was hidden by the
+notch overflow, and the owner was working); sleep/wake and quit during a meeting;
+Copy last meeting on the real clipboard; a long meeting; network outage with real
+requests; recognition of a full meeting by OpenAI (smoke recognition is synthetic);
+macOS 14.2 and Intel hardware.
+
 ## 0.8.1 — in-place replacement editing
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-13.

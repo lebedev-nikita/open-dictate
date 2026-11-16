@@ -234,7 +234,7 @@ At 1040px and below, the container caps at 900px with 18px gutters, primary navi
 
 ### Native macOS
 
-The settings window uses a fixed sidebar (190pt) and a scrollable content column separated by a native divider. The scoped rail/body padding tokens set the inset rhythm; recurring content groups use native vertical stacks and dividers rather than detached cards. Resizing keeps the rail fixed and lets the content scroll, including the longer Russian copy. Window dimensions and the five-page information architecture are recorded in `.impeccable/surfaces/apps-macos.md`.
+The settings window uses a fixed sidebar (190pt) and a scrollable content column separated by a native divider. The scoped rail/body padding tokens set the inset rhythm; recurring content groups use native vertical stacks and dividers rather than detached cards. Resizing keeps the rail fixed and lets the content scroll, including the longer Russian copy. Window dimensions and the seven-page information architecture are recorded in `.impeccable/surfaces/apps-macos.md`.
 
 ## Elevation & Depth
 
@@ -355,7 +355,7 @@ The Dictation button group's Gestures action opens a native scrollable `ModalBot
 
 Android's Integrations section groups Google Drive and ChatGPT in one rounded provider list, separated by the existing inset divider. The name/caption stack and trailing switch share an 80 dp minimum full-row target. Drive enabling opens Google authorization when needed, disabling disconnects, and user-initiated sign-in errors use a transient toast. Automatic synchronization remains unchanged. ChatGPT uses the conditional prerequisite and connection feedback described above.
 
-macOS settings offer the same three choices from a native menu button beside the version at the bottom of the sidebar. The saved choice applies across all five pages; Dark preserves the previous default. Light appearance uses semantic AppKit surfaces and foreground colors, including the selected navigation row. The recording HUD retains its dark nonactivating appearance.
+macOS settings offer the same three choices from a native menu button beside the version at the bottom of the sidebar. The saved choice applies across all settings pages and the meeting window; Dark preserves the previous default. Light appearance uses semantic AppKit surfaces and foreground colors, including the selected navigation row. The recording HUD retains its dark nonactivating appearance.
 
 ### Native Synchronization Source Choice
 
@@ -383,7 +383,17 @@ The borderless, nonactivating AppKit panel retains its native shadow and sits ce
 
 The menu bar always retains a microphone, independently of HUD style. Only recording uses a white `mic.fill` on a 20pt red circle. Its visible silhouette is 14pt high and centered by its ink bounds, compensating for asymmetric transparent SF Symbol padding. Idle, preparation and processing use the template `mic` symbol on the same 20 × 20pt canvas. Processing adds no ellipsis or other title, keeping the status-item width stable. `MenuBarIconTests` verifies state mapping, equal icon sizes, the filled white silhouette, the circular red background, and equal opposite insets in both native appearances at 1×, 2× and 8×.
 
+During a meeting the template microphone shifts 2pt left and gains a 7pt badge in the top-right corner of the same 20 × 20pt canvas, separated from the glyph by a 1.5pt cleared ring: `NSColor.systemRed` while recording (the microphone takes the menu bar's label color) and a monochrome template dot while paused. Dictation recording keeps its red circle, also during a meeting, so the two never look alike. Finishing a meeting shows the plain template microphone.
+
 The committed recording/processing captures at `.impeccable/review/macos-indicator-recording.png` and `.impeccable/review/macos-indicator-processing.png` document rc.1. The rc.4 refinement halves both dimensions and shows the finish control during preparation; production-view raster tests and offscreen native captures verify its geometry. The built SwiftUI/AppKit indicator is the visual authority.
+
+### Native Meetings
+
+Meetings extend the native settings world without a floating indicator. A titled, resizable meeting window (520 × 620pt default, 440 × 420pt minimum, frame remembered) uses the settings page surface, system type and SF Symbols, and follows the saved theme. Before recording it is a settings-style page: the 22pt semibold title, a one-time **Before you record** card with the consent notice and **I Understand**, and a **Sources** card with the call-audio picker (All system audio, then running apps with 16pt icons, apps playing audio first), the microphone permission row and, when missing, an API key row that opens Settings. **Start Recording** is the default action.
+
+While recording, a header shows a status label (red `record.circle.fill` for recording, `pause.circle`, `hourglass` for finishing), elapsed time in 22pt semibold monospaced digits, the source name and two five-bar channel meters (Me / Other speaker) with a mini spinner while a channel starts. Notices are secondary callout labels with SF Symbols: pause reasons, missing call audio with a small **System Settings…** button, channel failures and retrying recognition. Below a divider, the transcript is a ledger of rows: timestamp in caption monospaced digits and the speaker in semibold callout above selectable body text; waiting and not-recognized rows use secondary text. It scrolls to new rows. A sidebar-toned footer holds Pause/Resume, Finish (default) or Finish Now, and a trailing **Cancel Meeting…** with a destructive confirmation. After finishing, the window shows the saved title and transcript with Copy as Markdown, Open in Meetings and New Meeting.
+
+Settings gains a **Meetings** page in the sidebar (`person.2`, count of saved meetings) between History and Keyboard shortcuts: Record Meeting… beside the title, an **Export** card for the auto-export folder (Choose…/Turn Off, path abbreviated with a tilde) and a **Saved meetings** card with Delete All…, rows of date, source · duration and a chevron, or an empty state. A meeting opens in place with a borderless back link, its title, Copy as Markdown, Save as… and Delete…, a **Speakers** card with inset name fields (placeholder = role name), and a search field above the transcript ledger. Keyboard shortcuts gains a Meeting recording row, unassigned by default. English and Russian copy wraps without truncation at the minimum sizes. These are scoped component details, with no new tokens or raster assets.
 
 ## Do's and Don'ts
 
