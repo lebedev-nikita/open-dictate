@@ -155,6 +155,28 @@ final class MeetingControllerTests: XCTestCase {
         XCTAssertEqual(microphone.stops, 1); XCTAssertEqual(call.stops, 1)
     }
 
+    func testAnotherMeetingStartsFromZero() async throws {
+        let meetings = controller()
+        try await started(meetings)
+        try await feed(microphone: Speech.silence(1_000) + Speech.tone(1_500, 0.2) + Speech.silence(3_000))
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        let first = try XCTUnwrap(meetings.lastFinishedID)
+
+        try await started(meetings)
+        XCTAssertNotEqual(meetings.meeting?.id, first)
+        XCTAssertEqual(meetings.elapsedMillis, 0)
+        try await feed(microphone: Speech.silence(2_000) + Speech.tone(1_000, 0.3) + Speech.silence(1_500))
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        let second = try XCTUnwrap(store.meetings.first { $0.id != first })
+        XCTAssertEqual(store.meetings.count, 2)
+        XCTAssertEqual(second.utterances.map(\.text), ["Agreed, channels first."])
+        XCTAssertEqual(second.utterances[0].startMillis, 2_000, accuracy: 100)
+        XCTAssertEqual(second.durationMillis, 4_500, accuracy: 100)
+        XCTAssertEqual(store.meetings.first { $0.id == first }?.utterances.count, 1)
+    }
+
     func testEchoOfTheCallIsRemovedFromMe() async throws {
         let meetings = controller()
         try await started(meetings)
