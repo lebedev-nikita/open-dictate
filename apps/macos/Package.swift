@@ -13,7 +13,9 @@ let package = Package(
         .executableTarget(name: "OpenDictate", dependencies: ["OpenDictateCore", "OpenDictateAudio"],
                           linkerSettings: [.linkedFramework("Carbon")]),
         .testTarget(name: "OpenDictateCoreTests", dependencies: ["OpenDictateCore"]),
-        .testTarget(name: "OpenDictateTests", dependencies: ["OpenDictate", "OpenDictateCore", "OpenDictateAudio"])
+        .target(name: "TestWindowHiding", path: "Tests/TestWindowHiding", linkerSettings: [.linkedFramework("AppKit")]),
+        .testTarget(name: "OpenDictateTests",
+                    dependencies: ["OpenDictate", "OpenDictateCore", "OpenDictateAudio", "TestWindowHiding"])
     ],
     cxxLanguageStandard: .cxx17
 )
