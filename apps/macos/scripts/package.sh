@@ -14,7 +14,7 @@ bundle_version="$(bash "$macos_root/scripts/release-version.sh" "$version")"
 mkdir -p "$output"
 for architecture in arm64 x86_64; do
     swift build --package-path "$macos_root" --build-system native --configuration release \
-        --triple "${architecture}-apple-macosx14.0" --scratch-path "$macos_root/.build/$architecture" --product OpenDictate
+        --triple "${architecture}-apple-macosx14.2" --scratch-path "$macos_root/.build/$architecture" --product OpenDictate
 done
 rm -rf "$app" "$staging"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$staging"
@@ -65,7 +65,7 @@ fi
 "$layout_venv/bin/python" "$macos_root/scripts/write-dmg-layout.py" "$staging"
 dmg="$output/OpenDictate-macOS-$version-universal.dmg"
 rm -f "$dmg"
-# LZMA images require macOS 10.15+, below the app's macOS 14 minimum.
+# LZMA images require macOS 10.15+, below the app's macOS 14.2 minimum.
 hdiutil create -volname "OpenDictate $version" -srcfolder "$staging" -fs HFS+ -format ULMO "$dmg"
 hdiutil verify "$dmg"
 

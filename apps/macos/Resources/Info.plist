@@ -13,11 +13,12 @@
     <key>CFBundleVersion</key><string>89</string>
     <key>OpenDictateReleaseVersion</key><string>0.8.1</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
-    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>LSMinimumSystemVersion</key><string>14.2</string>
     <key>LSUIElement</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSMicrophoneUsageDescription</key><string>OpenDictate records your voice only when you start dictation. Audio is sent directly to OpenAI for transcription.</string>
+    <key>NSMicrophoneUsageDescription</key><string>OpenDictate records your voice only when you start dictation or record a meeting. Audio is sent directly to OpenAI for transcription.</string>
+    <key>NSAudioCaptureUsageDescription</key><string>OpenDictate records the call's audio only while you record a meeting. Speech is sent directly to OpenAI for transcription.</string>
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><false/></dict>
     <key>NSHumanReadableCopyright</key><string>Copyright © 2026 OpenDictate. MIT License.</string>
 </dict>

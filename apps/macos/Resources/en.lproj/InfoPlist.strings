@@ -1,1 +1,2 @@
-"NSMicrophoneUsageDescription" = "OpenDictate records your voice only when you start dictation. Audio is sent directly to OpenAI for transcription.";
+"NSMicrophoneUsageDescription" = "OpenDictate records your voice only when you start dictation or record a meeting. Audio is sent directly to OpenAI for transcription.";
+"NSAudioCaptureUsageDescription" = "OpenDictate records the call's audio only while you record a meeting. Speech is sent directly to OpenAI for transcription.";

@@ -30,6 +30,8 @@ final class AudioCapturePipeline {
     var format: AVAudioFormat { conversion.format }
     var hasCurrentAudio: Bool { conversion.producedAudio }
     private let keepAudio: Bool
+    /// Dictation stops below the provider's upload limit; meetings segment audio and pass nil.
+    private let limitBytes: Int?
     private var recording = Data()
     private var byteCount = 0
     private var chunker = PCMChunker()
@@ -42,10 +44,12 @@ final class AudioCapturePipeline {
     private var finished = false
     var retainedAudio: Data { recording }
 
-    init(format: AVAudioFormat, keepAudio: Bool, onReady: @escaping @Sendable () -> Void,
+    init(format: AVAudioFormat, keepAudio: Bool, limitBytes: Int? = AudioConstants.maximumRecordingBytes,
+         onReady: @escaping @Sendable () -> Void,
          onChunk: @escaping @Sendable (Data) -> Void, onLevel: @escaping @Sendable (Float) -> Void) throws {
         conversion = try Conversion(format: format)
-        self.keepAudio = keepAudio; self.onReady = onReady; self.onChunk = onChunk; self.onLevel = onLevel
+        self.keepAudio = keepAudio; self.limitBytes = limitBytes
+        self.onReady = onReady; self.onChunk = onChunk; self.onLevel = onLevel
     }
 
     /// The old engine must be stopped before replacing its callback storage or converter.
@@ -123,7 +127,7 @@ final class AudioCapturePipeline {
         guard let samples = output.int16ChannelData?.pointee, output.frameLength > 0 else { return }
         let count = Int(output.frameLength)
         let data = Data(bytes: samples, count: count * 2)
-        guard byteCount + data.count <= AudioConstants.maximumRecordingBytes else { throw DictationError.tooLong }
+        if let limitBytes, byteCount + data.count > limitBytes { throw DictationError.tooLong }
         byteCount += data.count
         conversion.producedAudio = true
         if keepAudio { recording.append(data) }

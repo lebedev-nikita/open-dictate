@@ -27,11 +27,15 @@ final class AudioRecorder: AudioRecording, @unchecked Sendable {
     private var drainTimer: DispatchSourceTimer?
     private var onError: (@Sendable (DictationError) -> Void)?
     private var recoveryAttempts = 0
+    private let limitBytes: Int?
 
+    /// `limitBytes` bounds one recording; nil for meeting channels, which keep no audio themselves.
     init(makeEngine: @escaping EngineFactory = { NativeAudioCaptureEngine(onConfigurationChange: $0) },
          inputDevice: @escaping () -> AudioDeviceID? = AudioRecorder.defaultInputDevice,
-         canPrepare: @escaping (AudioDeviceID) -> Bool = AudioRecorder.canPrepareInput) {
+         canPrepare: @escaping (AudioDeviceID) -> Bool = AudioRecorder.canPrepareInput,
+         limitBytes: Int? = AudioConstants.maximumRecordingBytes) {
         self.makeEngine = makeEngine; self.inputDevice = inputDevice; self.canPrepare = canPrepare
+        self.limitBytes = limitBytes
         queue.async { self.prepareNextEngine() }
     }
 
@@ -45,7 +49,7 @@ final class AudioRecorder: AudioRecording, @unchecked Sendable {
         preparedInputDevice = device
     }
 
-    private static func defaultInputDevice() -> AudioDeviceID? {
+    static func defaultInputDevice() -> AudioDeviceID? {
         var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice,
             mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var device = AudioDeviceID(0)
@@ -132,7 +136,7 @@ final class AudioRecorder: AudioRecording, @unchecked Sendable {
                     self.preparedInputDevice = nil
                     let format = engine.graph.format
                     let capture = try AudioCapturePipeline(format: format, keepAudio: keepAudio,
-                        onReady: onReady, onChunk: onChunk, onLevel: onLevel)
+                        limitBytes: self.limitBytes, onReady: onReady, onChunk: onChunk, onLevel: onLevel)
                     self.capture = capture; self.onError = onError
                     self.engine = engine
                     self.recoveryAttempts = 0

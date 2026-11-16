@@ -45,6 +45,9 @@ public:
     }
 
     bool hasFailed() const noexcept { return failed.load(std::memory_order_acquire) != 0; }
+    uint32_t buffers() const noexcept { return bufferCount; }
+    uint32_t frameBytes() const noexcept { return bytesPerFrame; }
+    void fail() noexcept { failed.store(1, std::memory_order_release); }
     uint64_t firstWriteTime() const noexcept { return firstWrite.load(std::memory_order_relaxed); }
 
 private:
@@ -126,6 +129,21 @@ private:
         storage->write(frames, input);
         return noErr;
     }];
+}
+
+- (AudioDeviceIOBlock)makeDeviceIOBlockWithFirstBuffer:(UInt32)firstBuffer {
+    auto storage = _storage;
+    return ^(const AudioTimeStamp *, const AudioBufferList *input, const AudioTimeStamp *,
+             AudioBufferList *, const AudioTimeStamp *) {
+        // A fixed stack view over the selected buffers; tap formats use one interleaved buffer.
+        struct { UInt32 count; AudioBuffer buffers[8]; } view;
+        const auto count = storage->buffers();
+        if (!input || count > 8 || input->mNumberBuffers < firstBuffer + count) { storage->fail(); return; }
+        view.count = count;
+        for (UInt32 index = 0; index < count; ++index) view.buffers[index] = input->mBuffers[firstBuffer + index];
+        const auto frames = view.buffers[0].mDataByteSize / storage->frameBytes();
+        storage->write(frames, reinterpret_cast<const AudioBufferList *>(&view));
+    };
 }
 
 - (BOOL)connectInputOfEngine:(AVAudioEngine *)engine toSink:(AVAudioSinkNode *)sink {
