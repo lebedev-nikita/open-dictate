@@ -405,7 +405,7 @@ final class MeetingWindowController: NSObject, NSWindowDelegate {
     private let model: AppModel
     private let openSettings: (String, UUID?) -> Void
     private let onClose: () -> Void
-    private let state = MeetingWindowState()
+    let state = MeetingWindowState()
 
     init(controller: MeetingController, model: AppModel, openSettings: @escaping (String, UUID?) -> Void,
          onClose: @escaping () -> Void) {
@@ -418,6 +418,9 @@ final class MeetingWindowController: NSObject, NSWindowDelegate {
     /// call, so the call app keeps keyboard focus.
     func show(activate: Bool, finished: UUID? = nil) {
         if let finished { state.shownMeeting = finished }
+        // A meeting started from the menu or shortcut replaces the one shown before; if it is
+        // cancelled, the window returns to setup instead of the earlier saved meeting.
+        else if controller.isActive { state.shownMeeting = nil }
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 620),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -443,6 +446,10 @@ final class MeetingWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { onClose() }
+
+    #if DEBUG
+    func closeForTesting() { window?.delegate = nil; window?.close() }
+    #endif
 }
 
 @MainActor

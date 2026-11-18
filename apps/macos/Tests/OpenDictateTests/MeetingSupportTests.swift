@@ -290,4 +290,22 @@ final class MeetingWindowTests: XCTestCase {
         store.delete(meeting.id)
         XCTAssertNotEqual(renamed, try snapshot(host), "A deleted meeting leaves the window")
     }
+
+    /// After a meeting started from the shortcut is cancelled, the window must not present
+    /// the previous meeting as if it had just been saved.
+    func testShowingAnActiveMeetingForgetsTheEarlierFinishedOne() throws {
+        let defaults = UserDefaults(suiteName: "meeting-window-\(UUID().uuidString)")!
+        let model = AppModel(localOnly: true, defaults: defaults)
+        defer { model.shutdown() }
+        let controller = MeetingController(store: MeetingStore(inMemory: true), preferences: model.preferences,
+                                           replacements: model.replacements)
+        let windows = MeetingWindowController(controller: controller, model: model, openSettings: { _, _ in }, onClose: {})
+        let earlier = UUID()
+        windows.show(activate: false, finished: earlier)
+        XCTAssertEqual(windows.state.shownMeeting, earlier)
+        controller.preview(Meeting(startedAt: Date(), sourceName: nil, sourceBundleID: nil), phase: .recording)
+        windows.show(activate: false)
+        XCTAssertNil(windows.state.shownMeeting)
+        windows.closeForTesting()
+    }
 }
