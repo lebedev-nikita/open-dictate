@@ -1,5 +1,36 @@
 # macOS verification
 
+## 0.9.0 — meeting transcription
+
+Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-18. All Swift tests
+pass and universal packaging verified both slices, the signature and the DMG.
+
+- Code review of the meeting engine found seven defects and of storage, windows and
+  export five; each has a test that failed before its fix. Among them: words lost when
+  a slow stop was flushed by an earlier one, recognized Me text failed by Finish now,
+  a stuck "finishing" after an unrequested cancellation, the previous meeting shown
+  after cancelling a new one, and stale retry messages.
+- Real `gpt-transcribe` recognition of two-channel conversations through the
+  production controller (harness on branch t3/meeting-transcript-evaluation): with headphones every sentence was
+  present, attributed and ordered in seven Russian, English and mixed conversations,
+  word errors within about 1.5 points of whole-file recognition, timestamps within
+  0.3 s. No phantom lines on 33 noise clips (silence, keyboard, coughs, hold music,
+  ringtones). Lost responses, 429, 500, a five-minute stall and a refused key all
+  recovered with an identical transcript.
+- A device test of the installed rc.3 was stopped before it reported; the meetings it
+  saved show Chrome, a test caller app and all system audio captured and recognized
+  on real hardware, but its findings were not reviewed.
+
+Known and not fixed: Me lines wait for the other side's utterance to end before
+echo is decided (median 6–12 s, longer under hold music); a reply with under 300 ms
+of speech is dropped; Me text is finalized 20 s after recognition even if a long
+overlapping call utterance is still pending; a key replaced in Settings is not used
+until the next meeting; a request that never returns keeps its utterance waiting
+until Finish now. Without headphones 1–8.5% of the other side's words stayed under
+Me and short replies over the other side were lost. Not verified: sleep/wake,
+AirPods and device switches, a tapped app relaunching mid-meeting, macOS 14.2 and
+Intel hardware.
+
 ## 0.9.0-rc.3 — alphabetical dictionary
 
 Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-18, in the
