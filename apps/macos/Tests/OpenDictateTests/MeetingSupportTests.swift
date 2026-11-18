@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import AVFoundation
 import XCTest
 import OpenDictateCore
@@ -252,5 +253,41 @@ final class MeetingFlowTests: XCTestCase {
         meetings.finish()
         try await waitUntil { meetings.phase == .idle }
         XCTAssertEqual(meetings.issue, "Couldn't save the meeting to the export folder. Check the folder in Settings → Meetings.")
+    }
+}
+
+@MainActor
+final class MeetingWindowTests: XCTestCase {
+    private func snapshot(_ host: NSView) throws -> Data {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        host.layoutSubtreeIfNeeded()
+        let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+        host.cacheDisplay(in: host.bounds, to: bitmap)
+        return try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+    }
+
+    /// Deleting or renaming the shown meeting in Settings must reach the meeting window.
+    func testTheFinishedViewFollowsTheStore() throws {
+        let defaults = UserDefaults(suiteName: "meeting-window-\(UUID().uuidString)")!
+        let model = AppModel(localOnly: true, defaults: defaults)
+        defer { model.shutdown() }
+        model.preferences.interfaceLanguage = "en"
+        let store = MeetingStore(inMemory: true)
+        let controller = MeetingController(store: store, preferences: model.preferences, replacements: model.replacements)
+        var meeting = Meeting(startedAt: Date(), sourceName: "Zoom", sourceBundleID: "us.zoom.xos", state: .finished)
+        meeting.insert(MeetingUtterance(speaker: Meeting.otherID, startMillis: 0, durationMillis: 1, text: "Hello", status: .recognized))
+        store.save(meeting)
+        let host = NSHostingView(rootView: MeetingView(controller: controller, preferences: model.preferences, model: model,
+                                                       shownMeeting: .constant(meeting.id), openSettings: { _, _ in }))
+        host.frame = NSRect(x: 0, y: 0, width: 520, height: 620)
+        let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = host
+        defer { window.close() }
+        let before = try snapshot(host)
+        store.rename(meeting.id, speaker: Meeting.otherID, to: "Anna")
+        let renamed = try snapshot(host)
+        XCTAssertNotEqual(before, renamed, "A new speaker name appears in the window")
+        store.delete(meeting.id)
+        XCTAssertNotEqual(renamed, try snapshot(host), "A deleted meeting leaves the window")
     }
 }

@@ -68,12 +68,20 @@ struct MeetingView: View {
     @ObservedObject var controller: MeetingController
     @ObservedObject var preferences: Preferences
     @ObservedObject var model: AppModel
+    /// Renames and deletions made in Settings reach the finished view.
+    @ObservedObject private var store: MeetingStore
     /// The finished meeting shown after recording, until a new one starts.
     @Binding var shownMeeting: UUID?
     var openSettings: (String, UUID?) -> Void
     @State private var apps = [MeetingSources.App]()
     @State private var confirmCancel = false
     @State private var copied = false
+
+    init(controller: MeetingController, preferences: Preferences, model: AppModel, shownMeeting: Binding<UUID?>,
+         openSettings: @escaping (String, UUID?) -> Void) {
+        self.controller = controller; self.preferences = preferences; self.model = model
+        store = controller.store; _shownMeeting = shownMeeting; self.openSettings = openSettings
+    }
 
     private var russian: Bool { preferences.isRussian }
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
@@ -83,7 +91,7 @@ struct MeetingView: View {
     var body: some View {
         Group {
             if controller.isActive, let meeting = controller.meeting { live(meeting) }
-            else if let id = shownMeeting, let meeting = controller.store.meeting(id) { finished(meeting) }
+            else if let id = shownMeeting, let meeting = store.meeting(id) { finished(meeting) }
             else { setup }
         }
         .frame(minWidth: 440, minHeight: 420)
