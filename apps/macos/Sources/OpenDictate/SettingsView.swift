@@ -233,8 +233,8 @@ struct SettingsView: View {
             PageHeader(title: t("Dictionary", "Словарь"),
                        subtitle: t("Names, products and terms you want OpenAI to recognize. One per line.",
                                    "Имена, продукты и термины для распознавания. По одному на строку.")) {
-                Button(t("Clean up", "Упорядочить")) { preferences.dictionary = DictionaryTerms.normalize(preferences.dictionary).joined(separator: "\n") }
-                    .help(t("Remove duplicates and empty lines", "Убрать повторы и пустые строки"))
+                Button(t("Clean up", "Упорядочить")) { sortDictionary() }
+                    .help(t("Sort and remove duplicates and empty lines", "Отсортировать, убрать повторы и пустые строки"))
             }
             TextEditor(text: $preferences.dictionary).font(.body)
                 .scrollContentBackground(.hidden).padding(Space.xs)
@@ -244,6 +244,12 @@ struct SettingsView: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Surface.fieldBorder))
                 .accessibilityLabel(t("Dictionary terms", "Слова в словаре"))
         }.frame(maxHeight: .infinity, alignment: .top)
+        // Terms are sorted on arrival and departure, never while typing, so the cursor stays put.
+        .onAppear(perform: sortDictionary).onDisappear(perform: sortDictionary)
+    }
+    private func sortDictionary() {
+        let sorted = DictionaryTerms.sorted(preferences.dictionary)
+        if sorted != preferences.dictionary { preferences.dictionary = sorted }
     }
 
     private var displayedHistory: [HistoryEntry] {
