@@ -400,8 +400,10 @@ final class MeetingController: ObservableObject {
                 do {
                     let text = try await transcribe(job.pcm, settings.key, settings.context, settings.timeout)
                     self?.recognized(job, text: text)
-                } catch is CancellationError {
+                } catch is CancellationError where Task.isCancelled {
+                    // Cancelled by the meeting, which has already dropped the job.
                 } catch {
+                    // URLSession can also report a failure as cancellation; retry it like one.
                     self?.failed(job, error: error)
                 }
             }

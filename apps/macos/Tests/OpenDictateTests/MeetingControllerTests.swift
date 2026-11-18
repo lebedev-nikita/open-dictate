@@ -342,6 +342,20 @@ final class MeetingControllerTests: XCTestCase {
         try await waitUntil { meetings.phase == .idle }
         XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Second point."])
     }
+
+    func testACancellationTheMeetingDidNotRequestIsRetried() async throws {
+        let attempts = Counter()
+        // URLSession reports some failures as cancellation, which OpenAIClient maps to CancellationError.
+        let meetings = controller(transcribe: { _, _, _, _ in
+            if attempts.increment() == 1 { throw CancellationError() }
+            return "After retry."
+        })
+        try await started(meetings)
+        try await feed(microphone: Speech.tone(1_000, 0.2) + Speech.silence(1_000))
+        meetings.finish()
+        try await waitUntil(4) { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["After retry."])
+    }
 }
 
 private final class Counter: @unchecked Sendable {
