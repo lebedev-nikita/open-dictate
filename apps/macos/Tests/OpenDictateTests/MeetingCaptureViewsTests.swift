@@ -101,6 +101,33 @@ final class MeetingCaptureViewsTests: XCTestCase {
                                elapsedMillis: 3_000, callAudio: .starting)
             try capture(meetingView(), size: NSSize(width: 440, height: 420), appearance: theme.appearance,
                         to: directory.appendingPathComponent("meeting-starting-min-\(suffix).png"))
+            // Long names, a very long phrase, both channels failed, paused by the user.
+            var crowded = sample(russian: russian, state: .recording)
+            crowded.rename(speaker: Meeting.meID, to: String(repeating: russian ? "Константин " : "Christopher ", count: 8))
+            crowded.rename(speaker: Meeting.otherID, to: String(repeating: russian ? "Александра " : "Alexandria ", count: 8))
+            crowded.insert(MeetingUtterance(speaker: Meeting.otherID, startMillis: 10 * 3_600_000 + 61_000, durationMillis: 29_000,
+                text: String(repeating: russian ? "Это очень длинная фраза без пауз, которую собеседник произносит на одном дыхании. "
+                                                : "This is a very long phrase without pauses that the other side says in one breath. ", count: 6),
+                status: .recognized))
+            for index in 0..<60 {
+                crowded.insert(MeetingUtterance(speaker: index % 2 == 0 ? Meeting.meID : Meeting.otherID,
+                                                startMillis: 11 * 3_600_000 + index * 4_000, durationMillis: 2_000,
+                                                text: russian ? "Реплика \(index)." : "Line \(index).", status: .recognized))
+            }
+            controller.preview(crowded, phase: .paused, elapsedMillis: 11 * 3_600_000 + 245_000, pauseReason: .user,
+                               microphone: .failed, callAudio: .failed, issue: DictationError.connection.message(russian: russian))
+            try capture(meetingView(), size: NSSize(width: 440, height: 420), appearance: theme.appearance,
+                        to: directory.appendingPathComponent("meeting-crowded-min-\(suffix).png"))
+            controller.preview(nil, phase: .idle)
+            store.save(crowded)
+            try capture(meetingView(crowded.id), size: window, appearance: theme.appearance,
+                        to: directory.appendingPathComponent("meeting-finished-crowded-\(suffix).png"))
+            navigation.page = "meetings"; navigation.meeting = crowded.id
+            try capture(SettingsView(model: model, preferences: preferences, history: model.history, replacements: model.replacements,
+                                     meetings: controller, navigation: navigation),
+                        size: NSSize(width: 740, height: 900), appearance: theme.appearance,
+                        to: directory.appendingPathComponent("meetings-detail-crowded-min-\(suffix).png"))
+            store.delete(crowded.id); navigation.meeting = nil
             // Saved.
             controller.preview(nil, phase: .idle)
             var finished = sample(russian: russian)
@@ -108,6 +135,12 @@ final class MeetingCaptureViewsTests: XCTestCase {
             store.save(finished)
             try capture(meetingView(finished.id), size: window, appearance: theme.appearance,
                         to: directory.appendingPathComponent("meeting-finished-\(suffix).png"))
+            controller.preview(nil, phase: .idle, issue: russian
+                ? "Не удалось сохранить встречу в папку экспорта. Проверьте папку в Настройках → Встречи."
+                : "Couldn't save the meeting to the export folder. Check the folder in Settings → Meetings.", lastFinishedID: finished.id)
+            try capture(meetingView(finished.id), size: NSSize(width: 440, height: 420), appearance: theme.appearance,
+                        to: directory.appendingPathComponent("meeting-finished-export-failed-min-\(suffix).png"))
+            controller.preview(nil, phase: .idle)
             // Settings → Meetings list and detail.
             var older = sample(russian: russian); older = Meeting(startedAt: older.startedAt.addingTimeInterval(-86_400 * 3),
                                                                   sourceName: "Google Chrome", sourceBundleID: "com.google.Chrome", state: .interrupted)

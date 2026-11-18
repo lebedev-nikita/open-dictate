@@ -598,7 +598,8 @@ final class MeetingController: ObservableObject {
     /// Shows a meeting state for native UI review without capturing audio or calling OpenAI.
     func preview(_ meeting: Meeting?, phase: Phase, elapsedMillis: Int = 0, pauseReason: PauseReason? = nil,
                  microphone: ChannelState = .live, callAudio: ChannelState = .live, callAudioSilent: Bool = false,
-                 issue: String? = nil, levels: (Float, Float) = (0, 0)) {
+                 issue: String? = nil, levels: (Float, Float) = (0, 0), lastFinishedID: UUID? = nil) {
+        self.lastFinishedID = lastFinishedID
         self.meeting = meeting; self.phase = phase; self.elapsedMillis = elapsedMillis; self.pauseReason = pauseReason
         self.microphone = microphone; self.callAudio = callAudio; self.callAudioSilent = callAudioSilent; self.issue = issue
         self.levels.set(levels.0, speaker: Meeting.meID); self.levels.set(levels.1, speaker: Meeting.otherID)
