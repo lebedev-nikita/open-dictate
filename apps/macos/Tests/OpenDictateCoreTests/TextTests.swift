@@ -34,6 +34,13 @@ final class TextTests: XCTestCase {
     func testDictionaryRejectsInvalidKeywordsAndDuplicates() {
         XCTAssertEqual(DictionaryTerms.normalize(" OpenDictate \n\nopendictate\r\n<API>\nSwift"), ["OpenDictate", "API", "Swift"])
     }
+
+    func testDictionarySortsAlphabeticallyIgnoringCase() {
+        let english = Locale(identifier: "en")
+        XCTAssertEqual(DictionaryTerms.sorted("Swift\napi\nOpenDictate\n\nswift", locale: english), "api\nOpenDictate\nSwift")
+        XCTAssertEqual(DictionaryTerms.sorted("Никита\nЖук\nЛебедев\nёлка", locale: Locale(identifier: "ru")), "ёлка\nЖук\nЛебедев\nНикита")
+        XCTAssertEqual(DictionaryTerms.sorted(" \n\n", locale: english), "")
+    }
     func testSearchIsLocalCaseInsensitiveAndTypoTolerant() {
         XCTAssertTrue(HistorySearch.matches("OpenDictate release résumé", query: "opendictat resume"))
         XCTAssertTrue(HistorySearch.matches("Привет, мир", query: "МИР"))
