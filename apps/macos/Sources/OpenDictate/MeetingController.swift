@@ -296,10 +296,14 @@ final class MeetingController: ObservableObject {
     // MARK: Capture
 
     private func startChannels() {
+        var leftovers = [MeetingChannel.Captured]()
+        // Leftovers are queued once every channel has started: reaching the backlog limit
+        // pauses the meeting, and that pause must stop all of them.
+        defer { enqueue(leftovers) }
         for channel in channels {
             let (run, leftover) = channel.begin()
             stopping[channel.speaker] = nil
-            enqueue(leftover)
+            leftovers += leftover
             runs[channel.speaker] = run
             setState(.starting, for: channel)
             let speaker = channel.speaker

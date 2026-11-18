@@ -403,6 +403,24 @@ final class MeetingControllerTests: XCTestCase {
         try await waitUntil(4) { meetings.phase == .idle }
         XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["After retry."])
     }
+
+    func testABacklogReachedWhileResumingLeavesCaptureStopped() async throws {
+        microphone = ScriptedRecorder(stopDelay: .milliseconds(1_000))
+        let meetings = controller(transcribe: { _, _, _, _ in try await Task.sleep(for: .seconds(3_600)); return "" },
+                                  pendingLimit: 150_000)
+        try await started(meetings)
+        try await feed(microphone: Speech.tone(1_500, 0.2) + Speech.silence(1_000) + Speech.tone(1_500, 0.2))
+        // Resuming before the stop's flush recovers the utterance in progress, which reaches the limit.
+        meetings.pause()
+        meetings.resume()
+        try await waitUntil { meetings.phase == .paused && meetings.pauseReason == .backlog }
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(meetings.microphone, .off)
+        XCTAssertEqual(meetings.callAudio, .off)
+        try await feed(microphone: Speech.tone(1_500, 0.4) + Speech.silence(1_000))
+        XCTAssertEqual(meetings.meeting?.utterances.count, 2, "Nothing is captured while paused")
+        meetings.finish(); meetings.finishNow()
+    }
 }
 
 private final class Counter: @unchecked Sendable {
