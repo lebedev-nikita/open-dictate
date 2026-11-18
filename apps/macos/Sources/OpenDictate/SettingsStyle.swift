@@ -15,7 +15,7 @@ enum Space {
 enum Surface {
     static let page = adaptive(light: 0xF5F5F7, dark: 0x1C1C1E)
     static let sidebar = adaptive(light: 0xECECEF, dark: 0x161618)
-    static let card = adaptive(light: 0xFFFFFF, dark: 0x2A2A2D)
+    static let card = adaptive(light: 0xFAFAFC, dark: 0x2A2A2D)
     /// Inputs sit on cards and never match the window background. Light fields are as light as
     /// the card, drawn by their border and inset shadow; dark fields are one step lighter.
     static let field = adaptive(light: 0xFFFFFF, dark: 0x3A3A3D)
