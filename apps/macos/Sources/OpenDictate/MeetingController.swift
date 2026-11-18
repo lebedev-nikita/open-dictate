@@ -267,6 +267,7 @@ final class MeetingController: ObservableObject {
     /// Ends a finishing meeting now; utterances still waiting are marked as not recognized.
     func finishNow() {
         guard phase == .finishing else { return }
+        resolveEcho(now: true)
         cancelRecognition()
         meeting?.failPending()
         complete()
@@ -465,8 +466,9 @@ final class MeetingController: ObservableObject {
         pump()
     }
 
-    /// Microphone text is final once the call text around it is known.
-    private func resolveEcho() {
+    /// Microphone text is final once the call text around it is known. `now` settles it with
+    /// the call text recognized so far, for a meeting that ends without waiting.
+    private func resolveEcho(now: Bool = false) {
         guard !awaitingEcho.isEmpty, let meeting else { return }
         let call = channels.first { $0.speaker == Meeting.otherID }
         // A stopped call channel still holds the utterance in progress until its flush.
@@ -479,7 +481,8 @@ final class MeetingController: ObservableObject {
             let window = (utterance.startMillis - MeetingEcho.windowMillis)...(end + MeetingEcho.windowMillis)
             let nearby = callSpans.filter { $0.startMillis <= window.upperBound && $0.startMillis + $0.durationMillis >= window.lowerBound }
             let callDecided = !callCapturing || covered >= window.upperBound || clock.millis - value.since > 20_000
-            guard callDecided, !nearby.contains(where: { $0.status == .pending }) || clock.millis - value.since > 20_000 else { continue }
+            guard now || callDecided, now || !nearby.contains(where: { $0.status == .pending }) || clock.millis - value.since > 20_000
+            else { continue }
             awaitingEcho[id] = nil
             let span = MeetingEcho.Span(startMillis: utterance.startMillis, endMillis: end, text: value.text)
             let heard = nearby.filter { $0.status == .recognized }.map {
@@ -574,6 +577,9 @@ final class MeetingController: ObservableObject {
 
     /// Quitting during a meeting keeps the text recognized so far; waiting audio is lost.
     func abandonForQuit() {
+        guard isActive else { return }
+        resolveEcho(now: true)
+        // Settling the last microphone text can complete a finishing meeting.
         guard isActive, var current = meeting else { return }
         clock.pause()
         stopChannels(flush: false)

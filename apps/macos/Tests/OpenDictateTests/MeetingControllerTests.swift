@@ -421,6 +421,38 @@ final class MeetingControllerTests: XCTestCase {
         XCTAssertEqual(meetings.meeting?.utterances.count, 2, "Nothing is captured while paused")
         meetings.finish(); meetings.finishNow()
     }
+
+    func testFinishNowKeepsRecognizedMicrophoneText() async throws {
+        // The call's text never arrives; the microphone's own words are already recognized.
+        let meetings = controller(transcribe: { pcm, _, _, _ in
+            if Speech.peak(pcm) == 0.3 { try await Task.sleep(for: .seconds(3_600)) }
+            return "Let's start with the release plan."
+        })
+        try await started(meetings)
+        try await feed(microphone: Speech.silence(500) + Speech.tone(1_500, 0.2) + Speech.silence(1_000),
+                       call: Speech.silence(1_000) + Speech.tone(1_500, 0.3) + Speech.silence(1_000))
+        meetings.finish()
+        await settle()
+        meetings.finishNow()
+        let saved = try XCTUnwrap(store.meetings.first)
+        XCTAssertEqual(saved.utterances.map(\.speaker), [Meeting.meID, Meeting.otherID])
+        XCTAssertEqual(saved.utterances.map(\.status), [.recognized, .failed])
+        XCTAssertEqual(saved.utterances.first?.text, "Let's start with the release plan.")
+    }
+
+    func testQuittingKeepsRecognizedMicrophoneText() async throws {
+        let meetings = controller(transcribe: { pcm, _, _, _ in
+            if Speech.peak(pcm) == 0.3 { try await Task.sleep(for: .seconds(3_600)) }
+            return "Let's start with the release plan."
+        })
+        try await started(meetings)
+        try await feed(microphone: Speech.silence(500) + Speech.tone(1_500, 0.2) + Speech.silence(1_000),
+                       call: Speech.silence(1_000) + Speech.tone(1_500, 0.3) + Speech.silence(1_000))
+        meetings.abandonForQuit()
+        let saved = try XCTUnwrap(store.meetings.first)
+        XCTAssertEqual(saved.state, .interrupted)
+        XCTAssertEqual(saved.utterances.map(\.status), [.recognized, .failed])
+    }
 }
 
 private final class Counter: @unchecked Sendable {
