@@ -42,6 +42,36 @@ final class MeetingStoreTests: XCTestCase {
         }
     }
 
+    /// Files written by 0.9.0-rc.1…rc.3 load; a newer file or a damaged one is left untouched
+    /// and never hides the others.
+    func testEarlierFilesLoadAndOthersAreLeftAlone() async throws {
+        try await MainActor.run {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let earlier = UUID(), future = UUID(), damaged = UUID()
+            let rc = """
+            {"durationMillis":61000,"id":"\(earlier.uuidString)","sourceBundleID":"us.zoom.xos","sourceName":"Zoom",
+             "speakers":[{"id":"me","role":"me"},{"id":"other","name":"Anna","role":"other"}],
+             "startedAt":"2026-11-16T12:00:00Z","state":"finished","transcriptionModel":"gpt-transcribe",
+             "utterances":[{"durationMillis":900,"id":"\(UUID().uuidString)","speaker":"other","startMillis":4000,
+                            "status":"recognized","text":"Hi"}],"version":1,"laterField":true}
+            """
+            try Data(rc.utf8).write(to: folder.appendingPathComponent("\(earlier.uuidString).json"))
+            let newer = Data(rc.replacingOccurrences(of: earlier.uuidString, with: future.uuidString)
+                .replacingOccurrences(of: "\"version\":1", with: "\"version\":2").utf8)
+            try newer.write(to: folder.appendingPathComponent("\(future.uuidString).json"))
+            try Data(rc.prefix(80).utf8).write(to: folder.appendingPathComponent("\(damaged.uuidString).json"))
+
+            let store = MeetingStore(folder: folder)
+            XCTAssertNil(store.error)
+            XCTAssertEqual(store.meetings.map(\.id), [earlier])
+            let loaded = try XCTUnwrap(store.meeting(earlier))
+            XCTAssertEqual(loaded.speaker(Meeting.otherID)?.name, "Anna")
+            XCTAssertEqual(loaded.utterances.map(\.text), ["Hi"])
+            XCTAssertEqual(try Data(contentsOf: folder.appendingPathComponent("\(future.uuidString).json")), newer)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("\(damaged.uuidString).json").path))
+        }
+    }
+
     func testDeletingRemovesFilesAndKeepsTheMeetingBeingRecorded() async throws {
         try await MainActor.run {
             let store = MeetingStore(folder: folder)
