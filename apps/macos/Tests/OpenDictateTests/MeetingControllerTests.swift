@@ -343,6 +343,24 @@ final class MeetingControllerTests: XCTestCase {
         XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Second point."])
     }
 
+    func testAnEarlierStopCannotFlushInPlaceOfALaterOne() async throws {
+        // A device stop can take a while, for example behind a Bluetooth route change.
+        microphone = ScriptedRecorder(stopDelay: .milliseconds(1_000))
+        let meetings = controller()
+        try await started(meetings)
+        meetings.pause()
+        try await Task.sleep(for: .milliseconds(1_200))
+        meetings.resume()
+        try await waitUntil { meetings.microphone == .live }
+        try await Task.sleep(for: .milliseconds(1_000))
+        // Speech still in progress when the meeting pauses again, then finishes.
+        try await feed(microphone: Speech.tone(1_500, 0.2))
+        meetings.pause()
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Let's start with the release plan."])
+    }
+
     func testACancellationTheMeetingDidNotRequestIsRetried() async throws {
         let attempts = Counter()
         // URLSession reports some failures as cancellation, which OpenAIClient maps to CancellationError.

@@ -160,8 +160,9 @@ final class MeetingController: ObservableObject {
     private var settings: Settings?
     private var channels = [MeetingChannel]()
     private var runs = [String: Int]()
-    /// Channels whose stopped run has not been flushed yet.
-    private var stopping = Set<String>()
+    /// Channels whose stopped run has not been flushed yet, with the stop that will flush it.
+    /// An earlier stop's late flush must not stand in for a later one.
+    private var stopping = [String: UUID]()
     private var queue = [Job]()
     private var running = [UUID: Task<Void, Never>]()
     private var retries = [UUID: Task<Void, Never>]()
@@ -297,7 +298,7 @@ final class MeetingController: ObservableObject {
     private func startChannels() {
         for channel in channels {
             let (run, leftover) = channel.begin()
-            stopping.remove(channel.speaker)
+            stopping[channel.speaker] = nil
             enqueue(leftover)
             runs[channel.speaker] = run
             setState(.starting, for: channel)
@@ -334,10 +335,11 @@ final class MeetingController: ObservableObject {
             setState(.off, for: channel)
             levels.set(0, speaker: channel.speaker)
             if !flush { channel.discard(); Task { _ = await channel.recorder.stop() }; continue }
-            stopping.insert(channel.speaker)
+            let stop = UUID()
+            stopping[channel.speaker] = stop
             let flushRun: @MainActor () -> Void = { [weak self] in
-                guard let self, self.stopping.contains(channel.speaker), self.runs[channel.speaker] == nil else { return }
-                self.stopping.remove(channel.speaker)
+                guard let self, self.stopping[channel.speaker] == stop else { return }
+                self.stopping[channel.speaker] = nil
                 self.enqueue(channel.end(run: run))
                 self.resolveEcho(); self.completeIfDone()
             }
