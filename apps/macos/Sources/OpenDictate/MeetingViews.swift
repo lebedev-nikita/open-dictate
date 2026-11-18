@@ -54,6 +54,14 @@ enum MeetingSources {
             .sorted { ($0.playing ? 0 : 1, $0.name.localizedLowercase) < ($1.playing ? 0 : 1, $1.name.localizedLowercase) }
     }
 
+    /// The remembered app under its current name. Picker tags include the name, so a name that
+    /// changed (an app update, another system language) would otherwise leave the picker blank.
+    static func refreshed(_ source: MeetingAudioSource, in apps: [App]) -> MeetingAudioSource {
+        guard case .application(let id, let name) = source, let app = apps.first(where: { $0.bundleID == id }),
+              app.name != name else { return source }
+        return .application(bundleID: id, name: app.name)
+    }
+
     static func icon(_ bundleID: String) -> NSImage? {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return nil }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
@@ -68,12 +76,20 @@ struct MeetingView: View {
     @ObservedObject var controller: MeetingController
     @ObservedObject var preferences: Preferences
     @ObservedObject var model: AppModel
+    /// Renames and deletions made in Settings reach the finished view.
+    @ObservedObject private var store: MeetingStore
     /// The finished meeting shown after recording, until a new one starts.
     @Binding var shownMeeting: UUID?
     var openSettings: (String, UUID?) -> Void
     @State private var apps = [MeetingSources.App]()
     @State private var confirmCancel = false
     @State private var copied = false
+
+    init(controller: MeetingController, preferences: Preferences, model: AppModel, shownMeeting: Binding<UUID?>,
+         openSettings: @escaping (String, UUID?) -> Void) {
+        self.controller = controller; self.preferences = preferences; self.model = model
+        store = controller.store; _shownMeeting = shownMeeting; self.openSettings = openSettings
+    }
 
     private var russian: Bool { preferences.isRussian }
     private func t(_ en: String, _ ru: String) -> String { preferences.t(en, ru) }
@@ -83,7 +99,7 @@ struct MeetingView: View {
     var body: some View {
         Group {
             if controller.isActive, let meeting = controller.meeting { live(meeting) }
-            else if let id = shownMeeting, let meeting = controller.store.meeting(id) { finished(meeting) }
+            else if let id = shownMeeting, let meeting = store.meeting(id) { finished(meeting) }
             else { setup }
         }
         .frame(minWidth: 440, minHeight: 420)
@@ -130,7 +146,6 @@ struct MeetingView: View {
                         }
                     }
                 }
-                if let issue = controller.issue { Label(issue, systemImage: "exclamationmark.triangle").fixedSize(horizontal: false, vertical: true) }
                 Button(t("Start Recording", "Начать запись"), action: start)
                     .controlSize(.large).keyboardShortcut(.defaultAction)
                     .disabled(!preferences.meetingNoticeAccepted || !hasKey || !model.microphoneAllowed)
@@ -138,7 +153,11 @@ struct MeetingView: View {
             .padding(Space.xl).frame(maxWidth: 560, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .onAppear { model.refreshPermissions(); apps = MeetingSources.runningApps() }
+        .onAppear {
+            model.refreshPermissions(); apps = MeetingSources.runningApps()
+            let current = MeetingSources.refreshed(preferences.meetingSource, in: apps)
+            if current != preferences.meetingSource { preferences.meetingSource = current }
+        }
     }
 
     private var sourcePicker: some View {
@@ -301,6 +320,10 @@ struct MeetingView: View {
                     .font(.callout.weight(.medium)).foregroundStyle(.secondary)
                 Text(MeetingFormat.title(meeting, russian: russian)).font(.system(size: 22, weight: .semibold))
                     .fixedSize(horizontal: false, vertical: true)
+                // The auto-export failure of the meeting just finished.
+                if meeting.id == controller.lastFinishedID, let issue = controller.issue {
+                    notice(issue, symbol: "exclamationmark.triangle").padding(.top, Space.xs)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Space.lg).padding(.top, Space.lg).padding(.bottom, Space.md)
@@ -394,7 +417,7 @@ final class MeetingWindowController: NSObject, NSWindowDelegate {
     private let model: AppModel
     private let openSettings: (String, UUID?) -> Void
     private let onClose: () -> Void
-    private let state = MeetingWindowState()
+    let state = MeetingWindowState()
 
     init(controller: MeetingController, model: AppModel, openSettings: @escaping (String, UUID?) -> Void,
          onClose: @escaping () -> Void) {
@@ -407,6 +430,9 @@ final class MeetingWindowController: NSObject, NSWindowDelegate {
     /// call, so the call app keeps keyboard focus.
     func show(activate: Bool, finished: UUID? = nil) {
         if let finished { state.shownMeeting = finished }
+        // A meeting started from the menu or shortcut replaces the one shown before; if it is
+        // cancelled, the window returns to setup instead of the earlier saved meeting.
+        else if controller.isActive { state.shownMeeting = nil }
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 520, height: 620),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -432,6 +458,10 @@ final class MeetingWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { onClose() }
+
+    #if DEBUG
+    func closeForTesting() { window?.delegate = nil; window?.close() }
+    #endif
 }
 
 @MainActor

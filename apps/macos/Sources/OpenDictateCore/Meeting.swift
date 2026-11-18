@@ -211,7 +211,12 @@ public enum MeetingFormat {
         return String(name.prefix(120)) + ".md"
     }
 
+    /// Backslash-escapes every Markdown punctuation character a name could use for emphasis,
+    /// code, links or HTML, so it renders exactly as typed inside the bold label.
     private static func escape(_ name: String) -> String {
-        name.replacingOccurrences(of: "*", with: "\\*").replacingOccurrences(of: "_", with: "\\_")
+        name.reduce(into: "") { result, character in
+            if "\\`*_[]<>!~|#".contains(character) { result.append("\\") }
+            result.append(character)
+        }
     }
 }

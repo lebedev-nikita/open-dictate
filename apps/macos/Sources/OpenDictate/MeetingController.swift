@@ -160,8 +160,9 @@ final class MeetingController: ObservableObject {
     private var settings: Settings?
     private var channels = [MeetingChannel]()
     private var runs = [String: Int]()
-    /// Channels whose stopped run has not been flushed yet.
-    private var stopping = Set<String>()
+    /// Channels whose stopped run has not been flushed yet, with the stop that will flush it.
+    /// An earlier stop's late flush must not stand in for a later one.
+    private var stopping = [String: UUID]()
     private var queue = [Job]()
     private var running = [UUID: Task<Void, Never>]()
     private var retries = [UUID: Task<Void, Never>]()
@@ -169,6 +170,8 @@ final class MeetingController: ObservableObject {
     /// Recognized microphone text waiting for the overlapping call text, for echo removal.
     private var awaitingEcho = [UUID: (text: String, since: Int)]()
     private var dictations = [(start: Int, end: Int?)]()
+    /// Whether dictation is running, also between meetings.
+    private var dictating = false
     private var timer: Timer?
     private var dirty = false
     private var lastSave = Date.distantPast
@@ -222,6 +225,8 @@ final class MeetingController: ObservableObject {
                     MeetingChannel(speaker: Meeting.otherID, recorder: makeCallAudio(source), clock: clock)]
         phase = .recording
         clock.reset(); clock.run()
+        // The app reports dictation only when it changes, which may be before this meeting.
+        if dictating { dictations.append((0, nil)) }
         startChannels()
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -262,6 +267,7 @@ final class MeetingController: ObservableObject {
     /// Ends a finishing meeting now; utterances still waiting are marked as not recognized.
     func finishNow() {
         guard phase == .finishing else { return }
+        resolveEcho(now: true)
         cancelRecognition()
         meeting?.failPending()
         complete()
@@ -282,6 +288,7 @@ final class MeetingController: ObservableObject {
     /// Ordinary dictation and voice editing share the microphone during a meeting. Their speech
     /// is addressed to a text field, so it stays out of the meeting transcript.
     func noteDictation(active: Bool) {
+        dictating = active
         guard phase == .recording || phase == .paused else { return }
         if active { if dictations.last?.end != nil || dictations.isEmpty { dictations.append((clock.millis, nil)) } }
         else if let last = dictations.indices.last, dictations[last].end == nil { dictations[last].end = clock.millis }
@@ -290,10 +297,14 @@ final class MeetingController: ObservableObject {
     // MARK: Capture
 
     private func startChannels() {
+        var leftovers = [MeetingChannel.Captured]()
+        // Leftovers are queued once every channel has started: reaching the backlog limit
+        // pauses the meeting, and that pause must stop all of them.
+        defer { enqueue(leftovers) }
         for channel in channels {
             let (run, leftover) = channel.begin()
-            stopping.remove(channel.speaker)
-            enqueue(leftover)
+            stopping[channel.speaker] = nil
+            leftovers += leftover
             runs[channel.speaker] = run
             setState(.starting, for: channel)
             let speaker = channel.speaker
@@ -307,15 +318,15 @@ final class MeetingController: ObservableObject {
                         Task { @MainActor [weak self] in self?.levels.set(level, speaker: speaker) }
                     }, onError: { [weak self] _ in
                         Task { @MainActor [weak self] in
-                            guard let self, self.runs[speaker] == run else { return }
+                            guard let self, self.isCurrent(channel, run: run) else { return }
                             self.setState(.failed, for: channel)
                         }
                     })
                     // A pause or finish while macOS was still starting this channel already queued its stop.
-                    guard let self, self.runs[speaker] == run else { return }
+                    guard let self, self.isCurrent(channel, run: run) else { return }
                     self.setState(.live, for: channel)
                 } catch {
-                    guard let self, self.runs[speaker] == run else { return }
+                    guard let self, self.isCurrent(channel, run: run) else { return }
                     self.setState(.failed, for: channel)
                 }
             }
@@ -329,10 +340,11 @@ final class MeetingController: ObservableObject {
             setState(.off, for: channel)
             levels.set(0, speaker: channel.speaker)
             if !flush { channel.discard(); Task { _ = await channel.recorder.stop() }; continue }
-            stopping.insert(channel.speaker)
+            let stop = UUID()
+            stopping[channel.speaker] = stop
             let flushRun: @MainActor () -> Void = { [weak self] in
-                guard let self, self.stopping.contains(channel.speaker), self.runs[channel.speaker] == nil else { return }
-                self.stopping.remove(channel.speaker)
+                guard let self, self.stopping[channel.speaker] == stop else { return }
+                self.stopping[channel.speaker] = nil
                 self.enqueue(channel.end(run: run))
                 self.resolveEcho(); self.completeIfDone()
             }
@@ -341,6 +353,11 @@ final class MeetingController: ObservableObject {
             // the meeting flushes what it has instead of waiting for it.
             Task { @MainActor in try? await Task.sleep(for: .seconds(3)); flushRun() }
         }
+    }
+
+    /// Run numbers restart with every meeting's channels, so the channel itself must match too.
+    private func isCurrent(_ channel: MeetingChannel, run: Int) -> Bool {
+        runs[channel.speaker] == run && channels.contains { $0 === channel }
     }
 
     private func setState(_ state: ChannelState, for channel: MeetingChannel) {
@@ -395,8 +412,10 @@ final class MeetingController: ObservableObject {
                 do {
                     let text = try await transcribe(job.pcm, settings.key, settings.context, settings.timeout)
                     self?.recognized(job, text: text)
-                } catch is CancellationError {
+                } catch is CancellationError where Task.isCancelled {
+                    // Cancelled by the meeting, which has already dropped the job.
                 } catch {
+                    // URLSession can also report a failure as cancellation; retry it like one.
                     self?.failed(job, error: error)
                 }
             }
@@ -447,11 +466,13 @@ final class MeetingController: ObservableObject {
         pump()
     }
 
-    /// Microphone text is final once the call text around it is known.
-    private func resolveEcho() {
+    /// Microphone text is final once the call text around it is known. `now` settles it with
+    /// the call text recognized so far, for a meeting that ends without waiting.
+    private func resolveEcho(now: Bool = false) {
         guard !awaitingEcho.isEmpty, let meeting else { return }
         let call = channels.first { $0.speaker == Meeting.otherID }
-        let callCapturing = phase == .recording && callAudio == .live
+        // A stopped call channel still holds the utterance in progress until its flush.
+        let callCapturing = (phase == .recording && callAudio == .live) || stopping[Meeting.otherID] != nil
         let covered = call?.coveredMillis ?? .max
         let callSpans = meeting.utterances.filter { $0.speaker == Meeting.otherID }
         for (id, value) in awaitingEcho {
@@ -460,7 +481,8 @@ final class MeetingController: ObservableObject {
             let window = (utterance.startMillis - MeetingEcho.windowMillis)...(end + MeetingEcho.windowMillis)
             let nearby = callSpans.filter { $0.startMillis <= window.upperBound && $0.startMillis + $0.durationMillis >= window.lowerBound }
             let callDecided = !callCapturing || covered >= window.upperBound || clock.millis - value.since > 20_000
-            guard callDecided, !nearby.contains(where: { $0.status == .pending }) || clock.millis - value.since > 20_000 else { continue }
+            guard now || callDecided, now || !nearby.contains(where: { $0.status == .pending }) || clock.millis - value.since > 20_000
+            else { continue }
             awaitingEcho[id] = nil
             let span = MeetingEcho.Span(startMillis: utterance.startMillis, endMillis: end, text: value.text)
             let heard = nearby.filter { $0.status == .recognized }.map {
@@ -496,6 +518,8 @@ final class MeetingController: ObservableObject {
         store.save(finished)
         lastFinishedID = finished.id
         meeting = finished
+        // Retry messages belong to the recording; only an export failure outlives it.
+        issue = nil
         export(finished)
         reset()
         onStateChange?()
@@ -555,6 +579,9 @@ final class MeetingController: ObservableObject {
 
     /// Quitting during a meeting keeps the text recognized so far; waiting audio is lost.
     func abandonForQuit() {
+        guard isActive else { return }
+        resolveEcho(now: true)
+        // Settling the last microphone text can complete a finishing meeting.
         guard isActive, var current = meeting else { return }
         clock.pause()
         stopChannels(flush: false)
@@ -571,7 +598,8 @@ final class MeetingController: ObservableObject {
     /// Shows a meeting state for native UI review without capturing audio or calling OpenAI.
     func preview(_ meeting: Meeting?, phase: Phase, elapsedMillis: Int = 0, pauseReason: PauseReason? = nil,
                  microphone: ChannelState = .live, callAudio: ChannelState = .live, callAudioSilent: Bool = false,
-                 issue: String? = nil, levels: (Float, Float) = (0, 0)) {
+                 issue: String? = nil, levels: (Float, Float) = (0, 0), lastFinishedID: UUID? = nil) {
+        self.lastFinishedID = lastFinishedID
         self.meeting = meeting; self.phase = phase; self.elapsedMillis = elapsedMillis; self.pauseReason = pauseReason
         self.microphone = microphone; self.callAudio = callAudio; self.callAudioSilent = callAudioSilent; self.issue = issue
         self.levels.set(levels.0, speaker: Meeting.meID); self.levels.set(levels.1, speaker: Meeting.otherID)

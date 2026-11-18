@@ -11,21 +11,36 @@ private final class TestTime: @unchecked Sendable {
     func advance(_ millis: Int) { lock.withLock { current = current.advanced(by: .milliseconds(millis)) } }
 }
 
-/// A capture channel driven by the test. `holdStart` simulates macOS waiting on a permission prompt.
+/// A capture channel driven by the test. `holdStart` simulates macOS waiting on a permission prompt;
+/// `gated` holds start until `release()`; `stopDelay` simulates a slow device stop.
 private final class ScriptedRecorder: AudioRecording, @unchecked Sendable {
     private let lock = NSLock()
     private var onChunk: (@Sendable (Data) -> Void)?
+    private var released = false
     private(set) var starts = 0
     private(set) var stops = 0
     let holdStart: Bool
+    let gated: Bool
+    let failStart: Bool
+    let stopDelay: Duration
 
-    init(holdStart: Bool = false) { self.holdStart = holdStart }
+    init(holdStart: Bool = false, gated: Bool = false, failStart: Bool = false, stopDelay: Duration = .zero) {
+        self.holdStart = holdStart; self.gated = gated; self.failStart = failStart; self.stopDelay = stopDelay
+    }
+
+    func release() { lock.withLock { released = true } }
+
+    private func waitForGate() async throws {
+        while gated && !lock.withLock({ released }) { try await Task.sleep(for: .milliseconds(10)) }
+    }
 
     func start(keepAudio: Bool, onReady: @escaping @Sendable () -> Void, onChunk: @escaping @Sendable (Data) -> Void,
                onLevel: @escaping @Sendable (Float) -> Void,
                onError: @escaping @Sendable (DictationError) -> Void) async throws {
         lock.withLock { starts += 1 }
         if holdStart { try await Task.sleep(for: .seconds(3_600)) }
+        try await waitForGate()
+        if failStart { throw DictationError.audio }
         lock.withLock { self.onChunk = onChunk }
         onReady()
     }
@@ -39,6 +54,8 @@ private final class ScriptedRecorder: AudioRecording, @unchecked Sendable {
         lock.withLock { stops += 1; onChunk = nil }
         // AudioRecorder serializes stop behind a start that macOS is still holding.
         if holdStart { try? await Task.sleep(for: .seconds(3_600)) }
+        try? await waitForGate()
+        if stopDelay > .zero { try? await Task.sleep(for: stopDelay) }
         return (Data(), 0)
     }
 }
@@ -87,9 +104,11 @@ final class MeetingControllerTests: XCTestCase {
                                  "0.4": "Second point."][String(Speech.peak(pcm))] ?? "" },
                             key: String? = "sk-test", microphoneAllowed: Bool = true, call: ScriptedRecorder? = nil,
                             pendingLimit: Int = MeetingLimits.maximumPendingAudioBytes) -> MeetingController {
-        let microphone = self.microphone!, callRecorder = call ?? self.call!, time = self.time!
+        let time = self.time!
+        // Looked up per meeting, so a test can give the next meeting other recorders.
         return MeetingController(store: store, preferences: preferences, replacements: preferences.replacements,
-            makeMicrophone: { microphone }, makeCallAudio: { _ in callRecorder }, transcribe: transcribe,
+            makeMicrophone: { [unowned self] in self.microphone }, makeCallAudio: { [unowned self] _ in call ?? self.call },
+            transcribe: transcribe,
             loadKey: { key }, microphoneAllowed: { microphoneAllowed },
             notify: { [weak self] in self?.notifications.append($0) },
             clock: MeetingClock(now: { time.now }), pendingLimit: pendingLimit)
@@ -124,7 +143,7 @@ final class MeetingControllerTests: XCTestCase {
 
     private func started(_ meetings: MeetingController) async throws {
         try meetings.start(source: .application(bundleID: "us.zoom.xos", name: "Zoom"))
-        try await waitUntil { meetings.microphone == .live && (meetings.callAudio == .live || call.holdStart) }
+        try await waitUntil { meetings.microphone == .live && (meetings.callAudio == .live || call.holdStart || call.gated) }
     }
 
     func testStartNeedsAKeyAndMicrophoneAccess() throws {
@@ -309,6 +328,130 @@ final class MeetingControllerTests: XCTestCase {
         XCTAssertTrue(exported.hasPrefix("# Meeting "))
         XCTAssertTrue(exported.contains("**[00:00:00] Me:** Let's start with the release plan."))
         XCTAssertTrue(meetings.copyLatest(to: NSPasteboard(name: .init("meeting-tests-\(UUID().uuidString)"))))
+    }
+
+    func testDictationAlreadyRunningWhenTheMeetingStartsStaysOut() async throws {
+        let meetings = controller()
+        // The app reports dictation when it starts, which can be before the meeting does.
+        meetings.noteDictation(active: true)
+        try await started(meetings)
+        try await feed(microphone: Speech.tone(1_500, 0.2) + Speech.silence(1_000))
+        meetings.noteDictation(active: false)
+        try await feed(microphone: Speech.tone(1_000, 0.4) + Speech.silence(1_000))
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Second point."])
+    }
+
+    func testAnEarlierMeetingsCallChannelCannotChangeTheNextOne() async throws {
+        let held = ScriptedRecorder(gated: true)
+        call = held
+        let meetings = controller()
+        try await started(meetings)
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        // The next meeting's tap cannot start (the app quit); the first one's prompt is answered later.
+        call = ScriptedRecorder(failStart: true)
+        try meetings.start(source: .application(bundleID: "us.zoom.xos", name: "Zoom"))
+        try await waitUntil { meetings.callAudio == .failed }
+        held.release()
+        await settle(); try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(meetings.callAudio, .failed, "The first meeting's channel does not report for the second")
+        meetings.cancel()
+    }
+
+    func testAnEarlierStopCannotFlushInPlaceOfALaterOne() async throws {
+        // A device stop can take a while, for example behind a Bluetooth route change.
+        microphone = ScriptedRecorder(stopDelay: .milliseconds(1_000))
+        let meetings = controller()
+        try await started(meetings)
+        meetings.pause()
+        try await Task.sleep(for: .milliseconds(1_200))
+        meetings.resume()
+        try await waitUntil { meetings.microphone == .live }
+        try await Task.sleep(for: .milliseconds(1_000))
+        // Speech still in progress when the meeting pauses again, then finishes.
+        try await feed(microphone: Speech.tone(1_500, 0.2))
+        meetings.pause()
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Let's start with the release plan."])
+    }
+
+    func testEchoWaitsForTheCallChannelsLastUtterance() async throws {
+        call = ScriptedRecorder(stopDelay: .milliseconds(1_000))
+        let meetings = controller()
+        try await started(meetings)
+        // The call is still speaking when the user finishes; the microphone heard it as echo.
+        try await feed(microphone: Speech.silence(500) + Speech.tone(1_500, 0.3) + Speech.silence(1_000),
+                       call: Speech.silence(450) + Speech.tone(1_500, 0.3))
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.speaker), [Meeting.otherID])
+    }
+
+    func testACancellationTheMeetingDidNotRequestIsRetried() async throws {
+        let attempts = Counter()
+        // URLSession reports some failures as cancellation, which OpenAIClient maps to CancellationError.
+        let meetings = controller(transcribe: { _, _, _, _ in
+            if attempts.increment() == 1 { throw CancellationError() }
+            return "After retry."
+        })
+        try await started(meetings)
+        try await feed(microphone: Speech.tone(1_000, 0.2) + Speech.silence(1_000))
+        meetings.finish()
+        try await waitUntil(4) { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["After retry."])
+    }
+
+    func testABacklogReachedWhileResumingLeavesCaptureStopped() async throws {
+        microphone = ScriptedRecorder(stopDelay: .milliseconds(1_000))
+        let meetings = controller(transcribe: { _, _, _, _ in try await Task.sleep(for: .seconds(3_600)); return "" },
+                                  pendingLimit: 150_000)
+        try await started(meetings)
+        try await feed(microphone: Speech.tone(1_500, 0.2) + Speech.silence(1_000) + Speech.tone(1_500, 0.2))
+        // Resuming before the stop's flush recovers the utterance in progress, which reaches the limit.
+        meetings.pause()
+        meetings.resume()
+        try await waitUntil { meetings.phase == .paused && meetings.pauseReason == .backlog }
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(meetings.microphone, .off)
+        XCTAssertEqual(meetings.callAudio, .off)
+        try await feed(microphone: Speech.tone(1_500, 0.4) + Speech.silence(1_000))
+        XCTAssertEqual(meetings.meeting?.utterances.count, 2, "Nothing is captured while paused")
+        meetings.finish(); meetings.finishNow()
+    }
+
+    func testFinishNowKeepsRecognizedMicrophoneText() async throws {
+        // The call's text never arrives; the microphone's own words are already recognized.
+        let meetings = controller(transcribe: { pcm, _, _, _ in
+            if Speech.peak(pcm) == 0.3 { try await Task.sleep(for: .seconds(3_600)) }
+            return "Let's start with the release plan."
+        })
+        try await started(meetings)
+        try await feed(microphone: Speech.silence(500) + Speech.tone(1_500, 0.2) + Speech.silence(1_000),
+                       call: Speech.silence(1_000) + Speech.tone(1_500, 0.3) + Speech.silence(1_000))
+        meetings.finish()
+        await settle()
+        meetings.finishNow()
+        let saved = try XCTUnwrap(store.meetings.first)
+        XCTAssertEqual(saved.utterances.map(\.speaker), [Meeting.meID, Meeting.otherID])
+        XCTAssertEqual(saved.utterances.map(\.status), [.recognized, .failed])
+        XCTAssertEqual(saved.utterances.first?.text, "Let's start with the release plan.")
+    }
+
+    func testQuittingKeepsRecognizedMicrophoneText() async throws {
+        let meetings = controller(transcribe: { pcm, _, _, _ in
+            if Speech.peak(pcm) == 0.3 { try await Task.sleep(for: .seconds(3_600)) }
+            return "Let's start with the release plan."
+        })
+        try await started(meetings)
+        try await feed(microphone: Speech.silence(500) + Speech.tone(1_500, 0.2) + Speech.silence(1_000),
+                       call: Speech.silence(1_000) + Speech.tone(1_500, 0.3) + Speech.silence(1_000))
+        meetings.abandonForQuit()
+        let saved = try XCTUnwrap(store.meetings.first)
+        XCTAssertEqual(saved.state, .interrupted)
+        XCTAssertEqual(saved.utterances.map(\.status), [.recognized, .failed])
     }
 }
 

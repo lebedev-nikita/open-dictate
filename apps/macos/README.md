@@ -23,6 +23,9 @@ apps/macos/scripts/package.sh
 open dist/macos/OpenDictate.app
 ```
 
+Windows that tests order front are fully transparent, so test runs do not flash
+on screen; set `OPENDICTATE_SHOW_TEST_WINDOWS=1` to watch them.
+
 Open `Package.swift` in Xcode for source editing and debugging. Run the bundled
 app for permission testing: a bare Swift executable has a different TCC identity.
 The universal build targets `arm64` and `x86_64`, with a macOS 14.2 deployment target.

@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import AVFoundation
 import XCTest
 import OpenDictateCore
@@ -38,6 +39,36 @@ final class MeetingStoreTests: XCTestCase {
             XCTAssertEqual(reloaded.meeting(finished.id)?.speaker(Meeting.otherID)?.name, "Anna")
             reloaded.rename(finished.id, speaker: Meeting.meID, to: "Nikita")
             XCTAssertEqual(MeetingStore(folder: folder).meeting(finished.id)?.speaker(Meeting.meID)?.name, "Nikita")
+        }
+    }
+
+    /// Files written by 0.9.0-rc.1…rc.3 load; a newer file or a damaged one is left untouched
+    /// and never hides the others.
+    func testEarlierFilesLoadAndOthersAreLeftAlone() async throws {
+        try await MainActor.run {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let earlier = UUID(), future = UUID(), damaged = UUID()
+            let rc = """
+            {"durationMillis":61000,"id":"\(earlier.uuidString)","sourceBundleID":"us.zoom.xos","sourceName":"Zoom",
+             "speakers":[{"id":"me","role":"me"},{"id":"other","name":"Anna","role":"other"}],
+             "startedAt":"2026-11-16T12:00:00Z","state":"finished","transcriptionModel":"gpt-transcribe",
+             "utterances":[{"durationMillis":900,"id":"\(UUID().uuidString)","speaker":"other","startMillis":4000,
+                            "status":"recognized","text":"Hi"}],"version":1,"laterField":true}
+            """
+            try Data(rc.utf8).write(to: folder.appendingPathComponent("\(earlier.uuidString).json"))
+            let newer = Data(rc.replacingOccurrences(of: earlier.uuidString, with: future.uuidString)
+                .replacingOccurrences(of: "\"version\":1", with: "\"version\":2").utf8)
+            try newer.write(to: folder.appendingPathComponent("\(future.uuidString).json"))
+            try Data(rc.prefix(80).utf8).write(to: folder.appendingPathComponent("\(damaged.uuidString).json"))
+
+            let store = MeetingStore(folder: folder)
+            XCTAssertNil(store.error)
+            XCTAssertEqual(store.meetings.map(\.id), [earlier])
+            let loaded = try XCTUnwrap(store.meeting(earlier))
+            XCTAssertEqual(loaded.speaker(Meeting.otherID)?.name, "Anna")
+            XCTAssertEqual(loaded.utterances.map(\.text), ["Hi"])
+            XCTAssertEqual(try Data(contentsOf: folder.appendingPathComponent("\(future.uuidString).json")), newer)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("\(damaged.uuidString).json").path))
         }
     }
 
@@ -105,6 +136,16 @@ final class MeetingCaptureTests: XCTestCase {
         }
     }
 
+    func testTheRememberedAppFollowsItsCurrentName() {
+        let running = [MeetingSources.App(bundleID: "us.zoom.xos", name: "zoom.us", playing: true)]
+        let remembered = MeetingAudioSource.application(bundleID: "us.zoom.xos", name: "Zoom")
+        let tags = running.map { MeetingAudioSource.application(bundleID: $0.bundleID, name: $0.name) }
+        XCTAssertFalse(tags.contains(remembered), "The stored name matches no picker row")
+        XCTAssertTrue(tags.contains(MeetingSources.refreshed(remembered, in: running)))
+        XCTAssertEqual(MeetingSources.refreshed(remembered, in: []), remembered, "An app that is not running keeps its name")
+        XCTAssertEqual(MeetingSources.refreshed(.system, in: running), .system)
+    }
+
     func testMeetingClockExcludesPauses() {
         final class Time: @unchecked Sendable { var now = ContinuousClock.now }
         let time = Time()
@@ -169,5 +210,142 @@ final class MeetingIconAndShortcutTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(ShortcutBindings.self, from: JSONEncoder().encode(updated)), updated)
         updated.meeting = original.dictate
         XCTAssertFalse(updated.isValid, "A meeting cannot share the dictation shortcut")
+    }
+}
+
+/// A microphone or call channel fed directly by the test.
+private final class FedRecorder: AudioRecording, @unchecked Sendable {
+    private let lock = NSLock()
+    private var onChunk: (@Sendable (Data) -> Void)?
+    func start(keepAudio: Bool, onReady: @escaping @Sendable () -> Void, onChunk: @escaping @Sendable (Data) -> Void,
+               onLevel: @escaping @Sendable (Float) -> Void, onError: @escaping @Sendable (DictationError) -> Void) async throws {
+        lock.withLock { self.onChunk = onChunk }
+        onReady()
+    }
+    func emit(_ data: Data) {
+        let callback = lock.withLock { onChunk }
+        var offset = 0
+        while offset < data.count {
+            callback?(data.subdata(in: offset..<min(offset + AudioConstants.chunkBytes, data.count)))
+            offset += AudioConstants.chunkBytes
+        }
+    }
+    func stop() async -> (Data, Int) { lock.withLock { onChunk = nil }; return (Data(), 0) }
+}
+
+@MainActor
+final class MeetingFlowTests: XCTestCase {
+    private func tone(_ millis: Int) -> Data {
+        let count = AudioConstants.sampleRate * millis / 1_000
+        var samples = [Int16](repeating: 0, count: count)
+        for index in samples.indices {
+            let phase: Double = 2 * Double.pi * 440 * Double(index) / Double(AudioConstants.sampleRate)
+            samples[index] = Int16(0.3 * 32_767 * sin(phase))
+        }
+        return samples.withUnsafeBytes { Data($0) }
+    }
+
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(6)
+        while !condition() {
+            guard Date() < deadline else { XCTFail("Timed out"); return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    private func controller(store: MeetingStore, preferences: Preferences, microphone: FedRecorder,
+                            transcribe: @escaping MeetingController.Transcriber) -> MeetingController {
+        MeetingController(store: store, preferences: preferences, replacements: preferences.replacements,
+                          makeMicrophone: { microphone }, makeCallAudio: { _ in FedRecorder() }, transcribe: transcribe,
+                          loadKey: { "sk-test" }, microphoneAllowed: { true })
+    }
+
+    private func preferences() -> Preferences {
+        let preferences = Preferences(defaults: UserDefaults(suiteName: "meeting-flow-\(UUID().uuidString)")!)
+        preferences.interfaceLanguage = "en"
+        return preferences
+    }
+
+    /// A retry message from the meeting that just ended must not greet the next one.
+    func testFinishingNowClearsTheRecognitionIssue() async throws {
+        let microphone = FedRecorder()
+        let meetings = controller(store: MeetingStore(inMemory: true), preferences: preferences(), microphone: microphone,
+                                  transcribe: { _, _, _, _ in throw DictationError.connection })
+        try meetings.start(source: .system)
+        try await waitUntil { meetings.microphone == .live }
+        microphone.emit(tone(1_000) + Data(count: AudioConstants.sampleRate * 2))
+        try await waitUntil { meetings.issue != nil }
+        meetings.finish()
+        try await waitUntil { meetings.phase == .finishing }
+        meetings.finishNow()
+        XCTAssertEqual(meetings.phase, .idle)
+        XCTAssertNil(meetings.issue, "The finished meeting has no retry in progress")
+    }
+
+    /// An export failure stays visible after the meeting ends.
+    func testExportFailureIsReportedAfterFinishing() async throws {
+        let preferences = preferences()
+        preferences.meetingExportFolder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("missing-\(UUID().uuidString)").path
+        let meetings = controller(store: MeetingStore(inMemory: true), preferences: preferences, microphone: FedRecorder(),
+                                  transcribe: { _, _, _, _ in "x" })
+        try meetings.start(source: .system)
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(meetings.issue, "Couldn't save the meeting to the export folder. Check the folder in Settings → Meetings.")
+    }
+}
+
+@MainActor
+final class MeetingWindowTests: XCTestCase {
+    private func snapshot(_ host: NSView) throws -> Data {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        host.layoutSubtreeIfNeeded()
+        let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+        host.cacheDisplay(in: host.bounds, to: bitmap)
+        return try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+    }
+
+    /// Deleting or renaming the shown meeting in Settings must reach the meeting window.
+    func testTheFinishedViewFollowsTheStore() throws {
+        let defaults = UserDefaults(suiteName: "meeting-window-\(UUID().uuidString)")!
+        let model = AppModel(localOnly: true, defaults: defaults)
+        defer { model.shutdown() }
+        model.preferences.interfaceLanguage = "en"
+        let store = MeetingStore(inMemory: true)
+        let controller = MeetingController(store: store, preferences: model.preferences, replacements: model.replacements)
+        var meeting = Meeting(startedAt: Date(), sourceName: "Zoom", sourceBundleID: "us.zoom.xos", state: .finished)
+        meeting.insert(MeetingUtterance(speaker: Meeting.otherID, startMillis: 0, durationMillis: 1, text: "Hello", status: .recognized))
+        store.save(meeting)
+        let host = NSHostingView(rootView: MeetingView(controller: controller, preferences: model.preferences, model: model,
+                                                       shownMeeting: .constant(meeting.id), openSettings: { _, _ in }))
+        host.frame = NSRect(x: 0, y: 0, width: 520, height: 620)
+        let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = host
+        defer { window.close() }
+        let before = try snapshot(host)
+        store.rename(meeting.id, speaker: Meeting.otherID, to: "Anna")
+        let renamed = try snapshot(host)
+        XCTAssertNotEqual(before, renamed, "A new speaker name appears in the window")
+        store.delete(meeting.id)
+        XCTAssertNotEqual(renamed, try snapshot(host), "A deleted meeting leaves the window")
+    }
+
+    /// After a meeting started from the shortcut is cancelled, the window must not present
+    /// the previous meeting as if it had just been saved.
+    func testShowingAnActiveMeetingForgetsTheEarlierFinishedOne() throws {
+        let defaults = UserDefaults(suiteName: "meeting-window-\(UUID().uuidString)")!
+        let model = AppModel(localOnly: true, defaults: defaults)
+        defer { model.shutdown() }
+        let controller = MeetingController(store: MeetingStore(inMemory: true), preferences: model.preferences,
+                                           replacements: model.replacements)
+        let windows = MeetingWindowController(controller: controller, model: model, openSettings: { _, _ in }, onClose: {})
+        let earlier = UUID()
+        windows.show(activate: false, finished: earlier)
+        XCTAssertEqual(windows.state.shownMeeting, earlier)
+        controller.preview(Meeting(startedAt: Date(), sourceName: nil, sourceBundleID: nil), phase: .recording)
+        windows.show(activate: false)
+        XCTAssertNil(windows.state.shownMeeting)
+        windows.closeForTesting()
     }
 }
