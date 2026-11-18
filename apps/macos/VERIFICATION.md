@@ -1,5 +1,16 @@
 # macOS verification
 
+## 0.8.2 — alphabetical dictionary
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-18.
+
+- All Swift tests pass, including English and Russian dictionary ordering, and
+  universal packaging verified both slices, the signature and the DMG.
+- The same sorting was exercised in the running 0.9.0-rc.3 build, whose Dictionary
+  page matches this release's.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.8.1 — in-place replacement editing
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-13.
