@@ -313,15 +313,15 @@ final class MeetingController: ObservableObject {
                         Task { @MainActor [weak self] in self?.levels.set(level, speaker: speaker) }
                     }, onError: { [weak self] _ in
                         Task { @MainActor [weak self] in
-                            guard let self, self.runs[speaker] == run else { return }
+                            guard let self, self.isCurrent(channel, run: run) else { return }
                             self.setState(.failed, for: channel)
                         }
                     })
                     // A pause or finish while macOS was still starting this channel already queued its stop.
-                    guard let self, self.runs[speaker] == run else { return }
+                    guard let self, self.isCurrent(channel, run: run) else { return }
                     self.setState(.live, for: channel)
                 } catch {
-                    guard let self, self.runs[speaker] == run else { return }
+                    guard let self, self.isCurrent(channel, run: run) else { return }
                     self.setState(.failed, for: channel)
                 }
             }
@@ -348,6 +348,11 @@ final class MeetingController: ObservableObject {
             // the meeting flushes what it has instead of waiting for it.
             Task { @MainActor in try? await Task.sleep(for: .seconds(3)); flushRun() }
         }
+    }
+
+    /// Run numbers restart with every meeting's channels, so the channel itself must match too.
+    private func isCurrent(_ channel: MeetingChannel, run: Int) -> Bool {
+        runs[channel.speaker] == run && channels.contains { $0 === channel }
     }
 
     private func setState(_ state: ChannelState, for channel: MeetingChannel) {

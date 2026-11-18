@@ -343,6 +343,23 @@ final class MeetingControllerTests: XCTestCase {
         XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Second point."])
     }
 
+    func testAnEarlierMeetingsCallChannelCannotChangeTheNextOne() async throws {
+        let held = ScriptedRecorder(gated: true)
+        call = held
+        let meetings = controller()
+        try await started(meetings)
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        // The next meeting's tap cannot start (the app quit); the first one's prompt is answered later.
+        call = ScriptedRecorder(failStart: true)
+        try meetings.start(source: .application(bundleID: "us.zoom.xos", name: "Zoom"))
+        try await waitUntil { meetings.callAudio == .failed }
+        held.release()
+        await settle(); try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(meetings.callAudio, .failed, "The first meeting's channel does not report for the second")
+        meetings.cancel()
+    }
+
     func testAnEarlierStopCannotFlushInPlaceOfALaterOne() async throws {
         // A device stop can take a while, for example behind a Bluetooth route change.
         microphone = ScriptedRecorder(stopDelay: .milliseconds(1_000))
