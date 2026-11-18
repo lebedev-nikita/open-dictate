@@ -79,6 +79,24 @@ final class MeetingTests: XCTestCase {
         XCTAssertTrue(MeetingFormat.markdown(meeting, russian: true, timeZone: utc).contains("**[00:00:01] Я:** *(не распознано)*"))
     }
 
+    /// Speaker names are user text: Markdown must show them as typed, keep the bold label and
+    /// never turn them into links or code.
+    func testSpeakerNamesRenderLiterally() throws {
+        for name in ["Anna_Maria_K", "*Boss*", "back\\*slash", "`Ops", "[Anna](notes)", "C:\\", "a <b>"] {
+            var meeting = meeting()
+            meeting.insert(MeetingUtterance(speaker: Meeting.otherID, startMillis: 1_000, durationMillis: 1, text: "Hello `there`",
+                                            status: .recognized))
+            meeting.rename(speaker: Meeting.otherID, to: name)
+            let line = try XCTUnwrap(MeetingFormat.markdown(meeting, russian: false, timeZone: utc)
+                .components(separatedBy: "\n\n").dropFirst().first)
+            let rendered = try AttributedString(markdown: line)
+            XCTAssertEqual(String(rendered.characters), "[00:00:01] \(name): Hello there", name)
+            XCTAssertTrue(rendered.runs.allSatisfy { $0.link == nil }, name)
+            let label = rendered.runs.first { String(rendered[$0.range].characters).contains(":") }
+            XCTAssertEqual(label?.inlinePresentationIntent, .stronglyEmphasized, name)
+        }
+    }
+
     func testSearchIgnoresCaseAndDiacriticsAndMatchesSpeakerNames() {
         var meeting = meeting()
         meeting.insert(MeetingUtterance(speaker: Meeting.meID, startMillis: 0, durationMillis: 1, text: "Ещё раз о релизе", status: .recognized))
