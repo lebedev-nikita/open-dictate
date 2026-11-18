@@ -465,7 +465,8 @@ final class MeetingController: ObservableObject {
     private func resolveEcho() {
         guard !awaitingEcho.isEmpty, let meeting else { return }
         let call = channels.first { $0.speaker == Meeting.otherID }
-        let callCapturing = phase == .recording && callAudio == .live
+        // A stopped call channel still holds the utterance in progress until its flush.
+        let callCapturing = (phase == .recording && callAudio == .live) || stopping[Meeting.otherID] != nil
         let covered = call?.coveredMillis ?? .max
         let callSpans = meeting.utterances.filter { $0.speaker == Meeting.otherID }
         for (id, value) in awaitingEcho {

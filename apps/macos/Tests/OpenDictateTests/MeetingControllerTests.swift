@@ -378,6 +378,18 @@ final class MeetingControllerTests: XCTestCase {
         XCTAssertEqual(store.meetings.first?.utterances.map(\.text), ["Let's start with the release plan."])
     }
 
+    func testEchoWaitsForTheCallChannelsLastUtterance() async throws {
+        call = ScriptedRecorder(stopDelay: .milliseconds(1_000))
+        let meetings = controller()
+        try await started(meetings)
+        // The call is still speaking when the user finishes; the microphone heard it as echo.
+        try await feed(microphone: Speech.silence(500) + Speech.tone(1_500, 0.3) + Speech.silence(1_000),
+                       call: Speech.silence(450) + Speech.tone(1_500, 0.3))
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(store.meetings.first?.utterances.map(\.speaker), [Meeting.otherID])
+    }
+
     func testACancellationTheMeetingDidNotRequestIsRetried() async throws {
         let attempts = Counter()
         // URLSession reports some failures as cancellation, which OpenAIClient maps to CancellationError.
