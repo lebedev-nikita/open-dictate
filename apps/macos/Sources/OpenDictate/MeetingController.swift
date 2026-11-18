@@ -169,6 +169,8 @@ final class MeetingController: ObservableObject {
     /// Recognized microphone text waiting for the overlapping call text, for echo removal.
     private var awaitingEcho = [UUID: (text: String, since: Int)]()
     private var dictations = [(start: Int, end: Int?)]()
+    /// Whether dictation is running, also between meetings.
+    private var dictating = false
     private var timer: Timer?
     private var dirty = false
     private var lastSave = Date.distantPast
@@ -222,6 +224,8 @@ final class MeetingController: ObservableObject {
                     MeetingChannel(speaker: Meeting.otherID, recorder: makeCallAudio(source), clock: clock)]
         phase = .recording
         clock.reset(); clock.run()
+        // The app reports dictation only when it changes, which may be before this meeting.
+        if dictating { dictations.append((0, nil)) }
         startChannels()
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -282,6 +286,7 @@ final class MeetingController: ObservableObject {
     /// Ordinary dictation and voice editing share the microphone during a meeting. Their speech
     /// is addressed to a text field, so it stays out of the meeting transcript.
     func noteDictation(active: Bool) {
+        dictating = active
         guard phase == .recording || phase == .paused else { return }
         if active { if dictations.last?.end != nil || dictations.isEmpty { dictations.append((clock.millis, nil)) } }
         else if let last = dictations.indices.last, dictations[last].end == nil { dictations[last].end = clock.millis }
