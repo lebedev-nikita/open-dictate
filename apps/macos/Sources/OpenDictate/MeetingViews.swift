@@ -130,7 +130,6 @@ struct MeetingView: View {
                         }
                     }
                 }
-                if let issue = controller.issue { Label(issue, systemImage: "exclamationmark.triangle").fixedSize(horizontal: false, vertical: true) }
                 Button(t("Start Recording", "Начать запись"), action: start)
                     .controlSize(.large).keyboardShortcut(.defaultAction)
                     .disabled(!preferences.meetingNoticeAccepted || !hasKey || !model.microphoneAllowed)
@@ -301,6 +300,10 @@ struct MeetingView: View {
                     .font(.callout.weight(.medium)).foregroundStyle(.secondary)
                 Text(MeetingFormat.title(meeting, russian: russian)).font(.system(size: 22, weight: .semibold))
                     .fixedSize(horizontal: false, vertical: true)
+                // The auto-export failure of the meeting just finished.
+                if meeting.id == controller.lastFinishedID, let issue = controller.issue {
+                    notice(issue, symbol: "exclamationmark.triangle").padding(.top, Space.xs)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Space.lg).padding(.top, Space.lg).padding(.bottom, Space.md)

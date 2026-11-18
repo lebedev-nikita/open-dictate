@@ -518,6 +518,8 @@ final class MeetingController: ObservableObject {
         store.save(finished)
         lastFinishedID = finished.id
         meeting = finished
+        // Retry messages belong to the recording; only an export failure outlives it.
+        issue = nil
         export(finished)
         reset()
         onStateChange?()

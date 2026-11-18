@@ -171,3 +171,86 @@ final class MeetingIconAndShortcutTests: XCTestCase {
         XCTAssertFalse(updated.isValid, "A meeting cannot share the dictation shortcut")
     }
 }
+
+/// A microphone or call channel fed directly by the test.
+private final class FedRecorder: AudioRecording, @unchecked Sendable {
+    private let lock = NSLock()
+    private var onChunk: (@Sendable (Data) -> Void)?
+    func start(keepAudio: Bool, onReady: @escaping @Sendable () -> Void, onChunk: @escaping @Sendable (Data) -> Void,
+               onLevel: @escaping @Sendable (Float) -> Void, onError: @escaping @Sendable (DictationError) -> Void) async throws {
+        lock.withLock { self.onChunk = onChunk }
+        onReady()
+    }
+    func emit(_ data: Data) {
+        let callback = lock.withLock { onChunk }
+        var offset = 0
+        while offset < data.count {
+            callback?(data.subdata(in: offset..<min(offset + AudioConstants.chunkBytes, data.count)))
+            offset += AudioConstants.chunkBytes
+        }
+    }
+    func stop() async -> (Data, Int) { lock.withLock { onChunk = nil }; return (Data(), 0) }
+}
+
+@MainActor
+final class MeetingFlowTests: XCTestCase {
+    private func tone(_ millis: Int) -> Data {
+        let count = AudioConstants.sampleRate * millis / 1_000
+        var samples = [Int16](repeating: 0, count: count)
+        for index in samples.indices {
+            let phase: Double = 2 * Double.pi * 440 * Double(index) / Double(AudioConstants.sampleRate)
+            samples[index] = Int16(0.3 * 32_767 * sin(phase))
+        }
+        return samples.withUnsafeBytes { Data($0) }
+    }
+
+    private func waitUntil(_ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(6)
+        while !condition() {
+            guard Date() < deadline else { XCTFail("Timed out"); return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    private func controller(store: MeetingStore, preferences: Preferences, microphone: FedRecorder,
+                            transcribe: @escaping MeetingController.Transcriber) -> MeetingController {
+        MeetingController(store: store, preferences: preferences, replacements: preferences.replacements,
+                          makeMicrophone: { microphone }, makeCallAudio: { _ in FedRecorder() }, transcribe: transcribe,
+                          loadKey: { "sk-test" }, microphoneAllowed: { true })
+    }
+
+    private func preferences() -> Preferences {
+        let preferences = Preferences(defaults: UserDefaults(suiteName: "meeting-flow-\(UUID().uuidString)")!)
+        preferences.interfaceLanguage = "en"
+        return preferences
+    }
+
+    /// A retry message from the meeting that just ended must not greet the next one.
+    func testFinishingNowClearsTheRecognitionIssue() async throws {
+        let microphone = FedRecorder()
+        let meetings = controller(store: MeetingStore(inMemory: true), preferences: preferences(), microphone: microphone,
+                                  transcribe: { _, _, _, _ in throw DictationError.connection })
+        try meetings.start(source: .system)
+        try await waitUntil { meetings.microphone == .live }
+        microphone.emit(tone(1_000) + Data(count: AudioConstants.sampleRate * 2))
+        try await waitUntil { meetings.issue != nil }
+        meetings.finish()
+        try await waitUntil { meetings.phase == .finishing }
+        meetings.finishNow()
+        XCTAssertEqual(meetings.phase, .idle)
+        XCTAssertNil(meetings.issue, "The finished meeting has no retry in progress")
+    }
+
+    /// An export failure stays visible after the meeting ends.
+    func testExportFailureIsReportedAfterFinishing() async throws {
+        let preferences = preferences()
+        preferences.meetingExportFolder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("missing-\(UUID().uuidString)").path
+        let meetings = controller(store: MeetingStore(inMemory: true), preferences: preferences, microphone: FedRecorder(),
+                                  transcribe: { _, _, _, _ in "x" })
+        try meetings.start(source: .system)
+        meetings.finish()
+        try await waitUntil { meetings.phase == .idle }
+        XCTAssertEqual(meetings.issue, "Couldn't save the meeting to the export folder. Check the folder in Settings → Meetings.")
+    }
+}
