@@ -247,7 +247,7 @@ internal fun SettingsScreen(
                         ActionRow(Icons.AutoMirrored.Outlined.MenuBook, stringResource(R.string.settings_dictionary),
                             if (state.prompt.isBlank()) stringResource(R.string.settings_dictionary_empty)
                             else stringResource(R.string.settings_dictionary_count, state.prompt.lineSequence().count { it.isNotBlank() }),
-                            { dictionaryOpen = true })
+                            { viewModel.sortPrompt(); dictionaryOpen = true })
                     }
 
                     val postProcessingState = rememberSaveableStateHolder()
@@ -355,7 +355,7 @@ internal fun SettingsScreen(
     ) { buttonAppearanceOpen = false }
     if (replacementsOpen) ReplacementSheet(viewModel.replacements) { replacementsOpen = false }
     if (languagesOpen) LanguagesSheet(state.languages, viewModel::toggleLanguage, viewModel::useAutomaticLanguageDetection) { languagesOpen = false }
-    if (dictionaryOpen) DictionarySheet(state.prompt, viewModel::savePrompt) { dictionaryOpen = false }
+    if (dictionaryOpen) DictionarySheet(state.prompt, viewModel::savePrompt) { viewModel.sortPrompt(); dictionaryOpen = false }
     if (timeoutOpen) TranscriptionTimeoutDialog(state.transcriptionResponseTimeoutSeconds,
         onDismiss = { timeoutOpen = false }, onSave = { viewModel.setTranscriptionResponseTimeout(it); timeoutOpen = false })
 }

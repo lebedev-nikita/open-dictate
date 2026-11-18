@@ -2,6 +2,7 @@ package com.opendictate.app.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.Locale
 
 class DictionaryTermsTest {
     @Test
@@ -42,10 +43,31 @@ class DictionaryTermsTest {
     }
 
     @Test
-    fun `adds trimmed selected phrase after existing terms`() {
+    fun `sorts terms alphabetically ignoring case`() {
         assertEquals(
-            DictionaryAddition.Added("OpenDictate\nJetpack Compose"),
-            addDictionaryTerm("OpenDictate", "  Jetpack\n Compose  "),
+            "api\nJetpack Compose\nKotlin\nOpenDictate",
+            sortDictionaryTerms("OpenDictate\nKotlin\napi\nJetpack Compose", Locale.ENGLISH),
+        )
+        assertEquals(
+            "ёлка\nЖук\nЛебедев\nНикита",
+            sortDictionaryTerms("Никита\nЖук\nЛебедев\nёлка", Locale.forLanguageTag("ru")),
+        )
+    }
+
+    @Test
+    fun `sorting drops blank lines and case-insensitive repeats`() {
+        assertEquals(
+            "Compose\nKotlin",
+            sortDictionaryTerms(" Kotlin \r\n\nkotlin\nCompose, KOTLIN\n", Locale.ENGLISH),
+        )
+        assertEquals("", sortDictionaryTerms(" \n\n", Locale.ENGLISH))
+    }
+
+    @Test
+    fun `adds trimmed selected phrase in alphabetical order`() {
+        assertEquals(
+            DictionaryAddition.Added("Jetpack Compose\nOpenDictate"),
+            addDictionaryTerm("OpenDictate", "  Jetpack\n Compose  ", Locale.ENGLISH),
         )
     }
 

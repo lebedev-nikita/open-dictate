@@ -66,6 +66,13 @@ public enum DictionaryTerms {
             return String(term.prefix(120))
         }.prefix(200).map { $0 }
     }
+
+    /// The normalized terms in alphabetical order, ignoring case, one per line.
+    public static func sorted(_ input: String, locale: Locale = .current) -> String {
+        normalize(input).sorted {
+            $0.compare($1, options: [.caseInsensitive], locale: locale) == .orderedAscending
+        }.joined(separator: "\n")
+    }
 }
 
 public struct HistoryEntry: Codable, Identifiable, Equatable, Sendable {

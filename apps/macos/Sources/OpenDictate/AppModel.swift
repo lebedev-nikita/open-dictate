@@ -584,7 +584,7 @@ final class AppModel: ObservableObject {
         do {
             let target = try TextTarget.capture(exclusions: preferences.excludedApps)
             guard !target.snapshot.selectedText.isEmpty else { throw DictationError.noField }
-            preferences.dictionary = DictionaryTerms.normalize(preferences.dictionary + "\n" + target.snapshot.selectedText).joined(separator: "\n")
+            preferences.dictionary = DictionaryTerms.sorted(preferences.dictionary + "\n" + target.snapshot.selectedText)
             message = preferences.t("Selection added to the dictionary.", "Выделение добавлено в словарь.")
         } catch { present(error) }
     }

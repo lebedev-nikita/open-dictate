@@ -18,6 +18,7 @@ import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.data.fuzzySearch
+import com.opendictate.app.data.sortDictionaryTerms
 import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.AppTheme
@@ -314,6 +315,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun savePrompt(prompt: String) {
         settings.prompt = prompt
         mutableState.update { it.copy(prompt = settings.prompt) }
+    }
+
+    fun sortPrompt() {
+        val sorted = sortDictionaryTerms(settings.prompt)
+        if (sorted != settings.prompt) savePrompt(sorted)
     }
 
     fun refreshPrompt() {

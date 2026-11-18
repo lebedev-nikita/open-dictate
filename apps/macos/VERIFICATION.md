@@ -1,5 +1,25 @@
 # macOS verification
 
+## 0.9.0-rc.3 — alphabetical dictionary
+
+Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-18, in the
+local-only smoke bundle in English and Russian. Opening Dictionary sorted mixed
+Latin and Cyrillic terms ignoring case and dropped repeats and blank lines; a term
+typed at the end stayed in place while editing and moved into order after leaving
+the page; **Clean up** sorted an unsorted edit and its tooltip mentions sorting in
+both languages. All Swift tests pass and universal packaging verified the DMG.
+
+## 0.8.2 — alphabetical dictionary
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-18.
+
+- All Swift tests pass, including English and Russian dictionary ordering, and
+  universal packaging verified both slices, the signature and the DMG.
+- The same sorting was exercised in the running 0.9.0-rc.3 build, whose Dictionary
+  page matches this release's.
+
+No dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.9.0-rc.2 — new meetings start at zero
 
 Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-16. rc.1 kept the
