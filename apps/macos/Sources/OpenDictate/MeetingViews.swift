@@ -54,6 +54,14 @@ enum MeetingSources {
             .sorted { ($0.playing ? 0 : 1, $0.name.localizedLowercase) < ($1.playing ? 0 : 1, $1.name.localizedLowercase) }
     }
 
+    /// The remembered app under its current name. Picker tags include the name, so a name that
+    /// changed (an app update, another system language) would otherwise leave the picker blank.
+    static func refreshed(_ source: MeetingAudioSource, in apps: [App]) -> MeetingAudioSource {
+        guard case .application(let id, let name) = source, let app = apps.first(where: { $0.bundleID == id }),
+              app.name != name else { return source }
+        return .application(bundleID: id, name: app.name)
+    }
+
     static func icon(_ bundleID: String) -> NSImage? {
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return nil }
         let icon = NSWorkspace.shared.icon(forFile: url.path)
@@ -145,7 +153,11 @@ struct MeetingView: View {
             .padding(Space.xl).frame(maxWidth: 560, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .onAppear { model.refreshPermissions(); apps = MeetingSources.runningApps() }
+        .onAppear {
+            model.refreshPermissions(); apps = MeetingSources.runningApps()
+            let current = MeetingSources.refreshed(preferences.meetingSource, in: apps)
+            if current != preferences.meetingSource { preferences.meetingSource = current }
+        }
     }
 
     private var sourcePicker: some View {

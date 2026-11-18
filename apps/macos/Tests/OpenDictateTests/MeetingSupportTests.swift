@@ -106,6 +106,16 @@ final class MeetingCaptureTests: XCTestCase {
         }
     }
 
+    func testTheRememberedAppFollowsItsCurrentName() {
+        let running = [MeetingSources.App(bundleID: "us.zoom.xos", name: "zoom.us", playing: true)]
+        let remembered = MeetingAudioSource.application(bundleID: "us.zoom.xos", name: "Zoom")
+        let tags = running.map { MeetingAudioSource.application(bundleID: $0.bundleID, name: $0.name) }
+        XCTAssertFalse(tags.contains(remembered), "The stored name matches no picker row")
+        XCTAssertTrue(tags.contains(MeetingSources.refreshed(remembered, in: running)))
+        XCTAssertEqual(MeetingSources.refreshed(remembered, in: []), remembered, "An app that is not running keeps its name")
+        XCTAssertEqual(MeetingSources.refreshed(.system, in: running), .system)
+    }
+
     func testMeetingClockExcludesPauses() {
         final class Time: @unchecked Sendable { var now = ContinuousClock.now }
         let time = Time()
