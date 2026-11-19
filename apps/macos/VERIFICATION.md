@@ -1,5 +1,21 @@
 # macOS verification
 
+## 0.9.1 — whole-word pattern replacements
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-19.
+
+- All Swift tests pass, including shared replacement fixtures for the reported
+  `пулл?` → `pull` case, backtracking to a bounded match, groups, combining marks
+  and an unterminated `\Q`, plus schema version 4 and legacy rules decoding without
+  the option. Universal packaging verified both slices, the signature and the DMG.
+- The Word replacements page was rendered in English (light) and Russian (dark),
+  including the editor with “Regular expression” on: options never wrap and Russian
+  moves “Слово целиком” beside the Add button.
+
+Android was verified by CI unit tests, lint and builds only; Boat sandboxes were
+unavailable, so the Android sheet was not inspected on an emulator. No dictation,
+provider request or Drive sync was exercised for this change.
+
 ## 0.9.0 — meeting transcription
 
 Verified on macOS 27.0.1, Apple Silicon (MacBook Pro), on 2026-11-18. All Swift tests
