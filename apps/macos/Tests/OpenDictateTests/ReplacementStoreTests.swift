@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import XCTest
 @testable import OpenDictate
+import OpenDictateCore
 
 final class ReplacementStoreTests: XCTestCase {
     func testListSortsByReplacementIgnoringCaseAndReordersAfterEditing() async {
@@ -64,6 +65,33 @@ final class ReplacementStoreTests: XCTestCase {
             XCTAssertTrue(json.contains(#""schemaVersion":3"#))
             XCTAssertNoThrow(try store.validateSync(json: json))
         }
+    }
+
+    func testWholeWordAppliesToPatternsOnlyAndSyncsAsVersionFour() async throws {
+        try await MainActor.run {
+            let suite = "com.opendictate.tests.replacements.\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let store = ReplacementStore(defaults: defaults)
+            XCTAssertTrue(store.save(source: "пулл?", replacement: "pull", regex: true))
+            XCTAssertEqual(store.engine().apply("пул популярный"), "pull поpullярный")
+            let rule = try XCTUnwrap(store.rules.first)
+            XCTAssertTrue(store.save(id: rule.id, source: rule.source, replacement: "pull", regex: true, wholeWord: true))
+            XCTAssertEqual(ReplacementStore(defaults: defaults).engine().apply("пул популярный"), "pull популярный")
+            // Phrases always match whole words, so the option is not stored for them.
+            XCTAssertTrue(store.save(source: "cat", replacement: "dog", wholeWord: true))
+            XCTAssertEqual(store.rules.first { $0.source == "cat" }?.wholeWord, false)
+            let json = try XCTUnwrap(store.syncValues["wordReplacements"])
+            XCTAssertTrue(json.contains(#""schemaVersion":4"#))
+            XCTAssertNoThrow(try store.validateSync(json: json))
+        }
+    }
+
+    func testNewPatternDraftsMatchWholeWordsAndOldPatternsKeepTheirMatching() {
+        XCTAssertTrue(ReplacementDraft().wholeWord)
+        XCTAssertFalse(ReplacementDraft(WordReplacement(source: "пулл?", replacement: "pull", regex: true)).wholeWord)
+        XCTAssertTrue(ReplacementDraft(WordReplacement(source: "пулл?", replacement: "pull", regex: true, wholeWord: true)).wholeWord)
+        XCTAssertTrue(ReplacementDraft(WordReplacement(source: "cat", replacement: "dog")).wholeWord)
     }
 
     func testEditsPersistAndSessionRulesAreImmutable() async {

@@ -17,7 +17,7 @@ class WordReplacementTest {
                 val rule = entries.getJSONObject(it)
                 WordReplacement(source = rule.getString("source"), replacement = rule.getString("replacement"),
                     enabled = rule.optBoolean("enabled", true), regex = rule.optBoolean("regex", false),
-                    matchCase = rule.optBoolean("matchCase", false))
+                    matchCase = rule.optBoolean("matchCase", false), wholeWord = rule.optBoolean("wholeWord", false))
             }
             assertEquals(fixture.getString("name"), fixture.getString("expected"),
                 WordReplacementEngine(rules).apply(fixture.getString("text"), fixture.optBoolean("final", true)))
@@ -38,7 +38,7 @@ class WordReplacementTest {
         assertFalse(WordReplacement(source = " ", replacement = "Test").isValid)
         assertFalse(WordReplacement(source = "test", replacement = "").isValid)
         assertFalse(WordReplacement(source = "x".repeat(257), replacement = "Test").isValid)
-        listOf("""{"schemaVersion":2,"rules":[]}""", """{"schemaVersion":3,"rules":[]}""", """{"schemaVersion":4,"rules":[]}""").forEach {
+        listOf("""{"schemaVersion":2,"rules":[]}""", """{"schemaVersion":3,"rules":[]}""", """{"schemaVersion":4,"rules":[]}""", """{"schemaVersion":5,"rules":[]}""").forEach {
             assertThrows(Exception::class.java) { ReplacementDocument.fromJson(it) }
         }
     }
@@ -64,6 +64,28 @@ class WordReplacementTest {
         assertEquals(pattern, ReplacementDocument.fromJson(pattern.toJson()))
         assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"schemaVersion\":3", "\"schemaVersion\":2")) }
         assertThrows(Exception::class.java) { ReplacementDocument.fromJson(pattern.toJson().replace("\"matchCase\":true", "\"matchCase\":1")) }
+    }
+    @Test fun wholeWordRulesUseVersionFour() {
+        val id = "00000000-0000-0000-0000-000000000001"
+        val document = ReplacementDocument(listOf(WordReplacement(id, "пулл?", "pull", regex = true, wholeWord = true)))
+        assertEquals(4, document.schemaVersion)
+        assertTrue(document.toJson().contains("\"wholeWord\":true"))
+        assertEquals(document, ReplacementDocument.fromJson(document.toJson()))
+        assertThrows(Exception::class.java) { ReplacementDocument.fromJson(document.toJson().replace("\"schemaVersion\":4", "\"schemaVersion\":3")) }
+        assertThrows(Exception::class.java) { ReplacementDocument.fromJson(document.toJson().replace("\"wholeWord\":true", "\"wholeWord\":1")) }
+        // Rules saved before the option decode without it and keep matching inside words.
+        val legacy = ReplacementDocument.fromJson(
+            """{"schemaVersion":2,"rules":[{"id":"$id","source":"пулл?","replacement":"pull","enabled":true,"regex":true}]}""")
+        assertFalse(legacy.rules.single().wholeWord)
+        assertFalse(legacy.toJson().contains("wholeWord"))
+    }
+    @Test fun wholeWordPatternUsability() {
+        fun usable(source: String) = WordReplacement(source = source, replacement = "x", regex = true, wholeWord = true).isUsable
+        assertTrue(usable("пулл?"))
+        assertTrue(usable("\\Qc++"))
+        // The wrapper must not complete a pattern that is invalid on its own.
+        assertFalse(usable("a)(b"))
+        assertFalse(usable("a*"))
     }
     @Test fun patternUsability() {
         fun usable(source: String, replacement: String = "x") = WordReplacement(source = source, replacement = replacement, regex = true).isUsable

@@ -320,14 +320,16 @@ Each session captures its rules at startup, and history/copy use the same result
 Voice editing instructions and results are not modified. Up to 500 rules, with
 256 UTF-16 units per phrase and 2,048 per replacement.
 
-Enable “Regular expression” to save an ICU pattern instead of a phrase. Patterns
-have no implicit word boundaries (use `\b`), keep their whitespace and must not
-match empty text. Replacements may use `$1`, `${12}` and `$$`, or be
+Enable “Regular expression” to save an ICU pattern instead of a phrase. With
+“Whole word”, on by default for new patterns, a match must have no letter, mark,
+digit or underscore on either side; patterns saved before the option existed keep
+matching inside words. Patterns keep their whitespace and must not match empty text. Replacements may use `$1`, `${12}` and `$$`, or be
 empty to delete the match. The earliest match wins, then the longer one, then
 phrase rules. Android compiles the same patterns with its own regex engine; a
 synced pattern it cannot compile is skipped there. Pattern rules sync as schema
-version 2 and case-sensitive rules as version 3, which older app versions reject.
-The list tags patterns with `.*` and case-sensitive rules with `Aa`.
+version 2, case-sensitive rules as version 3 and whole-word patterns as version 4,
+which older app versions reject. The list tags patterns with `.*`, case-sensitive
+rules with `Aa` and whole-word patterns with an underlined `ab`.
 
 Rules are applied locally and remain separate from dictionary hints sent to OpenAI.
 Connect Google Drive in Settings to sync the rule list, individual rule states and

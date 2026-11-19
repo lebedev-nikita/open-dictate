@@ -9,13 +9,15 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
     public var regex: Bool
     /// Matches the source's exact letter case instead of ignoring case.
     public var matchCase: Bool
+    /// Pattern rules match only text with no letter, digit or underscore on either side. Phrase rules always do.
+    public var wholeWord: Bool
 
-    private enum CodingKeys: String, CodingKey { case id, source, replacement, enabled, regex, matchCase }
+    private enum CodingKeys: String, CodingKey { case id, source, replacement, enabled, regex, matchCase, wholeWord }
 
     public init(id: String = UUID().uuidString.lowercased(), source: String, replacement: String,
-                enabled: Bool = true, regex: Bool = false, matchCase: Bool = false) {
+                enabled: Bool = true, regex: Bool = false, matchCase: Bool = false, wholeWord: Bool = false) {
         self.id = id; self.source = source; self.replacement = replacement
-        self.enabled = enabled; self.regex = regex; self.matchCase = matchCase
+        self.enabled = enabled; self.regex = regex; self.matchCase = matchCase; self.wholeWord = wholeWord
     }
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -25,6 +27,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
         enabled = try container.decode(Bool.self, forKey: .enabled)
         regex = try container.decodeIfPresent(Bool.self, forKey: .regex) ?? false
         matchCase = try container.decodeIfPresent(Bool.self, forKey: .matchCase) ?? false
+        wholeWord = try container.decodeIfPresent(Bool.self, forKey: .wholeWord) ?? false
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -35,6 +38,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
         // Literal rules keep the version 1 wire format.
         if regex { try container.encode(true, forKey: .regex) }
         if matchCase { try container.encode(true, forKey: .matchCase) }
+        if wholeWord { try container.encode(true, forKey: .wholeWord) }
     }
     /// Structural validity only. Patterns compile per platform, so synced rules never invalidate a document.
     public var isValid: Bool {
@@ -46,7 +50,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
     public var isUsable: Bool {
         guard isValid else { return false }
         guard regex else { return true }
-        guard let pattern = WordReplacementEngine.compile(source, matchCase: matchCase),
+        guard let pattern = WordReplacementEngine.compile(source, matchCase: matchCase, wholeWord: wholeWord),
               pattern.firstMatch(in: "", range: NSRange(location: 0, length: 0)) == nil else { return false }
         return WordReplacementEngine.groupReferences(replacement).allSatisfy { $0 <= pattern.numberOfCaptureGroups }
     }
@@ -55,8 +59,11 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
 public struct ReplacementDocument: Codable, Equatable, Sendable {
     public var rules: [WordReplacement]
     public init(rules: [WordReplacement] = []) { self.rules = rules }
-    /// Versions 2 and 3 mark documents with pattern and case-sensitive rules, so older clients reject rather than misread them.
-    public var schemaVersion: Int { rules.contains(where: \.matchCase) ? 3 : rules.contains(where: \.regex) ? 2 : 1 }
+    /// Versions 2, 3 and 4 mark documents with pattern, case-sensitive and whole-word rules,
+    /// so older clients reject rather than misread them.
+    public var schemaVersion: Int {
+        rules.contains(where: \.wholeWord) ? 4 : rules.contains(where: \.matchCase) ? 3 : rules.contains(where: \.regex) ? 2 : 1
+    }
     private enum CodingKeys: String, CodingKey { case schemaVersion, rules }
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -91,18 +98,41 @@ public struct WordReplacementEngine: @unchecked Sendable {
             return $0.matchCase ? "((?-i:" + escaped + "))" : "(" + escaped + ")"
         }.joined(separator: "|")
         var matchers: [Matcher] = []
-        if !alternatives.isEmpty, let regex = try? NSRegularExpression(pattern: "(?<![\\p{L}\\p{M}\\p{N}_])(?:" + alternatives + ")(?![\\p{L}\\p{M}\\p{N}_])", options: [.caseInsensitive]) {
+        if !alternatives.isEmpty, let regex = try? NSRegularExpression(pattern: Self.bounded(alternatives), options: [.caseInsensitive]) {
             matchers.append(Matcher(regex: regex, rules: literals, literal: true))
         }
         // A pattern this platform cannot compile is skipped instead of disabling other rules.
         for rule in active where rule.regex {
-            if let regex = Self.compile(rule.source, matchCase: rule.matchCase) { matchers.append(Matcher(regex: regex, rules: [rule], literal: false)) }
+            if let regex = Self.compile(rule.source, matchCase: rule.matchCase, wholeWord: rule.wholeWord) { matchers.append(Matcher(regex: regex, rules: [rule], literal: false)) }
         }
         self.matchers = matchers
     }
 
-    static func compile(_ pattern: String, matchCase: Bool = false) -> NSRegularExpression? {
-        try? NSRegularExpression(pattern: pattern.precomposedStringWithCanonicalMapping, options: matchCase ? [] : [.caseInsensitive])
+    static func compile(_ pattern: String, matchCase: Bool = false, wholeWord: Bool = false) -> NSRegularExpression? {
+        let pattern = pattern.precomposedStringWithCanonicalMapping
+        let options: NSRegularExpression.Options = matchCase ? [] : [.caseInsensitive]
+        // The pattern must stand alone, so the wrapper never completes a fragment such as `a)(b`.
+        guard let bare = try? NSRegularExpression(pattern: pattern, options: options) else { return nil }
+        guard wholeWord else { return bare }
+        return try? NSRegularExpression(pattern: bounded(pattern + (endsInQuote(pattern) ? "\\E" : "")), options: options)
+    }
+
+    /// A non-capturing wrapper keeps group numbers. Neighbours are letters, combining marks, digits and `_`.
+    private static func bounded(_ pattern: String) -> String {
+        "(?<![\\p{L}\\p{M}\\p{N}_])(?:" + pattern + ")(?![\\p{L}\\p{M}\\p{N}_])"
+    }
+
+    /// An unterminated `\Q` quotes the rest of the pattern, which would swallow the wrapper.
+    private static func endsInQuote(_ pattern: String) -> Bool {
+        let scalars = Array(pattern.unicodeScalars)
+        var index = 0, quoted = false
+        while index < scalars.count {
+            guard scalars[index] == "\\", index + 1 < scalars.count else { index += 1; continue }
+            // Inside a quote only `\E` is special; outside it every escape consumes the next character.
+            if quoted { if scalars[index + 1] == "E" { quoted = false; index += 2 } else { index += 1 } }
+            else { if scalars[index + 1] == "Q" { quoted = true }; index += 2 }
+        }
+        return quoted
     }
 
     public func apply(_ text: String, final: Bool = true) -> String {

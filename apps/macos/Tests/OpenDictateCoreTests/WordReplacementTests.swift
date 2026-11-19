@@ -3,7 +3,7 @@ import XCTest
 
 final class WordReplacementTests: XCTestCase {
     private struct Fixture: Decodable {
-        struct Rule: Decodable { let source: String; let replacement: String; let enabled: Bool?; let regex: Bool?; let matchCase: Bool? }
+        struct Rule: Decodable { let source: String; let replacement: String; let enabled: Bool?; let regex: Bool?; let matchCase: Bool?; let wholeWord: Bool? }
         let name: String; let rules: [Rule]; let text: String; let expected: String; let final: Bool?
     }
     func testSharedPlatformCases() throws {
@@ -11,7 +11,7 @@ final class WordReplacementTests: XCTestCase {
         for _ in 0..<5 { root.deleteLastPathComponent() }
         let cases = try JSONDecoder().decode([Fixture].self, from: Data(contentsOf: root.appendingPathComponent("shared/word-replacement-cases.json")))
         for fixture in cases {
-            let rules = fixture.rules.map { WordReplacement(source: $0.source, replacement: $0.replacement, enabled: $0.enabled ?? true, regex: $0.regex ?? false, matchCase: $0.matchCase ?? false) }
+            let rules = fixture.rules.map { WordReplacement(source: $0.source, replacement: $0.replacement, enabled: $0.enabled ?? true, regex: $0.regex ?? false, matchCase: $0.matchCase ?? false, wholeWord: $0.wholeWord ?? false) }
             XCTAssertEqual(WordReplacementEngine(rules: rules).apply(fixture.text, final: fixture.final ?? true), fixture.expected, fixture.name)
         }
     }
@@ -31,7 +31,7 @@ final class WordReplacementTests: XCTestCase {
         XCTAssertFalse(WordReplacement(source: " ", replacement: "Test").isValid)
         XCTAssertFalse(WordReplacement(source: "test", replacement: "").isValid)
         XCTAssertFalse(WordReplacement(source: String(repeating: "x", count: 257), replacement: "Test").isValid)
-        for json in [#"{"schemaVersion":2,"rules":[]}"#, #"{"schemaVersion":3,"rules":[]}"#, #"{"schemaVersion":4,"rules":[]}"#] {
+        for json in [#"{"schemaVersion":2,"rules":[]}"#, #"{"schemaVersion":3,"rules":[]}"#, #"{"schemaVersion":4,"rules":[]}"#, #"{"schemaVersion":5,"rules":[]}"#] {
             XCTAssertThrowsError(try JSONDecoder().decode(ReplacementDocument.self, from: Data(json.utf8)), json)
         }
     }
@@ -63,6 +63,30 @@ final class WordReplacementTests: XCTestCase {
         // Rules without the option keep their earlier wire format.
         let pattern = ReplacementDocument(rules: [WordReplacement(id: id, source: "c.t", replacement: "", regex: true)])
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(pattern), as: UTF8.self).contains("matchCase"))
+    }
+    func testWholeWordRulesUseVersionFour() throws {
+        let id = "00000000-0000-0000-0000-000000000001"
+        let document = ReplacementDocument(rules: [WordReplacement(id: id, source: "пулл?", replacement: "pull", regex: true, wholeWord: true)])
+        let data = try JSONEncoder().encode(document)
+        XCTAssertEqual(document.schemaVersion, 4)
+        XCTAssertEqual(try JSONDecoder().decode(ReplacementDocument.self, from: data), document)
+        let downgraded = String(decoding: data, as: UTF8.self).replacingOccurrences(of: #""schemaVersion":4"#, with: #""schemaVersion":3"#)
+        XCTAssertThrowsError(try JSONDecoder().decode(ReplacementDocument.self, from: Data(downgraded.utf8)))
+        // Rules saved before the option decode without it and keep matching inside words.
+        let legacy = #"{"schemaVersion":2,"rules":[{"id":"\#(id)","source":"пулл?","replacement":"pull","enabled":true,"regex":true}]}"#
+        let decoded = try JSONDecoder().decode(ReplacementDocument.self, from: Data(legacy.utf8))
+        XCTAssertFalse(decoded.rules[0].wholeWord)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(decoded), as: UTF8.self).contains("wholeWord"))
+    }
+    func testWholeWordPatternUsability() {
+        func usable(_ source: String) -> Bool {
+            WordReplacement(source: source, replacement: "x", regex: true, wholeWord: true).isUsable
+        }
+        XCTAssertTrue(usable("пулл?"))
+        XCTAssertTrue(usable("\\Qc++"))
+        // The wrapper must not complete a pattern that is invalid on its own.
+        XCTAssertFalse(usable("a)(b"))
+        XCTAssertFalse(usable("a*"))
     }
     func testPatternUsability() {
         func usable(_ source: String, _ replacement: String = "x") -> Bool {
