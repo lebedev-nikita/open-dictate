@@ -1,5 +1,20 @@
 # macOS verification
 
+## 0.9.2 — readable disabled buttons
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-19.
+
+- All Swift tests pass, including contrast tests: disabled titles measure at least
+  3.3:1 on every button kind (previously 1.9:1 light, 2.2:1 dark) and stay at most
+  half the enabled contrast; Save, Remove API key, Restore default shortcuts and
+  Start Recording are found by text recognition on rendered screens; the shortcut
+  recorder; and Return triggers only an enabled default button. Universal packaging
+  verified both slices, the signature and the DMG.
+- Settings and meeting screens were rendered offscreen in English (light) and Russian
+  (dark). Screens with only enabled buttons are pixel-identical to 0.9.1. The settings
+  window was also checked in the running app in both themes; the active-window default
+  button appearance was not inspected live.
+
 ## 0.9.1 — whole-word pattern replacements
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-19.
