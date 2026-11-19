@@ -39,9 +39,10 @@ enum Surface {
 }
 
 /// Labels of disabled controls. macOS fades them nearly into the bezel (about 1.9:1); these reach
-/// 3:1, the WCAG minimum for interface components, and stay well dimmer than enabled labels.
+/// 3:1, the WCAG minimum for interface components, and stay dimmer than enabled labels. The dark
+/// value also clears macOS 15, whose dark disabled bezel is lighter than later versions draw it.
 enum ControlText {
-    static let disabledNSColor = Surface.adaptiveNSColor(light: 0x7C7C80, dark: 0x88888C)
+    static let disabledNSColor = Surface.adaptiveNSColor(light: 0x7C7C80, dark: 0x9E9EA2)
     static let disabled = Color(nsColor: disabledNSColor)
 }
 

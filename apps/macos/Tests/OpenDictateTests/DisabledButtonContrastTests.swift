@@ -6,7 +6,7 @@ import XCTest
 
 /// Disabled buttons must stay readable yet look disabled. macOS draws a disabled label at about 1.9:1
 /// against its bezel in light mode and 2.2:1 in dark mode; the app keeps it at least at 3:1, the WCAG
-/// minimum for interface components, and well below the contrast of an enabled label.
+/// minimum for interface components, and below the contrast of an enabled label.
 final class DisabledButtonContrastTests: XCTestCase {
     private static let appearances: [NSAppearance.Name] = [.aqua, .darkAqua]
 
@@ -28,7 +28,7 @@ final class DisabledButtonContrastTests: XCTestCase {
                 if name != "borderless" {
                     // A disabled label still reads as disabled next to an enabled one.
                     let enabled = try swatchContrast(button, appearance: appearance)
-                    XCTAssertGreaterThan(enabled, disabled * 2, "\(name) enabled label in \(appearance.rawValue)")
+                    XCTAssertGreaterThan(enabled, disabled * 1.3, "\(name) enabled label in \(appearance.rawValue)")
                 }
             }
         }
@@ -91,7 +91,7 @@ final class DisabledButtonContrastTests: XCTestCase {
             }
             let enabled = try XCTUnwrap(contrasts[true]), disabled = try XCTUnwrap(contrasts[false])
             XCTAssertGreaterThanOrEqual(disabled, 3, "disabled recorder in \(appearance.rawValue)")
-            XCTAssertGreaterThan(enabled, disabled * 2, "enabled recorder in \(appearance.rawValue)")
+            XCTAssertGreaterThan(enabled, disabled * 1.3, "enabled recorder in \(appearance.rawValue)")
         }
     }
 
