@@ -99,6 +99,8 @@ class ReplacementSettingsTest {
         compose.runOnIdle { org.junit.Assert.assertEquals("250 ₽", store.engine().apply("250 рублей")) }
         compose.onNodeWithText(label(R.string.replacements_regex)).performScrollTo().performClick()
         compose.onNodeWithText(label(R.string.replacements_match_case)).performScrollTo().performClick()
+        // New patterns match whole words; a letter fix must match inside words.
+        compose.onNodeWithText(label(R.string.replacements_whole_word)).performScrollTo().performClick()
         compose.onNodeWithText(label(R.string.replacements_pattern)).performTextInput("ё")
         compose.onNodeWithText(label(R.string.replacements_target_pattern)).performTextInput("е")
         androidx.test.espresso.Espresso.closeSoftKeyboard()
@@ -108,10 +110,11 @@ class ReplacementSettingsTest {
         compose.runOnIdle { org.junit.Assert.assertEquals("Ёж все", store.engine().apply("Ёж всё")) }
         sheet(hasText("(\\d+) ?руб\\w*"))
         compose.onNodeWithText("(\\d+) ?руб\\w*", useUnmergedTree = true).assertIsDisplayed()
-        // Both rules are patterns; only the second matches case.
+        // Both rules are patterns; only the second matches case and only the first matches whole words.
         sheet(hasContentDescription(label(R.string.replacements_match_case)))
         compose.onAllNodesWithContentDescription(label(R.string.replacements_regex), useUnmergedTree = true).assertCountEquals(2)
         compose.onAllNodesWithContentDescription(label(R.string.replacements_match_case), useUnmergedTree = true).assertCountEquals(1)
+        compose.onAllNodesWithContentDescription(label(R.string.replacements_whole_word), useUnmergedTree = true).assertCountEquals(1)
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.waitForIdle()
         capture(context, "replacement-pattern-list")

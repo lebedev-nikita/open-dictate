@@ -21,6 +21,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -77,6 +78,8 @@ internal fun ReplacementSheet(store: ReplacementStore, onDismiss: () -> Unit) {
                                 Modifier.padding(start = 8.dp).alignByBaseline(), FontFamily.Monospace)
                             if (rule.matchCase) RuleBadge("Aa", stringResource(R.string.replacements_match_case),
                                 Modifier.padding(start = if (rule.regex) 4.dp else 8.dp).alignByBaseline())
+                            if (rule.wholeWord) RuleBadge("ab", stringResource(R.string.replacements_whole_word),
+                                Modifier.padding(start = 4.dp).alignByBaseline(), textDecoration = TextDecoration.Underline)
                         }
                         Text(rule.replacement)
                     }
@@ -106,6 +109,9 @@ private fun ReplacementEditor(store: ReplacementStore, rule: WordReplacement?, e
     var replacement by rememberSaveable(rule?.id) { mutableStateOf(rule?.replacement.orEmpty()) }
     var regex by rememberSaveable(rule?.id) { mutableStateOf(rule?.regex ?: false) }
     var matchCase by rememberSaveable(rule?.id) { mutableStateOf(rule?.matchCase ?: false) }
+    // New rules match whole words; patterns saved before the option keep matching inside words until it is turned on.
+    // Phrases already match whole words, so turning one into a pattern keeps that behavior.
+    var wholeWord by rememberSaveable(rule?.id) { mutableStateOf(rule?.takeIf { it.regex }?.wholeWord ?: true) }
     var error by rememberSaveable(rule?.id) { mutableStateOf<ReplacementError?>(null) }
     val focus = remember { FocusRequester() }
     if (rule != null) LaunchedEffect(Unit) { focus.requestFocus() }
@@ -117,15 +123,16 @@ private fun ReplacementEditor(store: ReplacementStore, rule: WordReplacement?, e
         OutlinedTextField(replacement, { replacement = it; error = null }, Modifier.fillMaxWidth().keepFullBoundsInView(),
             label = { Text(stringResource(if (regex) R.string.replacements_target_pattern else R.string.replacements_target)) }, maxLines = 4,
             keyboardOptions = KeyboardOptions(autoCorrectEnabled = false), enabled = enabled)
-        // Both options share a line where the labels fit.
+        // Options share a line where the labels fit. Phrases always match whole words, so that option belongs to patterns only.
         FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             LabeledCheckbox(stringResource(R.string.replacements_regex), regex, enabled) { regex = it; error = null }
             LabeledCheckbox(stringResource(R.string.replacements_match_case), matchCase, enabled) { matchCase = it; error = null }
+            if (regex) LabeledCheckbox(stringResource(R.string.replacements_whole_word), wholeWord, enabled) { wholeWord = it; error = null }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = {
-                error = store.save(rule?.id, source, replacement, regex, matchCase)
-                if (error == null) { source = ""; replacement = ""; regex = false; matchCase = false; onDone() }
+                error = store.save(rule?.id, source, replacement, regex, matchCase, wholeWord)
+                if (error == null) { source = ""; replacement = ""; regex = false; matchCase = false; wholeWord = true; onDone() }
             }, enabled = (if (regex) source.isNotEmpty() else source.isNotBlank() && replacement.isNotBlank()) && enabled) {
                 Text(stringResource(if (rule == null) R.string.replacements_add else R.string.action_save))
             }
@@ -150,9 +157,10 @@ private fun LabeledCheckbox(label: String, checked: Boolean, enabled: Boolean, o
 
 /** Marks a rule option with the glyph find-and-replace fields use for it, so the list needs no translated tag. */
 @Composable
-private fun RuleBadge(glyph: String, description: String, modifier: Modifier = Modifier, fontFamily: FontFamily? = null) {
+private fun RuleBadge(glyph: String, description: String, modifier: Modifier = Modifier, fontFamily: FontFamily? = null,
+                      textDecoration: TextDecoration? = null) {
     // A tint rather than an outline: the tag is a label, not a control.
     Text(glyph, modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
         .padding(horizontal = 6.dp, vertical = 2.dp).semantics { contentDescription = description },
-        style = MaterialTheme.typography.labelSmall, fontFamily = fontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        style = MaterialTheme.typography.labelSmall, fontFamily = fontFamily, textDecoration = textDecoration, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

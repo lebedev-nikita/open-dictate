@@ -36,5 +36,12 @@
   {"name":"match case applies per phrase","rules":[{"source":"US","replacement":"United States","matchCase":true},{"source":"cat","replacement":"dog"}],"text":"US us CAT","expected":"United States us dog"},
   {"name":"match case regex inside words","rules":[{"source":"ё","replacement":"е","regex":true,"matchCase":true},{"source":"Ё","replacement":"Е","regex":true,"matchCase":true}],"text":"Ёжик всё ещё у ЁЛКИ.","expected":"Ежик все еще у ЕЛКИ."},
   {"name":"match case regex classes","rules":[{"source":"[A-Z]{2,}","replacement":"#","regex":true,"matchCase":true}],"text":"NASA nasa Nasa","expected":"# nasa Nasa"},
-  {"name":"regex dashes and quotes","rules":[{"source":"\\s*[—–]\\s*","replacement":" - ","regex":true},{"source":"[«»“”„]","replacement":"\"","regex":true}],"text":"Он сказал — «да» – “нет”.","expected":"Он сказал - \"да\" - \"нет\"."}
+  {"name":"regex dashes and quotes","rules":[{"source":"\\s*[—–]\\s*","replacement":" - ","regex":true},{"source":"[«»“”„]","replacement":"\"","regex":true}],"text":"Он сказал — «да» – “нет”.","expected":"Он сказал - \"да\" - \"нет\"."},
+  {"name":"regex matches inside words by default","rules":[{"source":"пулл?","replacement":"pull","regex":true}],"text":"Сделай пулл, популярный пул.","expected":"Сделай pull, поpullярный pull."},
+  {"name":"whole word regex","rules":[{"source":"пулл?","replacement":"pull","regex":true,"wholeWord":true}],"text":"Сделай пулл, популярный пул_ пул2 пул.","expected":"Сделай pull, популярный пул_ пул2 pull."},
+  {"name":"whole word regex backtracks to a bounded match","rules":[{"source":"a|ab","replacement":"X","regex":true,"wholeWord":true}],"text":"ab a abc","expected":"X X abc"},
+  {"name":"whole word regex keeps groups and alternation","rules":[{"source":"(\\d+) руб|(\\d+) р","replacement":"$1$2 ₽","regex":true,"wholeWord":true}],"text":"5 руб 7 р 9 рубля","expected":"5 ₽ 7 ₽ 9 рубля"},
+  {"name":"whole word regex with combining mark","rules":[{"source":"cat","replacement":"dog","regex":true,"wholeWord":true}],"text":"cat́ cat.","expected":"cat́ dog."},
+  {"name":"whole word regex with open quote","rules":[{"source":"\\Qc++","replacement":"C++","regex":true,"wholeWord":true}],"text":"c++ ac++","expected":"C++ ac++"},
+  {"name":"whole word is ignored for phrases","rules":[{"source":"cat","replacement":"dog","wholeWord":true}],"text":"cat catalog","expected":"dog catalog"}
 ]

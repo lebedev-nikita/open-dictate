@@ -29,8 +29,8 @@ struct ReplacementSettingsView: View {
                     .foregroundStyle(.red)
             }
             SettingsSection(title: t("Rules", "Правила"),
-                            footer: t("Whole words and phrases. Case is ignored unless “Match case” is on. In regular expressions, \\b is a word boundary and $1 is a group.",
-                                      "Целые слова и фразы. Регистр не учитывается, если не включено «Учитывать регистр». В регулярных выражениях \\b — граница слова, $1 — группа.")) {
+                            footer: t("Phrases replace whole words only; regular expressions do so when “Whole word” is on. Case is ignored unless “Match case” is on. $1 inserts a group.",
+                                      "Фразы заменяют только целые слова, регулярные выражения — если включено «Слово целиком». Регистр не учитывается, если не включено «Учитывать регистр». $1 — группа.")) {
                 if store.rules.isEmpty {
                     Text(t("No replacements yet. For example: “open dictate” → “OpenDictate”.", "Пока нет замен. Например: «опен диктейт» → «OpenDictate»."))
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).settingsRowPadding()
@@ -59,6 +59,7 @@ struct ReplacementSettingsView: View {
                         HStack(alignment: .firstTextBaseline, spacing: Space.xxs) {
                             if rule.regex { badge(".*", t("Regular expression", "Регулярное выражение"), design: .monospaced) }
                             if rule.matchCase { badge("Aa", t("Match case", "Учитывать регистр")) }
+                            if rule.wholeWord { badge("ab", t("Whole word", "Слово целиком"), underline: true) }
                         }
                     }
                 }
@@ -81,23 +82,29 @@ struct ReplacementSettingsView: View {
     private func save(_ draft: Binding<ReplacementDraft>, id: String?) {
         let value = draft.wrappedValue
         guard value.canSave else { return }
-        if store.save(id: id, source: value.source, replacement: value.replacement, regex: value.regex, matchCase: value.matchCase) {
+        if store.save(id: id, source: value.source, replacement: value.replacement, regex: value.regex, matchCase: value.matchCase,
+                      wholeWord: value.wholeWord) {
             if id == nil { draft.wrappedValue = ReplacementDraft() } else { editingID = nil }
         } else { draft.wrappedValue.invalid = true }
     }
     /// Marks a rule option with the glyph find-and-replace fields use for it, so the list needs no translated tag.
-    private func badge(_ glyph: String, _ label: String, design: Font.Design = .default) -> some View {
+    private func badge(_ glyph: String, _ label: String, design: Font.Design = .default, underline: Bool = false) -> some View {
         // A tint rather than an outline: the tag is a label, not a control.
-        Text(glyph).font(.system(size: 11, weight: .medium, design: design)).foregroundStyle(.secondary)
+        Text(glyph).font(.system(size: 11, weight: .medium, design: design)).underline(underline).foregroundStyle(.secondary)
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4)).help(label).accessibilityLabel(label)
     }
 }
 
 struct ReplacementDraft {
-    var source = "", replacement = "", regex = false, matchCase = false, invalid = false
+    /// New rules match whole words; rules saved before the option keep matching inside words until it is turned on.
+    var source = "", replacement = "", regex = false, matchCase = false, wholeWord = true, invalid = false
     init() {}
-    init(_ rule: WordReplacement) { source = rule.source; replacement = rule.replacement; regex = rule.regex; matchCase = rule.matchCase }
+    init(_ rule: WordReplacement) {
+        source = rule.source; replacement = rule.replacement; regex = rule.regex; matchCase = rule.matchCase
+        // Phrases already match whole words, so turning one into a pattern keeps that behavior.
+        wholeWord = rule.regex ? rule.wholeWord : true
+    }
     var canSave: Bool {
         regex ? !source.isEmpty : !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             !replacement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -122,13 +129,23 @@ private struct ReplacementEditor: View {
             TextField(draft.regex ? t("Replace with, $1 for a group", "Заменить на, $1 — группа") : t("Replace with", "Заменить на"), text: $draft.replacement)
                 .settingsField().onSubmit(onSave)
             // The buttons move below the options rather than wrapping the option labels.
+            // Option labels never wrap: the buttons move below them, then the options stack.
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: Space.md) { options; Spacer(minLength: 0); buttons }
+                HStack(spacing: Space.md) { HStack(spacing: Space.md) { options }.fixedSize(); Spacer(minLength: 0); buttons }
                 VStack(alignment: .trailing, spacing: Space.sm) {
-                    HStack(spacing: Space.md) { options; Spacer(minLength: 0) }
+                    HStack(spacing: Space.md) { HStack(spacing: Space.md) { options }.fixedSize(); Spacer(minLength: 0) }
+                    HStack(spacing: Space.md) { buttons }
+                }
+                VStack(alignment: .leading, spacing: Space.sm) {
+                    HStack(spacing: Space.md) { regexToggle; matchCaseToggle }.fixedSize()
+                    HStack(spacing: Space.md) { wholeWordToggle.fixedSize(); Spacer(minLength: 0); buttons }
+                }
+                VStack(alignment: .trailing, spacing: Space.sm) {
+                    VStack(alignment: .leading, spacing: Space.sm) { options }.frame(maxWidth: .infinity, alignment: .leading)
                     HStack(spacing: Space.md) { buttons }
                 }
             }.toggleStyle(.checkbox).onChange(of: draft.regex) { draft.invalid = false }.onChange(of: draft.matchCase) { draft.invalid = false }
+                .onChange(of: draft.wholeWord) { draft.invalid = false }
             if draft.invalid {
                 Text(status == .invalidPattern
                      ? t("Invalid pattern. It must not match empty text, and $n must refer to an existing group.",
@@ -139,9 +156,12 @@ private struct ReplacementEditor: View {
             }
         }
     }
-    @ViewBuilder private var options: some View {
-        Toggle(t("Regular expression", "Регулярное выражение"), isOn: $draft.regex)
-        Toggle(t("Match case", "Учитывать регистр"), isOn: $draft.matchCase)
+    @ViewBuilder private var options: some View { regexToggle; matchCaseToggle; wholeWordToggle }
+    private var regexToggle: some View { Toggle(t("Regular expression", "Регулярное выражение"), isOn: $draft.regex) }
+    private var matchCaseToggle: some View { Toggle(t("Match case", "Учитывать регистр"), isOn: $draft.matchCase) }
+    /// Phrases always match whole words, so the option belongs to patterns only.
+    @ViewBuilder private var wholeWordToggle: some View {
+        if draft.regex { Toggle(t("Whole word", "Слово целиком"), isOn: $draft.wholeWord) }
     }
     @ViewBuilder private var buttons: some View {
         if let onCancel { Button(t("Cancel", "Отмена"), action: onCancel).keyboardShortcut(.cancelAction) }
