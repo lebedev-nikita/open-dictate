@@ -47,6 +47,7 @@ struct GoogleDriveSettingsView: View {
             if !shown && sync.needsSourceSelection { sync.disconnect() }
         })) {
             DriveSourceSelectionView(preferences: preferences, onChoose: sync.chooseSource, onCancel: sync.disconnect)
+                .buttonStyle(.legible)
         }
     }
 }

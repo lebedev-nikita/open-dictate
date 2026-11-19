@@ -24,14 +24,59 @@ enum Surface {
     static let selection = Color.primary.opacity(0.08)
 
     private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+        Color(nsColor: adaptiveNSColor(light: light, dark: dark))
+    }
+
+    fileprivate static func adaptiveNSColor(light: UInt32, dark: UInt32) -> NSColor {
         func color(_ rgb: UInt32) -> NSColor {
             NSColor(srgbRed: CGFloat((rgb >> 16) & 255) / 255, green: CGFloat((rgb >> 8) & 255) / 255,
                     blue: CGFloat(rgb & 255) / 255, alpha: 1)
         }
-        return Color(nsColor: NSColor(name: nil) { appearance in
+        return NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? color(dark) : color(light)
-        })
+        }
     }
+}
+
+/// Labels of disabled controls. macOS fades them nearly into the bezel (about 1.9:1); these reach
+/// 3:1, the WCAG minimum for interface components, and stay well dimmer than enabled labels.
+enum ControlText {
+    static let disabledNSColor = Surface.adaptiveNSColor(light: 0x7C7C80, dark: 0x88888C)
+    static let disabled = Color(nsColor: disabledNSColor)
+}
+
+/// A system button whose disabled label stays readable. Enabled buttons are left to the base style,
+/// keeping default and destructive appearance, keyboard shortcuts and control sizes native.
+struct LegibleButtonStyle<Base: PrimitiveButtonStyle>: PrimitiveButtonStyle {
+    let base: Base
+
+    func makeBody(configuration: Configuration) -> some View {
+        LegibleButton(configuration: configuration).buttonStyle(base)
+    }
+
+    private struct LegibleButton: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            if isEnabled {
+                Button(configuration)
+            } else {
+                Button(role: configuration.role, action: configuration.trigger) {
+                    configuration.label.foregroundStyle(ControlText.disabled)
+                }
+            }
+        }
+    }
+}
+
+extension PrimitiveButtonStyle where Self == LegibleButtonStyle<DefaultButtonStyle> {
+    /// The app-wide button style: the system default with readable disabled labels.
+    static var legible: Self { .init(base: .automatic) }
+}
+
+extension PrimitiveButtonStyle where Self == LegibleButtonStyle<BorderlessButtonStyle> {
+    static var legibleBorderless: Self { .init(base: .borderless) }
 }
 
 /// Page title and one line of context. The title names the page; the subtitle stays secondary.

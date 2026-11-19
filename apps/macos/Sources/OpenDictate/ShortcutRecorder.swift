@@ -39,6 +39,8 @@ final class ShortcutRecorderButton: NSButton {
     private var pendingShortcut: KeyboardShortcut?
     override var acceptsFirstResponder: Bool { true }
 
+    override class var cellClass: AnyClass? { get { LegibleButtonCell.self } set {} }
+
     func refreshTitle() { title = recording ? prompt : shortcutLabel }
 
     @objc func toggleRecording() {
@@ -96,5 +98,19 @@ final class ShortcutRecorderButton: NSButton {
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         if newWindow == nil { finish() }
         super.viewWillMove(toWindow: newWindow)
+    }
+}
+
+/// AppKit fades a disabled title nearly into the bezel; this cell draws it in a readable color.
+final class LegibleButtonCell: NSButtonCell {
+    override func drawTitle(_ title: NSAttributedString, withFrame frame: NSRect, in controlView: NSView) -> NSRect {
+        guard !isEnabled else { return super.drawTitle(title, withFrame: frame, in: controlView) }
+        let readable = NSMutableAttributedString(attributedString: title)
+        readable.addAttribute(.foregroundColor, value: ControlText.disabledNSColor,
+                              range: NSRange(location: 0, length: readable.length))
+        controlView.effectiveAppearance.performAsCurrentDrawingAppearance {
+            readable.draw(with: frame, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
+        }
+        return frame
     }
 }

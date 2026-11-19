@@ -157,15 +157,19 @@ Run the smallest relevant tests while iterating, then finish with:
 ```
 
 For macOS changes, also run `swift test --package-path apps/macos` and
-`apps/macos/scripts/package.sh`. Exercise hotkeys, secure fields, cursor edits,
-focus changes, cancellation, microphone permissions and insertion on macOS.
-For meetings, also exercise System Audio Recording, a real call app, and echo
-with speakers. Mock tests cannot verify TCC, Accessibility, process taps or actual
+`apps/macos/scripts/package.sh`. Keep the developer's screen free while they
+work: launch the app or a smoke bundle only when the developer asks, and report
+the live checks you did not run. Those checks cover hotkeys, secure fields,
+cursor edits, focus changes, cancellation, microphone permissions and insertion;
+for meetings, also System Audio Recording, a real call app, and echo with
+speakers. Mock tests cannot verify TCC, Accessibility, process taps or actual
 OpenAI model access.
 
-For UI changes, inspect the result yourself in the running app in both Russian
-and English, capture and review screenshots of the affected screens and states
-in each language, and compare them with the rest of the application's design.
+For UI changes, render the affected screens and states offscreen in both Russian
+and English: set `OPENDICTATE_VIEW_CAPTURES` to an output directory and run the
+capture tests (such as `SettingsCaptureTests` and `MeetingCaptureViewsTests`),
+adding any state they lack. `TestWindowHiding` keeps test windows transparent.
+Review the screenshots and compare them with the rest of the application's design.
 Verify that every label and message is correctly translated and fits the app's
 context, the control's purpose, and its placement. Keep UI copy concise,
 especially helper text, and check that it fits without clipping, truncation,

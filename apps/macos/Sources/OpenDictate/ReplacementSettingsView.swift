@@ -73,7 +73,7 @@ struct ReplacementSettingsView: View {
                 store.delete(rule); if editingID == rule.id { editingID = nil }
             } label: { Image(systemName: "trash") }.help(t("Delete replacement", "Удалить замену"))
                 .accessibilityLabel(t("Delete replacement for ", "Удалить замену для ") + rule.source)
-        }.buttonStyle(.borderless).padding(Space.md)
+        }.buttonStyle(.legibleBorderless).padding(Space.md)
     }
     private func editor(_ draft: Binding<ReplacementDraft>, id: String?, focus: FocusState<Bool>.Binding, isDefault: Bool) -> some View {
         ReplacementEditor(draft: draft, sourceFocused: focus, status: store.status, isDefault: isDefault, t: t,

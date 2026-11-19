@@ -24,7 +24,7 @@ struct PostProcessingSettingsView: View {
                                 next.formats = formats; next.formatValues = true
                                 preferences.postProcessing = next
                                 formatsOpen = false
-                            })
+                            }).buttonStyle(.legible)
                     }
                 Toggle(t("Format values", "Форматировать значения"), isOn: Binding(get: { settings.formatValues }, set: { enabled in
                     var next = settings
@@ -96,7 +96,7 @@ struct ValueFormattingMenu: View {
                                             }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                                         }.buttonStyle(.plain)
                                         Button { draft.removeRule(id: rule.id) } label: { Image(systemName: "trash") }
-                                            .buttonStyle(.borderless)
+                                            .buttonStyle(.legibleBorderless)
                                             .accessibilityLabel(t("Delete rule: ", "Удалить правило: ") + kind.title(russian: russian) + ", " + rule.languageTitle(russian: russian))
                                     }.padding(.vertical, 4)
                                 }

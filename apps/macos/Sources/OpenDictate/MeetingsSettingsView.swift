@@ -140,7 +140,7 @@ struct MeetingDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.lg) {
             Button(action: back) { Label(t("Meetings", "Встречи"), systemImage: "chevron.left") }
-                .buttonStyle(.borderless)
+                .buttonStyle(.legibleBorderless)
             PageHeader(title: MeetingFormat.title(current, russian: russian))
             HStack(spacing: Space.xs) {
                 Button(t("Copy as Markdown", "Скопировать как Markdown")) {

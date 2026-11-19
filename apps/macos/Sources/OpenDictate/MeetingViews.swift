@@ -103,6 +103,7 @@ struct MeetingView: View {
             else { setup }
         }
         .frame(minWidth: 440, minHeight: 420)
+        .buttonStyle(.legible)
         .background(Surface.page)
         .background(AppThemeAppearance(theme: preferences.theme))
         .alert(t("Cancel this meeting?", "Отменить встречу?"), isPresented: $confirmCancel) {
