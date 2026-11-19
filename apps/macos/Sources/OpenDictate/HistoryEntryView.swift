@@ -18,7 +18,7 @@ struct HistoryEntryView: View {
                 Button(action: onDelete) { Image(systemName: "trash") }
                     .help(russian ? "Удалить текст" : "Delete transcript")
                     .accessibilityLabel(russian ? "Удалить текст" : "Delete transcript")
-            }.font(.caption).buttonStyle(.borderless)
+            }.font(.caption).buttonStyle(.legibleBorderless)
             Text(entry.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
             let details = HistoryTiming.details(for: entry, russian: russian, abbreviated: false)
             if !details.isEmpty {

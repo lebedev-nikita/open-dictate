@@ -61,7 +61,7 @@ struct SettingsView: View {
                         Image(systemName: "exclamationmark.circle").foregroundStyle(.secondary)
                         Text(model.message).font(.callout).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                         Button(action: model.clearMessage) { Image(systemName: "xmark") }
-                            .buttonStyle(.borderless).help(t("Dismiss", "Закрыть сообщение"))
+                            .buttonStyle(.legibleBorderless).help(t("Dismiss", "Закрыть сообщение"))
                     }.padding(.horizontal, Space.xl).padding(.vertical, Space.md).background(Surface.card)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity).background(Surface.page)
@@ -69,6 +69,7 @@ struct SettingsView: View {
         // The window extends content under its transparent title bar; padding keeps clear of the window controls.
         .ignoresSafeArea()
         .frame(minWidth: 740, minHeight: 590)
+        .buttonStyle(.legible)
         .background(AppThemeAppearance(theme: preferences.theme))
         .onAppear { model.refreshPermissions() }
         .alert(t("Delete all history?", "Удалить всю историю?"), isPresented: $confirmClear) {
@@ -344,7 +345,7 @@ struct SettingsView: View {
                     HStack {
                         Text(id).font(.callout).textSelection(.enabled); Spacer()
                         Button { preferences.excludedApps.removeAll { $0 == id } } label: { Image(systemName: "minus.circle") }
-                            .buttonStyle(.borderless).help(t("Remove exclusion", "Убрать исключение"))
+                            .buttonStyle(.legibleBorderless).help(t("Remove exclusion", "Убрать исключение"))
                     }.settingsRowPadding()
                     RowDivider()
                 }
