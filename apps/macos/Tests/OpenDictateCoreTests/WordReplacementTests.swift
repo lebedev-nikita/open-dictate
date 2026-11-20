@@ -11,7 +11,7 @@ final class WordReplacementTests: XCTestCase {
         for _ in 0..<5 { root.deleteLastPathComponent() }
         let cases = try JSONDecoder().decode([Fixture].self, from: Data(contentsOf: root.appendingPathComponent("shared/word-replacement-cases.json")))
         for fixture in cases {
-            let rules = fixture.rules.map { WordReplacement(source: $0.source, replacement: $0.replacement, enabled: $0.enabled ?? true, regex: $0.regex ?? false, matchCase: $0.matchCase ?? false, wholeWord: $0.wholeWord ?? false) }
+            let rules = fixture.rules.map { WordReplacement(source: $0.source, replacement: $0.replacement, enabled: $0.enabled ?? true, regex: $0.regex ?? false, matchCase: $0.matchCase ?? false, wholeWord: $0.wholeWord) }
             XCTAssertEqual(WordReplacementEngine(rules: rules).apply(fixture.text, final: fixture.final ?? true), fixture.expected, fixture.name)
         }
     }
@@ -77,6 +77,26 @@ final class WordReplacementTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ReplacementDocument.self, from: Data(legacy.utf8))
         XCTAssertFalse(decoded.rules[0].wholeWord)
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(decoded), as: UTF8.self).contains("wholeWord"))
+    }
+    func testInWordPhrasesUseVersionFiveAndLegacyPhrasesStayWholeWord() throws {
+        let id = "00000000-0000-0000-0000-000000000001"
+        // Phrases saved before the option decode as whole-word and keep the version 1 wire format.
+        let legacy = #"{"schemaVersion":1,"rules":[{"id":"\#(id)","source":"cat","replacement":"dog","enabled":true}]}"#
+        let decoded = try JSONDecoder().decode(ReplacementDocument.self, from: Data(legacy.utf8))
+        XCTAssertTrue(decoded.rules[0].wholeWord)
+        XCTAssertEqual(decoded.schemaVersion, 1)
+        XCTAssertEqual(String(decoding: try JSONEncoder().encode(decoded), as: UTF8.self).contains("wholeWord"), false)
+        XCTAssertTrue(WordReplacement(source: "cat", replacement: "dog").wholeWord)
+        XCTAssertFalse(WordReplacement(source: "c.t", replacement: "dog", regex: true).wholeWord)
+
+        let document = ReplacementDocument(rules: [WordReplacement(id: id, source: "читшит", replacement: "cheatsheet", wholeWord: false)])
+        let data = try JSONEncoder().encode(document)
+        XCTAssertEqual(document.schemaVersion, 5)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains(#""wholeWord":false"#))
+        XCTAssertEqual(try JSONDecoder().decode(ReplacementDocument.self, from: data), document)
+        // A client that only knows version 4 computes a lower version for this document and rejects it.
+        let downgraded = String(decoding: data, as: UTF8.self).replacingOccurrences(of: #""schemaVersion":5"#, with: #""schemaVersion":4"#)
+        XCTAssertThrowsError(try JSONDecoder().decode(ReplacementDocument.self, from: Data(downgraded.utf8)))
     }
     func testWholeWordPatternUsability() {
         func usable(_ source: String) -> Bool {

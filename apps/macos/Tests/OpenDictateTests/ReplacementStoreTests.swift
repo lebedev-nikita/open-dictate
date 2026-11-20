@@ -67,7 +67,7 @@ final class ReplacementStoreTests: XCTestCase {
         }
     }
 
-    func testWholeWordAppliesToPatternsOnlyAndSyncsAsVersionFour() async throws {
+    func testWholeWordAppliesToPatternsAndPhrases() async throws {
         try await MainActor.run {
             let suite = "com.opendictate.tests.replacements.\(UUID().uuidString)"
             let defaults = UserDefaults(suiteName: suite)!
@@ -78,11 +78,16 @@ final class ReplacementStoreTests: XCTestCase {
             let rule = try XCTUnwrap(store.rules.first)
             XCTAssertTrue(store.save(id: rule.id, source: rule.source, replacement: "pull", regex: true, wholeWord: true))
             XCTAssertEqual(ReplacementStore(defaults: defaults).engine().apply("пул популярный"), "pull популярный")
-            // Phrases always match whole words, so the option is not stored for them.
-            XCTAssertTrue(store.save(source: "cat", replacement: "dog", wholeWord: true))
-            XCTAssertEqual(store.rules.first { $0.source == "cat" }?.wholeWord, false)
-            let json = try XCTUnwrap(store.syncValues["wordReplacements"])
+            XCTAssertTrue(store.save(source: "cat", replacement: "dog"))
+            XCTAssertEqual(store.rules.first { $0.source == "cat" }?.wholeWord, true)
+            var json = try XCTUnwrap(store.syncValues["wordReplacements"])
             XCTAssertTrue(json.contains(#""schemaVersion":4"#))
+            XCTAssertNoThrow(try store.validateSync(json: json))
+            let phrase = try XCTUnwrap(store.rules.first { $0.source == "cat" })
+            XCTAssertTrue(store.save(id: phrase.id, source: "cat", replacement: "dog", wholeWord: false))
+            XCTAssertEqual(ReplacementStore(defaults: defaults).engine().apply("cat bobcat"), "dog bobdog")
+            json = try XCTUnwrap(store.syncValues["wordReplacements"])
+            XCTAssertTrue(json.contains(#""schemaVersion":5"#))
             XCTAssertNoThrow(try store.validateSync(json: json))
         }
     }
@@ -92,6 +97,7 @@ final class ReplacementStoreTests: XCTestCase {
         XCTAssertFalse(ReplacementDraft(WordReplacement(source: "пулл?", replacement: "pull", regex: true)).wholeWord)
         XCTAssertTrue(ReplacementDraft(WordReplacement(source: "пулл?", replacement: "pull", regex: true, wholeWord: true)).wholeWord)
         XCTAssertTrue(ReplacementDraft(WordReplacement(source: "cat", replacement: "dog")).wholeWord)
+        XCTAssertFalse(ReplacementDraft(WordReplacement(source: "cat", replacement: "dog", wholeWord: false)).wholeWord)
     }
 
     func testEditsPersistAndSessionRulesAreImmutable() async {

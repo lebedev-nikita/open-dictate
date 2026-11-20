@@ -43,5 +43,11 @@
   {"name":"whole word regex keeps groups and alternation","rules":[{"source":"(\\d+) руб|(\\d+) р","replacement":"$1$2 ₽","regex":true,"wholeWord":true}],"text":"5 руб 7 р 9 рубля","expected":"5 ₽ 7 ₽ 9 рубля"},
   {"name":"whole word regex with combining mark","rules":[{"source":"cat","replacement":"dog","regex":true,"wholeWord":true}],"text":"cat́ cat.","expected":"cat́ dog."},
   {"name":"whole word regex with open quote","rules":[{"source":"\\Qc++","replacement":"C++","regex":true,"wholeWord":true}],"text":"c++ ac++","expected":"C++ ac++"},
-  {"name":"whole word is ignored for phrases","rules":[{"source":"cat","replacement":"dog","wholeWord":true}],"text":"cat catalog","expected":"dog catalog"}
+  {"name":"explicit whole word phrase","rules":[{"source":"cat","replacement":"dog","wholeWord":true}],"text":"cat catalog","expected":"dog catalog"},
+  {"name":"phrase inside words","rules":[{"source":"читшит","replacement":"cheatsheet","wholeWord":false}],"text":"Читшит, читшиты и мойчитшит.","expected":"cheatsheet, cheatsheetы и мойcheatsheet."},
+  {"name":"phrase inside words keeps match case","rules":[{"source":"ИП","replacement":"X","matchCase":true,"wholeWord":false}],"text":"ИПотека ипотека","expected":"Xотека ипотека"},
+  {"name":"boundaries apply per phrase","rules":[{"source":"cat","replacement":"dog"},{"source":"пул","replacement":"pool","wholeWord":false}],"text":"cat catalog пулы","expected":"dog catalog poolы"},
+  {"name":"longer whole word phrase wins over shorter in-word phrase","rules":[{"source":"new york","replacement":"NYC"},{"source":"new","replacement":"fresh","wholeWord":false}],"text":"new york renew","expected":"NYC refresh"},
+  {"name":"in-word phrase falls back when longer phrase is bounded","rules":[{"source":"cats","replacement":"felines"},{"source":"cat","replacement":"dog","wholeWord":false}],"text":"catsup cats","expected":"dogsup felines"},
+  {"name":"live in-word phrase waits at the end","rules":[{"source":"cat","replacement":"dog","wholeWord":false}],"text":"bobcat bobcat","final":false,"expected":"bobdog bobcat"}
 ]

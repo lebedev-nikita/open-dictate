@@ -25,7 +25,7 @@ final class ReplacementStore: ObservableObject {
     }
     func engine() -> WordReplacementEngine { WordReplacementEngine(rules: enabled ? document.rules : []) }
     @discardableResult func save(id: String? = nil, source: String, replacement: String, regex: Bool = false, matchCase: Bool = false,
-                                   wholeWord: Bool = false) -> Bool {
+                                   wholeWord: Bool? = nil) -> Bool {
         // Pattern whitespace is significant; an empty pattern replacement deletes the match.
         let source = (regex ? source : source.trimmingCharacters(in: .whitespacesAndNewlines)).precomposedStringWithCanonicalMapping
         let replacement = regex ? replacement : replacement.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -36,9 +36,7 @@ final class ReplacementStore: ObservableObject {
         else { status = .invalid; return false }
         let previous = document.rules.first { $0.id == id }
         let rule = WordReplacement(id: id ?? UUID().uuidString.lowercased(), source: source, replacement: replacement,
-                                   enabled: previous?.enabled ?? true, regex: regex, matchCase: matchCase,
-                                   // Phrases always match whole words; storing the option would only raise the schema version.
-                                   wholeWord: regex && wholeWord)
+                                   enabled: previous?.enabled ?? true, regex: regex, matchCase: matchCase, wholeWord: wholeWord)
         var next = document; next.rules.removeAll { $0.id == rule.id }; next.rules.append(rule)
         guard next.isValid else { status = .invalid; return false }
         guard rule.isUsable else { status = .invalidPattern; return false }

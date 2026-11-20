@@ -16,8 +16,11 @@ data class WordReplacement(
     val regex: Boolean = false,
     /** Matches the source's exact letter case instead of ignoring case. */
     val matchCase: Boolean = false,
-    /** Pattern rules match only text with no letter, digit or underscore on either side. Phrase rules always do. */
-    val wholeWord: Boolean = false,
+    /**
+     * Matches only text with no letter, mark, digit or underscore on either side.
+     * Defaults to on for phrases and off for patterns, as both behaved before the option covered phrases.
+     */
+    val wholeWord: Boolean = !regex,
 ) {
     /** Structural validity only. Patterns compile per platform, so synced rules never invalidate a document. */
     val isValid: Boolean get() = runCatching { UUID.fromString(id).toString() == id }.getOrDefault(false) &&
@@ -35,9 +38,13 @@ data class WordReplacement(
 }
 
 data class ReplacementDocument(val rules: List<WordReplacement> = emptyList()) {
-    /** Versions 2, 3 and 4 mark documents with pattern, case-sensitive and whole-word rules, so older clients reject rather than misread them. */
+    /**
+     * Versions 2 to 5 mark documents with pattern, case-sensitive, whole-word pattern and in-word phrase rules,
+     * so older clients reject rather than misread them.
+     */
     val schemaVersion: Int get() = when {
-        rules.any { it.wholeWord } -> 4
+        rules.any { !it.regex && !it.wholeWord } -> 5
+        rules.any { it.regex && it.wholeWord } -> 4
         rules.any { it.matchCase } -> 3
         rules.any { it.regex } -> 2
         else -> 1
@@ -45,22 +52,26 @@ data class ReplacementDocument(val rules: List<WordReplacement> = emptyList()) {
     val isValid: Boolean get() = rules.size <= 500 && rules.all { it.isValid } && rules.map { it.id }.toSet().size == rules.size
     fun toJson(): String = JSONObject().put("schemaVersion", schemaVersion).put("rules", JSONArray().apply {
         rules.forEach { rule -> put(JSONObject().put("id", rule.id).put("source", rule.source).put("replacement", rule.replacement)
-            .put("enabled", rule.enabled).apply { if (rule.regex) put("regex", true); if (rule.matchCase) put("matchCase", true); if (rule.wholeWord) put("wholeWord", true) }) }
+            .put("enabled", rule.enabled).apply {
+                // Rules with default options keep the version 1 wire format.
+                if (rule.regex) put("regex", true); if (rule.matchCase) put("matchCase", true)
+                if (rule.wholeWord == rule.regex) put("wholeWord", rule.wholeWord)
+            }) }
     }).toString()
     companion object {
         fun fromJson(json: String): ReplacementDocument {
             val value = JSONObject(json)
             val version = value.get("schemaVersion")
-            require(version is Number && version.toDouble() in listOf(1.0, 2.0, 3.0, 4.0))
+            require(version is Number && version.toDouble() in listOf(1.0, 2.0, 3.0, 4.0, 5.0))
             val entries = value.getJSONArray("rules")
             require(entries.length() <= 500)
             return ReplacementDocument((0 until entries.length()).map { index ->
                 val rule = entries.getJSONObject(index)
                 require(listOf("id", "source", "replacement").all { rule.get(it) is String } && rule.get("enabled") is Boolean)
                 require(listOf("regex", "matchCase", "wholeWord").all { !rule.has(it) || rule.get(it) is Boolean })
+                val regex = rule.optBoolean("regex", false)
                 WordReplacement(rule.getString("id"), rule.getString("source"), rule.getString("replacement"),
-                    rule.getBoolean("enabled"), rule.optBoolean("regex", false), rule.optBoolean("matchCase", false),
-                    rule.optBoolean("wholeWord", false))
+                    rule.getBoolean("enabled"), regex, rule.optBoolean("matchCase", false), rule.optBoolean("wholeWord", !regex))
             }).also { require(it.isValid && version.toDouble() == it.schemaVersion.toDouble()) }
         }
     }
@@ -76,10 +87,12 @@ class WordReplacementEngine(rules: List<WordReplacement>) {
             compareByDescending<WordReplacement> { it.source.length }.thenBy { it.id },
         )
         val literals = active.filterNot { it.regex }
+        // Each phrase carries its own boundaries, so whole-word and in-word phrases share one alternation.
         val literal = literals.takeIf { it.isNotEmpty() }?.joinToString("|") {
             val quoted = Pattern.quote(Normalizer.normalize(it.source, Normalizer.Form.NFC))
-            if (it.matchCase) "((?-i:$quoted))" else "($quoted)"
-        }?.let { Matcher(Pattern.compile(bounded(it), Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE), literals, true) }
+            val cased = if (it.matchCase) "(?-i:$quoted)" else quoted
+            "(${if (it.wholeWord) bounded(cased) else cased})"
+        }?.let { Matcher(Pattern.compile(it, Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE), literals, true) }
         // A pattern this platform cannot compile is skipped instead of disabling other rules.
         matchers = listOfNotNull(literal) + active.filter { it.regex }.mapNotNull { rule -> compile(rule.source, rule.matchCase, rule.wholeWord)?.let { Matcher(it, listOf(rule), false) } }
     }

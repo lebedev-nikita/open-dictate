@@ -312,24 +312,28 @@ disabled while busy or when there is no recording to retry.
 
 Settings → Word replacements manages local “recognized phrase → replacement”
 rules. Add, edit, delete, enable individual rules or turn all replacements off.
-Matching ignores case unless the rule has “Match case” enabled, respects Unicode
-word boundaries, prefers longer phrases and never cascades into another rule. Replacement spelling is preserved exactly.
+Matching ignores case unless the rule has “Match case” enabled, prefers longer
+phrases and never cascades into another rule. Replacement spelling is preserved exactly.
+With “Whole word”, a match must have no letter, mark, digit or underscore on either
+side; without it, the rule also matches inside longer words. The option is on for
+new rules and for phrases saved before it existed, which matched whole words only.
 Live applies completed words immediately; an unfinished trailing token waits for
 a boundary or the final result. Accurate applies rules before delivery.
 Each session captures its rules at startup, and history/copy use the same result.
 Voice editing instructions and results are not modified. Up to 500 rules, with
 256 UTF-16 units per phrase and 2,048 per replacement.
 
-Enable “Regular expression” to save an ICU pattern instead of a phrase. With
-“Whole word”, on by default for new patterns, a match must have no letter, mark,
-digit or underscore on either side; patterns saved before the option existed keep
-matching inside words. Patterns keep their whitespace and must not match empty text. Replacements may use `$1`, `${12}` and `$$`, or be
+Enable “Regular expression” to save an ICU pattern instead of a phrase. Patterns
+saved before “Whole word” existed keep matching inside words. Patterns keep their whitespace and must not match empty text. Replacements may use `$1`, `${12}` and `$$`, or be
 empty to delete the match. The earliest match wins, then the longer one, then
 phrase rules. Android compiles the same patterns with its own regex engine; a
 synced pattern it cannot compile is skipped there. Pattern rules sync as schema
-version 2, case-sensitive rules as version 3 and whole-word patterns as version 4,
-which older app versions reject. The list tags patterns with `.*`, case-sensitive
-rules with `Aa` and whole-word patterns with an underlined `ab`.
+version 2, case-sensitive rules as version 3, whole-word patterns as version 4 and
+phrases matching inside words as version 5, which older app versions reject. The
+`wholeWord` field is stored only when it differs from the rule kind's default: `true`
+for patterns and `false` for phrases, so earlier rules keep their bytes. The list
+tags patterns with `.*`, case-sensitive rules with `Aa` and rules matching inside
+words with `…ab…`.
 
 Rules are applied locally and remain separate from dictionary hints sent to OpenAI.
 Connect Google Drive in Settings to sync the rule list, individual rule states and

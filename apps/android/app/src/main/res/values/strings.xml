@@ -229,10 +229,11 @@
     <string name="replacements_regex">Regular expression</string>
     <string name="replacements_match_case">Match case</string>
     <string name="replacements_whole_word">Whole word</string>
+    <string name="replacements_inside_words">Matches inside words</string>
     <string name="replacements_invalid_pattern">Invalid pattern. It must not match empty text, and $n must refer to an existing group.</string>
     <string name="replacements_storage_error">Could not read or save replacements. Your saved data was kept. Restore your preferences before editing.</string>
     <string name="replacements_empty">No replacements yet. Example: open dictate → OpenDictate.</string>
-    <string name="replacements_note">Phrases replace whole words only; regular expressions do so when “Whole word” is on. Case is ignored unless “Match case” is on. $1 inserts a group.</string>
+    <string name="replacements_note">Without “Whole word”, a rule also matches inside longer words. Case is ignored unless “Match case” is on. $1 inserts a group.</string>
     <string name="replacements_edit_rule">Edit replacement for %1$s</string>
     <string name="replacements_delete_rule">Delete replacement for %1$s</string>
     <string name="replacements_toggle_rule">Enable replacement for %1$s</string>
