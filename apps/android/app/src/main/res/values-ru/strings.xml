@@ -226,10 +226,11 @@
     <string name="replacements_regex">Регулярное выражение</string>
     <string name="replacements_match_case">Учитывать регистр</string>
     <string name="replacements_whole_word">Слово целиком</string>
+    <string name="replacements_inside_words">Срабатывает внутри слов</string>
     <string name="replacements_invalid_pattern">Неверный шаблон. Он не должен совпадать с пустым текстом, а $n — ссылаться на существующую группу.</string>
     <string name="replacements_storage_error">Не удалось прочитать или сохранить автозамены. Данные сохранены. Восстановите настройки перед редактированием.</string>
     <string name="replacements_empty">Пока нет замен. Например: опен диктейт → OpenDictate.</string>
-    <string name="replacements_note">Фразы заменяют только целые слова, регулярные выражения — если включено «Слово целиком». Регистр не учитывается, если не включено «Учитывать регистр». $1 — группа.</string>
+    <string name="replacements_note">Без «Слово целиком» правило срабатывает и внутри других слов. Регистр не учитывается, если не включено «Учитывать регистр». $1 — группа.</string>
     <string name="replacements_edit_rule">Изменить замену для %1$s</string>
     <string name="replacements_delete_rule">Удалить замену для %1$s</string>
     <string name="replacements_toggle_rule">Включить замену для %1$s</string>

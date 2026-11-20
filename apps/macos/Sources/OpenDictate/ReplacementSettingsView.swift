@@ -29,8 +29,8 @@ struct ReplacementSettingsView: View {
                     .foregroundStyle(.red)
             }
             SettingsSection(title: t("Rules", "Правила"),
-                            footer: t("Phrases replace whole words only; regular expressions do so when “Whole word” is on. Case is ignored unless “Match case” is on. $1 inserts a group.",
-                                      "Фразы заменяют только целые слова, регулярные выражения — если включено «Слово целиком». Регистр не учитывается, если не включено «Учитывать регистр». $1 — группа.")) {
+                            footer: t("Without “Whole word”, a rule also matches inside longer words. Case is ignored unless “Match case” is on. $1 inserts a group.",
+                                      "Без «Слово целиком» правило срабатывает и внутри других слов. Регистр не учитывается, если не включено «Учитывать регистр». $1 — группа.")) {
                 if store.rules.isEmpty {
                     Text(t("No replacements yet. For example: “open dictate” → “OpenDictate”.", "Пока нет замен. Например: «опен диктейт» → «OpenDictate»."))
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).settingsRowPadding()
@@ -55,11 +55,12 @@ struct ReplacementSettingsView: View {
                 HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                     Text(rule.source).foregroundStyle(.secondary).font(rule.regex ? .body.monospaced() : .body)
                     // The tags sit further from the source than from each other, so they read as one group.
-                    if rule.regex || rule.matchCase {
+                    if rule.regex || rule.matchCase || !rule.wholeWord {
                         HStack(alignment: .firstTextBaseline, spacing: Space.xxs) {
                             if rule.regex { badge(".*", t("Regular expression", "Регулярное выражение"), design: .monospaced) }
                             if rule.matchCase { badge("Aa", t("Match case", "Учитывать регистр")) }
-                            if rule.wholeWord { badge("ab", t("Whole word", "Слово целиком"), underline: true) }
+                            // Whole words are the default, so only rules that also match inside words are tagged.
+                            if !rule.wholeWord { badge("…ab…", t("Matches inside words", "Срабатывает внутри слов")) }
                         }
                     }
                 }
@@ -88,22 +89,20 @@ struct ReplacementSettingsView: View {
         } else { draft.wrappedValue.invalid = true }
     }
     /// Marks a rule option with the glyph find-and-replace fields use for it, so the list needs no translated tag.
-    private func badge(_ glyph: String, _ label: String, design: Font.Design = .default, underline: Bool = false) -> some View {
+    private func badge(_ glyph: String, _ label: String, design: Font.Design = .default) -> some View {
         // A tint rather than an outline: the tag is a label, not a control.
-        Text(glyph).font(.system(size: 11, weight: .medium, design: design)).underline(underline).foregroundStyle(.secondary)
+        Text(glyph).font(.system(size: 11, weight: .medium, design: design)).foregroundStyle(.secondary)
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4)).help(label).accessibilityLabel(label)
     }
 }
 
 struct ReplacementDraft {
-    /// New rules match whole words; rules saved before the option keep matching inside words until it is turned on.
+    /// New rules match whole words; patterns saved before the option keep matching inside words until it is turned on.
     var source = "", replacement = "", regex = false, matchCase = false, wholeWord = true, invalid = false
     init() {}
     init(_ rule: WordReplacement) {
-        source = rule.source; replacement = rule.replacement; regex = rule.regex; matchCase = rule.matchCase
-        // Phrases already match whole words, so turning one into a pattern keeps that behavior.
-        wholeWord = rule.regex ? rule.wholeWord : true
+        source = rule.source; replacement = rule.replacement; regex = rule.regex; matchCase = rule.matchCase; wholeWord = rule.wholeWord
     }
     var canSave: Bool {
         regex ? !source.isEmpty : !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -159,10 +158,7 @@ private struct ReplacementEditor: View {
     @ViewBuilder private var options: some View { regexToggle; matchCaseToggle; wholeWordToggle }
     private var regexToggle: some View { Toggle(t("Regular expression", "Регулярное выражение"), isOn: $draft.regex) }
     private var matchCaseToggle: some View { Toggle(t("Match case", "Учитывать регистр"), isOn: $draft.matchCase) }
-    /// Phrases always match whole words, so the option belongs to patterns only.
-    @ViewBuilder private var wholeWordToggle: some View {
-        if draft.regex { Toggle(t("Whole word", "Слово целиком"), isOn: $draft.wholeWord) }
-    }
+    private var wholeWordToggle: some View { Toggle(t("Whole word", "Слово целиком"), isOn: $draft.wholeWord) }
     @ViewBuilder private var buttons: some View {
         if let onCancel { Button(t("Cancel", "Отмена"), action: onCancel).keyboardShortcut(.cancelAction) }
         Button(onCancel == nil ? t("Add", "Добавить") : t("Save", "Сохранить"), action: onSave)

@@ -256,7 +256,8 @@ Unsupported schema versions fail closed rather than being overwritten. Values
 are strings, except an explicit prompt reset, which uses JSON null and schema version 2. Structured future sections can encode JSON inside their value.
 The `wordReplacements` value contains the shared replacement JSON
 (`schemaVersion` and `rules` with `id`, `source`, `replacement`, `enabled` and
-the optional `regex`, `matchCase` and `wholeWord`).
+the optional `regex`, `matchCase` and `wholeWord`; an absent `wholeWord` means
+`true` for phrases and `false` for patterns).
 `wordReplacementsEnabled` is the string `true` or `false`. Invalid boolean
 values reject the import before any setting is applied. Existing five-field
 journals seed replacement settings at timestamp zero so new defaults yield to

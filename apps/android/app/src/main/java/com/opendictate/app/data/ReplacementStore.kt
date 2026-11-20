@@ -23,7 +23,7 @@ class ReplacementStore(context: Context, preferencesName: String = "word_replace
     }
     /** Returns null when saved, otherwise the reason the rule was rejected. */
     fun save(id: String?, source: String, replacement: String, regex: Boolean = false, matchCase: Boolean = false,
-             wholeWord: Boolean = false): ReplacementError? {
+             wholeWord: Boolean = !regex): ReplacementError? {
         // Pattern whitespace is significant; an empty pattern replacement deletes the match.
         val source = java.text.Normalizer.normalize(if (regex) source else source.trim(), java.text.Normalizer.Form.NFC)
         val replacement = if (regex) replacement else replacement.trim()
@@ -33,9 +33,8 @@ class ReplacementStore(context: Context, preferencesName: String = "word_replace
         if (current.document.rules.any { it.id != id && it.regex == regex &&
                 it.source.equals(source, ignoreCase = !regex && !(it.matchCase && matchCase)) }) return ReplacementError.Invalid
         val previous = current.document.rules.firstOrNull { it.id == id }
-        // Phrases always match whole words; storing the option would only raise the schema version.
         val rule = WordReplacement(id ?: java.util.UUID.randomUUID().toString(), source, replacement, previous?.enabled ?: true,
-            regex, matchCase, regex && wholeWord)
+            regex, matchCase, wholeWord)
         val next = ReplacementDocument(current.document.rules.filterNot { it.id == rule.id } + rule)
         return when {
             !next.isValid -> ReplacementError.Invalid

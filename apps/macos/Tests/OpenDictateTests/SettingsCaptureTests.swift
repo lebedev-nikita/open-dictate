@@ -18,6 +18,7 @@ final class SettingsCaptureTests: XCTestCase {
         model.replacements.save(source: "open dictate", replacement: "OpenDictate")
         model.replacements.save(source: "\\bgpt\\b", replacement: "GPT", regex: true, matchCase: true)
         model.replacements.save(source: "пулл?", replacement: "pull", regex: true, wholeWord: true)
+        model.replacements.save(source: "читшит", replacement: "cheatsheet", wholeWord: false)
         model.history.add("Давай встретимся завтра в 10:30 у входа в офис.", mode: "accurate",
                           transcriptionMillis: 1840, postProcessingMillis: 920,
                           transcriptionModelID: "gpt-transcribe", postProcessingModelID: "gpt-6-luna")

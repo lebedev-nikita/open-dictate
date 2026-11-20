@@ -9,15 +9,16 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
     public var regex: Bool
     /// Matches the source's exact letter case instead of ignoring case.
     public var matchCase: Bool
-    /// Pattern rules match only text with no letter, digit or underscore on either side. Phrase rules always do.
+    /// Matches only text with no letter, mark, digit or underscore on either side.
+    /// Defaults to on for phrases and off for patterns, as both behaved before the option covered phrases.
     public var wholeWord: Bool
 
     private enum CodingKeys: String, CodingKey { case id, source, replacement, enabled, regex, matchCase, wholeWord }
 
     public init(id: String = UUID().uuidString.lowercased(), source: String, replacement: String,
-                enabled: Bool = true, regex: Bool = false, matchCase: Bool = false, wholeWord: Bool = false) {
+                enabled: Bool = true, regex: Bool = false, matchCase: Bool = false, wholeWord: Bool? = nil) {
         self.id = id; self.source = source; self.replacement = replacement
-        self.enabled = enabled; self.regex = regex; self.matchCase = matchCase; self.wholeWord = wholeWord
+        self.enabled = enabled; self.regex = regex; self.matchCase = matchCase; self.wholeWord = wholeWord ?? !regex
     }
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -27,7 +28,7 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
         enabled = try container.decode(Bool.self, forKey: .enabled)
         regex = try container.decodeIfPresent(Bool.self, forKey: .regex) ?? false
         matchCase = try container.decodeIfPresent(Bool.self, forKey: .matchCase) ?? false
-        wholeWord = try container.decodeIfPresent(Bool.self, forKey: .wholeWord) ?? false
+        wholeWord = try container.decodeIfPresent(Bool.self, forKey: .wholeWord) ?? !regex
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -35,10 +36,10 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
         try container.encode(source, forKey: .source)
         try container.encode(replacement, forKey: .replacement)
         try container.encode(enabled, forKey: .enabled)
-        // Literal rules keep the version 1 wire format.
+        // Rules with default options keep the version 1 wire format.
         if regex { try container.encode(true, forKey: .regex) }
         if matchCase { try container.encode(true, forKey: .matchCase) }
-        if wholeWord { try container.encode(true, forKey: .wholeWord) }
+        if wholeWord == regex { try container.encode(wholeWord, forKey: .wholeWord) }
     }
     /// Structural validity only. Patterns compile per platform, so synced rules never invalidate a document.
     public var isValid: Bool {
@@ -59,10 +60,11 @@ public struct WordReplacement: Codable, Equatable, Identifiable, Sendable {
 public struct ReplacementDocument: Codable, Equatable, Sendable {
     public var rules: [WordReplacement]
     public init(rules: [WordReplacement] = []) { self.rules = rules }
-    /// Versions 2, 3 and 4 mark documents with pattern, case-sensitive and whole-word rules,
+    /// Versions 2 to 5 mark documents with pattern, case-sensitive, whole-word pattern and in-word phrase rules,
     /// so older clients reject rather than misread them.
     public var schemaVersion: Int {
-        rules.contains(where: \.wholeWord) ? 4 : rules.contains(where: \.matchCase) ? 3 : rules.contains(where: \.regex) ? 2 : 1
+        rules.contains { !$0.regex && !$0.wholeWord } ? 5 : rules.contains { $0.regex && $0.wholeWord } ? 4 :
+            rules.contains(where: \.matchCase) ? 3 : rules.contains(where: \.regex) ? 2 : 1
     }
     private enum CodingKeys: String, CodingKey { case schemaVersion, rules }
     public init(from decoder: Decoder) throws {
@@ -93,12 +95,14 @@ public struct WordReplacementEngine: @unchecked Sendable {
             return $0.id < $1.id
         }
         let literals = active.filter { !$0.regex }
+        // Each phrase carries its own boundaries, so whole-word and in-word phrases share one alternation.
         let alternatives = literals.map {
             let escaped = NSRegularExpression.escapedPattern(for: $0.source.precomposedStringWithCanonicalMapping)
-            return $0.matchCase ? "((?-i:" + escaped + "))" : "(" + escaped + ")"
+            let cased = $0.matchCase ? "(?-i:" + escaped + ")" : escaped
+            return "(" + ($0.wholeWord ? Self.bounded(cased) : cased) + ")"
         }.joined(separator: "|")
         var matchers: [Matcher] = []
-        if !alternatives.isEmpty, let regex = try? NSRegularExpression(pattern: Self.bounded(alternatives), options: [.caseInsensitive]) {
+        if !alternatives.isEmpty, let regex = try? NSRegularExpression(pattern: alternatives, options: [.caseInsensitive]) {
             matchers.append(Matcher(regex: regex, rules: literals, literal: true))
         }
         // A pattern this platform cannot compile is skipped instead of disabling other rules.

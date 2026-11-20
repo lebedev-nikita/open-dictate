@@ -1,5 +1,22 @@
 # macOS verification
 
+## 0.9.3 — whole-word phrase replacements
+
+Verified on macOS 27.0.1, Apple Silicon, on 2026-11-20.
+
+- All Swift tests pass, including shared replacement fixtures for phrases matching
+  inside words, per-phrase boundaries in one alternation, longest-first fallback,
+  match case and live trailing tokens, plus schema version 5 and legacy phrases and
+  patterns decoding with their earlier behavior and bytes. Universal packaging
+  verified both slices, the signature and the DMG.
+- The Word replacements page was rendered in English (light) and Russian (dark): the
+  option is shown for phrases, Russian moves “Слово целиком” beside the Add button,
+  and rules matching inside words show the `…ab…` tag.
+
+Android passed unit tests, lint and debug and release builds locally; instrumented
+tests were compiled but not run, and the sheet was not inspected on an emulator. No
+dictation, provider request or Drive sync was exercised for this change.
+
 ## 0.9.2 — readable disabled buttons
 
 Verified on macOS 27.0.1, Apple Silicon, on 2026-11-19.

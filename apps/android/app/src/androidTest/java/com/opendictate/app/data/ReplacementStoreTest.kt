@@ -61,7 +61,7 @@ class ReplacementStoreTest {
                 .getString("document", null)!!).schemaVersion)
         } finally { context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit() }
     }
-    @Test fun wholeWordAppliesToPatternsOnly() {
+    @Test fun wholeWordAppliesToPatternsAndPhrases() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val name = "replacement-test-${UUID.randomUUID()}"
         try {
@@ -71,10 +71,14 @@ class ReplacementStoreTest {
             val rule = store.state.value.document.rules.single()
             assertNull(store.save(rule.id, rule.source, "pull", regex = true, wholeWord = true))
             assertEquals("pull популярный", ReplacementStore(context, name).engine().apply("пул популярный"))
-            // Phrases always match whole words, so the option is not stored for them.
-            assertNull(store.save(null, "cat", "dog", wholeWord = true))
-            assertFalse(store.state.value.document.rules.first { it.source == "cat" }.wholeWord)
+            assertNull(store.save(null, "cat", "dog"))
+            val phrase = store.state.value.document.rules.first { it.source == "cat" }
+            assertTrue(phrase.wholeWord)
             assertEquals(4, ReplacementDocument.fromJson(context.getSharedPreferences(name, Context.MODE_PRIVATE)
+                .getString("document", null)!!).schemaVersion)
+            assertNull(store.save(phrase.id, "cat", "dog", wholeWord = false))
+            assertEquals("dog bobdog", ReplacementStore(context, name).engine().apply("cat bobcat"))
+            assertEquals(5, ReplacementDocument.fromJson(context.getSharedPreferences(name, Context.MODE_PRIVATE)
                 .getString("document", null)!!).schemaVersion)
         } finally { context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit() }
     }
