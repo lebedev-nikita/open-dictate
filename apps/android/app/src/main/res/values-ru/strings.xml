@@ -368,4 +368,23 @@
     <string name="error_reason_missing_recording">Предыдущая запись недоступна</string>
     <string name="error_reason_delivery_rejected">Поле ввода недоступно; результат скопирован</string>
     <string name="error_reason_unknown">Непредвиденная ошибка</string>
+    <string name="external_dictation_title">Управление из других приложений</string>
+    <string name="external_dictation_subtitle">Automate, Key Mapper и другие смогут запускать диктовку</string>
+    <string name="external_dictation_no_apps">Приложения, получающие текст, сначала спросят доступ</string>
+    <string name="external_dictation_revoke">Отозвать доступ у «%1$s»</string>
+    <string name="external_dictation_consent_title">Разрешить «%1$s» диктовку?</string>
+    <string name="external_dictation_consent_body">«%1$s» сможет записывать ваш голос через OpenDictate и получать текст. Доступ можно отозвать в настройках.</string>
+    <string name="external_dictation_allow">Разрешить</string>
+    <string name="external_dictation_deny">Запретить</string>
+    <string name="external_dictation_listening">Слушаю</string>
+    <string name="external_dictation_processing">Расшифровываю…</string>
+    <string name="external_dictation_for_app">Текст получит «%1$s»</string>
+    <string name="external_dictation_busy">OpenDictate уже записывает</string>
+    <string name="external_dictation_needs_result">Вызывающее приложение должно ждать результат, чтобы получить текст</string>
+    <string name="notification_text_external_recording">Нажмите «Остановить», когда закончите</string>
+    <string name="notification_text_external_processing">Текст получит приложение, которое его запросило</string>
+    <string name="floating_button_title">Кнопка над клавиатурой</string>
+    <string name="floating_button_subtitle">Если выключить, появится только во время диктовки</string>
+    <string name="command_no_field">Откройте поле ввода, чтобы диктовать</string>
+    <string name="command_microphone_unavailable">Android не разрешил включить микрофон</string>
 </resources>

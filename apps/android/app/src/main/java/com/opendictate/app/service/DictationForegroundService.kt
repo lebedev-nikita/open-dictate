@@ -28,6 +28,7 @@ import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.ErrorOperation
 import com.opendictate.app.model.ErrorRoute
 import com.opendictate.app.model.ErrorStage
+import com.opendictate.app.model.ExternalDictationOutcome
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.network.OpenAiTranscriptionClient
 import com.opendictate.app.ui.userMessage
@@ -77,6 +78,17 @@ class DictationForegroundService : Service() {
             ACTION_RETRY_LAST -> if (!DictationStateBus.state.value.isActive) {
                 retryLastDictation()
             }
+            ACTION_START_EXTERNAL -> intent.getStringExtra(EXTRA_REQUEST_ID)?.let { requestId ->
+                if (DictationStateBus.state.value.isActive) {
+                    ExternalDictationBus.deliver(requestId, ExternalDictationOutcome.Busy)
+                } else {
+                    startDictation(DictationOperation.DICTATION, externalRequestId = requestId)
+                }
+            }
+            ACTION_STOP_EXTERNAL -> if (isExternalTarget(intent.getStringExtra(EXTRA_REQUEST_ID))) requestStop()
+            ACTION_CANCEL_EXTERNAL -> if (isExternalTarget(intent.getStringExtra(EXTRA_REQUEST_ID))) {
+                requestCancel(activeSessionId)
+            }
         }
         return START_NOT_STICKY
     }
@@ -87,17 +99,29 @@ class DictationForegroundService : Service() {
         stopSignal.complete(Unit)
         scope.coroutineContext[Job]?.cancel()
         val state = DictationStateBus.state.value
+        if (state.isActive && state.sessionId == activeSessionId) {
+            activeExternalRequestId?.let { ExternalDictationBus.deliver(it, ExternalDictationOutcome.Cancelled) }
+        }
         if (state.isActive) clearSessionIfCurrent(activeSessionId)
         super.onDestroy()
+    }
+
+    /** Stop and cancel requests without an ID come from the caller's own control broadcast. */
+    private fun isExternalTarget(requestId: String?): Boolean {
+        val active = activeExternalRequestId ?: return false
+        return DictationStateBus.state.value.acceptsActiveUpdate(activeSessionId) && (requestId == null || requestId == active)
     }
 
     private fun startDictation(
         operation: DictationOperation,
         sourceText: String? = null,
         postProcessingOverride: Boolean? = null,
+        externalRequestId: String? = null,
     ) {
+        val external = externalRequestId != null
         val apiKey = SecureApiKeyStore(this).get()
         if (apiKey.isNullOrBlank()) {
+            externalRequestId?.let { ExternalDictationBus.deliver(it, ExternalDictationOutcome.Failed(DictationError.MissingApiKey)) }
             publishError(DictationError.MissingApiKey)
             stopSelf()
             return
@@ -111,7 +135,10 @@ class DictationForegroundService : Service() {
             return
         }
         val settings = SettingsStore(this)
-        val options = com.opendictate.app.model.DictationStartOptions.resolve(settings.model, settings.postProcessing, postProcessingOverride)
+        // Other apps always use the Accurate path with the saved post-processing rules.
+        val options = com.opendictate.app.model.DictationStartOptions.resolve(
+            if (external) TranscriptionModel.ACCURATE else settings.model, settings.postProcessing,
+            postProcessingOverride.takeUnless { external })
         val model = options.model
         val liveModelId = settings.liveModelId
         val accurateModelId = settings.accurateModelId
@@ -132,6 +159,7 @@ class DictationForegroundService : Service() {
         val previousJob = activeJob
         activeSessionId = sessionId
         activeOperation = operation
+        activeExternalRequestId = externalRequestId
         stopSignal = CompletableDeferred()
         startForeground(NOTIFICATION_ID, notification(false, operation))
         DictationStateBus.set(
@@ -141,6 +169,7 @@ class DictationForegroundService : Service() {
                 operation = operation,
                 model = model,
                 postProcessingEnabled = activePostProcessingEnabled,
+                external = external,
             ),
         )
         previousJob?.cancel()
@@ -226,7 +255,8 @@ class DictationForegroundService : Service() {
                             }
                         }
                         TranscriptionModel.ACCURATE -> {
-                            val file = if (operation == DictationOperation.DICTATION) {
+                            // External audio is never kept for retry; it lives only in a cache file.
+                            val file = if (operation == DictationOperation.DICTATION && !external) {
                                 (application as OpenDictateApplication).lastDictationAudioStore
                                     .begin(scope).also { savedRecording = it }.file
                             } else {
@@ -300,9 +330,12 @@ class DictationForegroundService : Service() {
                             phase = DictationPhase.COMPLETED,
                             operation = operation,
                             model = model,
-                            transcript = if (modelMessage == null) result else "",
+                            transcript = if (modelMessage == null && !external) result else "",
                         ),
                     )
+                    if (completed && externalRequestId != null) {
+                        ExternalDictationBus.deliver(externalRequestId, ExternalDictationOutcome.Transcribed(result))
+                    }
                     if (completed && operation == DictationOperation.DICTATION) {
                         withContext(Dispatchers.IO) {
                             runCatching {
@@ -315,17 +348,18 @@ class DictationForegroundService : Service() {
                         }
                     }
                     if (completed && postProcessingFailed) showPostProcessingError()
-                    delay(1_200)
+                    // The overlay shows the result briefly; another app has already received it.
+                    if (!external) delay(1_200)
                     clearSessionIfCurrent(sessionId)
                 }
                 outcome.onLeft { failure ->
                     stopRecording()
-                    publishFailure(sessionId, operation, model, failure, diagnostics)
+                    publishFailure(sessionId, operation, model, failure, diagnostics, externalRequestId)
                 }
             } catch (error: Exception) {
                 stopRecording()
                 if (error is CancellationException) throw error
-                publishFailure(sessionId, operation, model, DictationError.from(error), diagnostics)
+                publishFailure(sessionId, operation, model, DictationError.from(error), diagnostics, externalRequestId)
             } finally {
                 try { stopRecording() } finally {
                     tempFile?.delete()
@@ -336,6 +370,7 @@ class DictationForegroundService : Service() {
     }
 
     private var activePostProcessingEnabled = false
+    private var activeExternalRequestId: String? = null
 
     private fun retryLastDictation() {
         val apiKey = SecureApiKeyStore(this).get()
@@ -350,6 +385,7 @@ class DictationForegroundService : Service() {
         val sessionId = nextSession.incrementAndGet()
         val previousJob = activeJob
         activeSessionId = sessionId
+        activeExternalRequestId = null
         val model = TranscriptionModel.ACCURATE
         val accurateModelId = settings.accurateModelId
         val languages = settings.languages
@@ -446,13 +482,16 @@ class DictationForegroundService : Service() {
         val state = DictationStateBus.state.value
         if (!state.acceptsCancellation(sessionId)) return
         activeJob?.cancel()
+        if (sessionId == activeSessionId) {
+            activeExternalRequestId?.let { ExternalDictationBus.deliver(it, ExternalDictationOutcome.Cancelled) }
+        }
         DictationStateBus.set(state.copy(phase = DictationPhase.IDLE, transcript = "", processingStage = null))
     }
 
     private fun publishWhileActive(sessionId: Long, state: DictationState): Boolean {
         if (DictationStateBus.state.value.acceptsActiveUpdate(sessionId)) {
             DictationStateBus.set(state.copy(postProcessingEnabled = activePostProcessingEnabled,
-                diagnostics = activeDiagnostics?.context))
+                diagnostics = activeDiagnostics?.context, external = activeExternalRequestId != null))
             return true
         }
         return false
@@ -506,9 +545,11 @@ class DictationForegroundService : Service() {
         model: TranscriptionModel,
         failure: DictationError,
         diagnostics: DictationDiagnostics,
+        externalRequestId: String? = null,
     ) {
         currentCoroutineContext().ensureActive()
         diagnostics.record(failure.failureDetails)
+        externalRequestId?.let { ExternalDictationBus.deliver(it, ExternalDictationOutcome.Failed(failure)) }
         val published = publishWhileActive(sessionId, DictationState(
             sessionId = sessionId,
             phase = DictationPhase.ERROR,
@@ -518,7 +559,8 @@ class DictationForegroundService : Service() {
             failure = failure,
         ))
         if (published) {
-            delay(3_000)
+            // The calling app reports its own errors, so its session ends immediately.
+            if (externalRequestId == null) delay(3_000)
             clearSessionIfCurrent(sessionId)
         }
     }
@@ -574,6 +616,7 @@ class DictationForegroundService : Service() {
         operation: DictationOperation,
     ): Notification {
         val stopIntent = Intent(this, DictationForegroundService::class.java).setAction(ACTION_STOP)
+        val external = activeExternalRequestId != null
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
@@ -607,6 +650,8 @@ class DictationForegroundService : Service() {
                             R.string.notification_text_transforming
                         operation == DictationOperation.TRANSFORMATION ->
                             R.string.notification_text_instruction_recording
+                        external && processing -> R.string.notification_text_external_processing
+                        external -> R.string.notification_text_external_recording
                         processing -> R.string.notification_text_processing
                         else -> R.string.notification_text_recording
                     },
@@ -639,6 +684,10 @@ class DictationForegroundService : Service() {
         const val EXTRA_SOURCE_TEXT = "source_text"
         const val EXTRA_POST_PROCESSING_ENABLED = "com.opendictate.app.extra.POST_PROCESSING_ENABLED"
         const val EXTRA_SESSION_ID = "com.opendictate.app.extra.SESSION_ID"
+        const val ACTION_START_EXTERNAL = "com.opendictate.app.action.START_EXTERNAL_DICTATION"
+        const val ACTION_STOP_EXTERNAL = "com.opendictate.app.action.STOP_EXTERNAL_DICTATION"
+        const val ACTION_CANCEL_EXTERNAL = "com.opendictate.app.action.CANCEL_EXTERNAL_DICTATION"
+        const val EXTRA_REQUEST_ID = "com.opendictate.app.extra.REQUEST_ID"
         private const val CHANNEL_ID = "dictation"
         private const val ERROR_CHANNEL_ID = "errors"
         private const val NOTIFICATION_ID = 41

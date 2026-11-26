@@ -55,6 +55,7 @@ import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.UnfoldMore
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -260,6 +261,10 @@ internal fun SettingsScreen(
 
                     SectionTitle(stringResource(R.string.dictation_button_title))
                     SettingsGroup {
+                        ToggleRow(Icons.Outlined.Visibility, stringResource(R.string.floating_button_title),
+                            stringResource(R.string.floating_button_subtitle), state.floatingButtonVisible,
+                            viewModel::setFloatingButtonVisible)
+                        SettingsDivider()
                         ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),
                             stringResource(R.string.dictation_button_appearance_summary,
                                 stringResource(R.string.dictation_button_pixels,
@@ -322,6 +327,9 @@ internal fun SettingsScreen(
                         GoogleDriveSyncSettings()
                         SettingsDivider()
                         ChatGPTSettings(viewModel, state.hasApiKey, dictation.isActive)
+                        SettingsDivider()
+                        ExternalDictationSettings(state.externalDictationEnabled, state.externalDictationApps,
+                            viewModel::setExternalDictationEnabled, viewModel::revokeExternalDictation)
                     }
 
                     val testFieldLabel = stringResource(R.string.test_field_label)

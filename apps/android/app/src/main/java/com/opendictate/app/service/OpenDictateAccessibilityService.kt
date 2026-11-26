@@ -77,6 +77,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private var activeSessionId = 0L
     private var ignoredSessionId = 0L
     private val transcriptDelivery = TranscriptDeliveryTracker()
+    /** Keeps the hidden button visible between a command and the service publishing its session. */
+    private var commandStartPending = false
+    private val clearCommandStartPending = Runnable {
+        commandStartPending = false
+        scheduleOverlayUpdate()
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -91,6 +97,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             overlay?.setAppearance(it)
             scheduleOverlayUpdate()
         }
+        running = this
         overlay = DictationOverlayView(
             context = this,
             onDictationClick = ::onOverlayTapped,
@@ -107,10 +114,19 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             onAlternateDictationClick = ::onAlternateDictationTapped,
         )
         scope.launch {
+            var wasFieldSession = false
             DictationStateBus.state.collectLatest { state ->
                 overlay?.render(state)
                 overlayMenu?.render(state)
                 handleTranscriptState(state)
+                val fieldSession = state.isFieldSession()
+                if (fieldSession) {
+                    commandStartPending = false
+                    handler.removeCallbacks(clearCommandStartPending)
+                }
+                // A hidden button shows and hides with the session it indicates.
+                if (fieldSession != wasFieldSession) scheduleOverlayUpdate()
+                wasFieldSession = fieldSession
             }
         }
         scheduleOverlayUpdate()
@@ -122,10 +138,11 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {
-        stopDictation()
+        if (!DictationStateBus.state.value.external) stopDictation()
     }
 
     override fun onDestroy() {
+        if (running === this) running = null
         appFilterObserver?.close()
         buttonAppearanceObserver?.close()
         handler.removeCallbacksAndMessages(null)
@@ -147,7 +164,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         val focused = if (ime != null) findFocusedEditable() else null
         val hasEligibleTarget = ime != null && focused?.isTextInput() == true &&
             appFilter.allows(focused.packageName)
-        if (overlayVisibilitySession.shouldShow(hasEligibleTarget)) {
+        val fieldSessionActive = commandStartPending || DictationStateBus.state.value.isFieldSession()
+        if (overlayVisibilitySession.shouldShow(hasEligibleTarget, settings.floatingButtonVisible, fieldSessionActive)) {
             showOrMoveOverlay(ime, requireNotNull(focused))
         } else {
             if (!hasEligibleTarget) {
@@ -158,7 +176,9 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 overlay?.setMenuState(expanded = false)
             }
             removeOverlay()
-            if (!hasEligibleTarget && DictationStateBus.state.value.isActive) {
+            // Another app's session has its own panel and does not depend on a focused field.
+            val state = DictationStateBus.state.value
+            if (!hasEligibleTarget && state.isActive && !state.external) {
                 if (ime == null) onOverlayCancelled() else stopDictation()
             }
         }
@@ -415,17 +435,44 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         startOrdinaryDictation()
     }
 
+    /** Starts dictation into the focused field for [DictationCommandReceiver], like a button tap. */
+    internal fun startFromCommand() {
+        if (DictationStateBus.state.value.isActive) return
+        val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+        val focused = if (ime != null) findFocusedEditable() else null
+        if (ime == null || focused?.isTextInput() != true || !appFilter.allows(focused.packageName)) {
+            Toast.makeText(this, R.string.command_no_field, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // Show the indicator before the microphone starts; Android requires a visible window.
+        commandStartPending = true
+        handler.removeCallbacks(clearCommandStartPending)
+        handler.postDelayed(clearCommandStartPending, COMMAND_START_TIMEOUT_MS)
+        showOrMoveOverlay(ime, focused)
+        if (!startOrdinaryDictation()) clearCommandStartPending.run()
+    }
+
+    /** Cancels a field session as the overlay does, restoring text already inserted by Live. */
+    internal fun cancelFromCommand(): Boolean {
+        val state = DictationStateBus.state.value
+        if (!state.isFieldSession()) return false
+        onOverlayCancelled()
+        return true
+    }
+
+    private fun DictationState.isFieldSession(): Boolean = isActive && !external
+
     private fun onAlternateDictationTapped(postProcessingEnabled: Boolean) {
         if (DictationStateBus.state.value.isActive) return
         startOrdinaryDictation(postProcessingEnabled)
     }
 
-    private fun startOrdinaryDictation(postProcessingOverride: Boolean? = null) {
+    private fun startOrdinaryDictation(postProcessingOverride: Boolean? = null): Boolean {
         setOverlayMenuExpanded(false)
-        if (!isReadyToStart()) return
+        if (!isReadyToStart()) return false
         val focused = findFocusedEditable()
-        if (focused?.isTextInput() != true) return
-        if (!appFilter.allows(focused.packageName)) return
+        if (focused?.isTextInput() != true) return false
+        if (!appFilter.allows(focused.packageName)) return false
         editableSnapshot = focused.captureEditableText()
         clearPendingTextRestoration()
         targetPackage = focused.packageName
@@ -435,7 +482,14 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         val intent = Intent(this, DictationForegroundService::class.java)
             .setAction(DictationForegroundService.ACTION_START)
         postProcessingOverride?.let { intent.putExtra(DictationForegroundService.EXTRA_POST_PROCESSING_ENABLED, it) }
-        ContextCompat.startForegroundService(this, intent)
+        return try {
+            ContextCompat.startForegroundService(this, intent)
+            true
+        } catch (_: IllegalStateException) {
+            // Android can refuse a background microphone start; never retry through a workaround.
+            Toast.makeText(this, R.string.command_microphone_unavailable, Toast.LENGTH_SHORT).show()
+            false
+        }
     }
 
     private fun onTransformationTapped() {
@@ -697,6 +751,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     }
 
     private fun handleTranscriptState(state: DictationState) {
+        if (state.external) return
         if (state.sessionId != 0L && state.sessionId == ignoredSessionId) return
         if (state.sessionId != 0L && activeSessionId == 0L) activeSessionId = state.sessionId
         if (state.sessionId != activeSessionId || state.transcript.isBlank()) return
@@ -867,6 +922,10 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         )
 
     companion object {
+        /** The connected service, used by [DictationCommandReceiver] in the same process. */
+        internal var running: OpenDictateAccessibilityService? = null
+            private set
+        private const val COMMAND_START_TIMEOUT_MS = 3_000L
         private const val TAG = "OpenDictateA11y"
         private const val MAX_NODE_SCAN = 200
         private const val DEFAULT_KEYBOARD_HEIGHT_DP = 300

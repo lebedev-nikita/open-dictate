@@ -41,6 +41,8 @@ data class DictationState(
     val processingStage: DictationProcessingStage? = null,
     val postProcessingEnabled: Boolean = false,
     val diagnostics: com.opendictate.app.model.ErrorContext? = null,
+    /** Requested by another app; its transcript is returned to that app and never inserted in a field. */
+    val external: Boolean = false,
 ) {
     init {
         require(!isActive || model != null) { "Active dictation requires a transcription model" }
