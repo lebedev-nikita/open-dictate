@@ -232,6 +232,12 @@ The text selection and floating-menu actions store only selected text that the
 user explicitly adds to the dictionary. The Share action stores only the shared
 text. These actions do not log the text or read surrounding field contents.
 
+A hardware dictation button is a device-local key code. The accessibility service
+requests key event filtering only while a button is bound or being learned; it
+consumes only the bound key while a text field is ready or a session runs, and
+never logs or stores other keys. Back, Home, Recents and Power cannot be bound.
+A volume key's short press is replayed through `AudioManager`.
+
 Control from other apps is off by default. Its exported `RECOGNIZE_SPEECH`
 activity and command receiver are disabled components until the user enables it.
 Broadcast commands carry no sender identity, so they only start, stop or cancel

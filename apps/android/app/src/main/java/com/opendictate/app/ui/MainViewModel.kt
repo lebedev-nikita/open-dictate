@@ -59,6 +59,7 @@ data class MainUiState(
     val postProcessing: com.opendictate.app.model.PostProcessingSettings = com.opendictate.app.model.PostProcessingSettings(),
     val selectionDictionaryActionEnabled: Boolean = true,
     val floatingButtonVisible: Boolean = true,
+    val dictationKeyCode: Int = 0,
     val externalDictationEnabled: Boolean = false,
     val externalDictationApps: List<InstalledApp> = emptyList(),
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
@@ -355,6 +356,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> false
         }
 
+    fun setDictationKey(keyCode: Int) {
+        settings.dictationKeyCode = keyCode
+        mutableState.update { it.copy(dictationKeyCode = keyCode) }
+    }
+
     fun setFloatingButtonVisible(visible: Boolean) {
         settings.floatingButtonVisible = visible
         mutableState.update { it.copy(floatingButtonVisible = visible) }
@@ -459,6 +465,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         floatingButtonVisible = settings.floatingButtonVisible,
+        dictationKeyCode = settings.dictationKeyCode,
         externalDictationEnabled = ExternalDictationComponents.isEnabled(getApplication()),
         externalDictationApps = externalDictationApps(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,

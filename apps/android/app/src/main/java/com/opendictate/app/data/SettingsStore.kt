@@ -45,6 +45,19 @@ class SettingsStore(context: Context) {
             putString(KEY_BUTTON_POSITION, value.position.name)
         }
 
+    /** Hardware key that dictates while held in a text field; 0 when none is bound. Device-local. */
+    var dictationKeyCode: Int
+        get() = prefs.getInt(KEY_DICTATION_KEY_CODE, 0)
+        set(value) = prefs.edit { putInt(KEY_DICTATION_KEY_CODE, value) }
+
+    fun observeDictationKey(onChange: (Int) -> Unit): Closeable {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == KEY_DICTATION_KEY_CODE) onChange(dictationKeyCode)
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     /** When false, the button above the keyboard appears only while a session runs. */
     var floatingButtonVisible: Boolean
         get() = prefs.getBoolean(KEY_FLOATING_BUTTON_VISIBLE, true)
@@ -293,6 +306,7 @@ class SettingsStore(context: Context) {
         private const val KEY_ALLOWED_PACKAGES = "allowed_packages"
         private const val KEY_APP_FILTER_MODE = "app_filter_mode"
         private val APP_FILTER_KEYS = setOf(KEY_APP_FILTER_MODE, KEY_EXCLUDED_PACKAGES, KEY_ALLOWED_PACKAGES)
+        private const val KEY_DICTATION_KEY_CODE = "dictation_key_code"
         private const val KEY_FLOATING_BUTTON_VISIBLE = "floating_button_visible"
         private const val KEY_EXTERNAL_DICTATION_PACKAGES = "external_dictation_packages"
         private const val KEY_TRANSCRIPTION_RESPONSE_TIMEOUT = "transcription_response_timeout_seconds"

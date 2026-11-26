@@ -123,7 +123,7 @@ Automation apps can start and stop dictation, for example from a hardware
 button, and can request text through Android's standard speech recognition
 intent. See [Control Android dictation from other apps](docs/android-automation.md).
 In Settings → Keyboard, turn off the button above the keyboard to show it only
-while dictating.
+while dictating, or assign a hardware button, such as volume, to hold for dictation.
 
 Preview APKs install separately as `com.opendictate.app.preview`. Disable the
 stable accessibility service before enabling the preview service.

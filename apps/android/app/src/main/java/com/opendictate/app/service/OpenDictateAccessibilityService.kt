@@ -2,6 +2,7 @@ package com.opendictate.app.service
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -9,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -16,6 +18,7 @@ import android.os.PersistableBundle
 import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -29,6 +32,9 @@ import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.addToDictionary
 import com.opendictate.app.model.AppFilter
+import com.opendictate.app.model.DictationKeyAction
+import com.opendictate.app.model.DictationKeyGesture
+import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.overlay.DictationOverlayMenuView
 import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
@@ -53,6 +59,10 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private lateinit var settings: SettingsStore
     private var appFilter = AppFilter()
     private var appFilterObserver: Closeable? = null
+    private var dictationKeyObserver: Closeable? = null
+    private var dictationKeyCode = DictationKeys.NONE
+    private val keyGesture = DictationKeyGesture()
+    private val keyHoldTimeout = Runnable { performKeyAction(keyGesture.onHoldTimeout(), dictationKeyCode) }
     private var buttonAppearanceObserver: Closeable? = null
     private var overlay: DictationOverlayView? = null
     private var overlayMenu: DictationOverlayMenuView? = null
@@ -97,6 +107,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             overlay?.setAppearance(it)
             scheduleOverlayUpdate()
         }
+        dictationKeyCode = settings.dictationKeyCode
+        dictationKeyObserver = settings.observeDictationKey { keyCode ->
+            dictationKeyCode = keyCode
+            resetKeyGesture()
+            updateKeyFiltering()
+        }
         running = this
         overlay = DictationOverlayView(
             context = this,
@@ -129,7 +145,94 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 wasFieldSession = fieldSession
             }
         }
+        scope.launch {
+            DictationKeyCapture.active.collect {
+                resetKeyGesture()
+                updateKeyFiltering()
+            }
+        }
         scheduleOverlayUpdate()
+    }
+
+    /** Key events reach the service only while a key is bound or being learned in settings. */
+    private fun updateKeyFiltering() {
+        val info = serviceInfo ?: return
+        val filter = dictationKeyCode != DictationKeys.NONE || DictationKeyCapture.active.value
+        val flags = if (filter) {
+            info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+        } else {
+            info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
+        }
+        if (flags == info.flags) return
+        info.flags = flags
+        serviceInfo = info
+    }
+
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        if (DictationKeyCapture.active.value) {
+            if (!DictationKeys.isBindable(keyCode)) return false
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) DictationKeyCapture.report(keyCode)
+            return true
+        }
+        if (keyCode == DictationKeys.NONE || keyCode != dictationKeyCode) return false
+        val action = when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                val repeated = event.repeatCount > 0
+                val state = DictationStateBus.state.value
+                val fieldSessionActive = state.isFieldSession()
+                // Only a fresh press with no session queries the focused field, keeping repeats cheap.
+                val fieldReady = !repeated && !state.isActive && hasReadyField()
+                keyGesture.onKeyDown(repeated, fieldReady, fieldSessionActive, DictationKeys.holdsBeforeStart(keyCode))
+            }
+            KeyEvent.ACTION_UP -> keyGesture.onKeyUp()
+            else -> DictationKeyAction.PASS
+        }
+        performKeyAction(action, keyCode)
+        return action != DictationKeyAction.PASS
+    }
+
+    private fun performKeyAction(action: DictationKeyAction, keyCode: Int) {
+        when (action) {
+            DictationKeyAction.WAIT_FOR_HOLD -> handler.postDelayed(keyHoldTimeout, DictationKeyGesture.HOLD_THRESHOLD_MS)
+            DictationKeyAction.START -> startFromCommand()
+            DictationKeyAction.STOP -> {
+                handler.removeCallbacks(keyHoldTimeout)
+                // The service handles a stop queued behind its start, so a quick release still ends it.
+                if (commandStartPending || DictationStateBus.state.value.isFieldSession()) stopDictation()
+            }
+            DictationKeyAction.REPLAY_SHORT_PRESS -> {
+                handler.removeCallbacks(keyHoldTimeout)
+                replayVolumeKey(keyCode)
+            }
+            DictationKeyAction.CONSUME, DictationKeyAction.PASS -> Unit
+        }
+    }
+
+    /** Performs the volume change a short press would have made; other keys cannot be replayed. */
+    private fun replayVolumeKey(keyCode: Int) {
+        val direction = when (keyCode) {
+            DictationKeys.VOLUME_UP -> AudioManager.ADJUST_RAISE
+            DictationKeys.VOLUME_DOWN -> AudioManager.ADJUST_LOWER
+            DictationKeys.VOLUME_MUTE -> AudioManager.ADJUST_TOGGLE_MUTE
+            else -> return
+        }
+        runCatching {
+            getSystemService(AudioManager::class.java).adjustSuggestedStreamVolume(
+                direction, AudioManager.USE_DEFAULT_STREAM_TYPE, AudioManager.FLAG_SHOW_UI,
+            )
+        }
+    }
+
+    private fun resetKeyGesture() {
+        handler.removeCallbacks(keyHoldTimeout)
+        keyGesture.reset()
+    }
+
+    private fun hasReadyField(): Boolean {
+        if (windows.none { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }) return false
+        val focused = findFocusedEditable() ?: return false
+        return focused.isTextInput() && appFilter.allows(focused.packageName)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -144,6 +247,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         if (running === this) running = null
         appFilterObserver?.close()
+        dictationKeyObserver?.close()
         buttonAppearanceObserver?.close()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()

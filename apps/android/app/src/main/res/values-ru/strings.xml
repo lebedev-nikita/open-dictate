@@ -387,4 +387,13 @@
     <string name="floating_button_subtitle">Если выключить, появится только во время диктовки</string>
     <string name="command_no_field">Откройте поле ввода, чтобы диктовать</string>
     <string name="command_microphone_unavailable">Android не разрешил включить микрофон</string>
+    <string name="dictation_key_title">Аппаратная кнопка</string>
+    <string name="dictation_key_none">Не назначена</string>
+    <string name="dictation_key_capture_hint">Нажмите кнопку телефона. Удерживайте её в поле ввода, чтобы диктовать; в остальных случаях она работает как обычно. Короткое нажатие громкости по-прежнему меняет громкость.</string>
+    <string name="dictation_key_clear">Убрать</string>
+    <string name="dictation_key_volume_up">Громкость вверх</string>
+    <string name="dictation_key_volume_down">Громкость вниз</string>
+    <string name="dictation_key_volume_mute">Без звука</string>
+    <string name="dictation_key_code">Кнопка %1$d</string>
+    <string name="dictation_key_hold_summary">%1$s · удержание</string>
 </resources>

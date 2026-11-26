@@ -8,6 +8,21 @@ command.
 Enable **Settings → Integrations → Control from other apps**. It is off by
 default; while it is off, both entry points below are disabled Android components.
 
+## Hardware button
+
+**Settings → Keyboard → Hardware button** learns a button from its next press.
+Hold the button in a text field to dictate and release it to finish. Elsewhere
+the button keeps its usual behavior. A volume button starts dictation only after
+a 0.4-second hold; a shorter press still changes the volume. Other buttons start
+dictation as soon as they are pressed in a text field. Pressing the button during
+a session started another way stops it.
+
+Android sends key presses to OpenDictate only while a button is bound or being
+learned, and only through its accessibility service. Back, Home, Recents and
+Power cannot be bound. Android does not pass on buttons it cannot name, such as
+some manufacturer keys. Use an automation app for those if it can detect them,
+and send the commands below.
+
 ## Commands: dictate into the focused field
 
 Send an explicit broadcast to package `com.opendictate.app` with one of these actions:
