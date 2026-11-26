@@ -9,6 +9,7 @@ import android.widget.Toast
 import com.opendictate.app.R
 import com.opendictate.app.model.DictationCommand
 import com.opendictate.app.model.DictationCommandEffect
+import com.opendictate.app.ui.DictationCommandActivity
 import com.opendictate.app.ui.ExternalDictationActivity
 
 /**
@@ -18,6 +19,14 @@ import com.opendictate.app.ui.ExternalDictationActivity
 class DictationCommandReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val command = DictationCommand.fromAction(intent.action) ?: return
+        DictationCommands.perform(context, command, keyboardOptional = false)
+    }
+}
+
+/** Runs a command from [DictationCommandReceiver] or [DictationCommandActivity]. */
+internal object DictationCommands {
+    /** [keyboardOptional] starts without a visible keyboard, which an activity launch closes. */
+    fun perform(context: Context, command: DictationCommand, keyboardOptional: Boolean) {
         val state = DictationStateBus.state.value
         // A RECOGNIZE_SPEECH request may still be starting when the caller already sends stop.
         val pendingExternal = ExternalDictationBus.awaitedRequestId?.takeUnless { state.isActive && !state.external }
@@ -27,7 +36,7 @@ class DictationCommandReceiver : BroadcastReceiver() {
                 if (service == null) {
                     Toast.makeText(context, R.string.accessibility_enable_hint, Toast.LENGTH_SHORT).show()
                 } else {
-                    service.startFromCommand()
+                    service.startFromCommand(keyboardOptional)
                 }
             }
             DictationCommandEffect.STOP -> send(context,
@@ -61,10 +70,19 @@ object ExternalDictationComponents {
     private fun components(context: Context) = listOf(
         ComponentName(context, ExternalDictationActivity::class.java),
         ComponentName(context, DictationCommandReceiver::class.java),
+        ComponentName(context, DictationCommandActivity::class.java),
     )
 
-    fun isEnabled(context: Context): Boolean = components(context).all {
-        context.packageManager.getComponentEnabledSetting(it) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    private fun Context.isComponentEnabled(component: ComponentName): Boolean =
+        packageManager.getComponentEnabledSetting(component) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+
+    /** The receiver records the user's choice; entry points added in later versions follow it. */
+    fun isEnabled(context: Context): Boolean =
+        context.isComponentEnabled(ComponentName(context, DictationCommandReceiver::class.java))
+
+    /** Enables entry points that an update added while the feature was already on. */
+    fun sync(context: Context) {
+        if (isEnabled(context) && !components(context).all { context.isComponentEnabled(it) }) setEnabled(context, true)
     }
 
     fun setEnabled(context: Context, enabled: Boolean) {

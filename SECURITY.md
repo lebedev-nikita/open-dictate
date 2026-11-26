@@ -239,10 +239,12 @@ never logs or stores other keys. Back, Home, Recents and Power cannot be bound.
 A volume key's short press is replayed through `AudioManager`.
 
 Control from other apps is off by default. Its exported `RECOGNIZE_SPEECH`
-activity and command receiver are disabled components until the user enables it.
-Broadcast commands carry no sender identity, so they only start, stop or cancel
-dictation into the focused field under the usual focus, package, app-filter and
-keyboard guards; they never return text. Starting requires the accessibility
+activity, command receiver and windowless command activity are disabled
+components until the user enables it. Commands carry no sender identity, so they
+only start, stop or cancel dictation into the focused field under the usual
+focus, package, app-filter and keyboard guards; they never return text. Opening
+the command activity closes the keyboard, so its sessions instead require the
+focused field to keep focus and are cancelled a second after it loses focus. Starting requires the accessibility
 service, which shows the session before the microphone starts. Text reaches another
 app only as the result of a `RECOGNIZE_SPEECH` request from a package the user
 approved; Android supplies that package. Approvals stay in app-private preferences

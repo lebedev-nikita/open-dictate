@@ -35,6 +35,8 @@ import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.DictationKeyAction
 import com.opendictate.app.model.DictationKeyGesture
 import com.opendictate.app.model.DictationKeys
+import com.opendictate.app.model.FieldFocus
+import com.opendictate.app.model.FieldFocusGrace
 import com.opendictate.app.overlay.DictationOverlayMenuView
 import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
@@ -91,8 +93,13 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private var commandStartPending = false
     private val clearCommandStartPending = Runnable {
         commandStartPending = false
+        if (!DictationStateBus.state.value.isFieldSession()) clearKeyboardFreeTarget()
         scheduleOverlayUpdate()
     }
+    /** The field of a session started by an activity command, which continues without a keyboard. */
+    private var keyboardFreeTarget: AccessibilityNodeInfo? = null
+    private val keyboardFreeFocus = FieldFocusGrace()
+    private val recheckKeyboardFreeTarget = Runnable { scheduleOverlayUpdate() }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -140,6 +147,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                     commandStartPending = false
                     handler.removeCallbacks(clearCommandStartPending)
                 }
+                if (wasFieldSession && !fieldSession) clearKeyboardFreeTarget()
                 // A hidden button shows and hides with the session it indicates.
                 if (fieldSession != wasFieldSession) scheduleOverlayUpdate()
                 wasFieldSession = fieldSession
@@ -264,13 +272,23 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private val updateOverlayRunnable = Runnable {
         overlayUpdateScheduled = false
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-        // Node queries can block the main thread; there is no eligible target without an IME.
-        val focused = if (ime != null) findFocusedEditable() else null
+        val fieldSessionActive = commandStartPending || DictationStateBus.state.value.isFieldSession()
+        val keyboardFree = keyboardFreeTarget?.takeIf { fieldSessionActive }
+        // Node queries can block the main thread; without an IME only a keyboard-free session has a target.
+        val focused = if (ime != null || keyboardFree != null) findFocusedEditable() else null
         val hasEligibleTarget = ime != null && focused?.isTextInput() == true &&
             appFilter.allows(focused.packageName)
-        val fieldSessionActive = commandStartPending || DictationStateBus.state.value.isFieldSession()
-        if (overlayVisibilitySession.shouldShow(hasEligibleTarget, settings.floatingButtonVisible, fieldSessionActive)) {
+        val keyboardFreeState = keyboardFree?.let { target ->
+            val held = hasEligibleTarget || ime == null && focused?.isFocused == true && focused == target
+            keyboardFreeFocus.check(held, SystemClock.elapsedRealtime())
+        }
+        val hasTarget = hasEligibleTarget || keyboardFreeState == FieldFocus.Held
+        if (overlayVisibilitySession.shouldShow(hasTarget, settings.floatingButtonVisible, fieldSessionActive)) {
             showOrMoveOverlay(ime, requireNotNull(focused))
+        } else if (keyboardFreeState is FieldFocus.Waiting) {
+            // Keep the indicator while the command's task switch briefly moves focus.
+            handler.removeCallbacks(recheckKeyboardFreeTarget)
+            handler.postDelayed(recheckKeyboardFreeTarget, keyboardFreeState.remainingMs)
         } else {
             if (!hasEligibleTarget) {
                 overlayMenuExpanded = false
@@ -282,8 +300,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             removeOverlay()
             // Another app's session has its own panel and does not depend on a focused field.
             val state = DictationStateBus.state.value
-            if (!hasEligibleTarget && state.isActive && !state.external) {
-                if (ime == null) onOverlayCancelled() else stopDictation()
+            if (!hasTarget && state.isActive && !state.external) {
+                if (ime == null || keyboardFreeState == FieldFocus.Lost) onOverlayCancelled() else stopDictation()
             }
         }
     }
@@ -539,12 +557,20 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         startOrdinaryDictation()
     }
 
-    /** Starts dictation into the focused field for [DictationCommandReceiver], like a button tap. */
-    internal fun startFromCommand() {
+    /**
+     * Starts dictation into the focused field for [DictationCommands], like a button tap. An activity
+     * command closes the keyboard by switching tasks, so with [keyboardOptional] a focused field is
+     * enough and the session continues without a keyboard while that field keeps focus.
+     */
+    internal fun startFromCommand(keyboardOptional: Boolean = false) {
         if (DictationStateBus.state.value.isActive) return
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-        val focused = if (ime != null) findFocusedEditable() else null
-        if (ime == null || focused?.isTextInput() != true || !appFilter.allows(focused.packageName)) {
+        val focused = when {
+            ime != null -> findFocusedEditable()
+            keyboardOptional -> findFocusedEditable()?.takeIf { it.isFocused }
+            else -> null
+        }
+        if (focused?.isTextInput() != true || !appFilter.allows(focused.packageName)) {
             Toast.makeText(this, R.string.command_no_field, Toast.LENGTH_SHORT).show()
             return
         }
@@ -552,8 +578,18 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         commandStartPending = true
         handler.removeCallbacks(clearCommandStartPending)
         handler.postDelayed(clearCommandStartPending, COMMAND_START_TIMEOUT_MS)
+        if (keyboardOptional) {
+            keyboardFreeTarget = focused
+            keyboardFreeFocus.reset()
+        }
         showOrMoveOverlay(ime, focused)
         if (!startOrdinaryDictation()) clearCommandStartPending.run()
+    }
+
+    private fun clearKeyboardFreeTarget() {
+        keyboardFreeTarget = null
+        keyboardFreeFocus.reset()
+        handler.removeCallbacks(recheckKeyboardFreeTarget)
     }
 
     /** Cancels a field session as the overlay does, restoring text already inserted by Live. */
