@@ -5,6 +5,7 @@ import com.opendictate.app.audio.LastDictationAudioStore
 import com.opendictate.app.data.TranscriptHistoryStore
 import com.opendictate.app.model.ErrorContext
 import com.opendictate.app.model.FailureDetails
+import com.opendictate.app.service.ExternalDictationComponents
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +25,7 @@ class OpenDictateApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         driveSync
+        ExternalDictationComponents.sync(this)
     }
     val chatGPT by lazy { com.opendictate.app.chatgpt.ChatGPTSession(this) }
     val transcriptHistoryStore by lazy { TranscriptHistoryStore(this) }

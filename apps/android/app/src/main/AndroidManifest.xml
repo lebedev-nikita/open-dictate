@@ -92,6 +92,24 @@
             </intent-filter>
         </receiver>
 
+        <!-- The same commands for apps that can only open activities; it has no window. -->
+        <activity
+            android:name=".ui.DictationCommandActivity"
+            android:enabled="false"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="com.opendictate.app.action.DICTATION_START" />
+                <action android:name="com.opendictate.app.action.DICTATION_STOP" />
+                <action android:name="com.opendictate.app.action.DICTATION_TOGGLE" />
+                <action android:name="com.opendictate.app.action.DICTATION_CANCEL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".service.DictationForegroundService"
             android:exported="false"

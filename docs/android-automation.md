@@ -50,6 +50,25 @@ to cancel.
 - **Key Mapper** runs an action on press only. Use an Intent action with target
   *Broadcast receiver* and `DICTATION_TOGGLE`.
 
+### Apps that can only open activities
+
+Some button remappers can only open an activity. Start an activity with one of
+the actions above in package `com.opendictate.app`, or with the component
+`com.opendictate.app/.ui.DictationCommandActivity`. It has no window and closes
+at once.
+
+Opening any activity switches apps, and Android closes the keyboard. A session
+started this way therefore needs only a focused text field and continues while
+that field keeps focus; tap the field to bring the keyboard back. It is
+cancelled if focus stays elsewhere for a second. Stop it with the same command
+or the indicator; cancel it with the indicator or `DICTATION_CANCEL`.
+
+For example, Plus Key Remapper on OnePlus phones maps the Plus Key with a custom
+intent: action `com.opendictate.app.action.DICTATION_TOGGLE`, package
+`com.opendictate.app` and component class
+`com.opendictate.app.ui.DictationCommandActivity`. Without the class it opens
+the app instead.
+
 ## Return text to the calling app
 
 OpenDictate answers the standard `android.speech.action.RECOGNIZE_SPEECH`
