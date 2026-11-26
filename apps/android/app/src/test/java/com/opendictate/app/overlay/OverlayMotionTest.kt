@@ -267,6 +267,24 @@ class OverlayMotionTest {
     }
 
     @Test
+    fun `hidden button appears only while a field session runs`() {
+        val session = OverlayVisibilitySession()
+
+        assertFalse(session.shouldShow(hasEligibleTarget = true, alwaysVisible = false))
+        assertTrue(session.shouldShow(hasEligibleTarget = true, alwaysVisible = false, fieldSessionActive = true))
+        assertFalse(session.shouldShow(hasEligibleTarget = false, alwaysVisible = false, fieldSessionActive = true))
+    }
+
+    @Test
+    fun `dismissed button returns as an indicator for a session started elsewhere`() {
+        val session = OverlayVisibilitySession()
+        session.dismiss()
+
+        assertFalse(session.shouldShow(hasEligibleTarget = true))
+        assertTrue(session.shouldShow(hasEligibleTarget = true, fieldSessionActive = true))
+    }
+
+    @Test
     fun `retarget preserves position and velocity`() {
         val motion = OverlayPositionMotion(initialPositionPx = 800)
         motion.retarget(980)

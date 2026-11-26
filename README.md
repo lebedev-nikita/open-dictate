@@ -119,6 +119,12 @@ Swipe right to dismiss it until the keyboard closes. Add dictionary words from
 Android's text selection or Share menu. Android retains one private recording
 for retry; the next dictation replaces it.
 
+Automation apps can start and stop dictation, for example from a hardware
+button, and can request text through Android's standard speech recognition
+intent. See [Control Android dictation from other apps](docs/android-automation.md).
+In Settings → Keyboard, turn off the button above the keyboard to show it only
+while dictating.
+
 Preview APKs install separately as `com.opendictate.app.preview`. Disable the
 stable accessibility service before enabling the preview service.
 

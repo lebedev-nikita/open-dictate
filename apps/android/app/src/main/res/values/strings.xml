@@ -372,4 +372,23 @@
     <string name="error_reason_missing_recording">The previous recording is unavailable</string>
     <string name="error_reason_delivery_rejected">The target field was unavailable; the result was copied</string>
     <string name="error_reason_unknown">An unexpected error occurred</string>
+    <string name="external_dictation_title">Control from other apps</string>
+    <string name="external_dictation_subtitle">Automate, Key Mapper and others can start dictation</string>
+    <string name="external_dictation_no_apps">Apps that receive the text ask for access first</string>
+    <string name="external_dictation_revoke">Revoke access for %1$s</string>
+    <string name="external_dictation_consent_title">Allow %1$s to use dictation?</string>
+    <string name="external_dictation_consent_body">%1$s will be able to record your voice with OpenDictate and receive the text. You can revoke access in settings.</string>
+    <string name="external_dictation_allow">Allow</string>
+    <string name="external_dictation_deny">Don\'t allow</string>
+    <string name="external_dictation_listening">Listening</string>
+    <string name="external_dictation_processing">Transcribing…</string>
+    <string name="external_dictation_for_app">The text goes to %1$s</string>
+    <string name="external_dictation_busy">OpenDictate is already dictating</string>
+    <string name="external_dictation_needs_result">The calling app must wait for a result to receive text</string>
+    <string name="notification_text_external_recording">Tap Stop when you are done</string>
+    <string name="notification_text_external_processing">The text will go to the app that asked for it</string>
+    <string name="floating_button_title">Button above the keyboard</string>
+    <string name="floating_button_subtitle">When off, it appears only while dictating</string>
+    <string name="command_no_field">Focus a text field to dictate</string>
+    <string name="command_microphone_unavailable">Android did not allow the microphone to start</string>
 </resources>

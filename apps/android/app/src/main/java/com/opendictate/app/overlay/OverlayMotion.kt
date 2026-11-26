@@ -182,9 +182,13 @@ internal class OverlayVisibilitySession {
         dismissed = true
     }
 
-    fun shouldShow(hasEligibleTarget: Boolean): Boolean {
+    /**
+     * A hidden or dismissed button still appears while a field session runs, so dictation started
+     * by another app or a key always has a visible indicator with stop and cancel.
+     */
+    fun shouldShow(hasEligibleTarget: Boolean, alwaysVisible: Boolean = true, fieldSessionActive: Boolean = false): Boolean {
         if (!hasEligibleTarget) dismissed = false
-        return hasEligibleTarget && !dismissed
+        return hasEligibleTarget && (fieldSessionActive || alwaysVisible && !dismissed)
     }
 }
 

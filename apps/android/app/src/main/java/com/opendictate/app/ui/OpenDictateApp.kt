@@ -125,6 +125,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                 viewModel.refreshModelCatalog()
                 viewModel.refreshPrompt()
                 viewModel.refreshSelectionDictionaryAction()
+                viewModel.refreshExternalDictation()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

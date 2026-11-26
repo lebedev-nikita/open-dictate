@@ -45,9 +45,14 @@ class SettingsStore(context: Context) {
             putString(KEY_BUTTON_POSITION, value.position.name)
         }
 
+    /** When false, the button above the keyboard appears only while a session runs. */
+    var floatingButtonVisible: Boolean
+        get() = prefs.getBoolean(KEY_FLOATING_BUTTON_VISIBLE, true)
+        set(value) = prefs.edit { putBoolean(KEY_FLOATING_BUTTON_VISIBLE, value) }
+
     fun observeDictationButtonAppearance(onChange: (DictationButtonAppearance) -> Unit): Closeable {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == null || key == KEY_BUTTON_DIAMETER || key == KEY_BUTTON_POSITION) {
+            if (key == null || key == KEY_BUTTON_DIAMETER || key == KEY_BUTTON_POSITION || key == KEY_FLOATING_BUTTON_VISIBLE) {
                 onChange(dictationButtonAppearance)
             }
         }
@@ -161,6 +166,11 @@ class SettingsStore(context: Context) {
             require(value == null || TranscriptionResponseTimeout.isValid(value))
             prefs.edit { putInt(KEY_TRANSCRIPTION_RESPONSE_TIMEOUT, value ?: 0) }
         }
+
+    /** Apps the user allowed to record through dictation for other apps. Device-local, never synced. */
+    var externalDictationPackages: Set<String>
+        get() = prefs.getStringSet(KEY_EXTERNAL_DICTATION_PACKAGES, null).orEmpty().toSet()
+        set(value) = prefs.edit { putStringSet(KEY_EXTERNAL_DICTATION_PACKAGES, value.toSet()) }
 
     var driveSyncEnabled: Boolean
         get() = prefs.getBoolean("drive_sync_enabled", false)
@@ -283,6 +293,8 @@ class SettingsStore(context: Context) {
         private const val KEY_ALLOWED_PACKAGES = "allowed_packages"
         private const val KEY_APP_FILTER_MODE = "app_filter_mode"
         private val APP_FILTER_KEYS = setOf(KEY_APP_FILTER_MODE, KEY_EXCLUDED_PACKAGES, KEY_ALLOWED_PACKAGES)
+        private const val KEY_FLOATING_BUTTON_VISIBLE = "floating_button_visible"
+        private const val KEY_EXTERNAL_DICTATION_PACKAGES = "external_dictation_packages"
         private const val KEY_TRANSCRIPTION_RESPONSE_TIMEOUT = "transcription_response_timeout_seconds"
         private const val DEFAULT_PROMPT = "OpenDictate\nDictate"
     }

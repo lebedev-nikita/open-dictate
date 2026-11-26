@@ -232,6 +232,18 @@ The text selection and floating-menu actions store only selected text that the
 user explicitly adds to the dictionary. The Share action stores only the shared
 text. These actions do not log the text or read surrounding field contents.
 
+Control from other apps is off by default. Its exported `RECOGNIZE_SPEECH`
+activity and command receiver are disabled components until the user enables it.
+Broadcast commands carry no sender identity, so they only start, stop or cancel
+dictation into the focused field under the usual focus, package, app-filter and
+keyboard guards; they never return text. Starting requires the accessibility
+service, which shows the session before the microphone starts. Text reaches another
+app only as the result of a `RECOGNIZE_SPEECH` request from a package the user
+approved; Android supplies that package. Approvals stay in app-private preferences
+and are cleared when the feature is turned off. These sessions use a temporary
+cache WAV deleted after transcription, are never inserted into a field and return
+only fixed error codes.
+
 Transcript history is stored only in the app-private SQLite database. Android
 backup remains disabled. History search runs entirely on-device; queries and
 saved transcripts are not uploaded for search.

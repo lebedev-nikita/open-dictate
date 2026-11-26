@@ -227,6 +227,12 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   synchronized. Hold the history button in settings to view or clear it, or
   explicitly copy an error's technical details to the system clipboard.
 - Android backup is disabled for the application.
+- Control from other apps is off by default. When you turn it on, any app on the
+  device can start, stop or cancel dictation into the field you are editing; the
+  recording is always shown on screen and can be cancelled. Text is returned to
+  another app only after you allow that app; the allowed package names are stored
+  locally and cleared when you turn the setting off. Requested transcripts are
+  saved to history like other dictations, and their audio is deleted after use.
 - When you choose Add to OpenDictate dictionary from Android's text selection
   menu, the floating button's long-press menu, or Android's Share menu, only
   the selected or shared text is saved in app-private preferences. The

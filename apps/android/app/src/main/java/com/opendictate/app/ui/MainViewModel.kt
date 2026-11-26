@@ -28,6 +28,7 @@ import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.network.OpenAiTranscriptionClient
+import com.opendictate.app.service.ExternalDictationComponents
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,6 +58,9 @@ data class MainUiState(
     val prompt: String = "",
     val postProcessing: com.opendictate.app.model.PostProcessingSettings = com.opendictate.app.model.PostProcessingSettings(),
     val selectionDictionaryActionEnabled: Boolean = true,
+    val floatingButtonVisible: Boolean = true,
+    val externalDictationEnabled: Boolean = false,
+    val externalDictationApps: List<InstalledApp> = emptyList(),
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
     val appFilter: AppFilter = AppFilter(),
     val installedApps: List<InstalledApp> = emptyList(),
@@ -351,6 +355,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> false
         }
 
+    fun setFloatingButtonVisible(visible: Boolean) {
+        settings.floatingButtonVisible = visible
+        mutableState.update { it.copy(floatingButtonVisible = visible) }
+    }
+
+    fun refreshExternalDictation() {
+        mutableState.update {
+            it.copy(externalDictationEnabled = ExternalDictationComponents.isEnabled(getApplication()),
+                externalDictationApps = externalDictationApps())
+        }
+    }
+
+    fun setExternalDictationEnabled(enabled: Boolean) {
+        ExternalDictationComponents.setEnabled(getApplication(), enabled)
+        // Turning the feature off forgets every grant, so enabling it again asks each app anew.
+        if (!enabled) settings.externalDictationPackages = emptySet()
+        refreshExternalDictation()
+    }
+
+    fun revokeExternalDictation(packageName: String) {
+        settings.externalDictationPackages = settings.externalDictationPackages - packageName
+        refreshExternalDictation()
+    }
+
+    private fun externalDictationApps(): List<InstalledApp> {
+        val packageManager = getApplication<Application>().packageManager
+        return settings.externalDictationPackages.map { packageName ->
+            val label = runCatching {
+                packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+            }.getOrDefault(packageName)
+            InstalledApp(packageName, label)
+        }.sortedBy { it.label.lowercase() }
+    }
+
     fun setTranscriptionResponseTimeout(seconds: Int?) {
         settings.transcriptionResponseTimeoutSeconds = seconds
         mutableState.update { it.copy(transcriptionResponseTimeoutSeconds = seconds) }
@@ -420,6 +458,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         postProcessing = settings.postProcessing,
         textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
+        floatingButtonVisible = settings.floatingButtonVisible,
+        externalDictationEnabled = ExternalDictationComponents.isEnabled(getApplication()),
+        externalDictationApps = externalDictationApps(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,
         appFilter = settings.appFilter,
     )

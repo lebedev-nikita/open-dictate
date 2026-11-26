@@ -8,4 +8,14 @@
         <item name="android:navigationBarColor">#080808</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+
+    <!-- A transparent window for the external dictation panel drawn by Compose. -->
+    <style name="Theme.OpenDictate.Panel" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>
