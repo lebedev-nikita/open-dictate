@@ -391,4 +391,13 @@
     <string name="floating_button_subtitle">When off, it appears only while dictating</string>
     <string name="command_no_field">Focus a text field to dictate</string>
     <string name="command_microphone_unavailable">Android did not allow the microphone to start</string>
+    <string name="dictation_key_title">Hardware button</string>
+    <string name="dictation_key_none">Not assigned</string>
+    <string name="dictation_key_capture_hint">Press the phone button to use. Hold it in a text field to dictate; elsewhere it works as usual. A short volume press still changes the volume.</string>
+    <string name="dictation_key_clear">Remove</string>
+    <string name="dictation_key_volume_up">Volume up</string>
+    <string name="dictation_key_volume_down">Volume down</string>
+    <string name="dictation_key_volume_mute">Mute</string>
+    <string name="dictation_key_code">Button %1$d</string>
+    <string name="dictation_key_hold_summary">%1$s · hold</string>
 </resources>

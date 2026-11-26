@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MicNone
@@ -85,6 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.preferredFrameRate
 import androidx.compose.ui.res.painterResource
@@ -103,6 +105,7 @@ import com.opendictate.app.R
 import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.data.MAX_DICTIONARY_LENGTH
 import com.opendictate.app.data.normalizeDictionaryTerms
+import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.ModelCatalog
@@ -132,6 +135,7 @@ internal fun SettingsScreen(
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
     var gesturesOpen by rememberSaveable { mutableStateOf(false) }
     var buttonAppearanceOpen by rememberSaveable { mutableStateOf(false) }
+    var dictationKeyOpen by rememberSaveable { mutableStateOf(false) }
     val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
     val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
@@ -265,6 +269,9 @@ internal fun SettingsScreen(
                             stringResource(R.string.floating_button_subtitle), state.floatingButtonVisible,
                             viewModel::setFloatingButtonVisible)
                         SettingsDivider()
+                        ActionRow(Icons.Outlined.Keyboard, stringResource(R.string.dictation_key_title),
+                            dictationKeySummary(LocalContext.current.resources, state.dictationKeyCode), { dictationKeyOpen = true })
+                        SettingsDivider()
                         ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),
                             stringResource(R.string.dictation_button_appearance_summary,
                                 stringResource(R.string.dictation_button_pixels,
@@ -358,6 +365,9 @@ internal fun SettingsScreen(
         onDismiss = { gesturesOpen = false },
         mirrorGestures = state.dictationButtonAppearance.gestureDirection == -1,
     )
+    if (dictationKeyOpen) DictationKeyDialog(state.dictationKeyCode, state.accessibilityEnabled,
+        onBind = viewModel::setDictationKey, onClear = { viewModel.setDictationKey(DictationKeys.NONE) },
+        onDismiss = { dictationKeyOpen = false })
     if (buttonAppearanceOpen) DictationButtonAppearanceSheet(
         state.dictationButtonAppearance, viewModel::setDictationButtonAppearance,
     ) { buttonAppearanceOpen = false }

@@ -227,6 +227,10 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   synchronized. Hold the history button in settings to view or clear it, or
   explicitly copy an error's technical details to the system clipboard.
 - Android backup is disabled for the application.
+- When you assign a hardware button, the accessibility service receives
+  hardware key presses so it can recognize that button. Only the assigned key code
+  is stored; other presses are passed on unchanged and never stored or sent.
+  Key presses are not received while no button is assigned.
 - Control from other apps is off by default. When you turn it on, any app on the
   device can start, stop or cancel dictation into the field you are editing; the
   recording is always shown on screen and can be cancelled. Text is returned to
