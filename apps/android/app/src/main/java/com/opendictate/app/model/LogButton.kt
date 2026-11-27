@@ -134,6 +134,26 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
         if (candidate.bursts.size > MAX_BURSTS) candidate.bursts.removeAt(0)
     }
 
+    /**
+     * A best guess for showing progress while the button's line is still unknown: the presses in
+     * the group that a line naming a key is going through. A line that was already in the log shows
+     * only from its second press, because its first one may be anything.
+     */
+    fun heardPresses(nowMs: Long): Int {
+        if (inRhythm != null) return presses
+        return candidates.values.maxOfOrNull { candidate ->
+            val heard = if (rank(candidate) >= NAMED_RANK) pressesOf(candidate, nowMs) else 0
+            if (candidate.seenBefore && heard < 2) 0 else heard
+        } ?: 0
+    }
+
+    private fun pressesOf(candidate: Candidate, nowMs: Long): Int {
+        if (nowMs - candidate.lastArrivalMs >= MAX_PRESS_GAP_MS) return if (signatureOf(candidate, nowMs) != null) presses else 0
+        // A burst soon after another is the release of the same press.
+        val heard = 1 + group(candidate).zipWithNext().count { (earlier, later) -> LogLine.gapMs(earlier, later) >= MIN_PRESS_GAP_MS }
+        return if (heard <= presses) heard else 0
+    }
+
     /** A press of a button the app can see as a key, such as volume, after the presses were found. */
     fun onOtherButton(nowMs: Long) {
         if (inRhythm == null || result != null) return
@@ -178,10 +198,7 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
      */
     private fun signatureOf(candidate: Candidate, nowMs: Long): LogButtonSignature? {
         if (nowMs - candidate.lastArrivalMs < MAX_PRESS_GAP_MS) return null
-        val bursts = candidate.bursts
-        var first = bursts.lastIndex
-        while (first > 0 && LogLine.gapMs(bursts[first - 1], bursts[first]) <= MAX_PRESS_GAP_MS) first--
-        val group = bursts.subList(first, bursts.size)
+        val group = group(candidate)
         val releaseLogged = when (group.size) {
             presses * 2 -> true
             // A press and its quick release must not pass for two presses of a button that logs once.
@@ -189,6 +206,13 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
             else -> return null
         }
         return LogButtonSignature(candidate.tag, candidate.message, releaseLogged)
+    }
+
+    private fun group(candidate: Candidate): List<Long> {
+        val bursts = candidate.bursts
+        var first = bursts.lastIndex
+        while (first > 0 && LogLine.gapMs(bursts[first - 1], bursts[first]) <= MAX_PRESS_GAP_MS) first--
+        return if (bursts.isEmpty()) bursts else bursts.subList(first, bursts.size)
     }
 
     /**

@@ -146,6 +146,44 @@ class LogButtonTest {
     }
 
     @Test
+    fun showsPressesAsTheyAreHeard() = with(Learning()) {
+        assertEquals(0, learner.heardPresses(2_000))
+        press(3_000)
+        assertEquals(1, learner.heardPresses(3_200))
+        press(4_200)
+        assertEquals(2, learner.heardPresses(4_400))
+        press(5_300)
+        assertEquals(3, learner.heardPresses(5_500))
+        // The count stays while the group is checked and once it is accepted.
+        assertEquals(3, learner.heardPresses(5_410 + LogButtonLearner.MAX_PRESS_GAP_MS))
+        afterPresses(5_410, named = true)
+        assertEquals(3, learner.heardPresses(20_000))
+    }
+
+    @Test
+    fun forgetsPressesThatDidNotMakeThree() = with(Learning()) {
+        press(3_000)
+        press(4_200)
+        assertEquals(2, learner.heardPresses(4_400))
+        // The pause was too long: the next press starts over.
+        assertEquals(0, learner.heardPresses(4_310 + LogButtonLearner.MAX_PRESS_GAP_MS))
+        press(9_000)
+        assertEquals(1, learner.heardPresses(9_200))
+        // A fourth press in a row is not three presses either.
+        listOf(10_000L, 11_000, 12_000).forEach { press(it) }
+        assertEquals(0, learner.heardPresses(12_200))
+    }
+
+    @Test
+    fun lineAlreadyInTheLogShowsFromItsSecondPress() = with(Learning(listOf("WindowKeys"))) {
+        // Seen on a OnePlus 15: a line naming a key is logged whenever a window opens.
+        line(3_000, "WindowKeys")
+        assertEquals(0, learner.heardPresses(3_200))
+        line(4_000, "WindowKeys")
+        assertEquals(2, learner.heardPresses(4_200))
+    }
+
+    @Test
     fun learnsFromQuickPresses() = with(Learning()) {
         listOf(57_367L, 57_479, 57_577, 57_681, 57_763, 57_900).forEach { line(it, "Keys", "undefined key") }
         afterPresses(57_900)
