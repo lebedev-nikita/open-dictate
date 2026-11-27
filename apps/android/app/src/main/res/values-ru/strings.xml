@@ -480,7 +480,7 @@
     <string name="mcp_server_trust">Доверять сертификатам, установленным на устройстве</string>
     <string name="mcp_server_trust_hint">Для сервера в своей сети с собственным центром сертификации</string>
     <string name="mcp_server_hint">Подсказка для модели (необязательно)</string>
-    <string name="mcp_server_hint_example">Например: если проект не назван, запускай тред без проекта</string>
+    <string name="mcp_server_hint_example">Например: по умолчанию тред без проекта</string>
     <string name="assistant_done_open">Готово. Нажмите, чтобы открыть</string>
     <string name="mcp_server_delete">Удалить</string>
     <string name="mcp_server_busy">Подключаюсь…</string>
