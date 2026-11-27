@@ -14,6 +14,7 @@ import androidx.lifecycle.viewModelScope
 import arrow.core.getOrElse
 import com.opendictate.app.OpenDictateApplication
 import com.opendictate.app.R
+import com.opendictate.app.data.McpSecrets
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.TranscriptHistoryItem
@@ -24,10 +25,15 @@ import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationLanguage
+import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.LogButtonSignature
+import com.opendictate.app.model.McpServer
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
+import com.opendictate.app.network.McpClient
+import com.opendictate.app.network.McpError
+import com.opendictate.app.network.McpSignIn
 import com.opendictate.app.network.OpenAiTranscriptionClient
 import com.opendictate.app.service.ExternalDictationComponents
 import com.opendictate.app.service.LogButton
@@ -64,9 +70,12 @@ data class MainUiState(
     val dictationKeyCode: Int = 0,
     /** READ_LOGS was granted through adb; until then the log button is not offered at all. */
     val logButtonPermitted: Boolean = false,
-    val logButtonEnabled: Boolean = false,
     val logButtonTag: String? = null,
-    val logButtonLink: String = "",
+    val mcpServers: List<McpServer> = emptyList(),
+    /** Servers with a token in storage, or that need none. */
+    val mcpSignedIn: Set<String> = emptySet(),
+    val mcpBusy: Set<String> = emptySet(),
+    val mcpErrors: Map<String, McpError> = emptyMap(),
     val externalDictationEnabled: Boolean = false,
     val externalDictationApps: List<InstalledApp> = emptyList(),
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
@@ -89,6 +98,7 @@ data class HistoryUiState(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val settings = SettingsStore(application)
+    private val mcpSecrets = McpSecrets(application)
     private val selectionDictionaryComponent = ComponentName(
         application,
         AddToDictionaryActivity::class.java,
@@ -364,25 +374,82 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> false
         }
 
+    /** One hardware button is bound at a time: a key Android reports, or one found in the system log. */
     fun setDictationKey(keyCode: Int) {
         settings.dictationKeyCode = keyCode
-        mutableState.update { it.copy(dictationKeyCode = keyCode) }
-    }
-
-    fun setLogButtonEnabled(enabled: Boolean) {
-        settings.logButtonEnabled = enabled
-        mutableState.update { it.copy(logButtonEnabled = enabled) }
+        if (keyCode != DictationKeys.NONE) settings.logButtonSignature = null
+        mutableState.update { it.copy(dictationKeyCode = keyCode, logButtonTag = settings.logButtonSignature?.tag) }
     }
 
     fun setLogButtonSignature(signature: LogButtonSignature?) {
         settings.logButtonSignature = signature
-        mutableState.update { it.copy(logButtonTag = signature?.tag) }
+        if (signature != null) settings.dictationKeyCode = DictationKeys.NONE
+        mutableState.update { it.copy(logButtonTag = signature?.tag, dictationKeyCode = settings.dictationKeyCode) }
     }
 
-    fun setLogButtonLink(link: String) {
-        settings.logButtonLink = link
-        mutableState.update { it.copy(logButtonLink = settings.logButtonLink) }
+    fun unbindHardwareButton() {
+        settings.dictationKeyCode = DictationKeys.NONE
+        settings.logButtonSignature = null
+        mutableState.update { it.copy(dictationKeyCode = DictationKeys.NONE, logButtonTag = null) }
     }
+
+    /** Saves a server; a pasted [token] replaces the stored one. Its tools are then listed anew. */
+    fun saveMcpServer(server: McpServer, token: String?) {
+        val previous = settings.mcpServers.firstOrNull { it.id == server.id }
+        if (token != null) mcpSecrets.save(server.id, token)
+        // A token belongs to the address and sign-in it was issued for.
+        if (previous != null && (previous.url != server.url || previous.auth != server.auth) && token == null) mcpSecrets.clear(server.id)
+        val addressChanged = previous != null && previous.url != server.url
+        storeMcpServers(settings.mcpServers.filterNot { it.id == server.id } + if (addressChanged) server.copy(tools = emptyList(), enabledTools = emptySet()) else server)
+        if (mcpSecrets.hasToken(server)) refreshMcpTools(server.id)
+    }
+
+    fun deleteMcpServer(serverId: String) {
+        mcpSecrets.clear(serverId)
+        storeMcpServers(settings.mcpServers.filterNot { it.id == serverId })
+    }
+
+    fun setMcpToolEnabled(serverId: String, tool: String, enabled: Boolean) {
+        storeMcpServers(settings.mcpServers.map { server ->
+            if (server.id != serverId) server
+            else server.copy(enabledTools = if (enabled) server.enabledTools + tool else server.enabledTools - tool)
+        })
+    }
+
+    fun signInMcpServer(serverId: String) = mcpOperation(serverId) { server ->
+        McpSignIn(getApplication()).signIn(server).map { token ->
+            mcpSecrets.save(server.id, token)
+            listMcpTools(server)
+        }.fold({ it }, { it })
+    }
+
+    fun refreshMcpTools(serverId: String) = mcpOperation(serverId, ::listMcpTools)
+
+    private suspend fun listMcpTools(server: McpServer): McpError? =
+        McpClient().listTools(server, mcpSecrets.token(server)).fold({ it }, { tools ->
+            storeMcpServers(settings.mcpServers.map { if (it.id == server.id) it.withTools(tools) else it })
+            null
+        })
+
+    private fun mcpOperation(serverId: String, operation: suspend (McpServer) -> McpError?) {
+        val server = settings.mcpServers.firstOrNull { it.id == serverId } ?: return
+        if (serverId in state.value.mcpBusy) return
+        mutableState.update { it.copy(mcpBusy = it.mcpBusy + serverId, mcpErrors = it.mcpErrors - serverId) }
+        viewModelScope.launch {
+            val error = operation(server)
+            mutableState.update {
+                it.copy(mcpBusy = it.mcpBusy - serverId, mcpErrors = if (error == null) it.mcpErrors - serverId else it.mcpErrors + (serverId to error),
+                    mcpSignedIn = mcpSignedIn(settings.mcpServers))
+            }
+        }
+    }
+
+    private fun storeMcpServers(servers: List<McpServer>) {
+        settings.mcpServers = servers
+        mutableState.update { it.copy(mcpServers = servers, mcpSignedIn = mcpSignedIn(servers)) }
+    }
+
+    private fun mcpSignedIn(servers: List<McpServer>): Set<String> = servers.filter(mcpSecrets::hasToken).map { it.id }.toSet()
 
     fun setFloatingButtonVisible(visible: Boolean) {
         settings.floatingButtonVisible = visible
@@ -490,9 +557,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         floatingButtonVisible = settings.floatingButtonVisible,
         dictationKeyCode = settings.dictationKeyCode,
         logButtonPermitted = LogButton.isPermitted(getApplication()),
-        logButtonEnabled = settings.logButtonEnabled,
         logButtonTag = settings.logButtonSignature?.tag,
-        logButtonLink = settings.logButtonLink,
+        mcpServers = settings.mcpServers,
+        mcpSignedIn = mcpSignedIn(settings.mcpServers),
         externalDictationEnabled = ExternalDictationComponents.isEnabled(getApplication()),
         externalDictationApps = externalDictationApps(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,

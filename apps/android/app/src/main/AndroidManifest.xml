@@ -82,9 +82,14 @@
             </intent-filter>
         </activity>
 
-        <!-- Started only by the app, for the double press of a button learned from the system log. -->
+        <!-- MCP sign-in returns on a loopback address, so AppAuth's custom-scheme receiver is unused. -->
         <activity
-            android:name=".ui.LinkDictationActivity"
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            tools:node="remove" />
+
+        <!-- Started only by the app, for a spoken command after a double press of a bound button. -->
+        <activity
+            android:name=".ui.CommandDictationActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:theme="@style/Theme.OpenDictate.Panel" />

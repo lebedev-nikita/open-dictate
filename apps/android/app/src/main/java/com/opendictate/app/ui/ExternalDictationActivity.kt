@@ -1,8 +1,6 @@
 package com.opendictate.app.ui
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.widget.Toast
@@ -60,9 +58,9 @@ import com.opendictate.app.R
 import com.opendictate.app.model.ExternalCallerAccess
 import com.opendictate.app.model.ExternalDictationContract
 import com.opendictate.app.model.ExternalDictationOutcome
-import com.opendictate.app.model.TextLink
 import com.opendictate.app.model.externalCallerAccess
 import com.opendictate.app.model.toResult
+import com.opendictate.app.service.AssistantCommands
 
 /**
  * Answers `android.speech.action.RECOGNIZE_SPEECH` for apps the user allowed. The result goes back
@@ -136,19 +134,19 @@ class ExternalDictationActivity : DictationPanelActivity() {
 }
 
 /**
- * Dictates text for the link the user set for a button's double press, then opens that link with
- * the text. Only the app itself can start it.
+ * Dictates a command after a button's double press and hands the text to [AssistantCommands], which
+ * asks the model for a tool and calls it. Only the app itself can start it.
  */
-class LinkDictationActivity : DictationPanelActivity() {
+class CommandDictationActivity : DictationPanelActivity() {
     override val waitsForRunningSession = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!TextLink.isValid(settings.logButtonLink)) return abandon()
+        if (!settings.assistantCommandsAvailable) return abandon()
         if (!restoreRequest(savedInstanceState)) startWhenResumed()
         showPanel { processing ->
             ExternalDictationPanel(
-                destination = stringResource(R.string.link_dictation_destination),
+                destination = stringResource(R.string.assistant_command_destination),
                 callerLabel = "",
                 consentPending = false,
                 processing = processing,
@@ -161,13 +159,7 @@ class LinkDictationActivity : DictationPanelActivity() {
     }
 
     override fun deliver(outcome: ExternalDictationOutcome) {
-        if (outcome !is ExternalDictationOutcome.Transcribed) return
-        val link = TextLink.build(settings.logButtonLink, outcome.text)
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.link_dictation_no_app, Toast.LENGTH_LONG).show()
-        }
+        if (outcome is ExternalDictationOutcome.Transcribed) AssistantCommands.run(applicationContext, outcome.text)
     }
 }
 

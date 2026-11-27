@@ -40,13 +40,12 @@ import com.opendictate.app.model.DictationKeyGesture
 import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.FieldFocus
 import com.opendictate.app.model.FieldFocusGrace
-import com.opendictate.app.model.TextLink
 import com.opendictate.app.overlay.DictationOverlayMenuView
 import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
 import com.opendictate.app.overlay.OverlayPositionMotion
 import com.opendictate.app.overlay.OverlayVisibilitySession
-import com.opendictate.app.ui.LinkDictationActivity
+import com.opendictate.app.ui.CommandDictationActivity
 import java.io.Closeable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -601,17 +600,17 @@ class OpenDictateAccessibilityService : AccessibilityService() {
 
     /**
      * A press of a button that only reports presses. It toggles dictation into the focused field at
-     * once. With a link set, a second press soon after a starting press undoes that start and
-     * dictates for the link instead; only the hint about a missing field waits for that press.
+     * once. With tools for spoken commands, a second press soon after a starting press undoes that
+     * start and dictates a command instead; only the hint about a missing field waits for that press.
      */
     internal fun onTapButtonPress(timeMs: Long) {
-        val linkSet = TextLink.isValid(settings.logButtonLink)
+        val commands = settings.assistantCommandsAvailable
         val state = DictationStateBus.state.value
         val external = ExternalDictationBus.awaitedRequestId?.takeUnless { state.isFieldSession() }
         val sessionActive = state.isActive || commandStartPending || external != null
-        when (tapGesture.onPress(timeMs, sessionActive, secondaryAvailable = linkSet)) {
+        when (tapGesture.onPress(timeMs, sessionActive, secondaryAvailable = commands)) {
             ButtonTapAction.START -> startFromCommand(keyboardOptional = true,
-                noFieldHintDelayMs = if (linkSet) ButtonTapGesture.DOUBLE_PRESS_WINDOW_MS else 0)
+                noFieldHintDelayMs = if (commands) ButtonTapGesture.DOUBLE_PRESS_WINDOW_MS else 0)
             ButtonTapAction.STOP -> when {
                 external != null -> DictationCommands.perform(this, DictationCommand.STOP, keyboardOptional = true)
                 // The service handles a stop queued behind its start.
@@ -621,7 +620,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 handler.removeCallbacks(showNoFieldHint)
                 // A start still on its way to the service is cancelled once its session appears.
                 if (!cancelFromCommand()) cancelStartingSession = commandStartPending
-                startActivity(Intent(this, LinkDictationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                startActivity(Intent(this, CommandDictationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         }
     }

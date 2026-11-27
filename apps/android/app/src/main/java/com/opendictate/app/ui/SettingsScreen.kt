@@ -46,7 +46,8 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Key
-import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.SmartButton
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MicNone
@@ -90,6 +91,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.preferredFrameRate
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
@@ -109,7 +111,6 @@ import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.ModelCatalog
-import com.opendictate.app.model.TextLink
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.service.DictationPhase
 import com.opendictate.app.service.DictationState
@@ -126,6 +127,8 @@ internal fun SettingsScreen(
     onMicrophone: () -> Unit,
     onAccessibility: () -> Unit,
     onAppFilter: () -> Unit,
+    onHardwareButton: () -> Unit,
+    onMcpServers: () -> Unit,
     viewModel: MainViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -136,9 +139,6 @@ internal fun SettingsScreen(
     var timeoutOpen by rememberSaveable { mutableStateOf(false) }
     var gesturesOpen by rememberSaveable { mutableStateOf(false) }
     var buttonAppearanceOpen by rememberSaveable { mutableStateOf(false) }
-    var dictationKeyOpen by rememberSaveable { mutableStateOf(false) }
-    var logButtonLearnOpen by rememberSaveable { mutableStateOf(false) }
-    var logButtonLinkOpen by rememberSaveable { mutableStateOf(false) }
     val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
     val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
@@ -272,17 +272,8 @@ internal fun SettingsScreen(
                             stringResource(R.string.floating_button_subtitle), state.floatingButtonVisible,
                             viewModel::setFloatingButtonVisible)
                         SettingsDivider()
-                        ActionRow(Icons.Outlined.Keyboard, stringResource(R.string.dictation_key_title),
-                            dictationKeySummary(LocalContext.current.resources, state.dictationKeyCode), { dictationKeyOpen = true })
-                        if (state.logButtonPermitted) {
-                            SettingsDivider()
-                            LogButtonSettings(state.logButtonEnabled, state.logButtonTag, state.logButtonLink,
-                                onEnabledChange = {
-                                    viewModel.setLogButtonEnabled(it)
-                                    if (it && state.logButtonTag == null) logButtonLearnOpen = true
-                                },
-                                onLearn = { logButtonLearnOpen = true }, onEditLink = { logButtonLinkOpen = true })
-                        }
+                        ActionRow(Icons.Outlined.SmartButton, stringResource(R.string.dictation_key_title),
+                            hardwareButtonSummary(LocalContext.current.resources, state.dictationKeyCode, state.logButtonTag), onHardwareButton)
                         SettingsDivider()
                         ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),
                             stringResource(R.string.dictation_button_appearance_summary,
@@ -349,6 +340,10 @@ internal fun SettingsScreen(
                         SettingsDivider()
                         ExternalDictationSettings(state.externalDictationEnabled, state.externalDictationApps,
                             viewModel::setExternalDictationEnabled, viewModel::revokeExternalDictation)
+                        SettingsDivider()
+                        ActionRow(Icons.Outlined.Hub, stringResource(R.string.mcp_servers_title),
+                            if (state.mcpServers.isEmpty()) stringResource(R.string.mcp_servers_subtitle)
+                            else pluralStringResource(R.plurals.mcp_servers_count, state.mcpServers.size, state.mcpServers.size), onMcpServers)
                     }
 
                     val testFieldLabel = stringResource(R.string.test_field_label)
@@ -377,12 +372,6 @@ internal fun SettingsScreen(
         onDismiss = { gesturesOpen = false },
         mirrorGestures = state.dictationButtonAppearance.gestureDirection == -1,
     )
-    if (dictationKeyOpen) DictationKeyDialog(state.dictationKeyCode, state.accessibilityEnabled,
-        onBind = viewModel::setDictationKey, onClear = { viewModel.setDictationKey(DictationKeys.NONE) },
-        onDismiss = { dictationKeyOpen = false })
-    if (logButtonLearnOpen) LogButtonLearnSheet(state.accessibilityEnabled, TextLink.isValid(state.logButtonLink),
-        viewModel::setLogButtonSignature) { logButtonLearnOpen = false }
-    if (logButtonLinkOpen) LogButtonLinkDialog(state.logButtonLink, viewModel::setLogButtonLink) { logButtonLinkOpen = false }
     if (buttonAppearanceOpen) DictationButtonAppearanceSheet(
         state.dictationButtonAppearance, viewModel::setDictationButtonAppearance,
     ) { buttonAppearanceOpen = false }
@@ -428,13 +417,13 @@ private fun AppTheme.icon(): ImageVector = when (this) {
 }
 
 @Composable
-private fun SectionTitle(title: String) {
+internal fun SectionTitle(title: String) {
     Text(title, Modifier.padding(start = 16.dp, top = 32.dp, bottom = 8.dp).semantics { heading() },
         style = MaterialTheme.typography.labelLarge, color = SettingsMuted, fontWeight = FontWeight.SemiBold)
 }
 
 @Composable
-private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(16.dp), color = SettingsSurface, modifier = Modifier.fillMaxWidth()) {
         Column(content = content)
     }

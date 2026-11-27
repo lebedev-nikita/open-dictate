@@ -106,6 +106,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("io.arrow-kt:arrow-core:2.2.3")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    implementation("io.modelcontextprotocol:kotlin-sdk-client:0.16.0")
+    implementation("io.ktor:ktor-client-okhttp:3.5.2")
+    implementation("net.openid:appauth:0.11.1")
     implementation("com.google.android.gms:play-services-auth:22.0.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")

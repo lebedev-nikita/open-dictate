@@ -1,8 +1,6 @@
 package com.opendictate.app.model
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ButtonTapGestureTest {
@@ -40,19 +38,5 @@ class ButtonTapGestureTest {
     fun pressSoonAfterAStoppingPressStartsAgain() {
         gesture.onPress(1_000, sessionActive = true, secondaryAvailable = true)
         assertEquals(ButtonTapAction.START, gesture.onPress(1_300, sessionActive = false, secondaryAvailable = true))
-    }
-
-    @Test
-    fun linkNeedsASchemeAndThePlaceholder() {
-        assertTrue(TextLink.isValid("t3code://new?prompt={text}"))
-        assertFalse(TextLink.isValid("t3code://new?prompt="))
-        assertFalse(TextLink.isValid("new?prompt={text}"))
-        assertFalse(TextLink.isValid(""))
-    }
-
-    @Test
-    fun linkTextIsPercentEncoded() {
-        assertEquals("t3code://new?prompt=Fix%20a%2Bb%20%26%20c%3F%0A%D0%94%D0%B0~",
-            TextLink.build("t3code://new?prompt={text}", "Fix a+b & c?\nДа~"))
     }
 }

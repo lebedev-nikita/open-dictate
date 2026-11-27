@@ -233,17 +233,23 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   Key presses are not received while no button is assigned. They are also
   received for a few seconds while you teach the app a button from the system
   log, to tell that button from the volume buttons.
-- A button from the system log is off by default and is offered only after you
+- A button that Android hides from apps is watched only after you bind one, and
+  binding it is offered only after you
   grant the app Android's `READ_LOGS` permission through adb. That permission
   covers all device logs. While you teach the app a button, it reads every log
   line for a few seconds, in memory only, to find the line the button leaves;
   it stores that line's tag and text and nothing else. Afterwards Android's
-  logcat passes the app only lines with that tag. The log is not read while the
-  setting is off.
-- With a double-press link set for that button, the text you dictate after a
-  double press is placed in the link and the link is opened, so the app that
-  handles the link receives the text. These transcripts are saved to history
-  like other dictations, and their audio is deleted after use.
+  logcat passes the app only lines with that tag. The log is not read while no
+  such button is bound.
+- Spoken commands are off until you add an MCP server and enable its tools. A
+  command you dictate after a double press is sent to OpenAI's text model
+  together with the names, descriptions and argument schemas of the enabled
+  tools. The model's chosen tool call, with arguments taken from your words, is
+  then sent from your phone to that MCP server, and the server's answer is shown
+  in a notification. Nothing goes to a server you did not add. Server addresses
+  and tool lists are stored in app-private preferences, and tokens are encrypted
+  with Android Keystore; none of them are synchronized. These transcripts are
+  saved to history like other dictations, and their audio is deleted after use.
 - Control from other apps is off by default. When you turn it on, any app on the
   device can start, stop or cancel dictation into the field you are editing; the
   recording is always shown on screen and can be cancelled. Text is returned to

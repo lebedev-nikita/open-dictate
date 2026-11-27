@@ -2,7 +2,6 @@ package com.opendictate.app.ui
 
 import android.os.Process
 import android.os.SystemClock
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,14 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.SmartButton
-import androidx.compose.material.icons.outlined.TouchApp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,22 +22,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.opendictate.app.R
 import com.opendictate.app.model.LogButtonLearner
 import com.opendictate.app.model.LogButtonSignature
-import com.opendictate.app.model.TextLink
 import com.opendictate.app.service.DictationKeyCapture
 import com.opendictate.app.service.LogButton
 import com.opendictate.app.service.LogReader
@@ -86,49 +76,21 @@ import com.opendictate.app.model.DictationKeys
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Shown only after READ_LOGS was granted through adb; everyone else never sees these rows. */
-@Composable
-internal fun LogButtonSettings(
-    enabled: Boolean,
-    learnedTag: String?,
-    link: String,
-    onEnabledChange: (Boolean) -> Unit,
-    onLearn: () -> Unit,
-    onEditLink: () -> Unit,
-) {
-    val status by LogButton.status.collectAsStateWithLifecycle()
-    ToggleRow(Icons.Outlined.SmartButton, stringResource(R.string.log_button_title),
-        stringResource(when {
-            !enabled -> R.string.log_button_subtitle
-            learnedTag == null -> R.string.log_button_not_learned
-            status == LogButton.Status.ACTIVE -> R.string.log_button_active
-            else -> R.string.log_button_needs_access
-        }), enabled, onEnabledChange)
-    AnimatedVisibility(enabled) {
-        Column {
-            SettingsDivider()
-            ActionRow(Icons.Outlined.TouchApp, stringResource(R.string.log_button_learn_title),
-                learnedTag?.let { stringResource(R.string.log_button_learned_summary, it) }
-                    ?: stringResource(R.string.log_button_learn_summary), onLearn)
-            SettingsDivider()
-            ActionRow(Icons.Outlined.Link, stringResource(R.string.log_button_link_title),
-                link.ifEmpty { stringResource(R.string.log_button_link_none) }, onEditLink)
-        }
-    }
-}
-
 private enum class StepStatus { PENDING, ACTIVE, DONE }
 
 /**
- * Binds a button in three visible steps: press it three times, press both volume buttons so the app
- * can tell it from them, then try it. The accessibility service reports the volume presses and
- * keeps them from changing the volume.
+ * Binds one hardware button. A button Android reports as a key is bound by its first press. With
+ * adb-granted log access, a button Android hides is found in three visible steps: press it three
+ * times, press both volume buttons so the app can tell it from them, then try it. The accessibility
+ * service reports the keys and keeps the volume from changing meanwhile.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun LogButtonLearnSheet(
+internal fun ButtonBindSheet(
     accessibilityEnabled: Boolean,
-    linkSet: Boolean,
+    logPermitted: Boolean,
+    commandsAvailable: Boolean,
+    onBindKey: (Int) -> Unit,
     onLearned: (LogButtonSignature) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -136,9 +98,11 @@ internal fun LogButtonLearnSheet(
     var state by remember { mutableStateOf<LogButtonLearner.State>(LogButtonLearner.State.AwaitingAccess) }
     var heard by remember { mutableIntStateOf(0) }
     var otherKeys by remember { mutableStateOf(emptySet<Int>()) }
+    var boundKey by remember { mutableStateOf<Int?>(null) }
     var lastPress by remember { mutableStateOf<ButtonTapAction?>(null) }
     var pressCount by remember { mutableIntStateOf(0) }
     val currentOnLearned by rememberUpdatedState(onLearned)
+    val currentOnBindKey by rememberUpdatedState(onBindKey)
     // A button bound earlier must not start dictation while it is pressed here.
     DisposableEffect(Unit) {
         LogButton.learning = true
@@ -147,54 +111,70 @@ internal fun LogButtonLearnSheet(
     LaunchedEffect(attempt) {
         heard = 0
         otherKeys = emptySet()
+        boundKey = null
         lastPress = null
-        val learner = LogButtonLearner(Process.myPid())
-        val reader = LogReader.everything(RECENT_LOG_LINES) { line ->
-            synchronized(learner) { learner.onLine(line, SystemClock.elapsedRealtime()) }
+        val learner = if (logPermitted) LogButtonLearner(Process.myPid()) else null
+        val reader = learner?.let {
+            LogReader.everything(RECENT_LOG_LINES) { line -> synchronized(it) { it.onLine(line, SystemClock.elapsedRealtime()) } }
         }
-        val otherButtons = launch {
+        val keys = launch {
             DictationKeyCapture.captured.collect { keyCode ->
-                // Each button counts once, so the same one pressed twice does not pass for two.
-                if (keyCode !in otherKeys) {
-                    otherKeys = otherKeys + keyCode
-                    synchronized(learner) { learner.onOtherButton(SystemClock.elapsedRealtime()) }
+                when {
+                    // Before the hidden button's presses are found, a key Android reports is the button itself.
+                    learner == null || state != LogButtonLearner.State.AwaitingOtherButtons -> if (boundKey == null) {
+                        boundKey = keyCode
+                        currentOnBindKey(keyCode)
+                    }
+                    // Each button counts once, so the same one pressed twice does not pass for two.
+                    keyCode !in otherKeys -> {
+                        otherKeys = otherKeys + keyCode
+                        synchronized(learner) { learner.onOtherButton(SystemClock.elapsedRealtime()) }
+                    }
                 }
             }
         }
         try {
-            while (true) {
-                val now = SystemClock.elapsedRealtime()
-                state = synchronized(learner) { learner.state(now) }
-                heard = synchronized(learner) { learner.heardPresses(now) }
-                if (state == LogButtonLearner.State.AwaitingOtherButtons) DictationKeyCapture.begin() else DictationKeyCapture.end()
-                val learned = state as? LogButtonLearner.State.Learned
-                if (learned != null) {
-                    currentOnLearned(learned.signature)
-                    // Log access lasts while a reader is open; the watcher's reader takes over first.
-                    delay(READER_HANDOVER_MS)
-                    break
+            DictationKeyCapture.begin()
+            while (boundKey == null) {
+                if (learner != null) {
+                    val now = SystemClock.elapsedRealtime()
+                    state = synchronized(learner) { learner.state(now) }
+                    heard = synchronized(learner) { learner.heardPresses(now) }
+                    val learned = state as? LogButtonLearner.State.Learned
+                    if (learned != null) {
+                        currentOnLearned(learned.signature)
+                        // Log access lasts while a reader is open; the watcher's reader takes over first.
+                        DictationKeyCapture.end()
+                        delay(READER_HANDOVER_MS)
+                        break
+                    }
+                    if (state == LogButtonLearner.State.Failed || state == LogButtonLearner.State.Indistinct) break
                 }
-                if (state == LogButtonLearner.State.Failed || state == LogButtonLearner.State.Indistinct) break
                 delay(POLL_MS)
             }
         } finally {
             DictationKeyCapture.end()
-            otherButtons.cancel()
-            reader.close()
+            keys.cancel()
+            reader?.close()
         }
     }
     // The bound button is tried with the gesture that will run it, so the names match what happens.
-    LaunchedEffect(attempt, linkSet) {
+    LaunchedEffect(attempt, commandsAvailable) {
         val gesture = ButtonTapGesture()
         LogButton.learningPresses.collect { timeMs ->
-            lastPress = gesture.onPress(timeMs, sessionActive = false, secondaryAvailable = linkSet)
+            lastPress = gesture.onPress(timeMs, sessionActive = false, secondaryAvailable = commandsAvailable)
             pressCount++
         }
     }
 
+    val key = boundKey
     val learned = state is LogButtonLearner.State.Learned
     val failed = state == LogButtonLearner.State.Failed || state == LogButtonLearner.State.Indistinct
     val othersReached = state == LogButtonLearner.State.AwaitingOtherButtons || state == LogButtonLearner.State.Indistinct || learned
+    val restart: () -> Unit = {
+        state = LogButtonLearner.State.AwaitingAccess
+        attempt++
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -209,48 +189,55 @@ internal fun LogButtonLearnSheet(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Step(1, if (othersReached) StepStatus.DONE else StepStatus.ACTIVE,
-                stringResource(if (othersReached) R.string.log_button_step_press_done else R.string.log_button_step_press)) {
-                when (state) {
-                    LogButtonLearner.State.AwaitingAccess -> StepNote(stringResource(R.string.log_button_learn_access), busy = true)
-                    LogButtonLearner.State.Calibrating -> StepNote(stringResource(R.string.log_button_learn_wait), busy = true)
-                    LogButtonLearner.State.Failed -> StepNote(stringResource(R.string.log_button_learn_failed), error = true)
-                    else -> PressDots(heard)
+            when {
+                key != null -> BoundKey(dictationKeySummary(LocalContext.current.resources, key))
+                !logPermitted -> Column(Modifier.padding(vertical = 14.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
+                    Text(stringResource(R.string.button_bind_press), style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.height(6.dp))
+                    if (accessibilityEnabled) StepNote(stringResource(R.string.button_bind_press_hint), busy = true)
+                    else StepNote(stringResource(R.string.accessibility_enable_hint), error = true)
                 }
-            }
-            SettingsDivider(startInset = 42.dp)
-            Step(2, when {
-                learned -> StepStatus.DONE
-                othersReached -> StepStatus.ACTIVE
-                else -> StepStatus.PENDING
-            }, stringResource(if (learned) R.string.log_button_step_others_done else R.string.log_button_step_others)) {
-                when {
-                    state == LogButtonLearner.State.Indistinct -> StepNote(stringResource(R.string.log_button_learn_indistinct), error = true)
-                    !accessibilityEnabled -> StepNote(stringResource(R.string.accessibility_enable_hint), error = true)
-                    else -> {
-                        StepNote(stringResource(R.string.log_button_step_others_hint))
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            VolumeChip(stringResource(R.string.log_button_volume_up), DictationKeys.VOLUME_UP in otherKeys)
-                            VolumeChip(stringResource(R.string.log_button_volume_down), DictationKeys.VOLUME_DOWN in otherKeys)
+                else -> {
+                    Step(1, if (othersReached) StepStatus.DONE else StepStatus.ACTIVE,
+                        stringResource(if (othersReached) R.string.log_button_step_press_done else R.string.log_button_step_press)) {
+                        when (state) {
+                            LogButtonLearner.State.AwaitingAccess -> StepNote(stringResource(R.string.log_button_learn_access), busy = true)
+                            LogButtonLearner.State.Calibrating -> StepNote(stringResource(R.string.log_button_learn_wait), busy = true)
+                            LogButtonLearner.State.Failed -> StepNote(stringResource(R.string.log_button_learn_failed), error = true)
+                            else -> PressDots(heard)
                         }
                     }
+                    SettingsDivider(startInset = 42.dp)
+                    Step(2, when {
+                        learned -> StepStatus.DONE
+                        othersReached -> StepStatus.ACTIVE
+                        else -> StepStatus.PENDING
+                    }, stringResource(if (learned) R.string.log_button_step_others_done else R.string.log_button_step_others)) {
+                        when {
+                            state == LogButtonLearner.State.Indistinct -> StepNote(stringResource(R.string.log_button_learn_indistinct), error = true)
+                            !accessibilityEnabled -> StepNote(stringResource(R.string.accessibility_enable_hint), error = true)
+                            else -> {
+                                StepNote(stringResource(R.string.log_button_step_others_hint))
+                                Spacer(Modifier.height(12.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    VolumeChip(stringResource(R.string.log_button_volume_up), DictationKeys.VOLUME_UP in otherKeys)
+                                    VolumeChip(stringResource(R.string.log_button_volume_down), DictationKeys.VOLUME_DOWN in otherKeys)
+                                }
+                            }
+                        }
+                    }
+                    SettingsDivider(startInset = 42.dp)
+                    Step(3, if (learned) StepStatus.ACTIVE else StepStatus.PENDING,
+                        stringResource(if (learned) R.string.log_button_step_try_active else R.string.log_button_step_try)) {
+                        TryPad(lastPress, pressCount, commandsAvailable)
+                    }
                 }
-            }
-            SettingsDivider(startInset = 42.dp)
-            Step(3, if (learned) StepStatus.ACTIVE else StepStatus.PENDING,
-                stringResource(if (learned) R.string.log_button_step_try_active else R.string.log_button_step_try)) {
-                TryPad(lastPress, pressCount, linkSet)
             }
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically) {
-                val restart: () -> Unit = {
-                    state = LogButtonLearner.State.AwaitingAccess
-                    attempt++
-                }
                 when {
-                    learned -> {
+                    key != null || learned -> {
                         TextButton(restart) { Text(stringResource(R.string.log_button_rebind)) }
                         Button(onDismiss) { Text(stringResource(R.string.settings_done)) }
                     }
@@ -261,6 +248,23 @@ internal fun LogButtonLearnSheet(
                     else -> TextButton(onDismiss) { Text(stringResource(R.string.action_cancel)) }
                 }
             }
+        }
+    }
+}
+
+/** The outcome for a button Android reports as a key: it is bound by its first press. */
+@Composable
+private fun BoundKey(name: String) {
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().padding(vertical = 14.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
+        Box(Modifier.size(28.dp).clip(CircleShape).background(colors.primaryContainer), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Check, null, Modifier.size(16.dp), tint = colors.onPrimaryContainer)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.button_bind_key_done, name), Modifier.padding(top = 3.dp), style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(4.dp))
+            StepNote(stringResource(R.string.button_bind_key_hint))
         }
     }
 }
@@ -358,7 +362,7 @@ private fun VolumeChip(label: String, pressed: Boolean) {
 
 /** Names each press of the bound button the way the app will act on it. Other buttons do nothing. */
 @Composable
-private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, linkSet: Boolean) {
+private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, commandsAvailable: Boolean) {
     val colors = MaterialTheme.colorScheme
     val scale = remember { Animatable(1f) }
     LaunchedEffect(pressCount) {
@@ -379,7 +383,7 @@ private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, linkSet: Boolea
             Text(
                 stringResource(when {
                     lastPress == null -> R.string.log_button_try_idle
-                    double -> R.string.log_button_link_title
+                    double -> R.string.log_button_double
                     else -> R.string.log_button_try_single
                 }),
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -391,8 +395,8 @@ private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, linkSet: Boolea
     Spacer(Modifier.height(14.dp))
     GestureEffect(stringResource(R.string.log_button_try_single), stringResource(R.string.log_button_single_effect),
         current = lastPress != null && !double)
-    GestureEffect(stringResource(R.string.log_button_link_title),
-        stringResource(if (linkSet) R.string.log_button_double_effect else R.string.log_button_double_unused), current = double)
+    GestureEffect(stringResource(R.string.log_button_double),
+        stringResource(if (commandsAvailable) R.string.log_button_double_effect else R.string.log_button_double_unused), current = double)
 }
 
 @Composable
@@ -403,36 +407,6 @@ private fun GestureEffect(gesture: String, effect: String, current: Boolean) {
     }
 }
 
-/** Sets the link that receives the text dictated after a double press. */
-@Composable
-internal fun LogButtonLinkDialog(link: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by rememberSaveable { mutableStateOf(link) }
-    val trimmed = text.trim()
-    val invalid = trimmed.isNotEmpty() && !TextLink.isValid(trimmed)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.log_button_link_title)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.log_button_link_hint))
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(LINK_EXAMPLE) }, singleLine = true, isError = invalid,
-                    supportingText = if (invalid) { { Text(stringResource(R.string.log_button_link_error, LINK_EXAMPLE)) } } else null,
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None,
-                        autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton({ onSave(trimmed); onDismiss() }, enabled = !invalid) { Text(stringResource(R.string.action_save)) }
-        },
-        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
-}
-
-private const val LINK_EXAMPLE = "t3code://new?prompt=${TextLink.PLACEHOLDER}"
 private const val RECENT_LOG_LINES = 5_000
 private const val POLL_MS = 100L
 private const val READER_HANDOVER_MS = 1_000L
