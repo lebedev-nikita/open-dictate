@@ -481,6 +481,9 @@
     <string name="mcp_server_token_saved">Saved. Enter a new one to replace it</string>
     <string name="mcp_server_trust">Trust certificates installed on the device</string>
     <string name="mcp_server_trust_hint">For a server in your own network with its own certificate authority</string>
+    <string name="mcp_server_hint">Note for the model (optional)</string>
+    <string name="mcp_server_hint_example">For example: when no project is named, start the thread without one</string>
+    <string name="assistant_done_open">Done. Tap to open</string>
     <string name="mcp_server_delete">Delete</string>
     <string name="mcp_server_busy">Connecting…</string>
     <string name="mcp_server_needs_sign_in">Sign-in needed</string>

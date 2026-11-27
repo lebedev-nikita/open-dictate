@@ -223,6 +223,7 @@ private fun McpServerSheet(
     var auth by rememberSaveable { mutableStateOf(server?.auth ?: McpAuth.BROWSER) }
     var token by remember { mutableStateOf("") }
     var trust by rememberSaveable { mutableStateOf(server?.trustDeviceCertificates ?: false) }
+    var hint by rememberSaveable { mutableStateOf(server?.hint.orEmpty()) }
     val urlInvalid = url.isNotBlank() && !McpServer.isValidUrl(url)
     val complete = name.isNotBlank() && McpServer.isValidUrl(url) && (auth != McpAuth.TOKEN || token.isNotBlank() || hasToken)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = SettingsSurface) {
@@ -263,6 +264,9 @@ private fun McpServerSheet(
                     Switch(trust, onCheckedChange = null)
                 }
             }
+            OutlinedTextField(hint, { hint = it }, Modifier.fillMaxWidth(), minLines = 2, maxLines = 4,
+                label = { Text(stringResource(R.string.mcp_server_hint)) },
+                supportingText = { Text(stringResource(R.string.mcp_server_hint_example)) })
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (onDelete != null) TextButton(onDelete) { Text(stringResource(R.string.mcp_server_delete), color = MaterialTheme.colorScheme.error) }
                 Spacer(Modifier.weight(1f))
@@ -270,7 +274,7 @@ private fun McpServerSheet(
                 Spacer(Modifier.width(8.dp))
                 Button({
                     val saved = (server ?: McpServer(UUID.randomUUID().toString(), "", "")).copy(
-                        name = name.trim(), url = url.trim(), auth = auth, trustDeviceCertificates = trust)
+                        name = name.trim(), url = url.trim(), auth = auth, trustDeviceCertificates = trust, hint = hint.trim())
                     onSave(saved, token.trim().takeIf { auth == McpAuth.TOKEN && it.isNotEmpty() })
                 }, enabled = complete) { Text(stringResource(R.string.action_save)) }
             }
