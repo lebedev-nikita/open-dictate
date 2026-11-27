@@ -167,6 +167,7 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                     onSignIn = viewModel::signInMcpServer,
                     onRefresh = viewModel::refreshMcpTools,
                     onToolEnabled = viewModel::setMcpToolEnabled,
+                    onTryCommand = viewModel::runAssistantCommand,
                     modifier = Modifier.padding(padding),
                 )
             } else if (showHardwareButton) {

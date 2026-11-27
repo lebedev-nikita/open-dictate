@@ -490,4 +490,8 @@
     <string name="mcp_server_sign_in">Войти</string>
     <string name="mcp_server_refresh">Обновить</string>
     <string name="mcp_server_choose_tools">Выбрать инструменты</string>
+    <string name="mcp_try_title">Проверить команду</string>
+    <string name="mcp_try_label">Команда, как вы бы её произнесли</string>
+    <string name="mcp_try_hint">Результат придёт уведомлением</string>
+    <string name="mcp_try_run">Выполнить</string>
 </resources>

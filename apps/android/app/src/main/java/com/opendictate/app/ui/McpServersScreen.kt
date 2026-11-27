@@ -86,6 +86,7 @@ internal fun McpServersScreen(
     onSignIn: (String) -> Unit,
     onRefresh: (String) -> Unit,
     onToolEnabled: (String, String, Boolean) -> Unit,
+    onTryCommand: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
@@ -103,6 +104,7 @@ internal fun McpServersScreen(
                         onToolEnabled = { tool, enabled -> onToolEnabled(server.id, tool, enabled) })
                 }
                 Button({ adding = true }, Modifier.align(Alignment.End)) { Text(stringResource(R.string.mcp_server_add)) }
+                if (servers.any { it.activeTools.isNotEmpty() }) TryCommand(onTryCommand)
             }
         }
     }
@@ -181,6 +183,26 @@ private fun ServerCard(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Runs a typed command exactly as a spoken one, to try the servers without the button. */
+@Composable
+private fun TryCommand(onRun: (String) -> Unit) {
+    var command by rememberSaveable { mutableStateOf("") }
+    Column {
+        SectionTitle(stringResource(R.string.mcp_try_title))
+        SettingsGroup {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(command, { command = it }, Modifier.fillMaxWidth(), minLines = 2, maxLines = 4,
+                    label = { Text(stringResource(R.string.mcp_try_label)) })
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.mcp_try_hint), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+                    Spacer(Modifier.width(12.dp))
+                    Button({ onRun(command.trim()); command = "" }, enabled = command.isNotBlank()) { Text(stringResource(R.string.mcp_try_run)) }
                 }
             }
         }

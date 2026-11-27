@@ -35,6 +35,7 @@ import com.opendictate.app.network.McpClient
 import com.opendictate.app.network.McpError
 import com.opendictate.app.network.McpSignIn
 import com.opendictate.app.network.OpenAiTranscriptionClient
+import com.opendictate.app.service.AssistantCommands
 import com.opendictate.app.service.ExternalDictationComponents
 import com.opendictate.app.service.LogButton
 import kotlinx.coroutines.CancellationException
@@ -415,6 +416,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else server.copy(enabledTools = if (enabled) server.enabledTools + tool else server.enabledTools - tool)
         })
     }
+
+    fun runAssistantCommand(command: String) = AssistantCommands.run(getApplication(), command)
 
     fun signInMcpServer(serverId: String) = mcpOperation(serverId) { server ->
         McpSignIn(getApplication()).signIn(server).map { token ->

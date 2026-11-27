@@ -492,4 +492,8 @@
     <string name="mcp_server_sign_in">Sign in</string>
     <string name="mcp_server_refresh">Refresh</string>
     <string name="mcp_server_choose_tools">Choose tools</string>
+    <string name="mcp_try_title">Try a command</string>
+    <string name="mcp_try_label">Command, as you would say it</string>
+    <string name="mcp_try_hint">The outcome arrives as a notification</string>
+    <string name="mcp_try_run">Run</string>
 </resources>
