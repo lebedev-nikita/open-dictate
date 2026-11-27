@@ -403,11 +403,13 @@
     <string name="log_button_active">Нажатие начинает и завершает диктовку</string>
     <string name="log_button_needs_access_notification">Откройте OpenDictate и разрешите доступ к журналам устройства, чтобы кнопка снова работала.</string>
     <string name="log_button_learn_title">Определить кнопку</string>
-    <string name="log_button_learn_summary">Нажмите её три раза</string>
+    <string name="log_button_learn_summary">Нажмите её три раза, потом громкость</string>
     <string name="log_button_learned_summary">Тег журнала: %1$s</string>
     <string name="log_button_learn_access">Разрешите доступ к журналам устройства в системном окне.</string>
     <string name="log_button_learn_wait">Подождите, пока не нажимайте кнопку…</string>
     <string name="log_button_learn_press">Нажмите кнопку три раза, примерно раз в секунду. Экран не трогайте.</string>
+    <string name="log_button_learn_others">Теперь нажмите по одному разу обе кнопки громкости.</string>
+    <string name="log_button_learn_indistinct">Эту кнопку не удалось отличить от кнопок громкости.</string>
     <string name="log_button_learn_done">Кнопка определена. Нажмите её и проверьте, что считается только она.
 Нажатий: %1$d</string>
     <string name="log_button_learn_failed">Кнопка не найдена. Возможно, она ничего не оставляет в системном журнале.</string>

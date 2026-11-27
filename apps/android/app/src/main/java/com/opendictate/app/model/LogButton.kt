@@ -74,7 +74,9 @@ class LogPressDetector(private val releaseLogged: Boolean) {
  * Finds a button's log line while the user presses the button [presses] times, about once a second.
  * The line is recognized by that rhythm, a group of presses with quiet before and after it, and by
  * being new: recent lines, including those left by the taps that opened the screen, are known to be
- * unrelated. Lines are held in memory only until a result is known.
+ * unrelated. The user then presses other buttons, such as volume, and every line those leave as well
+ * is dropped: the system can log one line for any hardware button. Lines are held in memory only
+ * until a result is known.
  */
 class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESSES) {
     sealed interface State {
@@ -82,8 +84,12 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
         data object AwaitingAccess : State
         data object Calibrating : State
         data object AwaitingPresses : State
+        /** The button's lines are known; presses of other buttons now tell which line is its own. */
+        data object AwaitingOtherButtons : State
         data class Learned(val signature: LogButtonSignature) : State
         data object Failed : State
+        /** Every line the button leaves is also left by the other buttons. */
+        data object Indistinct : State
     }
 
     private class Candidate(val tag: String, val message: String, val seenBefore: Boolean) {
@@ -96,6 +102,12 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
     private var accessAtMs: Long? = null
     private var matched: Candidate? = null
     private var matchedAtMs = 0L
+    /** Lines that kept the rhythm of the presses, from the moment other buttons are asked for. */
+    private var inRhythm: List<Pair<Candidate, LogButtonSignature>>? = null
+    private var othersSinceMs = 0L
+    private var otherPresses = 0
+    private var lastOtherPressMs = 0L
+    private var result: State? = null
     private val seenBefore = HashSet<Pair<String, String>>()
     private val candidates = LinkedHashMap<Pair<String, String>, Candidate>()
 
@@ -122,27 +134,42 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
         if (candidate.bursts.size > MAX_BURSTS) candidate.bursts.removeAt(0)
     }
 
+    /** A press of a button the app can see as a key, such as volume, after the presses were found. */
+    fun onOtherButton(nowMs: Long) {
+        if (inRhythm == null || result != null) return
+        otherPresses++
+        lastOtherPressMs = nowMs
+    }
+
     fun state(nowMs: Long): State {
+        result?.let { return it }
         val accessAt = accessAtMs ?: return State.AwaitingAccess
         val pressingFor = nowMs - accessAt - CALIBRATION_MS
         if (pressingFor < 0) return State.Calibrating
-        val learned = candidates.values
+        inRhythm?.let { found ->
+            if (otherPresses < OTHER_PRESSES || nowMs - lastOtherPressMs < OTHER_SETTLE_MS) return State.AwaitingOtherButtons
+            val own = found.filter { (candidate, _) -> candidate.lastArrivalMs <= othersSinceMs }
+                // A line without numbers is the same in every state of the phone.
+                .maxWithOrNull(compareBy({ (candidate, _) -> rank(candidate) }, { (candidate, _) -> '#' !in candidate.message }))
+            return (own?.let { State.Learned(it.second) } ?: State.Indistinct).also { result = it }
+        }
+        val matching = candidates.values
             .filter { rank(it) > 0 }
             .mapNotNull { candidate -> signatureOf(candidate, nowMs)?.let { candidate to it } }
-            .maxByOrNull { (candidate, _) -> rank(candidate) }
-        if (learned?.first !== matched) {
-            matched = learned?.first
+        val best = matching.maxByOrNull { (candidate, _) -> rank(candidate) }?.first
+        if (best !== matched) {
+            matched = best
             matchedAtMs = nowMs
         }
-        return when {
-            learned == null -> if (pressingFor > PRESS_TIMEOUT_MS) State.Failed else State.AwaitingPresses
-            // Other lines can keep the rhythm before the button's own line has finished: a side
-            // effect of each press, or the motion sensor as the phone is picked up. A line that
-            // names a key is taken soon; any other waits for a better one to finish its presses.
-            nowMs - matchedAtMs >= (if (rank(learned.first) >= NAMED_RANK) DECISION_DELAY_MS else UNNAMED_DECISION_DELAY_MS) ->
-                State.Learned(learned.second)
-            else -> State.AwaitingPresses
-        }
+        if (best == null) return if (pressingFor > PRESS_TIMEOUT_MS) State.Failed.also { result = it } else State.AwaitingPresses
+        // Other lines can keep the rhythm before the button's own line has finished: a side effect
+        // of each press, or the motion sensor as the phone is picked up. A line that names a key is
+        // taken soon; any other waits for a better one to finish its presses.
+        val delay = if (rank(best) >= NAMED_RANK) DECISION_DELAY_MS else UNNAMED_DECISION_DELAY_MS
+        if (nowMs - matchedAtMs < delay) return State.AwaitingPresses
+        inRhythm = matching
+        othersSinceMs = nowMs
+        return State.AwaitingOtherButtons
     }
 
     /**
@@ -183,6 +210,8 @@ class LogButtonLearner(private val ownPid: Int, private val presses: Int = PRESS
         const val MIN_PRESS_GAP_MS = 300L
         const val MAX_PRESS_GAP_MS = 2_000L
         const val PRESS_TIMEOUT_MS = 60_000L
+        const val OTHER_PRESSES = 2
+        const val OTHER_SETTLE_MS = 1_000L
         private const val MAX_CANDIDATES = 2_000
         private const val MAX_BURSTS = 12
         private val BUTTON_WORDS = listOf("key", "button")

@@ -77,14 +77,14 @@ class LogButtonTest {
         assertFalse(detector.onLine(1_200 + LogPressDetector.RELEASE_TIMEOUT_MS))
     }
 
-    private class Learning {
+    private class Learning(calibrationLines: List<String> = listOf("System")) {
         val learner = LogButtonLearner(ownPid = 10)
 
         init {
-            line(0, "System", "start")
+            calibrationLines.forEach { line(0, it, "event") }
         }
 
-        fun line(atMs: Long, tag: String, message: String, pid: Int = 5034) =
+        fun line(atMs: Long, tag: String, message: String = "event", pid: Int = 5034) =
             learner.onLine(LogLine(atMs, tag, pid, message), nowMs = atMs)
 
         fun press(atMs: Long, tag: String = "Keys", message: String = "undefined key", holdMs: Long? = 110) {
@@ -94,10 +94,25 @@ class LogButtonTest {
         }
 
         /** The state once the last line, logged at [lastLineMs], is surely the end of its group. */
-        fun decided(lastLineMs: Long): LogButtonLearner.State {
+        fun afterPresses(lastLineMs: Long, named: Boolean = false): LogButtonLearner.State {
             val settledAt = lastLineMs + LogButtonLearner.MAX_PRESS_GAP_MS
             learner.state(settledAt)
-            return learner.state(settledAt + LogButtonLearner.UNNAMED_DECISION_DELAY_MS)
+            return learner.state(settledAt + if (named) LogButtonLearner.DECISION_DELAY_MS else LogButtonLearner.UNNAMED_DECISION_DELAY_MS)
+        }
+
+        /** Two other buttons pressed at [firstMs] and a second later; [linesOf] logs what each leaves. */
+        fun afterOtherButtons(firstMs: Long, linesOf: (Long) -> Unit = {}): LogButtonLearner.State {
+            for (at in listOf(firstMs, firstMs + 1_000)) {
+                learner.onOtherButton(at)
+                linesOf(at)
+            }
+            assertEquals(LogButtonLearner.State.AwaitingOtherButtons, learner.state(firstMs + 1_500))
+            return learner.state(firstMs + 1_000 + LogButtonLearner.OTHER_SETTLE_MS)
+        }
+
+        fun learnedTag(lastLineMs: Long): String? {
+            assertEquals(LogButtonLearner.State.AwaitingOtherButtons, afterPresses(lastLineMs))
+            return (afterOtherButtons(lastLineMs + 20_000) as? LogButtonLearner.State.Learned)?.signature?.tag
         }
     }
 
@@ -123,19 +138,61 @@ class LogButtonTest {
         assertEquals(LogButtonLearner.State.AwaitingPresses, learner.state(52_882 + 1_100))
         press(54_067, holdMs = 164)
         assertEquals(LogButtonLearner.State.AwaitingPresses, learner.state(54_231 + LogButtonLearner.MAX_PRESS_GAP_MS))
-        assertEquals(learned("Keys", "undefined key", releaseLogged = true), decided(54_231))
+        assertEquals(LogButtonLearner.State.AwaitingOtherButtons, afterPresses(54_231, named = true))
+        // One other button is not enough to tell.
+        learner.onOtherButton(60_000)
+        assertEquals(LogButtonLearner.State.AwaitingOtherButtons, learner.state(70_000))
+        assertEquals(learned("Keys", "undefined key", releaseLogged = true), afterOtherButtons(71_000))
     }
 
     @Test
     fun learnsFromQuickPresses() = with(Learning()) {
         listOf(57_367L, 57_479, 57_577, 57_681, 57_763, 57_900).forEach { line(it, "Keys", "undefined key") }
-        assertEquals(learned("Keys", "undefined key", releaseLogged = true), decided(57_900))
+        afterPresses(57_900)
+        assertEquals(learned("Keys", "undefined key", releaseLogged = true), afterOtherButtons(70_000))
     }
 
     @Test
     fun learnsAButtonThatLogsOnlyItsPress() = with(Learning()) {
         listOf(3_000L, 4_000, 5_000).forEach { press(it, "Hw", "press 17", holdMs = null) }
-        assertEquals(learned("Hw", "press #", releaseLogged = false), decided(5_000))
+        afterPresses(5_000)
+        assertEquals(learned("Hw", "press #", releaseLogged = false), afterOtherButtons(20_000))
+    }
+
+    @Test
+    fun lineLeftByAnyHardwareButtonIsNotTheButton() = with(Learning()) {
+        // Seen on a OnePlus 15: one line is logged for every hardware key, volume included, and
+        // comes before the line that only the Plus Key leaves.
+        for (press in listOf(3_000L, 4_000, 5_000)) {
+            line(press, "system_server", "start saupwkProcessKey")
+            line(press + 1, "KEYLOG_OplusKeyEventUtil", "undefined keys")
+            line(press + 120, "system_server", "start saupwkProcessKey")
+            line(press + 121, "KEYLOG_OplusKeyEventUtil", "undefined keys")
+        }
+        assertEquals(LogButtonLearner.State.AwaitingOtherButtons, afterPresses(5_121, named = true))
+        val state = afterOtherButtons(20_000) { volumePress ->
+            line(volumePress, "system_server", "start saupwkProcessKey")
+            line(volumePress + 110, "system_server", "start saupwkProcessKey")
+        }
+        assertEquals(learned("KEYLOG_OplusKeyEventUtil", "undefined keys", releaseLogged = true), state)
+    }
+
+    @Test
+    fun buttonWithoutALineOfItsOwnIsIndistinct() = with(Learning()) {
+        listOf(3_000L, 4_000, 5_000).forEach { press(it, "AnyKey", "key event") }
+        afterPresses(5_110, named = true)
+        assertEquals(LogButtonLearner.State.Indistinct, afterOtherButtons(20_000) { line(it, "AnyKey", "key event") })
+    }
+
+    @Test
+    fun prefersALineWithoutNumbers() = with(Learning()) {
+        // A line that carries the phone's state stops matching when that state changes.
+        for (press in listOf(3_000L, 4_000, 5_000)) {
+            line(press, "KeyPolicy", "key down, screenOn = true, flags=0x8")
+            line(press + 1, "KeyUtil", "undefined key")
+        }
+        afterPresses(5_001, named = true)
+        assertEquals(learned("KeyUtil", "undefined key", releaseLogged = false), afterOtherButtons(20_000))
     }
 
     @Test
@@ -143,30 +200,21 @@ class LogButtonTest {
         // The user tried the button once before following the instructions.
         press(3_000)
         listOf(8_000L, 9_200, 10_300).forEach { press(it) }
-        assertEquals(learned("Keys", "undefined key", releaseLogged = true), decided(10_410))
+        afterPresses(10_410)
+        assertEquals(learned("Keys", "undefined key", releaseLogged = true), afterOtherButtons(30_000))
     }
 
     @Test
-    fun linesSeenBeforeThePressesAreNotTheButton() {
-        val learner = LogButtonLearner(ownPid = 10)
-        fun line(atMs: Long, tag: String) = learner.onLine(LogLine(atMs, tag, 5034, "event"), nowMs = atMs)
+    fun linesSeenBeforeThePressesAreNotTheButton() = with(Learning(listOf("SurfaceFlinger"))) {
         // Seen on a OnePlus 15: display updates kept the rhythm of three presses by themselves.
-        line(0, "SurfaceFlinger")
         listOf(3_000L, 3_600, 4_300).forEach { line(it, "SurfaceFlinger") }
-        learner.state(4_300 + LogButtonLearner.MAX_PRESS_GAP_MS)
-        assertEquals(LogButtonLearner.State.AwaitingPresses,
-            learner.state(4_300 + LogButtonLearner.MAX_PRESS_GAP_MS + LogButtonLearner.UNNAMED_DECISION_DELAY_MS))
+        assertEquals(LogButtonLearner.State.AwaitingPresses, afterPresses(4_300))
     }
 
     @Test
-    fun buttonTriedJustBeforeLearningIsStillFound() {
-        val learner = LogButtonLearner(ownPid = 10)
-        fun line(atMs: Long, tag: String) = learner.onLine(LogLine(atMs, tag, 5034, "event"), nowMs = atMs)
-        line(0, "InputKeys")
+    fun buttonTriedJustBeforeLearningIsStillFound() = with(Learning(listOf("InputKeys"))) {
         listOf(3_000L, 4_000, 5_000).forEach { line(it, "InputKeys") }
-        learner.state(5_000 + LogButtonLearner.MAX_PRESS_GAP_MS)
-        val state = learner.state(5_000 + LogButtonLearner.MAX_PRESS_GAP_MS + LogButtonLearner.DECISION_DELAY_MS)
-        assertEquals("InputKeys", (state as LogButtonLearner.State.Learned).signature.tag)
+        assertEquals("InputKeys", learnedTag(5_000))
     }
 
     @Test
@@ -180,24 +228,17 @@ class LogButtonTest {
         press(5_600)
         assertEquals(LogButtonLearner.State.AwaitingPresses,
             learner.state(3_400 + LogButtonLearner.MAX_PRESS_GAP_MS + LogButtonLearner.DECISION_DELAY_MS))
-        val settledAt = 5_710 + LogButtonLearner.MAX_PRESS_GAP_MS
-        assertEquals(LogButtonLearner.State.AwaitingPresses, learner.state(settledAt))
-        assertEquals(learned("Keys", "undefined key", releaseLogged = true),
-            learner.state(settledAt + LogButtonLearner.DECISION_DELAY_MS))
+        assertEquals(LogButtonLearner.State.AwaitingOtherButtons, afterPresses(5_710, named = true))
+        assertEquals(learned("Keys", "undefined key", releaseLogged = true), afterOtherButtons(20_000))
     }
 
     @Test
-    fun aNewLineWinsOverOneSeenBeforeWhenNeitherNamesAKey() {
-        val learner = LogButtonLearner(ownPid = 10)
-        fun line(atMs: Long, tag: String) = learner.onLine(LogLine(atMs, tag, 5034, "event"), nowMs = atMs)
-        line(0, "Old")
+    fun aNewLineWinsOverOneSeenBeforeWhenNeitherNamesAKey() = with(Learning(listOf("Old"))) {
         for (press in listOf(3_000L, 4_000, 5_000)) {
             line(press, "Old")
             line(press + 2, "Fresh")
         }
-        learner.state(5_002 + LogButtonLearner.MAX_PRESS_GAP_MS)
-        val state = learner.state(5_002 + LogButtonLearner.MAX_PRESS_GAP_MS + LogButtonLearner.UNNAMED_DECISION_DELAY_MS)
-        assertEquals("Fresh", (state as LogButtonLearner.State.Learned).signature.tag)
+        assertEquals("Fresh", learnedTag(5_002))
     }
 
     @Test
@@ -206,7 +247,7 @@ class LogButtonTest {
             line(press, "Power", "user activity")
             line(press + 1, "InputKeys", "event")
         }
-        assertEquals("InputKeys", (decided(5_001) as LogButtonLearner.State.Learned).signature.tag)
+        assertEquals("InputKeys", learnedTag(5_001))
     }
 
     @Test
@@ -218,7 +259,7 @@ class LogButtonTest {
             line(press + 2, "JobInfo", "flag for job 4 is ignored")
         }
         assertEquals(LogButtonLearner.State.AwaitingPresses, learner.state(5_002 + LogButtonLearner.MAX_PRESS_GAP_MS))
-        assertEquals(learned("Keys", "undefined key", releaseLogged = true), decided(5_150))
+        assertEquals("Keys", learnedTag(5_150))
     }
 
     @Test
@@ -229,7 +270,7 @@ class LogButtonTest {
         listOf(30_000L, 30_600, 31_200, 31_800).forEach { line(it, "Timer", "tick") }
         listOf(30_000L, 31_000).forEach { line(it, "Rare", "twice") }
         listOf(30_000L, 31_000, 32_000).forEach { line(it, "bad tag", "press") }
-        assertEquals(LogButtonLearner.State.AwaitingPresses, decided(32_000))
+        assertEquals(LogButtonLearner.State.AwaitingPresses, afterPresses(32_000))
         assertEquals(LogButtonLearner.State.Failed, learner.state(1_500 + LogButtonLearner.PRESS_TIMEOUT_MS + 1))
     }
 }

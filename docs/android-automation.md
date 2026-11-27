@@ -34,8 +34,8 @@ adb shell pm grant com.opendictate.app android.permission.READ_LOGS
 ```
 
 **Settings → Keyboard → Button from the system log** appears after that. Turn it
-on and press the button three times when asked; OpenDictate finds the button's
-line by itself. A press then starts dictation into the focused text field and the
+on, press the button three times when asked and then both volume buttons;
+OpenDictate finds the line that only your button leaves. A press then starts dictation into the focused text field and the
 next press finishes it, with or without an open keyboard.
 
 **Double press** takes a link with `{text}`, for example

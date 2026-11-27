@@ -230,7 +230,9 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
 - When you assign a hardware button, the accessibility service receives
   hardware key presses so it can recognize that button. Only the assigned key code
   is stored; other presses are passed on unchanged and never stored or sent.
-  Key presses are not received while no button is assigned.
+  Key presses are not received while no button is assigned. They are also
+  received for a few seconds while you teach the app a button from the system
+  log, to tell that button from the volume buttons.
 - A button from the system log is off by default and is offered only after you
   grant the app Android's `READ_LOGS` permission through adb. That permission
   covers all device logs. While you teach the app a button, it reads every log

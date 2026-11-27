@@ -242,7 +242,8 @@ A button from the system log serves buttons whose key events Android withholds
 from apps. It needs `READ_LOGS`, which the manifest declares but only adb can
 grant; the setting stays hidden until then and is off by default. Learning reads
 the whole log in memory for a few seconds and keeps only the tag and text of the
-button's line. Afterwards logcat runs with that tag as its filter, so no other
+button's line; it also receives key events until two other buttons are pressed,
+to drop lines that every hardware button leaves. Afterwards logcat runs with that tag as its filter, so no other
 line reaches the app, and it runs only while the setting is on. Android grants
 log access only to the app in front and asks each time, so the watcher starts
 from the app's own screen. A press toggles dictation into the focused field under

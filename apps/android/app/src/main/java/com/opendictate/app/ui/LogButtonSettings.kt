@@ -44,9 +44,11 @@ import com.opendictate.app.R
 import com.opendictate.app.model.LogButtonLearner
 import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.TextLink
+import com.opendictate.app.service.DictationKeyCapture
 import com.opendictate.app.service.LogButton
 import com.opendictate.app.service.LogReader
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Shown only after READ_LOGS was granted through adb; everyone else never sees these rows. */
 @Composable
@@ -79,9 +81,12 @@ internal fun LogButtonSettings(
     }
 }
 
-/** Finds the button's log line while the user presses the button three times. */
+/**
+ * Finds the button's log line while the user presses the button three times, then the volume
+ * buttons, which the accessibility service reports and keeps from changing the volume.
+ */
 @Composable
-internal fun LogButtonLearnDialog(onLearned: (LogButtonSignature) -> Unit, onDismiss: () -> Unit) {
+internal fun LogButtonLearnDialog(accessibilityEnabled: Boolean, onLearned: (LogButtonSignature) -> Unit, onDismiss: () -> Unit) {
     var attempt by remember { mutableIntStateOf(0) }
     var state by remember { mutableStateOf<LogButtonLearner.State>(LogButtonLearner.State.AwaitingAccess) }
     val currentOnLearned by rememberUpdatedState(onLearned)
@@ -96,9 +101,13 @@ internal fun LogButtonLearnDialog(onLearned: (LogButtonSignature) -> Unit, onDis
         val reader = LogReader.everything(RECENT_LOG_LINES) { line ->
             synchronized(learner) { learner.onLine(line, SystemClock.elapsedRealtime()) }
         }
+        val otherButtons = launch {
+            DictationKeyCapture.captured.collect { synchronized(learner) { learner.onOtherButton(SystemClock.elapsedRealtime()) } }
+        }
         try {
             while (true) {
                 state = synchronized(learner) { learner.state(SystemClock.elapsedRealtime()) }
+                if (state == LogButtonLearner.State.AwaitingOtherButtons) DictationKeyCapture.begin() else DictationKeyCapture.end()
                 val learned = state as? LogButtonLearner.State.Learned
                 if (learned != null) {
                     LogButton.learning = true
@@ -107,14 +116,17 @@ internal fun LogButtonLearnDialog(onLearned: (LogButtonSignature) -> Unit, onDis
                     delay(READER_HANDOVER_MS)
                     break
                 }
-                if (state == LogButtonLearner.State.Failed) break
+                if (state == LogButtonLearner.State.Failed || state == LogButtonLearner.State.Indistinct) break
                 delay(POLL_MS)
             }
         } finally {
+            DictationKeyCapture.end()
+            otherButtons.cancel()
             reader.close()
         }
     }
-    val waiting = state !is LogButtonLearner.State.Learned && state != LogButtonLearner.State.Failed
+    val waiting = state !is LogButtonLearner.State.Learned && state != LogButtonLearner.State.Failed &&
+        state != LogButtonLearner.State.Indistinct
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.log_button_learn_title)) },
@@ -128,9 +140,12 @@ internal fun LogButtonLearnDialog(onLearned: (LogButtonSignature) -> Unit, onDis
                     LogButtonLearner.State.AwaitingAccess -> stringResource(R.string.log_button_learn_access)
                     LogButtonLearner.State.Calibrating -> stringResource(R.string.log_button_learn_wait)
                     LogButtonLearner.State.AwaitingPresses -> stringResource(R.string.log_button_learn_press)
+                    LogButtonLearner.State.AwaitingOtherButtons -> stringResource(
+                        if (accessibilityEnabled) R.string.log_button_learn_others else R.string.accessibility_enable_hint)
                     // The count lets the user see that it follows the button and nothing else.
                     is LogButtonLearner.State.Learned -> stringResource(R.string.log_button_learn_done, checkedPresses)
                     LogButtonLearner.State.Failed -> stringResource(R.string.log_button_learn_failed)
+                    LogButtonLearner.State.Indistinct -> stringResource(R.string.log_button_learn_indistinct)
                 })
             }
         },

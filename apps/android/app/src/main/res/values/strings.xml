@@ -407,11 +407,13 @@
     <string name="log_button_active">A press starts and stops dictation</string>
     <string name="log_button_needs_access_notification">Open OpenDictate and allow access to device logs so the button works again.</string>
     <string name="log_button_learn_title">Learn the button</string>
-    <string name="log_button_learn_summary">Press it three times</string>
+    <string name="log_button_learn_summary">Press it three times, then the volume buttons</string>
     <string name="log_button_learned_summary">Log tag: %1$s</string>
     <string name="log_button_learn_access">Allow access to device logs in the system dialog.</string>
     <string name="log_button_learn_wait">Wait, do not press the button yet…</string>
     <string name="log_button_learn_press">Press the button three times, about once a second. Do not touch the screen.</string>
+    <string name="log_button_learn_others">Now press both volume buttons once each.</string>
+    <string name="log_button_learn_indistinct">This button could not be told apart from the volume buttons.</string>
     <string name="log_button_learn_done">The button is learned. Press it to check that only it is counted.
 Presses: %1$d</string>
     <string name="log_button_learn_failed">The button was not found. It may leave nothing in the system log.</string>
