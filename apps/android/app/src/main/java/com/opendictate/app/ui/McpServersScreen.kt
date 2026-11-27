@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -59,6 +60,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -92,7 +94,8 @@ internal fun McpServersScreen(
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     var adding by rememberSaveable { mutableStateOf(false) }
 
-    Box(modifier.fillMaxSize().background(SettingsCanvas).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.TopCenter) {
+    // The keyboard shrinks the list instead of covering its end, where commands are tried.
+    Box(modifier.fillMaxSize().background(SettingsCanvas).statusBarsPadding().navigationBarsPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 680.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
             ScreenHeader(stringResource(R.string.mcp_servers_title), onBack)
             Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -191,18 +194,22 @@ private fun ServerCard(
 
 /** Runs a typed command exactly as a spoken one, to try the servers without the button. */
 @Composable
-private fun TryCommand(onRun: (String) -> Unit) {
+internal fun TryCommand(onRun: (String) -> Unit) {
     var command by rememberSaveable { mutableStateOf("") }
+    val run = { if (command.isNotBlank()) { onRun(command.trim()); command = "" } }
     Column {
         SectionTitle(stringResource(R.string.mcp_try_title))
         SettingsGroup {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Focusing the field scrolls the whole group into view, so Run stays above the keyboard.
+            Column(Modifier.keepFullBoundsInView().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(command, { command = it }, Modifier.fillMaxWidth(), minLines = 2, maxLines = 4,
-                    label = { Text(stringResource(R.string.mcp_try_label)) })
+                    label = { Text(stringResource(R.string.mcp_try_label)) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { run() }))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.mcp_try_hint), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
                     Spacer(Modifier.width(12.dp))
-                    Button({ onRun(command.trim()); command = "" }, enabled = command.isNotBlank()) { Text(stringResource(R.string.mcp_try_run)) }
+                    Button(run, enabled = command.isNotBlank()) { Text(stringResource(R.string.mcp_try_run)) }
                 }
             }
         }
