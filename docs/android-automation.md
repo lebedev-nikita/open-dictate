@@ -3,7 +3,7 @@
 Automation apps such as Automate, Tasker or Key Mapper can start dictation from a
 hardware button, shortcut or Quick Settings tile. OpenDictate has no
 device-specific button code; map the button in the automation app and send a
-command.
+command, or let OpenDictate learn a button from the system log.
 
 Enable **Settings → Integrations → Control from other apps**. It is off by
 default; while it is off, both entry points below are disabled Android components.
@@ -22,6 +22,31 @@ learned, and only through its accessibility service. Back, Home, Recents and
 Power cannot be bound. Android does not pass on buttons it cannot name, such as
 some manufacturer keys. Use an automation app for those if it can detect them,
 and send the commands below.
+
+## Buttons that Android hides from apps
+
+Some manufacturer buttons, such as the Plus Key on OnePlus phones, never reach
+apps as key events but leave a line in the system log. OpenDictate can watch for
+that line. Reading the log needs a permission that only adb can grant:
+
+```bash
+adb shell pm grant com.opendictate.app android.permission.READ_LOGS
+```
+
+**Settings → Keyboard → Button from the system log** appears after that. Turn it
+on and press the button three times when asked; OpenDictate finds the button's
+line by itself. A press then starts dictation into the focused text field and the
+next press finishes it, with or without an open keyboard.
+
+**Double press** takes a link with `{text}`, for example
+`t3code://new?prompt={text}`. A quick second press then records with a small
+panel instead, and opens the link with the dictated text in place of `{text}`.
+A single press, or the panel's **Done** button, finishes that recording.
+
+Android asks to allow log access each time the app starts reading, and only
+while the app is open. After a restart of the phone or the app, a notification
+asks you to open OpenDictate once. Key presses sent through adb can leave the
+same log line and count as presses.
 
 ## Commands: dictate into the focused field
 

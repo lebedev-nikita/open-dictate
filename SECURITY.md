@@ -238,6 +238,19 @@ consumes only the bound key while a text field is ready or a session runs, and
 never logs or stores other keys. Back, Home, Recents and Power cannot be bound.
 A volume key's short press is replayed through `AudioManager`.
 
+A button from the system log serves buttons whose key events Android withholds
+from apps. It needs `READ_LOGS`, which the manifest declares but only adb can
+grant; the setting stays hidden until then and is off by default. Learning reads
+the whole log in memory for a few seconds and keeps only the tag and text of the
+button's line. Afterwards logcat runs with that tag as its filter, so no other
+line reaches the app, and it runs only while the setting is on. Android grants
+log access only to the app in front and asks each time, so the watcher starts
+from the app's own screen. A press toggles dictation into the focused field under
+the usual guards. A double press records behind the visible panel of a
+non-exported activity and opens the user's link with the percent-encoded text;
+the link is stored in app-private preferences, outside Drive sync. Any app that
+can write the same log line can trigger a press, but not read the result.
+
 Control from other apps is off by default. Its exported `RECOGNIZE_SPEECH`
 activity, command receiver and windowless command activity are disabled
 components until the user enables it. Commands carry no sender identity, so they
