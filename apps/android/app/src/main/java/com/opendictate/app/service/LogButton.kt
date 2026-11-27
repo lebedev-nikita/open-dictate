@@ -126,7 +126,7 @@ internal object LogButton {
     fun sync() {
         val context = application ?: return
         val store = settings ?: return
-        val signature = store.logButtonSignature?.takeIf { store.logButtonEnabled && isPermitted(context) }
+        val signature = store.logButtonSignature?.takeIf { isPermitted(context) }
         if (signature == null) {
             stop()
             mutableStatus.value = Status.OFF
@@ -218,7 +218,7 @@ internal object LogButton {
         if (mutableStatus.value != Status.NEEDS_ACCESS || isInForeground()) return@Runnable
         val manager = notifications(context)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, context.getString(R.string.log_button_title), NotificationManager.IMPORTANCE_LOW),
+            NotificationChannel(CHANNEL_ID, context.getString(R.string.dictation_key_title), NotificationManager.IMPORTANCE_LOW),
         )
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -226,7 +226,7 @@ internal object LogButton {
         runCatching {
             manager.notify(NOTIFICATION_ID, NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_mic_chatgpt_24)
-                .setContentTitle(context.getString(R.string.log_button_title))
+                .setContentTitle(context.getString(R.string.dictation_key_title))
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setOnlyAlertOnce(true)

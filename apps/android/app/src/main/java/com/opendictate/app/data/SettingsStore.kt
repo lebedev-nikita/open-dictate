@@ -10,6 +10,7 @@ import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.LogButtonSignature
+import com.opendictate.app.model.McpServer
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.TranscriptionModel
@@ -59,11 +60,7 @@ class SettingsStore(context: Context) {
         return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
-    /** Whether the button learned from the system log is in use. Device-local, like its signature. */
-    var logButtonEnabled: Boolean
-        get() = prefs.getBoolean(KEY_LOG_BUTTON_ENABLED, false)
-        set(value) = prefs.edit { putBoolean(KEY_LOG_BUTTON_ENABLED, value) }
-
+    /** The log line of a button that Android hides from apps; null when none is bound. Device-local. */
     var logButtonSignature: LogButtonSignature?
         get() {
             val tag = prefs.getString(KEY_LOG_BUTTON_TAG, null) ?: return null
@@ -80,10 +77,17 @@ class SettingsStore(context: Context) {
             }
         }
 
-    /** Link that receives text dictated after a double press; blank when the double press is unused. */
-    var logButtonLink: String
-        get() = prefs.getString(KEY_LOG_BUTTON_LINK, null).orEmpty()
-        set(value) = prefs.edit { putString(KEY_LOG_BUTTON_LINK, value.trim()) }
+    /** MCP servers for spoken commands, with the tools each last offered. Device-local, never synced. */
+    var mcpServers: List<McpServer>
+        get() = McpServer.listFromJson(prefs.getString(KEY_MCP_SERVERS, null))
+        set(value) = prefs.edit {
+            putString(KEY_MCP_SERVERS, McpServer.listToJson(value))
+            putBoolean(KEY_MCP_COMMANDS, value.any { it.activeTools.isNotEmpty() })
+        }
+
+    /** Whether a spoken command has any tool to call; read on every button press. */
+    val assistantCommandsAvailable: Boolean
+        get() = prefs.getBoolean(KEY_MCP_COMMANDS, false)
 
     fun observeLogButton(onChange: () -> Unit): Closeable {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -344,11 +348,11 @@ class SettingsStore(context: Context) {
         private const val KEY_DICTATION_KEY_CODE = "dictation_key_code"
         private const val KEY_FLOATING_BUTTON_VISIBLE = "floating_button_visible"
         private const val LOG_BUTTON_PREFIX = "log_button_"
-        private const val KEY_LOG_BUTTON_ENABLED = LOG_BUTTON_PREFIX + "enabled"
         private const val KEY_LOG_BUTTON_TAG = LOG_BUTTON_PREFIX + "tag"
         private const val KEY_LOG_BUTTON_MESSAGE = LOG_BUTTON_PREFIX + "message"
         private const val KEY_LOG_BUTTON_RELEASE = LOG_BUTTON_PREFIX + "release"
-        private const val KEY_LOG_BUTTON_LINK = LOG_BUTTON_PREFIX + "link"
+        private const val KEY_MCP_SERVERS = "mcp_servers"
+        private const val KEY_MCP_COMMANDS = "mcp_commands_available"
         private const val KEY_EXTERNAL_DICTATION_PACKAGES = "external_dictation_packages"
         private const val KEY_TRANSCRIPTION_RESPONSE_TIMEOUT = "transcription_response_timeout_seconds"
         private const val DEFAULT_PROMPT = "OpenDictate\nDictate"

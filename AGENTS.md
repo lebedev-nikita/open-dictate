@@ -46,11 +46,18 @@ Meeting audio never touches disk; transcripts stay local, outside Drive.
    adds the container only for the accurate path.
 
 `LogButton` serves buttons that Android withholds from apps, such as the OnePlus
-Plus Key: with adb-granted `READ_LOGS` and the setting on, it runs logcat filtered
+Plus Key: with adb-granted `READ_LOGS` and a bound button, it runs logcat filtered
 to the learned line's tag and reports presses. `ButtonTapGesture` turns presses
-into a toggle and, with a link set, a double press that dictates through
-`LinkDictationActivity` and opens the link. Keep the log out of the app otherwise:
-no reader while the setting is off, and no unfiltered reader outside learning.
+into a toggle and, when MCP tools are enabled, a double press that dictates a
+command through `CommandDictationActivity`. Keep the log out of the app otherwise:
+no reader without a bound button, and no unfiltered reader outside binding.
+
+`AssistantCommands` carries out a spoken command: one text-model request with the
+enabled tools of the user's MCP servers (`AssistantCommand`), then at most one
+tool call through `McpClient` (MCP Kotlin SDK over Streamable HTTP), reported as
+a notification. `McpSignIn` signs in with AppAuth and a loopback redirect.
+Servers and tool lists live in `SettingsStore`, tokens in `McpSecrets`; never log
+commands, tool arguments, tool answers or tokens.
 
 Partial live text is cumulative. `EditableTextSnapshot.compose()` always
 replaces the selection captured at session start, so every delta replaces the
@@ -182,14 +189,6 @@ context, the control's purpose, and its placement. Keep UI copy concise,
 especially helper text, and check that it fits without clipping, truncation,
 or awkward wrapping. Fix translation, visual, and interaction inconsistencies
 before handing the changes to a human.
-
-Run Android emulators only in Boat sandboxes (`boat` CLI), never on the
-developer's Mac. Each sandbox has `/dev/kvm`; use one headless x86_64 emulator
-per sandbox, preferably Android 14 (`android-34;google_apis;x86_64`) as in
-<https://docs.boat.dev/machines/virtualization.md>. Copy the APK in with
-`boat scp`, and drive it with `boat exec … adb`. Sandboxes bill while they run:
-delete every sandbox with `boat delete <id> --yes` as soon as testing ends, and
-confirm with `boat list` that none remain.
 
 The work is complete when required commands pass, no generated build output is
 committed, and behavior-specific coverage exists for pure logic. Exercise

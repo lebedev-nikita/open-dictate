@@ -92,6 +92,8 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     var showHistory by rememberSaveable { mutableStateOf(false) }
     var showErrorHistory by rememberSaveable { mutableStateOf(false) }
     var showAppFilter by rememberSaveable { mutableStateOf(false) }
+    var showHardwareButton by rememberSaveable { mutableStateOf(false) }
+    var showMcpServers by rememberSaveable { mutableStateOf(false) }
     val settingsScrollState = rememberScrollState()
     val maximumDisplayRefreshRate = LocalView.current.display
         ?.supportedModes
@@ -111,8 +113,11 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
     LaunchedEffect(showAppFilter) {
         if (showAppFilter) viewModel.loadInstalledApps()
     }
-    BackHandler(enabled = showHistory || showAppFilter || showErrorHistory) {
+    BackHandler(enabled = showHistory || showAppFilter || showErrorHistory || showHardwareButton || showMcpServers) {
         when {
+            // MCP servers can be opened from the hardware button, and return there.
+            showMcpServers -> showMcpServers = false
+            showHardwareButton -> showHardwareButton = false
             showErrorHistory -> showErrorHistory = false
             showAppFilter -> showAppFilter = false
             else -> showHistory = false
@@ -148,6 +153,31 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                             ClipData.newPlainText(clipboardDiagnosticsLabel, report),
                         )
                     },
+                    modifier = Modifier.padding(padding),
+                )
+            } else if (showMcpServers) {
+                McpServersScreen(
+                    servers = state.mcpServers,
+                    signedIn = state.mcpSignedIn,
+                    busy = state.mcpBusy,
+                    errors = state.mcpErrors,
+                    onBack = { showMcpServers = false },
+                    onSave = viewModel::saveMcpServer,
+                    onDelete = viewModel::deleteMcpServer,
+                    onSignIn = viewModel::signInMcpServer,
+                    onRefresh = viewModel::refreshMcpTools,
+                    onToolEnabled = viewModel::setMcpToolEnabled,
+                    onTryCommand = viewModel::runAssistantCommand,
+                    modifier = Modifier.padding(padding),
+                )
+            } else if (showHardwareButton) {
+                HardwareButtonScreen(
+                    state = state,
+                    onBack = { showHardwareButton = false },
+                    onBindKey = viewModel::setDictationKey,
+                    onLearned = viewModel::setLogButtonSignature,
+                    onUnbind = viewModel::unbindHardwareButton,
+                    onMcpServers = { showMcpServers = true },
                     modifier = Modifier.padding(padding),
                 )
             } else if (showAppFilter) {
@@ -196,6 +226,8 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
                     onAppFilter = { showAppFilter = true },
+                    onHardwareButton = { showHardwareButton = true },
+                    onMcpServers = { showMcpServers = true },
                     viewModel = viewModel,
                     modifier = Modifier.padding(padding),
                 )

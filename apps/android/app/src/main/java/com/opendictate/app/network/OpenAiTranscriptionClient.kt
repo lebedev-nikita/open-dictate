@@ -8,6 +8,9 @@ import arrow.core.raise.ensure
 import arrow.core.right
 import com.opendictate.app.audio.PcmAudioRecorder
 import com.opendictate.app.data.transcriptionKeywords
+import com.opendictate.app.model.AssistantCommand
+import com.opendictate.app.model.AssistantDecision
+import com.opendictate.app.model.AssistantFunction
 import com.opendictate.app.model.DiagnosticException
 import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.DictationLanguage
@@ -153,6 +156,23 @@ class OpenAiTranscriptionClient(
                 }
             }
         }
+
+    /** Asks the text model which tool carries out a spoken command; see [AssistantCommand]. */
+    internal suspend fun assistantDecision(
+        apiKey: String,
+        command: String,
+        functions: List<AssistantFunction>,
+        modelId: String = TextProcessingModel.ID,
+        chatGPTAccount: String? = null,
+    ): Either<DictationError, AssistantDecision> =
+        withTimeoutOrNull(TRANSFORMATION_TIMEOUT_MS) {
+            withContext(Dispatchers.IO) {
+                either {
+                    val body = textResponse(apiKey, AssistantCommand.request(command, functions, modelId), chatGPTAccount).bind()
+                    requestAttempt { AssistantCommand.decision(body, functions) }.bind()
+                }
+            }
+        } ?: DictationError.Timeout.left()
 
     private suspend fun textResponse(apiKey: String, body: JSONObject, account: String?): Either<DictationError, JSONObject> {
         if (account != null) {

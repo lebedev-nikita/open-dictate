@@ -247,10 +247,23 @@ to drop lines that every hardware button leaves. Afterwards logcat runs with tha
 line reaches the app, and it runs only while the setting is on. Android grants
 log access only to the app in front and asks each time, so the watcher starts
 from the app's own screen. A press toggles dictation into the focused field under
-the usual guards. A double press records behind the visible panel of a
-non-exported activity and opens the user's link with the percent-encoded text;
-the link is stored in app-private preferences, outside Drive sync. Any app that
-can write the same log line can trigger a press, but not read the result.
+the usual guards. Any app that can write the same log line can trigger a press,
+but not read the result.
+
+Spoken commands send a transcript and the enabled tools of the user's MCP servers
+to the text model in one request with `store: false`, then make at most one tool
+call from the phone; the tool's answer is not sent back to the model. A double
+press records behind the visible panel of a non-exported activity. Only `https://`
+server addresses are accepted. A server may opt in to certificate authorities the
+user installed on the device; that trust is built per server from the platform's
+trust manager and never applies to OpenAI or other connections. Tokens are
+encrypted per server with Android Keystore and stay out of logs, notifications
+and Drive sync. Browser sign-in follows MCP authorization: discovery (RFC 9728,
+RFC 8414), client registration, and an authorization code with PKCE and a state
+check through AppAuth, returning to a listener bound to `127.0.0.1` on a random
+port for the duration of the sign-in. Tool descriptions come from the server and
+reach the model as data; a server the user added can therefore steer which of
+its own tools is called, and should be one the user trusts.
 
 Control from other apps is off by default. Its exported `RECOGNIZE_SPEECH`
 activity, command receiver and windowless command activity are disabled

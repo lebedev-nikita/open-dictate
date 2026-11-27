@@ -5,12 +5,13 @@ hardware button, shortcut or Quick Settings tile. OpenDictate has no
 device-specific button code; map the button in the automation app and send a
 command, or let OpenDictate learn a button from the system log.
 
-Enable **Settings → Integrations → Control from other apps**. It is off by
-default; while it is off, both entry points below are disabled Android components.
+Enable **Settings → Integrations → Control from other apps** for the commands and
+requests below. It is off by default; while it is off, their entry points are
+disabled Android components. A hardware button needs no such setting.
 
 ## Hardware button
 
-**Settings → Keyboard → Hardware button** learns a button from its next press.
+**Settings → Dictation button → Hardware button** binds a button by its press.
 Hold the button in a text field to dictate and release it to finish. Elsewhere
 the button keeps its usual behavior. A volume button starts dictation only after
 a 0.4-second hold; a shorter press still changes the volume. Other buttons start
@@ -33,21 +34,41 @@ that line. Reading the log needs a permission that only adb can grant:
 adb shell pm grant com.opendictate.app android.permission.READ_LOGS
 ```
 
-**Settings → Keyboard → Button from the system log** appears after that. Turn it
-on and follow the three steps: press the button three times, press both volume
-buttons, then try the button. OpenDictate finds the line that only your button
-leaves, and the last step names each press as the app understands it. A press then starts dictation into the focused text field and the
-next press finishes it, with or without an open keyboard.
+After that, **Settings → Dictation button → Hardware button → Bind a button**
+also finds such buttons. Follow its three steps: press the button three times,
+press both volume buttons, then try the button. OpenDictate finds the line that
+only your button leaves, and the last step names each press as the app
+understands it. A button that Android does report as a key is bound by its first
+press instead, and works by holding.
 
-**Double press** takes a link with `{text}`, for example
-`t3code://new?prompt={text}`. A quick second press then records with a small
-panel instead, and opens the link with the dictated text in place of `{text}`.
-A single press, or the panel's **Done** button, finishes that recording.
+A press of a button found this way starts dictation into the focused text field
+and the next press finishes it, with or without an open keyboard.
 
 Android asks to allow log access each time the app starts reading, and only
 while the app is open. After a restart of the phone or the app, a notification
 asks you to open OpenDictate once. Key presses sent through adb can leave the
 same log line and count as presses.
+
+## Spoken commands for MCP servers
+
+A double press of such a button dictates a command instead. OpenDictate sends
+the text to the text model together with the tools you enabled on your MCP
+servers, the model picks one tool, and the phone calls it. The outcome arrives
+as a notification. There is one request to the model and at most one tool call
+per command, so a command cannot first look something up and then act on it.
+
+Add servers under **Settings → Integrations → MCP servers**:
+
+- **Address**: the server's Streamable HTTP endpoint, `https://` only.
+- **Sign-in**: through the browser, for servers that follow MCP authorization
+  (OAuth with client registration, such as T3 Code); a bearer token you paste;
+  or none. Browser sign-in returns to a port the app listens on, on the phone
+  itself, so keep OpenDictate's accessibility service on while you sign in.
+- **Trust certificates installed on the device**: for a server in your own
+  network whose certificate comes from your own certificate authority. Install
+  that authority in Android's settings first.
+- **Tools**: a server with more than 20 tools starts with none enabled. Enable
+  the few you will speak to; every enabled tool is sent with each command.
 
 ## Commands: dictate into the focused field
 
