@@ -53,9 +53,9 @@ command through `CommandDictationActivity`. Keep the log out of the app otherwis
 no reader without a bound button, and no unfiltered reader outside binding.
 
 `AssistantCommands` carries out a spoken command: one text-model request with the
-enabled tools of the user's MCP servers (`AssistantCommand`), then at most one
-tool call through `McpClient` (MCP Kotlin SDK over Streamable HTTP), reported as
-a notification. `McpSignIn` signs in with AppAuth and a loopback redirect.
+enabled tools of the user's MCP servers (`AssistantCommand`), then one tool call
+through `McpClient` (MCP Kotlin SDK over Streamable HTTP), reported as a
+notification. Only an error answer returns to the model, once, to correct the call. `McpSignIn` signs in with AppAuth and a loopback redirect.
 Servers and tool lists live in `SettingsStore`, tokens in `McpSecrets`; never log
 commands, tool arguments, tool answers or tokens.
 

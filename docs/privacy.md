@@ -244,9 +244,11 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
 - Spoken commands are off until you add an MCP server and enable its tools. A
   command you dictate after a double press is sent to OpenAI's text model
   together with the names, descriptions and argument schemas of the enabled
-  tools. The model's chosen tool call, with arguments taken from your words, is
-  then sent from your phone to that MCP server, and the server's answer is shown
-  in a notification. Nothing goes to a server you did not add. Server addresses
+  tools and any note you wrote for a server. The model's chosen tool call, with
+  arguments taken from your words, is then sent from your phone to that MCP
+  server, and the server's answer is shown in a notification. If the server
+  answers with an error, that error goes to the model once so it can correct the
+  call; other answers do not. Nothing goes to a server you did not add. Server addresses
   and tool lists are stored in app-private preferences, and tokens are encrypted
   with Android Keystore; none of them are synchronized. These transcripts are
   saved to history like other dictations, and their audio is deleted after use.

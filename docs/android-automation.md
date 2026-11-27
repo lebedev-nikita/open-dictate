@@ -54,8 +54,10 @@ same log line and count as presses.
 A double press of such a button dictates a command instead. OpenDictate sends
 the text to the text model together with the tools you enabled on your MCP
 servers, the model picks one tool, and the phone calls it. The outcome arrives
-as a notification. There is one request to the model and at most one tool call
-per command, so a command cannot first look something up and then act on it.
+as a notification; if the tool's answer holds a link, a tap opens it. There is
+one request to the model and one tool call per command, so a command cannot
+first look something up and then act on it. Only when the server refuses the
+call does the model see that error and try once more.
 
 Add servers under **Settings → Integrations → MCP servers**:
 
@@ -69,6 +71,8 @@ Add servers under **Settings → Integrations → MCP servers**:
   that authority in Android's settings first.
 - **Tools**: a server with more than 20 tools starts with none enabled. Enable
   the few you will speak to; every enabled tool is sent with each command.
+- **Note for the model**: optional words sent with each command, such as the
+  project to use when you name none.
 
 ## Commands: dictate into the focused field
 

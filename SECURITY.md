@@ -251,8 +251,10 @@ the usual guards. Any app that can write the same log line can trigger a press,
 but not read the result.
 
 Spoken commands send a transcript and the enabled tools of the user's MCP servers
-to the text model in one request with `store: false`, then make at most one tool
-call from the phone; the tool's answer is not sent back to the model. A double
+to the text model in one request with `store: false`, then make one tool call
+from the phone. A successful answer is not sent back to the model; an error
+answer is sent once, cut to 1000 characters, so the model can correct its call.
+A notification opens only an `https://` link from the tool's answer. A double
 press records behind the visible panel of a non-exported activity. Only `https://`
 server addresses are accepted. A server may opt in to certificate authorities the
 user installed on the device; that trust is built per server from the platform's

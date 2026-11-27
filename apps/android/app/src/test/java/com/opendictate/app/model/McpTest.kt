@@ -116,4 +116,38 @@ class McpTest {
         assertEquals(AssistantDecision.Nothing, AssistantCommand.decision(unknown, AssistantCommand.functions(listOf(code))))
         assertEquals(AssistantDecision.Nothing, AssistantCommand.decision(JSONObject("{}"), emptyList()))
     }
+
+    @Test
+    fun aRefusedCallIsShownToTheModelOnce() {
+        val functions = AssistantCommand.functions(listOf(code))
+        // Seen with T3 Code: a thread launched from outside a thread needs a project or none at all.
+        val failed = FailedCall(functions[0], """{"title":"ping"}""", "Pass projectId: this MCP client is not running inside a T3 thread.")
+        val input = AssistantCommand.request("создай новый thread с текстом ping", functions, "m", failed).getJSONArray("input")
+        assertEquals(2, input.length())
+        assertEquals("создай новый thread с текстом ping", input.getJSONObject(0).getString("content"))
+        val note = input.getJSONObject(1).getString("content")
+        assertTrue(note.contains("s1_t3_thread_launch({\"title\":\"ping\"})"))
+        assertTrue(note.contains("Pass projectId"))
+    }
+
+    @Test
+    fun theUsersNotesAboutServersReachTheModel() {
+        val noted = code.copy(hint = "When no project is named, pass scratch: true.")
+        val instructions = AssistantCommand.request("ping", AssistantCommand.functions(listOf(noted, home)), "m").getString("instructions")
+        assertTrue(instructions.endsWith("- T3 Code: When no project is named, pass scratch: true."))
+        assertFalse(AssistantCommand.request("ping", AssistantCommand.functions(listOf(code)), "m").getString("instructions").contains("Notes from the user"))
+        assertEquals(noted, McpServer.listFromJson(McpServer.listToJson(listOf(noted))).single())
+    }
+
+    @Test
+    fun answersAreReducedForANotification() {
+        assertEquals(ToolAnswer("Свет включён", null), AssistantCommand.answer(" Свет включён "))
+        assertEquals(ToolAnswer("Pass projectId: this MCP client is not running inside a T3 thread.", null),
+            AssistantCommand.answer("""{"_tag":"OrchestratorMcpFailure","code":"target_required","message":"Pass projectId: this MCP client is not running inside a T3 thread."}"""))
+        assertEquals(ToolAnswer(null, "https://app.t3.codes/threads/a/b"),
+            AssistantCommand.answer("""{"threadId":"mcp:1","link":"https://app.t3.codes/threads/a/b","status":"preparing"}"""))
+        // Only https links are opened from a notification.
+        assertEquals(ToolAnswer(null, null), AssistantCommand.answer("""{"url":"intent://evil","ok":true}"""))
+        assertEquals(ToolAnswer(null, null), AssistantCommand.answer(""))
+    }
 }

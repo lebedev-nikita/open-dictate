@@ -14,6 +14,7 @@ import com.opendictate.app.model.AssistantFunction
 import com.opendictate.app.model.DiagnosticException
 import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.DictationLanguage
+import com.opendictate.app.model.FailedCall
 import com.opendictate.app.model.ErrorReason
 import com.opendictate.app.model.FailureDetails
 import com.opendictate.app.model.ModelCatalog
@@ -164,11 +165,12 @@ class OpenAiTranscriptionClient(
         functions: List<AssistantFunction>,
         modelId: String = TextProcessingModel.ID,
         chatGPTAccount: String? = null,
+        failed: FailedCall? = null,
     ): Either<DictationError, AssistantDecision> =
         withTimeoutOrNull(TRANSFORMATION_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
                 either {
-                    val body = textResponse(apiKey, AssistantCommand.request(command, functions, modelId), chatGPTAccount).bind()
+                    val body = textResponse(apiKey, AssistantCommand.request(command, functions, modelId, failed), chatGPTAccount).bind()
                     requestAttempt { AssistantCommand.decision(body, functions) }.bind()
                 }
             }
