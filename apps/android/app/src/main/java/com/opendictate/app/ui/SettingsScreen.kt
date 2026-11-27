@@ -109,6 +109,7 @@ import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.ModelCatalog
+import com.opendictate.app.model.TextLink
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.service.DictationPhase
 import com.opendictate.app.service.DictationState
@@ -379,7 +380,8 @@ internal fun SettingsScreen(
     if (dictationKeyOpen) DictationKeyDialog(state.dictationKeyCode, state.accessibilityEnabled,
         onBind = viewModel::setDictationKey, onClear = { viewModel.setDictationKey(DictationKeys.NONE) },
         onDismiss = { dictationKeyOpen = false })
-    if (logButtonLearnOpen) LogButtonLearnDialog(viewModel::setLogButtonSignature) { logButtonLearnOpen = false }
+    if (logButtonLearnOpen) LogButtonLearnSheet(state.accessibilityEnabled, TextLink.isValid(state.logButtonLink),
+        viewModel::setLogButtonSignature) { logButtonLearnOpen = false }
     if (logButtonLinkOpen) LogButtonLinkDialog(state.logButtonLink, viewModel::setLogButtonLink) { logButtonLinkOpen = false }
     if (buttonAppearanceOpen) DictationButtonAppearanceSheet(
         state.dictationButtonAppearance, viewModel::setDictationButtonAppearance,

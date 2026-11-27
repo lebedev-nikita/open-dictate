@@ -22,7 +22,10 @@ import com.opendictate.app.model.LogPressDetector
 import java.io.Closeable
 import java.io.IOException
 import kotlin.concurrent.thread
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Runs logcat and hands over its lines on a background thread until closed. */
@@ -85,14 +88,11 @@ internal object LogButton {
     private const val ACCESS_TIMEOUT_MS = 60_000L
     private const val REMINDER_DELAY_MS = 3_000L
 
-    /** Set while settings learn a button: presses are only counted there, for the user to check. */
+    /** Set while settings bind a button: presses are only shown there, for the user to try it. */
     var learning = false
-        set(value) {
-            field = value
-            mutableLearningPresses.value = 0
-        }
-    private val mutableLearningPresses = MutableStateFlow(0)
-    val learningPresses = mutableLearningPresses.asStateFlow()
+    private val mutableLearningPresses = MutableSharedFlow<Long>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /** Log times of the presses made while [learning]. */
+    val learningPresses = mutableLearningPresses.asSharedFlow()
 
     private val mutableStatus = MutableStateFlow(Status.OFF)
     val status = mutableStatus.asStateFlow()
@@ -192,7 +192,7 @@ internal object LogButton {
     private fun press(context: Context, timeMs: Long) {
         if (mutableStatus.value != Status.ACTIVE) return
         if (learning) {
-            mutableLearningPresses.value++
+            mutableLearningPresses.tryEmit(timeMs)
             return
         }
         val service = OpenDictateAccessibilityService.running
