@@ -136,6 +136,8 @@ internal fun SettingsScreen(
     var gesturesOpen by rememberSaveable { mutableStateOf(false) }
     var buttonAppearanceOpen by rememberSaveable { mutableStateOf(false) }
     var dictationKeyOpen by rememberSaveable { mutableStateOf(false) }
+    var logButtonLearnOpen by rememberSaveable { mutableStateOf(false) }
+    var logButtonLinkOpen by rememberSaveable { mutableStateOf(false) }
     val replacements by viewModel.replacements.state.collectAsStateWithLifecycle()
     val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
     val ready = state.hasApiKey && state.microphoneGranted && state.accessibilityEnabled
@@ -271,6 +273,15 @@ internal fun SettingsScreen(
                         SettingsDivider()
                         ActionRow(Icons.Outlined.Keyboard, stringResource(R.string.dictation_key_title),
                             dictationKeySummary(LocalContext.current.resources, state.dictationKeyCode), { dictationKeyOpen = true })
+                        if (state.logButtonPermitted) {
+                            SettingsDivider()
+                            LogButtonSettings(state.logButtonEnabled, state.logButtonTag, state.logButtonLink,
+                                onEnabledChange = {
+                                    viewModel.setLogButtonEnabled(it)
+                                    if (it && state.logButtonTag == null) logButtonLearnOpen = true
+                                },
+                                onLearn = { logButtonLearnOpen = true }, onEditLink = { logButtonLinkOpen = true })
+                        }
                         SettingsDivider()
                         ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),
                             stringResource(R.string.dictation_button_appearance_summary,
@@ -368,6 +379,8 @@ internal fun SettingsScreen(
     if (dictationKeyOpen) DictationKeyDialog(state.dictationKeyCode, state.accessibilityEnabled,
         onBind = viewModel::setDictationKey, onClear = { viewModel.setDictationKey(DictationKeys.NONE) },
         onDismiss = { dictationKeyOpen = false })
+    if (logButtonLearnOpen) LogButtonLearnDialog(viewModel::setLogButtonSignature) { logButtonLearnOpen = false }
+    if (logButtonLinkOpen) LogButtonLinkDialog(state.logButtonLink, viewModel::setLogButtonLink) { logButtonLinkOpen = false }
     if (buttonAppearanceOpen) DictationButtonAppearanceSheet(
         state.dictationButtonAppearance, viewModel::setDictationButtonAppearance,
     ) { buttonAppearanceOpen = false }

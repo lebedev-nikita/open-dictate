@@ -6,6 +6,7 @@ import com.opendictate.app.data.TranscriptHistoryStore
 import com.opendictate.app.model.ErrorContext
 import com.opendictate.app.model.FailureDetails
 import com.opendictate.app.service.ExternalDictationComponents
+import com.opendictate.app.service.LogButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,6 +27,7 @@ class OpenDictateApplication : Application() {
         super.onCreate()
         driveSync
         ExternalDictationComponents.sync(this)
+        LogButton.attach(this)
     }
     val chatGPT by lazy { com.opendictate.app.chatgpt.ChatGPTSession(this) }
     val transcriptHistoryStore by lazy { TranscriptHistoryStore(this) }

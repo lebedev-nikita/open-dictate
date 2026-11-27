@@ -24,11 +24,13 @@ import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationLanguage
+import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.network.OpenAiTranscriptionClient
 import com.opendictate.app.service.ExternalDictationComponents
+import com.opendictate.app.service.LogButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -60,6 +62,11 @@ data class MainUiState(
     val selectionDictionaryActionEnabled: Boolean = true,
     val floatingButtonVisible: Boolean = true,
     val dictationKeyCode: Int = 0,
+    /** READ_LOGS was granted through adb; until then the log button is not offered at all. */
+    val logButtonPermitted: Boolean = false,
+    val logButtonEnabled: Boolean = false,
+    val logButtonTag: String? = null,
+    val logButtonLink: String = "",
     val externalDictationEnabled: Boolean = false,
     val externalDictationApps: List<InstalledApp> = emptyList(),
     val transcriptionResponseTimeoutSeconds: Int? = TranscriptionResponseTimeout.DEFAULT_SECONDS,
@@ -140,6 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 hasApiKey = apiKeyStore.hasKey(),
                 accessibilityEnabled = isAccessibilityEnabled(getApplication()),
                 microphoneGranted = hasMicrophonePermission(getApplication()),
+                logButtonPermitted = LogButton.isPermitted(getApplication()),
             )
         }
     }
@@ -361,6 +369,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(dictationKeyCode = keyCode) }
     }
 
+    fun setLogButtonEnabled(enabled: Boolean) {
+        settings.logButtonEnabled = enabled
+        mutableState.update { it.copy(logButtonEnabled = enabled) }
+    }
+
+    fun setLogButtonSignature(signature: LogButtonSignature?) {
+        settings.logButtonSignature = signature
+        mutableState.update { it.copy(logButtonTag = signature?.tag) }
+    }
+
+    fun setLogButtonLink(link: String) {
+        settings.logButtonLink = link
+        mutableState.update { it.copy(logButtonLink = settings.logButtonLink) }
+    }
+
     fun setFloatingButtonVisible(visible: Boolean) {
         settings.floatingButtonVisible = visible
         mutableState.update { it.copy(floatingButtonVisible = visible) }
@@ -466,6 +489,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         floatingButtonVisible = settings.floatingButtonVisible,
         dictationKeyCode = settings.dictationKeyCode,
+        logButtonPermitted = LogButton.isPermitted(getApplication()),
+        logButtonEnabled = settings.logButtonEnabled,
+        logButtonTag = settings.logButtonSignature?.tag,
+        logButtonLink = settings.logButtonLink,
         externalDictationEnabled = ExternalDictationComponents.isEnabled(getApplication()),
         externalDictationApps = externalDictationApps(),
         transcriptionResponseTimeoutSeconds = settings.transcriptionResponseTimeoutSeconds,

@@ -32,16 +32,21 @@ import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.addToDictionary
 import com.opendictate.app.model.AppFilter
+import com.opendictate.app.model.ButtonTapAction
+import com.opendictate.app.model.ButtonTapGesture
+import com.opendictate.app.model.DictationCommand
 import com.opendictate.app.model.DictationKeyAction
 import com.opendictate.app.model.DictationKeyGesture
 import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.FieldFocus
 import com.opendictate.app.model.FieldFocusGrace
+import com.opendictate.app.model.TextLink
 import com.opendictate.app.overlay.DictationOverlayMenuView
 import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
 import com.opendictate.app.overlay.OverlayPositionMotion
 import com.opendictate.app.overlay.OverlayVisibilitySession
+import com.opendictate.app.ui.LinkDictationActivity
 import java.io.Closeable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -93,9 +98,13 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private var commandStartPending = false
     private val clearCommandStartPending = Runnable {
         commandStartPending = false
+        cancelStartingSession = false
         if (!DictationStateBus.state.value.isFieldSession()) clearKeyboardFreeTarget()
         scheduleOverlayUpdate()
     }
+    private val tapGesture = ButtonTapGesture()
+    private var cancelStartingSession = false
+    private val showNoFieldHint = Runnable { Toast.makeText(this, R.string.command_no_field, Toast.LENGTH_SHORT).show() }
     /** The field of a session started by an activity command, which continues without a keyboard. */
     private var keyboardFreeTarget: AccessibilityNodeInfo? = null
     private val keyboardFreeFocus = FieldFocusGrace()
@@ -146,6 +155,10 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 if (fieldSession) {
                     commandStartPending = false
                     handler.removeCallbacks(clearCommandStartPending)
+                    if (cancelStartingSession) {
+                        cancelStartingSession = false
+                        onOverlayCancelled()
+                    }
                 }
                 if (wasFieldSession && !fieldSession) clearKeyboardFreeTarget()
                 // A hidden button shows and hides with the session it indicates.
@@ -562,7 +575,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
      * command closes the keyboard by switching tasks, so with [keyboardOptional] a focused field is
      * enough and the session continues without a keyboard while that field keeps focus.
      */
-    internal fun startFromCommand(keyboardOptional: Boolean = false) {
+    internal fun startFromCommand(keyboardOptional: Boolean = false, noFieldHintDelayMs: Long = 0) {
         if (DictationStateBus.state.value.isActive) return
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
         val focused = when {
@@ -571,7 +584,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             else -> null
         }
         if (focused?.isTextInput() != true || !appFilter.allows(focused.packageName)) {
-            Toast.makeText(this, R.string.command_no_field, Toast.LENGTH_SHORT).show()
+            handler.postDelayed(showNoFieldHint, noFieldHintDelayMs)
             return
         }
         // Show the indicator before the microphone starts; Android requires a visible window.
@@ -584,6 +597,33 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         }
         showOrMoveOverlay(ime, focused)
         if (!startOrdinaryDictation()) clearCommandStartPending.run()
+    }
+
+    /**
+     * A press of a button that only reports presses. It toggles dictation into the focused field at
+     * once. With a link set, a second press soon after a starting press undoes that start and
+     * dictates for the link instead; only the hint about a missing field waits for that press.
+     */
+    internal fun onTapButtonPress(timeMs: Long) {
+        val linkSet = TextLink.isValid(settings.logButtonLink)
+        val state = DictationStateBus.state.value
+        val external = ExternalDictationBus.awaitedRequestId?.takeUnless { state.isFieldSession() }
+        val sessionActive = state.isActive || commandStartPending || external != null
+        when (tapGesture.onPress(timeMs, sessionActive, secondaryAvailable = linkSet)) {
+            ButtonTapAction.START -> startFromCommand(keyboardOptional = true,
+                noFieldHintDelayMs = if (linkSet) ButtonTapGesture.DOUBLE_PRESS_WINDOW_MS else 0)
+            ButtonTapAction.STOP -> when {
+                external != null -> DictationCommands.perform(this, DictationCommand.STOP, keyboardOptional = true)
+                // The service handles a stop queued behind its start.
+                commandStartPending || state.isFieldSession() -> stopDictation()
+            }
+            ButtonTapAction.SECONDARY -> {
+                handler.removeCallbacks(showNoFieldHint)
+                // A start still on its way to the service is cancelled once its session appears.
+                if (!cancelFromCommand()) cancelStartingSession = commandStartPending
+                startActivity(Intent(this, LinkDictationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
     }
 
     private fun clearKeyboardFreeTarget() {

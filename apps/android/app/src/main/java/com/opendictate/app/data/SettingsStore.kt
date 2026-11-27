@@ -9,6 +9,7 @@ import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.DictationLanguage
+import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.PostProcessingSettings
 import com.opendictate.app.model.TranscriptionModel
@@ -53,6 +54,40 @@ class SettingsStore(context: Context) {
     fun observeDictationKey(onChange: (Int) -> Unit): Closeable {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == null || key == KEY_DICTATION_KEY_CODE) onChange(dictationKeyCode)
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    /** Whether the button learned from the system log is in use. Device-local, like its signature. */
+    var logButtonEnabled: Boolean
+        get() = prefs.getBoolean(KEY_LOG_BUTTON_ENABLED, false)
+        set(value) = prefs.edit { putBoolean(KEY_LOG_BUTTON_ENABLED, value) }
+
+    var logButtonSignature: LogButtonSignature?
+        get() {
+            val tag = prefs.getString(KEY_LOG_BUTTON_TAG, null) ?: return null
+            val message = prefs.getString(KEY_LOG_BUTTON_MESSAGE, null) ?: return null
+            return LogButtonSignature(tag, message, prefs.getBoolean(KEY_LOG_BUTTON_RELEASE, false))
+        }
+        set(value) = prefs.edit {
+            if (value == null) {
+                remove(KEY_LOG_BUTTON_TAG); remove(KEY_LOG_BUTTON_MESSAGE); remove(KEY_LOG_BUTTON_RELEASE)
+            } else {
+                putString(KEY_LOG_BUTTON_TAG, value.tag)
+                putString(KEY_LOG_BUTTON_MESSAGE, value.message)
+                putBoolean(KEY_LOG_BUTTON_RELEASE, value.releaseLogged)
+            }
+        }
+
+    /** Link that receives text dictated after a double press; blank when the double press is unused. */
+    var logButtonLink: String
+        get() = prefs.getString(KEY_LOG_BUTTON_LINK, null).orEmpty()
+        set(value) = prefs.edit { putString(KEY_LOG_BUTTON_LINK, value.trim()) }
+
+    fun observeLogButton(onChange: () -> Unit): Closeable {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key.startsWith(LOG_BUTTON_PREFIX)) onChange()
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
@@ -308,6 +343,12 @@ class SettingsStore(context: Context) {
         private val APP_FILTER_KEYS = setOf(KEY_APP_FILTER_MODE, KEY_EXCLUDED_PACKAGES, KEY_ALLOWED_PACKAGES)
         private const val KEY_DICTATION_KEY_CODE = "dictation_key_code"
         private const val KEY_FLOATING_BUTTON_VISIBLE = "floating_button_visible"
+        private const val LOG_BUTTON_PREFIX = "log_button_"
+        private const val KEY_LOG_BUTTON_ENABLED = LOG_BUTTON_PREFIX + "enabled"
+        private const val KEY_LOG_BUTTON_TAG = LOG_BUTTON_PREFIX + "tag"
+        private const val KEY_LOG_BUTTON_MESSAGE = LOG_BUTTON_PREFIX + "message"
+        private const val KEY_LOG_BUTTON_RELEASE = LOG_BUTTON_PREFIX + "release"
+        private const val KEY_LOG_BUTTON_LINK = LOG_BUTTON_PREFIX + "link"
         private const val KEY_EXTERNAL_DICTATION_PACKAGES = "external_dictation_packages"
         private const val KEY_TRANSCRIPTION_RESPONSE_TIMEOUT = "transcription_response_timeout_seconds"
         private const val DEFAULT_PROMPT = "OpenDictate\nDictate"

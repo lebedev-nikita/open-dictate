@@ -45,6 +45,13 @@ Meeting audio never touches disk; transcripts stay local, outside Drive.
 5. `PcmAudioRecorder` emits 24 kHz, mono, PCM16 chunks every 40 ms. `WavFile`
    adds the container only for the accurate path.
 
+`LogButton` serves buttons that Android withholds from apps, such as the OnePlus
+Plus Key: with adb-granted `READ_LOGS` and the setting on, it runs logcat filtered
+to the learned line's tag and reports presses. `ButtonTapGesture` turns presses
+into a toggle and, with a link set, a double press that dictates through
+`LinkDictationActivity` and opens the link. Keep the log out of the app otherwise:
+no reader while the setting is off, and no unfiltered reader outside learning.
+
 Partial live text is cumulative. `EditableTextSnapshot.compose()` always
 replaces the selection captured at session start, so every delta replaces the
 previous partial result instead of appending it. Keep the target-package check

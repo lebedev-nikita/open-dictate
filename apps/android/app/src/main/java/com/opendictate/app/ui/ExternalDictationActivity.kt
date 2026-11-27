@@ -1,14 +1,11 @@
 package com.opendictate.app.ui
 
-import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.addCallback
-import androidx.activity.compose.setContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -59,97 +56,56 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import com.opendictate.app.R
-import com.opendictate.app.data.SecureApiKeyStore
-import com.opendictate.app.data.SettingsStore
-import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.ExternalCallerAccess
 import com.opendictate.app.model.ExternalDictationContract
 import com.opendictate.app.model.ExternalDictationOutcome
+import com.opendictate.app.model.TextLink
 import com.opendictate.app.model.externalCallerAccess
 import com.opendictate.app.model.toResult
-import com.opendictate.app.service.DictationForegroundService
-import com.opendictate.app.service.DictationPhase
-import com.opendictate.app.service.DictationStateBus
-import com.opendictate.app.service.ExternalDictationBus
-import java.util.UUID
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 
 /**
- * Answers `android.speech.action.RECOGNIZE_SPEECH` for apps the user allowed. The visible panel
- * lets Android 14+ start the microphone service; the result goes back only to the calling app.
+ * Answers `android.speech.action.RECOGNIZE_SPEECH` for apps the user allowed. The result goes back
+ * only to the calling app.
  */
-class ExternalDictationActivity : ComponentActivity() {
-    private val settings by lazy { SettingsStore(this) }
-    private var requestId: String? = null
+class ExternalDictationActivity : DictationPanelActivity() {
     private var callerPackage: String? = null
     private var consentPending by mutableStateOf(false)
     private var callerLabel by mutableStateOf("")
-    private var startWhenResumed = false
-    private var finished = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         callerPackage = callingPackage
         callerLabel = callerPackage?.let(::appLabel).orEmpty()
-        requestId = savedInstanceState?.getString(KEY_REQUEST_ID)
         consentPending = savedInstanceState?.getBoolean(KEY_CONSENT_PENDING) == true
-        val restoredRequest = requestId
-        if (restoredRequest != null) {
-            awaitResult(restoredRequest)
-        } else if (!consentPending) {
+        if (!restoreRequest(savedInstanceState) && !consentPending) {
             when (externalCallerAccess(callerPackage, settings.externalDictationPackages)) {
                 ExternalCallerAccess.REJECTED -> {
                     // Without a result there is no identified caller to receive the transcript.
                     Toast.makeText(this, R.string.external_dictation_needs_result, Toast.LENGTH_LONG).show()
-                    finished = true
-                    finish()
-                    return
+                    return abandon()
                 }
-                ExternalCallerAccess.ALLOWED -> startWhenResumed = true
+                ExternalCallerAccess.ALLOWED -> startWhenResumed()
                 ExternalCallerAccess.ASK -> consentPending = true
             }
         }
-        onBackPressedDispatcher.addCallback(this) { cancel() }
-        setContent {
-            OpenDictateTheme(theme = settings.theme) {
-                val state by DictationStateBus.state.collectAsStateWithLifecycle()
-                ExternalDictationPanel(
-                    callerLabel = callerLabel,
-                    consentPending = consentPending,
-                    processing = state.external && state.phase == DictationPhase.PROCESSING,
-                    onAllow = ::allowCaller,
-                    onDeny = { finishWith(ExternalDictationOutcome.NotAllowed) },
-                    onStop = ::stopRecording,
-                    onCancel = ::cancel,
-                )
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (startWhenResumed) {
-            startWhenResumed = false
-            start()
+        showPanel { processing ->
+            ExternalDictationPanel(
+                destination = if (callerLabel.isEmpty()) "" else stringResource(R.string.external_dictation_for_app, callerLabel),
+                callerLabel = callerLabel,
+                consentPending = consentPending,
+                processing = processing,
+                onAllow = ::allowCaller,
+                onDeny = { finishWith(ExternalDictationOutcome.NotAllowed) },
+                onStop = ::stopRecording,
+                onCancel = ::cancel,
+            )
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(KEY_REQUEST_ID, requestId)
         outState.putBoolean(KEY_CONSENT_PENDING, consentPending)
-    }
-
-    override fun onDestroy() {
-        // Leaving the panel for good, for example from Recents, discards the recording.
-        if (isFinishing && !finished) cancel()
-        super.onDestroy()
     }
 
     private fun allowCaller() {
@@ -159,49 +115,7 @@ class ExternalDictationActivity : ComponentActivity() {
         start()
     }
 
-    private fun start() {
-        if (finished || requestId != null) return
-        if (!SecureApiKeyStore(this).hasKey()) return finishWith(ExternalDictationOutcome.Failed(DictationError.MissingApiKey))
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            return finishWith(ExternalDictationOutcome.Failed(DictationError.MicrophonePermission))
-        }
-        if (DictationStateBus.state.value.isActive) return finishWith(ExternalDictationOutcome.Busy)
-        val id = UUID.randomUUID().toString()
-        requestId = id
-        ExternalDictationBus.await(id)
-        awaitResult(id)
-        try {
-            ContextCompat.startForegroundService(this, serviceIntent(DictationForegroundService.ACTION_START_EXTERNAL, id))
-        } catch (_: IllegalStateException) {
-            finishWith(ExternalDictationOutcome.Failed(DictationError.Unexpected))
-        }
-    }
-
-    private fun awaitResult(id: String) {
-        lifecycleScope.launch {
-            val delivery = ExternalDictationBus.delivery.filterNotNull().first { it.requestId == id }
-            finishWith(delivery.outcome)
-        }
-    }
-
-    private fun stopRecording() {
-        requestId?.let { runCatching { startService(serviceIntent(DictationForegroundService.ACTION_STOP_EXTERNAL, it)) } }
-    }
-
-    private fun cancel() {
-        if (finished) return
-        requestId?.let { runCatching { startService(serviceIntent(DictationForegroundService.ACTION_CANCEL_EXTERNAL, it)) } }
-        finishWith(ExternalDictationOutcome.Cancelled)
-    }
-
-    private fun serviceIntent(action: String, id: String) =
-        Intent(this, DictationForegroundService::class.java)
-            .setAction(action)
-            .putExtra(DictationForegroundService.EXTRA_REQUEST_ID, id)
-
-    private fun finishWith(outcome: ExternalDictationOutcome) {
-        if (finished) return
-        finished = true
+    override fun deliver(outcome: ExternalDictationOutcome) {
         val result = outcome.toResult()
         val data = Intent()
         result.text?.let {
@@ -210,14 +124,6 @@ class ExternalDictationActivity : ComponentActivity() {
         }
         result.error?.let { data.putExtra(ExternalDictationContract.EXTRA_ERROR, it) }
         setResult(result.resultCode, data)
-        val message = when (outcome) {
-            is ExternalDictationOutcome.Failed -> outcome.error.userMessage(resources)
-            ExternalDictationOutcome.Busy -> getString(R.string.external_dictation_busy)
-            else -> null
-        }
-        message?.let { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
-        requestId?.let(ExternalDictationBus::release)
-        finish()
     }
 
     private fun appLabel(packageName: String): String = runCatching {
@@ -225,13 +131,49 @@ class ExternalDictationActivity : ComponentActivity() {
     }.getOrDefault(packageName)
 
     private companion object {
-        const val KEY_REQUEST_ID = "request_id"
         const val KEY_CONSENT_PENDING = "consent_pending"
+    }
+}
+
+/**
+ * Dictates text for the link the user set for a button's double press, then opens that link with
+ * the text. Only the app itself can start it.
+ */
+class LinkDictationActivity : DictationPanelActivity() {
+    override val waitsForRunningSession = true
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (!TextLink.isValid(settings.logButtonLink)) return abandon()
+        if (!restoreRequest(savedInstanceState)) startWhenResumed()
+        showPanel { processing ->
+            ExternalDictationPanel(
+                destination = stringResource(R.string.link_dictation_destination),
+                callerLabel = "",
+                consentPending = false,
+                processing = processing,
+                onAllow = {},
+                onDeny = {},
+                onStop = ::stopRecording,
+                onCancel = ::cancel,
+            )
+        }
+    }
+
+    override fun deliver(outcome: ExternalDictationOutcome) {
+        if (outcome !is ExternalDictationOutcome.Transcribed) return
+        val link = TextLink.build(settings.logButtonLink, outcome.text)
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.link_dictation_no_app, Toast.LENGTH_LONG).show()
+        }
     }
 }
 
 @Composable
 internal fun ExternalDictationPanel(
+    destination: String,
     callerLabel: String,
     consentPending: Boolean,
     processing: Boolean,
@@ -254,7 +196,7 @@ internal fun ExternalDictationPanel(
             shadowElevation = 8.dp,
         ) {
             Column(Modifier.padding(start = 24.dp, end = 16.dp, top = 24.dp, bottom = 12.dp)) {
-                if (consentPending) ConsentContent(callerLabel) else SessionContent(callerLabel, processing)
+                if (consentPending) ConsentContent(callerLabel) else SessionContent(destination, processing)
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                     if (consentPending) {
@@ -286,7 +228,7 @@ private fun ConsentContent(callerLabel: String) {
 }
 
 @Composable
-private fun SessionContent(callerLabel: String, processing: Boolean) {
+private fun SessionContent(destination: String, processing: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
             if (processing) {
@@ -306,8 +248,8 @@ private fun SessionContent(callerLabel: String, processing: Boolean) {
         Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
             Text(stringResource(if (processing) R.string.external_dictation_processing else R.string.external_dictation_listening),
                 style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            if (callerLabel.isNotEmpty()) {
-                Text(stringResource(R.string.external_dictation_for_app, callerLabel),
+            if (destination.isNotEmpty()) {
+                Text(destination,
                     style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

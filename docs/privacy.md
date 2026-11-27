@@ -231,6 +231,17 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   hardware key presses so it can recognize that button. Only the assigned key code
   is stored; other presses are passed on unchanged and never stored or sent.
   Key presses are not received while no button is assigned.
+- A button from the system log is off by default and is offered only after you
+  grant the app Android's `READ_LOGS` permission through adb. That permission
+  covers all device logs. While you teach the app a button, it reads every log
+  line for a few seconds, in memory only, to find the line the button leaves;
+  it stores that line's tag and text and nothing else. Afterwards Android's
+  logcat passes the app only lines with that tag. The log is not read while the
+  setting is off.
+- With a double-press link set for that button, the text you dictate after a
+  double press is placed in the link and the link is opened, so the app that
+  handles the link receives the text. These transcripts are saved to history
+  like other dictations, and their audio is deleted after use.
 - Control from other apps is off by default. When you turn it on, any app on the
   device can start, stop or cancel dictation into the field you are editing; the
   recording is always shown on screen and can be cancelled. Text is returned to

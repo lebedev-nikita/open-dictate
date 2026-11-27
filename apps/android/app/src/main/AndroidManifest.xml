@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Never granted on install: only adb can grant it, for a button that Android hides from apps. -->
+    <uses-permission
+        android:name="android.permission.READ_LOGS"
+        tools:ignore="ProtectedPermissions" />
 
     <queries>
         <intent>
@@ -77,6 +81,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Started only by the app, for the double press of a button learned from the system log. -->
+        <activity
+            android:name=".ui.LinkDictationActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/Theme.OpenDictate.Panel" />
 
         <!-- Commands cannot identify senders; they only control dictation into the focused field. -->
         <receiver

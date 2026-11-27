@@ -396,4 +396,26 @@
     <string name="dictation_key_volume_mute">Без звука</string>
     <string name="dictation_key_code">Кнопка %1$d</string>
     <string name="dictation_key_hold_summary">%1$s · удержание</string>
+    <string name="log_button_title">Кнопка по системному журналу</string>
+    <string name="log_button_subtitle">Для кнопок, которые Android не передаёт приложениям</string>
+    <string name="log_button_not_learned">Кнопка ещё не определена</string>
+    <string name="log_button_needs_access">Ждёт доступа к журналам устройства</string>
+    <string name="log_button_active">Нажатие начинает и завершает диктовку</string>
+    <string name="log_button_needs_access_notification">Откройте OpenDictate и разрешите доступ к журналам устройства, чтобы кнопка снова работала.</string>
+    <string name="log_button_learn_title">Определить кнопку</string>
+    <string name="log_button_learn_summary">Нажмите её три раза</string>
+    <string name="log_button_learned_summary">Тег журнала: %1$s</string>
+    <string name="log_button_learn_access">Разрешите доступ к журналам устройства в системном окне.</string>
+    <string name="log_button_learn_wait">Подождите, пока не нажимайте кнопку…</string>
+    <string name="log_button_learn_press">Нажмите кнопку три раза, примерно раз в секунду. Экран не трогайте.</string>
+    <string name="log_button_learn_done">Кнопка определена. Нажмите её и проверьте, что считается только она.
+Нажатий: %1$d</string>
+    <string name="log_button_learn_failed">Кнопка не найдена. Возможно, она ничего не оставляет в системном журнале.</string>
+    <string name="log_button_retry">Повторить</string>
+    <string name="log_button_link_title">Двойное нажатие</string>
+    <string name="log_button_link_none">Не используется</string>
+    <string name="log_button_link_hint">Быстрое второе нажатие диктует текст и открывает эту ссылку, подставив его вместо {text}. Оставьте поле пустым, чтобы отключить.</string>
+    <string name="log_button_link_error">Введите ссылку с {text}, например %1$s</string>
+    <string name="link_dictation_destination">Текст откроется по вашей ссылке</string>
+    <string name="link_dictation_no_app">Ни одно приложение не открывает эту ссылку</string>
 </resources>
