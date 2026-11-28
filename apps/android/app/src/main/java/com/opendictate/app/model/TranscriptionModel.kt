@@ -4,11 +4,17 @@ import java.util.Locale
 
 enum class TranscriptionModel(val apiName: String) {
     LIVE("gpt-live-transcribe"),
-    ACCURATE("gpt-transcribe");
+    ACCURATE("gpt-transcribe"),
+    /** Gemini Nano on this phone. A local choice: it is never synced, since other devices may lack it. */
+    ON_DEVICE(OnDeviceModels.ID);
+
+    /** Text appears while the user speaks, so cancelling must restore the field. */
+    val streamsPartials: Boolean get() = this != ACCURATE
 
     companion object {
+        /** Reads the synced Live/Accurate choice, which never holds the local on-device mode. */
         fun fromStored(value: String?): TranscriptionModel =
-            entries.firstOrNull { it.name == value } ?: ACCURATE
+            entries.firstOrNull { it.name == value && it != ON_DEVICE } ?: ACCURATE
     }
 }
 

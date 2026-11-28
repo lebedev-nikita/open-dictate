@@ -46,6 +46,8 @@ fun ExternalDictationOutcome.toResult(): ExternalDictationResult = with(External
             -> failure(RESULT_SERVER_ERROR, "server")
             DictationError.MissingRecording, DictationError.NothingToTransform, DictationError.Unexpected,
             -> failure(RESULT_CLIENT_ERROR, "unexpected")
+            DictationError.OnDeviceUnavailable -> failure(RESULT_CLIENT_ERROR, "on_device_unavailable")
+            DictationError.OnDeviceBlocked, DictationError.OnDeviceBusy -> failure(RESULT_SERVER_ERROR, "on_device_busy")
         }
     }
 }

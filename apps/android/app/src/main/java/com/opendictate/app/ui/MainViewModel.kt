@@ -30,7 +30,11 @@ import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.McpServer
 import com.opendictate.app.model.ModelCatalog
+import com.opendictate.app.model.OnDeviceAvailability
+import com.opendictate.app.model.OnDeviceModels
+import com.opendictate.app.model.OnDeviceStatus
 import com.opendictate.app.model.PhoneButton
+import com.opendictate.app.ondevice.GeminiNano
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.network.McpClient
@@ -61,6 +65,10 @@ data class MainUiState(
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
     val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
     val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.STANDARD,
+    /** Gemini Nano answers text requests first; a device-local choice. */
+    val onDeviceTextProcessing: Boolean = false,
+    /** Null until AICore has answered. */
+    val onDevice: OnDeviceAvailability? = null,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
     val newModelCount: Int = 0,
@@ -140,11 +148,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     private var historyLoadJob: Job? = null
+    private var onDeviceJob: Job? = null
     private var modelLoadJob: Job? = null
     private var appsLoadJob: Job? = null
 
     init {
         refreshModelCatalog()
+        refreshOnDevice()
         viewModelScope.launch {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
@@ -217,6 +227,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectModel(model: TranscriptionModel) {
         settings.model = model
         mutableState.update { it.copy(model = model) }
+        if (model == TranscriptionModel.ON_DEVICE) prepareOnDevice(speech = true)
+    }
+
+    /** Asks AICore what this phone offers; recognition depends on the dictation language. */
+    fun refreshOnDevice() {
+        onDeviceJob?.cancel()
+        onDeviceJob = viewModelScope.launch {
+            val text = GeminiNano.textStatus()
+            val speech = if (text == OnDeviceStatus.UNAVAILABLE) OnDeviceStatus.UNAVAILABLE
+                else GeminiNano.speechStatus(speechLocale())
+            mutableState.update { it.copy(onDevice = OnDeviceAvailability(speech, text)) }
+        }
+    }
+
+    /** Emulators have no AICore; tests show the states of a phone with Gemini Nano. */
+    @androidx.annotation.VisibleForTesting
+    internal fun showOnDeviceAvailability(availability: OnDeviceAvailability?) {
+        onDeviceJob?.cancel()
+        mutableState.update { it.copy(onDevice = availability) }
+    }
+
+    /** AICore downloads what the phone lacks once the user chooses it. */
+    private fun prepareOnDevice(speech: Boolean) {
+        val current = mutableState.value.onDevice ?: return
+        if ((if (speech) current.speech else current.text) != OnDeviceStatus.DOWNLOADABLE) return
+        val locale = speechLocale()
+        mutableState.update {
+            it.copy(onDevice = if (speech) current.copy(speech = OnDeviceStatus.DOWNLOADING) else current.copy(text = OnDeviceStatus.DOWNLOADING))
+        }
+        viewModelScope.launch {
+            val status = if (speech) GeminiNano.downloadSpeech(locale) else GeminiNano.downloadText()
+            mutableState.update {
+                val latest = it.onDevice ?: current
+                it.copy(onDevice = if (speech) latest.copy(speech = status) else latest.copy(text = status))
+            }
+        }
+    }
+
+    private fun speechLocale(): String {
+        val locales = android.content.res.Resources.getSystem().configuration.locales
+        return OnDeviceModels.speechLocale(settings.languages, List(locales.size()) { locales[it].toLanguageTag() })
     }
 
     fun setDictationButtonAppearance(appearance: DictationButtonAppearance) {
@@ -242,6 +293,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectTextProcessingModel(id: String) {
+        // Gemini Nano is a local choice; the synced OpenAI model stays for other devices and fallback.
+        val onDevice = id == OnDeviceModels.ID
+        settings.onDeviceTextProcessing = onDevice
+        mutableState.update { it.copy(onDeviceTextProcessing = onDevice) }
+        if (onDevice) return prepareOnDevice(speech = false)
         if (!com.opendictate.app.model.TextProcessingModel.isValid(id)) return
         val model = com.opendictate.app.model.TextProcessingModel.model(id)
         val tier = com.opendictate.app.model.TextProcessingModel.tier(id)
@@ -330,11 +386,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         settings.languages = languages
         mutableState.update { it.copy(languages = languages) }
+        refreshOnDevice()
     }
 
     fun useAutomaticLanguageDetection() {
         settings.languages = emptySet()
         mutableState.update { it.copy(languages = emptySet()) }
+        refreshOnDevice()
     }
 
     fun savePrompt(prompt: String) {
@@ -412,7 +470,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
-    fun runAssistantCommand(command: String) = AssistantCommands.run(getApplication(), command)
+    fun runAssistantCommand(command: String) {
+        AssistantCommands.run(getApplication(), command)
+    }
 
     fun signInMcpServer(serverId: String) = mcpOperation(serverId) { server ->
         McpSignIn(getApplication()).signIn(server).map { token ->
@@ -551,6 +611,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prompt = settings.prompt,
         postProcessing = settings.postProcessing,
         textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
+        onDeviceTextProcessing = settings.onDeviceTextProcessing,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         floatingButtonVisible = settings.floatingButtonVisible,
         buttonBindings = settings.buttonBindings,

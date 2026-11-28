@@ -136,21 +136,21 @@ object AssistantCommand {
         .put("instructions", instructions(functions))
         .put("input", if (failed == null) command else JSONArray()
             .put(JSONObject().put("role", "user").put("content", command))
-            .put(JSONObject().put("role", "user").put("content",
-                "Note from the app, not from the user: your call ${failed.function.name}(${failed.argumentsJson}) " +
-                    "was answered with this error: ${failed.error.take(MAX_ERROR)}\n" +
-                    "Call a tool again with corrected arguments, or say in one short sentence why the command cannot be done.")))
+            .put(JSONObject().put("role", "user").put("content", correction(failed))))
         .put("tool_choice", "auto")
         .put("parallel_tool_calls", false)
         .put("tools", JSONArray(functions.map { function ->
             JSONObject()
                 .put("type", "function")
                 .put("name", function.name)
-                .put("description", "[${function.server.name}] ${function.tool.description}".take(MAX_DESCRIPTION))
+                .put("description", description(function))
                 .put("parameters", parameters(function.tool.schemaJson))
                 // Servers write ordinary JSON Schema, which strict mode would reject.
                 .put("strict", false)
         }))
+
+    fun description(function: AssistantFunction): String =
+        "[${function.server.name}] ${function.tool.description}".take(MAX_DESCRIPTION)
 
     fun decision(response: JSONObject, functions: List<AssistantFunction>): AssistantDecision {
         val output = response.optJSONArray("output") ?: return AssistantDecision.Nothing
@@ -179,7 +179,13 @@ object AssistantCommand {
         return ToolAnswer(message, link)
     }
 
-    private fun instructions(functions: List<AssistantFunction>): String {
+    /** The app's note that asks the model to correct a call the server refused. */
+    fun correction(failed: FailedCall): String =
+        "Note from the app, not from the user: your call ${failed.function.name}(${failed.argumentsJson}) " +
+            "was answered with this error: ${failed.error.take(MAX_ERROR)}\n" +
+            "Call a tool again with corrected arguments, or say in one short sentence why the command cannot be done."
+
+    fun instructions(functions: List<AssistantFunction>): String {
         val hints = functions.map { it.server }.distinctBy { it.id }.filter { it.hint.isNotBlank() }
         if (hints.isEmpty()) return INSTRUCTIONS
         return INSTRUCTIONS + "\nNotes from the user about their servers:" +

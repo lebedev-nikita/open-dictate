@@ -145,7 +145,9 @@ Automate's *App decision* block. The first request from each app asks for
 permission. Revoke access under **Control from other apps** in settings.
 
 A request records with a small panel and transcribes with the Accurate path,
-current post-processing, dictionary and replacements. The panel's **Done**
+current post-processing, dictionary and replacements. When the dictation mode
+is **On device**, it uses Gemini Nano on the phone instead, with replacements
+and without post-processing. The panel's **Done**
 button, `DICTATION_STOP` or `DICTATION_TOGGLE` finishes it. Cancel, back or
 `DICTATION_CANCEL` discards it. The transcript is saved to history; its audio
 is a temporary cache file and is not kept for retry.
@@ -158,7 +160,8 @@ The result uses `RecognizerIntent` codes:
 | Other codes | `com.opendictate.app.extra.ERROR` |
 
 `ERROR` is one of `cancelled`, `not_allowed`, `busy`, `missing_api_key`,
-`microphone_permission`, `network`, `timeout`, `server`, `empty` or `unexpected`.
+`microphone_permission`, `network`, `timeout`, `server`, `empty`,
+`on_device_unavailable`, `on_device_busy` or `unexpected`.
 Without the overlay privilege, Automate opens the panel from a notification;
 enable *Show window* and grant the privilege to open it directly.
 

@@ -512,4 +512,16 @@
     <string name="mcp_try_label">Команда, как вы бы её произнесли</string>
     <string name="mcp_try_hint">Результат придёт уведомлением</string>
     <string name="mcp_try_run">Выполнить</string>
+    <!-- Gemini Nano -->
+    <string name="api_key_optional_on_device">Нужен только для моделей OpenAI</string>
+    <string name="settings_mode_on_device">Локально</string>
+    <string name="model_on_device_description">Слова появляются во время речи. Звук не покидает телефон.</string>
+    <string name="model_on_device_downloading">Gemini Nano загружается. Диктовка заработает после загрузки.</string>
+    <string name="model_on_device_unavailable">Gemini Nano недоступна на этом телефоне.</string>
+    <string name="text_model_on_device_hint">Поверх других приложений Android блокирует Gemini Nano, поэтому работает %1$s.</string>
+    <string name="text_model_on_device_downloading">Gemini Nano загружается.</string>
+    <string name="error_on_device_unavailable">Gemini Nano не готова. Выберите другой режим в настройках.</string>
+    <string name="error_reason_on_device_unavailable">Gemini Nano была недоступна</string>
+    <string name="error_reason_on_device_blocked">Android даёт Gemini Nano работать, только пока OpenDictate открыт</string>
+    <string name="error_reason_on_device_busy">Gemini Nano занята; попробуйте позже</string>
 </resources>

@@ -63,6 +63,7 @@ import com.opendictate.app.model.externalCallerAccess
 import com.opendictate.app.model.toResult
 import com.opendictate.app.service.AssistantCommands
 import com.opendictate.app.service.CommandButtonHold
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -117,7 +118,7 @@ class ExternalDictationActivity : DictationPanelActivity() {
         start()
     }
 
-    override fun deliver(outcome: ExternalDictationOutcome) {
+    override fun deliver(outcome: ExternalDictationOutcome): Job? {
         val result = outcome.toResult()
         val data = Intent()
         result.text?.let {
@@ -126,6 +127,7 @@ class ExternalDictationActivity : DictationPanelActivity() {
         }
         result.error?.let { data.putExtra(ExternalDictationContract.EXTRA_ERROR, it) }
         setResult(result.resultCode, data)
+        return null
     }
 
     private fun appLabel(packageName: String): String = runCatching {
@@ -178,9 +180,14 @@ class CommandDictationActivity : DictationPanelActivity() {
         }
     }
 
-    override fun deliver(outcome: ExternalDictationOutcome) {
-        if (outcome is ExternalDictationOutcome.Transcribed) AssistantCommands.run(applicationContext, outcome.text)
-    }
+    /** The command also needs a text model: Gemini Nano, which works while this panel is open, or OpenAI. */
+    override val needsApiKey: Boolean
+        get() = super.needsApiKey || !settings.onDeviceTextProcessing
+
+    override fun deliver(outcome: ExternalDictationOutcome): Job? =
+        if (outcome is ExternalDictationOutcome.Transcribed) {
+            AssistantCommands.run(applicationContext, outcome.text).takeIf { settings.onDeviceTextProcessing }
+        } else null
 
     companion object {
         /** The [CommandButtonHold] number of the panel, whose signals it follows. */

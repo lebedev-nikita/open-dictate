@@ -29,6 +29,7 @@ import com.opendictate.app.MainActivity
 import com.opendictate.app.OpenDictateApplication
 import com.opendictate.app.R
 import com.opendictate.app.data.SecureApiKeyStore
+import com.opendictate.app.model.OnDeviceModels
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.addToDictionary
 import com.opendictate.app.model.AppFilter
@@ -732,7 +733,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
 
     private fun startOrdinaryDictation(postProcessingOverride: Boolean? = null): Boolean {
         setOverlayMenuExpanded(false)
-        if (!isReadyToStart()) return false
+        // Choosing post-processing for one session switches it to the Accurate path.
+        if (!isReadyToStart(cloudText = postProcessingOverride != null)) return false
         val focused = findFocusedEditable()
         if (focused?.isTextInput() != true) return false
         if (!appFilter.allows(focused.packageName)) return false
@@ -766,7 +768,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     /** Starts voice editing of the focused field; [showError] explains a field that cannot be edited. */
     private fun startTransformation(showError: (Int) -> Unit): Boolean {
         setOverlayMenuExpanded(false)
-        if (!isReadyToStart()) return false
+        if (!isReadyToStart(cloudText = true)) return false
         val focused = findFocusedEditable()
         if (focused?.isTextInput() != true) return false
         if (!appFilter.allows(focused.packageName)) return false
@@ -961,9 +963,9 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         scheduleOverlayUpdate()
     }
 
-    private fun isReadyToStart(): Boolean {
+    private fun isReadyToStart(cloudText: Boolean): Boolean {
         if (
-            SecureApiKeyStore(this).hasKey() &&
+            (!OnDeviceModels.requiresApiKey(SettingsStore(this).model, cloudText) || SecureApiKeyStore(this).hasKey()) &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         ) {
