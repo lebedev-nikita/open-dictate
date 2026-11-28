@@ -32,14 +32,17 @@ import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.data.addToDictionary
 import com.opendictate.app.model.AppFilter
-import com.opendictate.app.model.ButtonTapAction
-import com.opendictate.app.model.ButtonTapGesture
+import com.opendictate.app.model.ButtonAction
+import com.opendictate.app.model.ButtonBindings
+import com.opendictate.app.model.ButtonGesture
+import com.opendictate.app.model.ButtonGestureRecognizer
+import com.opendictate.app.model.ButtonSignal
 import com.opendictate.app.model.DictationCommand
-import com.opendictate.app.model.DictationKeyAction
-import com.opendictate.app.model.DictationKeyGesture
 import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.FieldFocus
 import com.opendictate.app.model.FieldFocusGrace
+import com.opendictate.app.model.LogButtonEdge
+import com.opendictate.app.model.PhoneButton
 import com.opendictate.app.overlay.DictationOverlayMenuView
 import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
@@ -53,8 +56,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class OpenDictateAccessibilityService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -65,10 +70,11 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private lateinit var settings: SettingsStore
     private var appFilter = AppFilter()
     private var appFilterObserver: Closeable? = null
-    private var dictationKeyObserver: Closeable? = null
-    private var dictationKeyCode = DictationKeys.NONE
-    private val keyGesture = DictationKeyGesture()
-    private val keyHoldTimeout = Runnable { performKeyAction(keyGesture.onHoldTimeout(), dictationKeyCode) }
+    private var buttonBindingsObserver: Closeable? = null
+    private var buttonBindings = ButtonBindings()
+    private val buttonChannels = HashMap<PhoneButton, ButtonChannel>()
+    /** A double press waits for the session its first press started to end before its own begins. */
+    private var replacingStart: Job? = null
     private var buttonAppearanceObserver: Closeable? = null
     private var overlay: DictationOverlayView? = null
     private var overlayMenu: DictationOverlayMenuView? = null
@@ -101,7 +107,6 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         if (!DictationStateBus.state.value.isFieldSession()) clearKeyboardFreeTarget()
         scheduleOverlayUpdate()
     }
-    private val tapGesture = ButtonTapGesture()
     private var cancelStartingSession = false
     private val showNoFieldHint = Runnable { Toast.makeText(this, R.string.command_no_field, Toast.LENGTH_SHORT).show() }
     /** The field of a session started by an activity command, which continues without a keyboard. */
@@ -122,10 +127,10 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             overlay?.setAppearance(it)
             scheduleOverlayUpdate()
         }
-        dictationKeyCode = settings.dictationKeyCode
-        dictationKeyObserver = settings.observeDictationKey { keyCode ->
-            dictationKeyCode = keyCode
-            resetKeyGesture()
+        buttonBindings = settings.buttonBindings
+        buttonBindingsObserver = settings.observeButtonBindings { bindings ->
+            buttonBindings = bindings
+            resetButtons()
             updateKeyFiltering()
         }
         running = this
@@ -167,7 +172,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         }
         scope.launch {
             DictationKeyCapture.active.collect {
-                resetKeyGesture()
+                resetButtons()
                 updateKeyFiltering()
             }
         }
@@ -177,7 +182,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     /** Key events reach the service only while a key is bound or being learned in settings. */
     private fun updateKeyFiltering() {
         val info = serviceInfo ?: return
-        val filter = dictationKeyCode != DictationKeys.NONE || DictationKeyCapture.active.value
+        val filter = buttonBindings.keyCodes.isNotEmpty() || DictationKeyCapture.active.value
         val flags = if (filter) {
             info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
         } else {
@@ -195,37 +200,142 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) DictationKeyCapture.report(keyCode)
             return true
         }
-        if (keyCode == DictationKeys.NONE || keyCode != dictationKeyCode) return false
-        val action = when (event.action) {
-            KeyEvent.ACTION_DOWN -> {
-                val repeated = event.repeatCount > 0
-                val state = DictationStateBus.state.value
-                val fieldSessionActive = state.isFieldSession()
-                // Only a fresh press with no session queries the focused field, keeping repeats cheap.
-                val fieldReady = !repeated && !state.isActive && hasReadyField()
-                keyGesture.onKeyDown(repeated, fieldReady, fieldSessionActive, DictationKeys.holdsBeforeStart(keyCode))
-            }
-            KeyEvent.ACTION_UP -> keyGesture.onKeyUp()
-            else -> DictationKeyAction.PASS
+        if (keyCode !in buttonBindings.keyCodes) return false
+        val channel = buttonChannel(PhoneButton.Key(keyCode))
+        val signal = when (event.action) {
+            KeyEvent.ACTION_DOWN -> if (event.repeatCount > 0) channel.recognizer.onRepeat() else buttonDown(channel, event.eventTime)
+            KeyEvent.ACTION_UP -> channel.recognizer.onUp(event.eventTime)
+            else -> ButtonSignal.Pass
         }
-        performKeyAction(action, keyCode)
-        return action != DictationKeyAction.PASS
+        performButtonSignal(channel, signal)
+        return signal != ButtonSignal.Pass
     }
 
-    private fun performKeyAction(action: DictationKeyAction, keyCode: Int) {
+    /** A press or release of a bound button found in the system log. */
+    internal fun onLogButton(event: LogButtonEvent) {
+        val channel = buttonChannel(PhoneButton.Log(event.signature))
+        performButtonSignal(channel, when (event.edge) {
+            LogButtonEdge.PRESS -> buttonDown(channel, event.timeMs)
+            LogButtonEdge.RELEASE -> channel.recognizer.onUp(event.timeMs)
+        })
+    }
+
+    /** One bound button: its gestures in progress and the action its hold runs. */
+    private inner class ButtonChannel(val button: PhoneButton) {
+        val recognizer = ButtonGestureRecognizer()
+        var heldAction: ButtonAction? = null
+        val holdTimeout = Runnable { performButtonSignal(this, recognizer.onHoldTimeout()) }
+    }
+
+    private fun buttonChannel(button: PhoneButton): ButtonChannel = buttonChannels.getOrPut(button) { ButtonChannel(button) }
+
+    private fun resetButtons() {
+        buttonChannels.values.forEach { handler.removeCallbacks(it.holdTimeout) }
+        buttonChannels.clear()
+    }
+
+    /** Gestures of [button] whose actions can run; a command needs a server tool to call. */
+    private fun availableGestures(button: PhoneButton): Set<ButtonGesture> = button.gestures.filterTo(HashSet()) { gesture ->
+        val action = buttonBindings.actionFor(button, gesture)
+        action != null && (action != ButtonAction.AGENT_COMMAND || settings.assistantCommandsAvailable)
+    }
+
+    private fun buttonDown(channel: ButtonChannel, timeMs: Long): ButtonSignal {
+        val button = channel.button
+        val gestures = availableGestures(button)
+        val sessionActive = buttonSessionActive()
+        // A key keeps its usual behavior when none of its actions can start; only a fresh press with
+        // no session queries the focused field, keeping repeats cheap.
+        val startable = button !is PhoneButton.Key || sessionActive ||
+            gestures.any { buttonBindings.actionFor(button, it)?.needsField == false } || hasReadyField()
+        return channel.recognizer.onDown(timeMs, gestures, button.keepsShortPress, sessionActive, startable)
+    }
+
+    private fun buttonSessionActive(): Boolean {
+        val state = DictationStateBus.state.value
+        return state.isActive || commandStartPending || ExternalDictationBus.awaitedRequestId != null
+    }
+
+    private fun performButtonSignal(channel: ButtonChannel, signal: ButtonSignal) {
+        if (signal != ButtonSignal.WaitForHold) handler.removeCallbacks(channel.holdTimeout)
+        when (signal) {
+            is ButtonSignal.Start -> {
+                val action = buttonBindings.actionFor(channel.button, signal.gesture) ?: return
+                val held = signal.gesture == ButtonGesture.HOLD
+                if (held) channel.heldAction = action
+                if (!signal.replacesPress) {
+                    // A press that a double press can still replace keeps quiet about a missing field meanwhile.
+                    val hintDelay = if (signal.gesture == ButtonGesture.PRESS && ButtonGesture.DOUBLE_PRESS in availableGestures(channel.button)) {
+                        ButtonGestureRecognizer.DOUBLE_PRESS_WINDOW_MS
+                    } else {
+                        0L
+                    }
+                    startButtonAction(action, held, hintDelay)
+                    return
+                }
+                handler.removeCallbacks(showNoFieldHint)
+                if (buttonBindings.actionFor(channel.button, ButtonGesture.PRESS) == ButtonAction.AGENT_COMMAND) {
+                    CommandButtonHold.cancel()
+                } else if (!cancelFromCommand()) {
+                    // A start still on its way to the service is cancelled once its session appears.
+                    cancelStartingSession = commandStartPending
+                }
+                // The command panel itself waits for the replaced session to end.
+                if (action == ButtonAction.AGENT_COMMAND) startButtonAction(action, held, 0) else startAfterSessionEnds { startButtonAction(action, held, 0) }
+            }
+            ButtonSignal.Stop -> stopButtonSession()
+            ButtonSignal.Release -> {
+                val action = channel.heldAction ?: return
+                channel.heldAction = null
+                if (action == ButtonAction.AGENT_COMMAND) {
+                    CommandButtonHold.release()
+                } else if (commandStartPending || DictationStateBus.state.value.isFieldSession()) {
+                    // The service handles a stop queued behind its start, so a quick release still ends it.
+                    stopDictation()
+                }
+            }
+            ButtonSignal.WaitForHold -> handler.postDelayed(channel.holdTimeout, ButtonGestureRecognizer.HOLD_THRESHOLD_MS)
+            ButtonSignal.ReplayShortPress -> (channel.button as? PhoneButton.Key)?.let { replayVolumeKey(it.keyCode) }
+            ButtonSignal.Consume, ButtonSignal.Pass -> Unit
+        }
+    }
+
+    private fun startButtonAction(action: ButtonAction, held: Boolean, noFieldHintDelayMs: Long) {
         when (action) {
-            DictationKeyAction.WAIT_FOR_HOLD -> handler.postDelayed(keyHoldTimeout, DictationKeyGesture.HOLD_THRESHOLD_MS)
-            DictationKeyAction.START -> startFromCommand()
-            DictationKeyAction.STOP -> {
-                handler.removeCallbacks(keyHoldTimeout)
-                // The service handles a stop queued behind its start, so a quick release still ends it.
-                if (commandStartPending || DictationStateBus.state.value.isFieldSession()) stopDictation()
+            ButtonAction.DICTATION -> startFromCommand(keyboardOptional = true, noFieldHintDelayMs = noFieldHintDelayMs)
+            ButtonAction.ALTERNATE_DICTATION -> startFromCommand(keyboardOptional = true, noFieldHintDelayMs = noFieldHintDelayMs,
+                postProcessingOverride = !settings.postProcessing.forMode(settings.model).enabled)
+            ButtonAction.VOICE_EDIT -> startFromCommand(keyboardOptional = true, noFieldHintDelayMs = noFieldHintDelayMs, transformation = true)
+            ButtonAction.AGENT_COMMAND -> {
+                val panel = CommandButtonHold.open(held)
+                startActivity(Intent(this, CommandDictationActivity::class.java)
+                    .putExtra(CommandDictationActivity.EXTRA_PANEL, panel)
+                    .putExtra(CommandDictationActivity.EXTRA_WHILE_HELD, held)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
-            DictationKeyAction.REPLAY_SHORT_PRESS -> {
-                handler.removeCallbacks(keyHoldTimeout)
-                replayVolumeKey(keyCode)
+        }
+    }
+
+    private fun startAfterSessionEnds(start: () -> Unit) {
+        replacingStart?.cancel()
+        replacingStart = scope.launch {
+            withTimeoutOrNull(REPLACED_SESSION_WAIT_MS) {
+                // A start still on its way appears as a session first.
+                if (commandStartPending && !DictationStateBus.state.value.isActive) DictationStateBus.state.first { it.isActive }
+                DictationStateBus.state.first { !it.isActive }
             }
-            DictationKeyAction.CONSUME, DictationKeyAction.PASS -> Unit
+            if (!DictationStateBus.state.value.isActive) start()
+        }
+    }
+
+    /** Finishes the running session, in the field or for an activity such as the command panel. */
+    private fun stopButtonSession() {
+        val state = DictationStateBus.state.value
+        when {
+            !state.isFieldSession() && ExternalDictationBus.awaitedRequestId != null ->
+                DictationCommands.perform(this, DictationCommand.STOP, keyboardOptional = true)
+            // The service handles a stop queued behind its start.
+            commandStartPending || state.isFieldSession() -> stopDictation()
         }
     }
 
@@ -242,11 +352,6 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 direction, AudioManager.USE_DEFAULT_STREAM_TYPE, AudioManager.FLAG_SHOW_UI,
             )
         }
-    }
-
-    private fun resetKeyGesture() {
-        handler.removeCallbacks(keyHoldTimeout)
-        keyGesture.reset()
     }
 
     private fun hasReadyField(): Boolean {
@@ -267,7 +372,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         if (running === this) running = null
         appFilterObserver?.close()
-        dictationKeyObserver?.close()
+        buttonBindingsObserver?.close()
         buttonAppearanceObserver?.close()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
@@ -574,7 +679,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
      * command closes the keyboard by switching tasks, so with [keyboardOptional] a focused field is
      * enough and the session continues without a keyboard while that field keeps focus.
      */
-    internal fun startFromCommand(keyboardOptional: Boolean = false, noFieldHintDelayMs: Long = 0) {
+    internal fun startFromCommand(keyboardOptional: Boolean = false, noFieldHintDelayMs: Long = 0,
+        postProcessingOverride: Boolean? = null, transformation: Boolean = false) {
         if (DictationStateBus.state.value.isActive) return
         val ime = windows.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
         val focused = when {
@@ -595,34 +701,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             keyboardFreeFocus.reset()
         }
         showOrMoveOverlay(ime, focused)
-        if (!startOrdinaryDictation()) clearCommandStartPending.run()
-    }
-
-    /**
-     * A press of a button that only reports presses. It toggles dictation into the focused field at
-     * once. With tools for spoken commands, a second press soon after a starting press undoes that
-     * start and dictates a command instead; only the hint about a missing field waits for that press.
-     */
-    internal fun onTapButtonPress(timeMs: Long) {
-        val commands = settings.assistantCommandsAvailable
-        val state = DictationStateBus.state.value
-        val external = ExternalDictationBus.awaitedRequestId?.takeUnless { state.isFieldSession() }
-        val sessionActive = state.isActive || commandStartPending || external != null
-        when (tapGesture.onPress(timeMs, sessionActive, secondaryAvailable = commands)) {
-            ButtonTapAction.START -> startFromCommand(keyboardOptional = true,
-                noFieldHintDelayMs = if (commands) ButtonTapGesture.DOUBLE_PRESS_WINDOW_MS else 0)
-            ButtonTapAction.STOP -> when {
-                external != null -> DictationCommands.perform(this, DictationCommand.STOP, keyboardOptional = true)
-                // The service handles a stop queued behind its start.
-                commandStartPending || state.isFieldSession() -> stopDictation()
-            }
-            ButtonTapAction.SECONDARY -> {
-                handler.removeCallbacks(showNoFieldHint)
-                // A start still on its way to the service is cancelled once its session appears.
-                if (!cancelFromCommand()) cancelStartingSession = commandStartPending
-                startActivity(Intent(this, CommandDictationActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+        val started = if (transformation) {
+            startTransformation { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+        } else {
+            startOrdinaryDictation(postProcessingOverride)
         }
+        if (!started) clearCommandStartPending.run()
     }
 
     private fun clearKeyboardFreeTarget() {
@@ -676,24 +760,29 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             stopDictation()
             return
         }
+        startTransformation(::showOverlayError)
+    }
+
+    /** Starts voice editing of the focused field; [showError] explains a field that cannot be edited. */
+    private fun startTransformation(showError: (Int) -> Unit): Boolean {
         setOverlayMenuExpanded(false)
-        if (!isReadyToStart()) return
+        if (!isReadyToStart()) return false
         val focused = findFocusedEditable()
-        if (focused?.isTextInput() != true) return
-        if (!appFilter.allows(focused.packageName)) return
+        if (focused?.isTextInput() != true) return false
+        if (!appFilter.allows(focused.packageName)) return false
         if (focused.isPassword) {
-            showOverlayError(R.string.error_password_field_transformation)
-            return
+            showError(R.string.error_password_field_transformation)
+            return false
         }
         val captured = focused.captureEditableText()
         val target = captured.transformationTarget()
         if (target == null) {
-            showOverlayError(R.string.error_nothing_to_transform)
-            return
+            showError(R.string.error_nothing_to_transform)
+            return false
         }
         if (target.sourceText.length > MAX_TRANSFORMATION_CHARS) {
-            showOverlayError(R.string.error_text_too_long)
-            return
+            showError(R.string.error_text_too_long)
+            return false
         }
         editableSnapshot = target.replacementSnapshot
         clearPendingTextRestoration()
@@ -704,7 +793,14 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         val intent = Intent(this, DictationForegroundService::class.java)
             .setAction(DictationForegroundService.ACTION_START_TRANSFORMATION)
             .putExtra(DictationForegroundService.EXTRA_SOURCE_TEXT, target.sourceText)
-        ContextCompat.startForegroundService(this, intent)
+        return try {
+            ContextCompat.startForegroundService(this, intent)
+            true
+        } catch (_: IllegalStateException) {
+            // Android can refuse a background microphone start; never retry through a workaround.
+            Toast.makeText(this, R.string.command_microphone_unavailable, Toast.LENGTH_SHORT).show()
+            false
+        }
     }
 
     private fun onAddToDictionaryTapped() {
@@ -1105,6 +1201,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         internal var running: OpenDictateAccessibilityService? = null
             private set
         private const val COMMAND_START_TIMEOUT_MS = 3_000L
+        private const val REPLACED_SESSION_WAIT_MS = 1_500L
         private const val TAG = "OpenDictateA11y"
         private const val MAX_NODE_SCAN = 200
         private const val DEFAULT_KEYBOARD_HEIGHT_DP = 300

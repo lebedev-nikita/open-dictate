@@ -23,12 +23,14 @@ import com.opendictate.app.data.sortDictionaryTerms
 import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.AppTheme
+import com.opendictate.app.model.ButtonAction
+import com.opendictate.app.model.ButtonBindings
+import com.opendictate.app.model.ButtonGesture
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationLanguage
-import com.opendictate.app.model.DictationKeys
-import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.McpServer
 import com.opendictate.app.model.ModelCatalog
+import com.opendictate.app.model.PhoneButton
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.network.McpClient
@@ -68,10 +70,9 @@ data class MainUiState(
     val postProcessing: com.opendictate.app.model.PostProcessingSettings = com.opendictate.app.model.PostProcessingSettings(),
     val selectionDictionaryActionEnabled: Boolean = true,
     val floatingButtonVisible: Boolean = true,
-    val dictationKeyCode: Int = 0,
+    val buttonBindings: ButtonBindings = ButtonBindings(),
     /** READ_LOGS was granted through adb; until then the log button is not offered at all. */
     val logButtonPermitted: Boolean = false,
-    val logButtonTag: String? = null,
     val mcpServers: List<McpServer> = emptyList(),
     /** Servers with a token in storage, or that need none. */
     val mcpSignedIn: Set<String> = emptySet(),
@@ -375,23 +376,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             else -> false
         }
 
-    /** One hardware button is bound at a time: a key Android reports, or one found in the system log. */
-    fun setDictationKey(keyCode: Int) {
-        settings.dictationKeyCode = keyCode
-        if (keyCode != DictationKeys.NONE) settings.logButtonSignature = null
-        mutableState.update { it.copy(dictationKeyCode = keyCode, logButtonTag = settings.logButtonSignature?.tag) }
+    /** Runs [action] with [gesture] of [button]; ignored when the button lacks it or another action uses it. */
+    fun bindButton(action: ButtonAction, button: PhoneButton, gesture: ButtonGesture) {
+        val bindings = settings.buttonBindings.bind(action, button, gesture)
+        settings.buttonBindings = bindings
+        mutableState.update { it.copy(buttonBindings = bindings) }
     }
 
-    fun setLogButtonSignature(signature: LogButtonSignature?) {
-        settings.logButtonSignature = signature
-        if (signature != null) settings.dictationKeyCode = DictationKeys.NONE
-        mutableState.update { it.copy(logButtonTag = signature?.tag, dictationKeyCode = settings.dictationKeyCode) }
-    }
-
-    fun unbindHardwareButton() {
-        settings.dictationKeyCode = DictationKeys.NONE
-        settings.logButtonSignature = null
-        mutableState.update { it.copy(dictationKeyCode = DictationKeys.NONE, logButtonTag = null) }
+    fun unbindButton(action: ButtonAction) {
+        val bindings = settings.buttonBindings.unbind(action)
+        settings.buttonBindings = bindings
+        mutableState.update { it.copy(buttonBindings = bindings) }
     }
 
     /** Saves a server; a pasted [token] replaces the stored one. Its tools are then listed anew. */
@@ -558,9 +553,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         floatingButtonVisible = settings.floatingButtonVisible,
-        dictationKeyCode = settings.dictationKeyCode,
+        buttonBindings = settings.buttonBindings,
         logButtonPermitted = LogButton.isPermitted(getApplication()),
-        logButtonTag = settings.logButtonSignature?.tag,
         mcpServers = settings.mcpServers,
         mcpSignedIn = mcpSignedIn(settings.mcpServers),
         externalDictationEnabled = ExternalDictationComponents.isEnabled(getApplication()),

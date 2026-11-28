@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import com.opendictate.app.MainActivity
 import com.opendictate.app.R
 import com.opendictate.app.data.SettingsStore
+import com.opendictate.app.model.LogButtonEdge
 import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.LogLine
 import com.opendictate.app.model.LogPressDetector
@@ -27,6 +28,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+/** A press or release of a bound log button, at its time of day in the log. */
+internal data class LogButtonEvent(val signature: LogButtonSignature, val edge: LogButtonEdge, val timeMs: Long)
 
 /** Runs logcat and hands over its lines on a background thread until closed. */
 internal class LogReader(
@@ -70,9 +74,9 @@ internal class LogReader(
 }
 
 /**
- * Watches the system log for a button that Android does not deliver to apps. It needs READ_LOGS,
- * which only adb can grant, and it runs logcat only while the user has the feature on. logcat itself
- * filters by the button's tag, so no other log line reaches the app.
+ * Watches the system log for buttons that Android does not deliver to apps. It needs READ_LOGS,
+ * which only adb can grant, and it runs logcat only while such a button is bound. logcat itself
+ * filters by the buttons' tags, so no other log line reaches the app.
  */
 internal object LogButton {
     enum class Status {
@@ -90,8 +94,9 @@ internal object LogButton {
 
     /** Set while settings bind a button: presses are only shown there, for the user to try it. */
     var learning = false
-    private val mutableLearningPresses = MutableSharedFlow<Long>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    /** Log times of the presses made while [learning]. */
+    private val mutableLearningPresses = MutableSharedFlow<LogButtonEvent>(extraBufferCapacity = 8,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /** Presses and releases of bound buttons made while [learning]. */
     val learningPresses = mutableLearningPresses.asSharedFlow()
 
     private val mutableStatus = MutableStateFlow(Status.OFF)
@@ -101,7 +106,7 @@ internal object LogButton {
     private var application: Application? = null
     private var settings: SettingsStore? = null
     private var settingsObserver: Closeable? = null
-    private var watched: LogButtonSignature? = null
+    private var watched: List<LogButtonSignature> = emptyList()
     private var probe: LogReader? = null
     private var reader: LogReader? = null
     private val abandonProbe = Runnable {
@@ -117,7 +122,7 @@ internal object LogButton {
         if (this.application != null) return
         this.application = application
         settings = SettingsStore(application).also { store ->
-            settingsObserver = store.observeLogButton { handler.post(::sync) }
+            settingsObserver = store.observeButtonBindings { handler.post(::sync) }
         }
         sync()
     }
@@ -126,16 +131,16 @@ internal object LogButton {
     fun sync() {
         val context = application ?: return
         val store = settings ?: return
-        val signature = store.logButtonSignature?.takeIf { isPermitted(context) }
-        if (signature == null) {
+        val signatures = store.buttonBindings.logSignatures.takeIf { isPermitted(context) }.orEmpty()
+        if (signatures.isEmpty()) {
             stop()
             mutableStatus.value = Status.OFF
             notifications(context).cancel(NOTIFICATION_ID)
             return
         }
-        if (signature == watched && (reader != null || probe != null)) return
+        if (signatures == watched && (reader != null || probe != null)) return
         stop()
-        watched = signature
+        watched = signatures
         mutableStatus.value = Status.NEEDS_ACCESS
         if (!isInForeground()) return remindToOpen()
         // Android answers a declined request with silence, so access is confirmed by the first line
@@ -145,20 +150,25 @@ internal object LogButton {
         started = LogReader(listOf("-T", "1"), onLine = { line ->
             if (!confirmed && line.pid != Process.myPid()) {
                 confirmed = true
-                handler.post { if (probe === started) watch(context, signature) }
+                handler.post { if (probe === started) watch(context, signatures) }
             }
         })
         probe = started
         handler.postDelayed(abandonProbe, ACCESS_TIMEOUT_MS)
     }
 
-    private fun watch(context: Context, signature: LogButtonSignature) {
-        val detector = LogPressDetector(signature.releaseLogged)
+    private fun watch(context: Context, signatures: List<LogButtonSignature>) {
+        val detectors = signatures.associateWith { LogPressDetector(it.releaseLogged) }
+        val filters = signatures.map { "${it.tag}:V" }.distinct()
         lateinit var started: LogReader
         started = LogReader(
-            listOf("-T", "1", "${signature.tag}:V", "*:S"),
+            listOf("-T", "1") + filters + "*:S",
             onLine = { line ->
-                if (signature.matches(line) && detector.onLine(line.timeMs)) handler.post { press(context, line.timeMs) }
+                for ((signature, detector) in detectors) {
+                    if (!signature.matches(line)) continue
+                    val edge = detector.onLine(line.timeMs) ?: continue
+                    handler.post { press(context, LogButtonEvent(signature, edge, line.timeMs)) }
+                }
             },
             onEnd = {
                 handler.post {
@@ -186,18 +196,20 @@ internal object LogButton {
         reader?.close()
         probe = null
         reader = null
-        watched = null
+        watched = emptyList()
     }
 
-    private fun press(context: Context, timeMs: Long) {
-        if (mutableStatus.value != Status.ACTIVE) return
+    private fun press(context: Context, event: LogButtonEvent) {
+        if (mutableStatus.value != Status.ACTIVE || event.signature !in watched) return
         if (learning) {
-            mutableLearningPresses.tryEmit(timeMs)
+            mutableLearningPresses.tryEmit(event)
             return
         }
         val service = OpenDictateAccessibilityService.running
-        if (service == null) Toast.makeText(context, R.string.accessibility_enable_hint, Toast.LENGTH_SHORT).show()
-        else service.onTapButtonPress(timeMs)
+        when {
+            service != null -> service.onLogButton(event)
+            event.edge == LogButtonEdge.PRESS -> Toast.makeText(context, R.string.accessibility_enable_hint, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun isInForeground(): Boolean {

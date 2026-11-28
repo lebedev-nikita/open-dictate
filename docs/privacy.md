@@ -242,7 +242,7 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   logcat passes the app only lines with that tag. The log is not read while no
   such button is bound.
 - Spoken commands are off until you add an MCP server and enable its tools. A
-  command you dictate after a double press is sent to OpenAI's text model
+  command you dictate for the AI agent is sent to OpenAI's text model
   together with the names, descriptions and argument schemas of the enabled
   tools and any note you wrote for a server. The model's chosen tool call, with
   arguments taken from your words, is then sent from your phone to that MCP

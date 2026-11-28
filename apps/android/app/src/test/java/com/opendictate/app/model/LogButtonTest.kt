@@ -1,5 +1,7 @@
 package com.opendictate.app.model
 
+import com.opendictate.app.model.LogButtonEdge.PRESS
+import com.opendictate.app.model.LogButtonEdge.RELEASE
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -48,16 +50,16 @@ class LogButtonTest {
     @Test
     fun repeatedLinesOfOneEventAreOnePress() {
         val detector = LogPressDetector(releaseLogged = false)
-        assertTrue(detector.onLine(1_000))
-        assertFalse(detector.onLine(1_000))
-        assertTrue(detector.onLine(1_344))
+        assertEquals(LogButtonEdge.PRESS, detector.onLine(1_000))
+        assertNull(detector.onLine(1_000))
+        assertEquals(LogButtonEdge.PRESS, detector.onLine(1_344))
     }
 
     @Test
-    fun releaseLineDoesNotCountAsAPress() {
+    fun releaseLineIsAReleaseNotAPress() {
         // Timings of a real double press of the OnePlus Plus Key: down, up, down, up.
         val detector = LogPressDetector(releaseLogged = true)
-        assertEquals(listOf(true, false, false, false, true, false, false, false),
+        assertEquals(listOf(PRESS, null, RELEASE, null, PRESS, null, RELEASE, null),
             listOf(4_085L, 4_085, 4_169, 4_169, 4_429, 4_429, 4_543, 4_543).map(detector::onLine))
     }
 
@@ -65,16 +67,18 @@ class LogButtonTest {
     fun releaseAfterALongHoldIsStillARelease() {
         // A three-second hold of the Plus Key logs the same line when the button comes up.
         val detector = LogPressDetector(releaseLogged = true)
-        assertEquals(listOf(true, false, true, false), listOf(9_077L, 12_158, 13_188, 16_176).map(detector::onLine))
+        assertEquals(listOf(PRESS, RELEASE, PRESS, RELEASE), listOf(9_077L, 12_158, 13_188, 16_176).map(detector::onLine))
+        // A command can be held for half a minute.
+        assertEquals(listOf(PRESS, RELEASE), listOf(20_000L, 50_000).map(detector::onLine))
     }
 
     @Test
     fun orderOfPressAndReleaseRecoversAfterAMissedLine() {
         val detector = LogPressDetector(releaseLogged = true)
-        assertTrue(detector.onLine(1_000))
+        assertEquals(PRESS, detector.onLine(1_000))
         // The release was missed; much later the next line can only be a press.
-        assertTrue(detector.onLine(1_000 + LogPressDetector.RELEASE_TIMEOUT_MS + 1))
-        assertFalse(detector.onLine(1_200 + LogPressDetector.RELEASE_TIMEOUT_MS))
+        assertEquals(PRESS, detector.onLine(1_000 + LogPressDetector.RELEASE_TIMEOUT_MS + 1))
+        assertEquals(RELEASE, detector.onLine(1_200 + LogPressDetector.RELEASE_TIMEOUT_MS))
     }
 
     private class Learning(calibrationLines: List<String> = listOf("System")) {

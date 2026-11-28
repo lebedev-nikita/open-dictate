@@ -32,8 +32,13 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
+import com.opendictate.app.model.ButtonAction
+import com.opendictate.app.model.ButtonBindings
+import com.opendictate.app.model.ButtonGesture
+import com.opendictate.app.model.ButtonGestureRecognizer
+import com.opendictate.app.model.ButtonSignal
 import com.opendictate.app.model.LogButtonLearner
-import com.opendictate.app.model.LogButtonSignature
+import com.opendictate.app.model.PhoneButton
 import com.opendictate.app.service.DictationKeyCapture
 import com.opendictate.app.service.LogButton
 import com.opendictate.app.service.LogReader
@@ -70,8 +75,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
-import com.opendictate.app.model.ButtonTapAction
-import com.opendictate.app.model.ButtonTapGesture
+import com.opendictate.app.model.LogButtonEdge
+import kotlinx.coroutines.Job
 import com.opendictate.app.model.DictationKeys
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -89,9 +94,9 @@ private enum class StepStatus { PENDING, ACTIVE, DONE }
 internal fun ButtonBindSheet(
     accessibilityEnabled: Boolean,
     logPermitted: Boolean,
-    commandsAvailable: Boolean,
-    onBindKey: (Int) -> Unit,
-    onLearned: (LogButtonSignature) -> Unit,
+    bindings: ButtonBindings,
+    actionNames: Map<ButtonAction, String>,
+    onBound: (PhoneButton) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var attempt by remember { mutableIntStateOf(0) }
@@ -99,10 +104,9 @@ internal fun ButtonBindSheet(
     var heard by remember { mutableIntStateOf(0) }
     var otherKeys by remember { mutableStateOf(emptySet<Int>()) }
     var boundKey by remember { mutableStateOf<Int?>(null) }
-    var lastPress by remember { mutableStateOf<ButtonTapAction?>(null) }
+    var lastGesture by remember { mutableStateOf<ButtonGesture?>(null) }
     var pressCount by remember { mutableIntStateOf(0) }
-    val currentOnLearned by rememberUpdatedState(onLearned)
-    val currentOnBindKey by rememberUpdatedState(onBindKey)
+    val currentOnBound by rememberUpdatedState(onBound)
     // A button bound earlier must not start dictation while it is pressed here.
     DisposableEffect(Unit) {
         LogButton.learning = true
@@ -112,7 +116,7 @@ internal fun ButtonBindSheet(
         heard = 0
         otherKeys = emptySet()
         boundKey = null
-        lastPress = null
+        lastGesture = null
         val learner = if (logPermitted) LogButtonLearner(Process.myPid()) else null
         val reader = learner?.let {
             LogReader.everything(RECENT_LOG_LINES) { line -> synchronized(it) { it.onLine(line, SystemClock.elapsedRealtime()) } }
@@ -123,7 +127,7 @@ internal fun ButtonBindSheet(
                     // Before the hidden button's presses are found, a key Android reports is the button itself.
                     learner == null || state != LogButtonLearner.State.AwaitingOtherButtons -> if (boundKey == null) {
                         boundKey = keyCode
-                        currentOnBindKey(keyCode)
+                        currentOnBound(PhoneButton.Key(keyCode))
                     }
                     // Each button counts once, so the same one pressed twice does not pass for two.
                     keyCode !in otherKeys -> {
@@ -142,7 +146,7 @@ internal fun ButtonBindSheet(
                     heard = synchronized(learner) { learner.heardPresses(now) }
                     val learned = state as? LogButtonLearner.State.Learned
                     if (learned != null) {
-                        currentOnLearned(learned.signature)
+                        currentOnBound(PhoneButton.Log(learned.signature))
                         // Log access lasts while a reader is open; the watcher's reader takes over first.
                         DictationKeyCapture.end()
                         delay(READER_HANDOVER_MS)
@@ -158,12 +162,32 @@ internal fun ButtonBindSheet(
             reader?.close()
         }
     }
-    // The bound button is tried with the gesture that will run it, so the names match what happens.
-    LaunchedEffect(attempt, commandsAvailable) {
-        val gesture = ButtonTapGesture()
-        LogButton.learningPresses.collect { timeMs ->
-            lastPress = gesture.onPress(timeMs, sessionActive = false, secondaryAvailable = commandsAvailable)
+    val learnedButton = (state as? LogButtonLearner.State.Learned)?.signature?.let(PhoneButton::Log)
+    // Every gesture the button offers is told apart, so the user sees which one each press makes.
+    LaunchedEffect(attempt, learnedButton) {
+        val button = learnedButton ?: return@LaunchedEffect
+        val recognizer = ButtonGestureRecognizer()
+        var holdTimeout: Job? = null
+        fun show(signal: ButtonSignal) {
+            if (signal !is ButtonSignal.Start) return
+            lastGesture = signal.gesture
             pressCount++
+        }
+        LogButton.learningPresses.collect { event ->
+            if (event.signature != button.signature) return@collect
+            holdTimeout?.cancel()
+            val signal = when (event.edge) {
+                LogButtonEdge.PRESS -> recognizer.onDown(event.timeMs, button.gestures, keepsShortPress = false, sessionActive = false)
+                LogButtonEdge.RELEASE -> recognizer.onUp(event.timeMs)
+            }
+            if (signal == ButtonSignal.WaitForHold) {
+                holdTimeout = launch {
+                    delay(ButtonGestureRecognizer.HOLD_THRESHOLD_MS)
+                    show(recognizer.onHoldTimeout())
+                }
+            } else {
+                show(signal)
+            }
         }
     }
 
@@ -190,7 +214,7 @@ internal fun ButtonBindSheet(
             }
             Spacer(Modifier.height(8.dp))
             when {
-                key != null -> BoundKey(dictationKeySummary(LocalContext.current.resources, key))
+                key != null -> BoundKey(dictationKeyName(LocalContext.current.resources, key))
                 !logPermitted -> Column(Modifier.padding(vertical = 14.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
                     Text(stringResource(R.string.button_bind_press), style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(6.dp))
@@ -229,7 +253,11 @@ internal fun ButtonBindSheet(
                     SettingsDivider(startInset = 42.dp)
                     Step(3, if (learned) StepStatus.ACTIVE else StepStatus.PENDING,
                         stringResource(if (learned) R.string.log_button_step_try_active else R.string.log_button_step_try)) {
-                        TryPad(lastPress, pressCount, commandsAvailable)
+                        learnedButton?.let { button ->
+                            TryPad(lastGesture, pressCount, button.gestures.associateWith { gesture ->
+                                bindings.actionFor(button, gesture)?.let(actionNames::getValue)
+                            })
+                        }
                     }
                 }
             }
@@ -360,9 +388,9 @@ private fun VolumeChip(label: String, pressed: Boolean) {
     }
 }
 
-/** Names each press of the bound button the way the app will act on it. Other buttons do nothing. */
+/** Names each gesture of the bound button and the action it runs. Other buttons do nothing. */
 @Composable
-private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, commandsAvailable: Boolean) {
+private fun TryPad(lastGesture: ButtonGesture?, pressCount: Int, effects: Map<ButtonGesture, String?>) {
     val colors = MaterialTheme.colorScheme
     val scale = remember { Animatable(1f) }
     LaunchedEffect(pressCount) {
@@ -371,7 +399,6 @@ private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, commandsAvailab
             scale.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow))
         }
     }
-    val double = lastPress == ButtonTapAction.SECONDARY
     StepNote(stringResource(R.string.log_button_try_hint))
     Spacer(Modifier.height(14.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -379,24 +406,20 @@ private fun TryPad(lastPress: ButtonTapAction?, pressCount: Int, commandsAvailab
             Icon(Icons.Outlined.SmartButton, null, Modifier.size(28.dp), tint = SettingsText)
         }
         Spacer(Modifier.width(16.dp))
-        Surface(shape = CircleShape, color = if (lastPress == null) SettingsInset else colors.primary) {
+        Surface(shape = CircleShape, color = if (lastGesture == null) SettingsInset else colors.primary) {
             Text(
-                stringResource(when {
-                    lastPress == null -> R.string.log_button_try_idle
-                    double -> R.string.log_button_double
-                    else -> R.string.log_button_try_single
-                }),
+                stringResource(lastGesture?.labelRes() ?: R.string.log_button_try_idle),
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (lastPress == null) SettingsMuted else colors.onPrimary,
+                color = if (lastGesture == null) SettingsMuted else colors.onPrimary,
             )
         }
     }
     Spacer(Modifier.height(14.dp))
-    GestureEffect(stringResource(R.string.log_button_try_single), stringResource(R.string.log_button_single_effect),
-        current = lastPress != null && !double)
-    GestureEffect(stringResource(R.string.log_button_double),
-        stringResource(if (commandsAvailable) R.string.log_button_double_effect else R.string.log_button_double_unused), current = double)
+    ButtonGesture.entries.filter { it in effects }.forEach { gesture ->
+        GestureEffect(stringResource(gesture.labelRes()), effects[gesture] ?: stringResource(R.string.log_button_double_unused),
+            current = gesture == lastGesture)
+    }
 }
 
 @Composable
