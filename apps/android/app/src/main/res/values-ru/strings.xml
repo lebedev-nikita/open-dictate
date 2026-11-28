@@ -455,7 +455,11 @@
     <string name="log_button_try_hint">Каждое нажатие подписывается так, как его понимает приложение. Другие кнопки здесь ничего не делают.</string>
     <string name="log_button_try_idle">Нажмите кнопку</string>
     <string name="log_button_double_unused">не используется</string>
-    <string name="assistant_command_destination">Команда ИИ-агенту</string>
+    <string name="command_indicator_listening">Слушаю команду. Нажмите, чтобы закончить, или смахните, чтобы отменить.</string>
+    <string name="command_indicator_transcribing">Расшифровываю команду. Смахните, чтобы отменить.</string>
+    <string name="command_indicator_executing">Выполняю команду. Смахните, чтобы скрыть.</string>
+    <string name="command_indicator_cancel">Отменить команду</string>
+    <string name="command_indicator_hide">Скрыть</string>
     <string name="assistant_channel">Голосовые команды</string>
     <string name="assistant_running">Выполняю команду…</string>
     <string name="assistant_failed">Команда не выполнена</string>

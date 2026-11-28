@@ -43,13 +43,16 @@ internal object AssistantCommands {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
-     * Returns once the model has first decided, before any tool runs: Android answers Gemini Nano
-     * only while an OpenDictate window is in front, so the command panel stays open until then.
+     * A command on its way. [decided] completes once the model has first decided, before any tool
+     * runs: Android answers Gemini Nano only while an OpenDictate window is in front, so one stays
+     * until then. [done] completes once the outcome is shown; callers only wait for it.
      */
-    fun run(context: Context, command: String): Job {
+    class Running(val decided: Job, val done: Job)
+
+    fun run(context: Context, command: String): Running {
         val application = context.applicationContext
         val decided = CompletableDeferred<Unit>()
-        scope.launch {
+        val done = scope.launch {
             try {
                 notify(application, Report(application.getString(R.string.assistant_running), command), ongoing = true)
                 notify(application, execute(application, command) { decided.complete(Unit) }, ongoing = false)
@@ -57,7 +60,7 @@ internal object AssistantCommands {
                 decided.complete(Unit)
             }
         }
-        return decided
+        return Running(decided, done)
     }
 
     /** What the notification says; [link] is opened when the user taps it. */

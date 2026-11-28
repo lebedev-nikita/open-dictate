@@ -93,12 +93,15 @@
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             tools:node="remove" />
 
-        <!-- Started only by the app, for a spoken AI agent command from a bound phone button. -->
+
+        <!-- Started only by the app: Gemini Nano answers a spoken command only while an app window is in front. -->
         <activity
-            android:name=".ui.CommandDictationActivity"
+            android:name=".ui.CommandFrontActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:theme="@style/Theme.OpenDictate.Panel" />
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.OpenDictate.Invisible" />
 
         <!-- Commands cannot identify senders; they only control dictation into the focused field. -->
         <receiver

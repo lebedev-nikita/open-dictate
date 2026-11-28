@@ -10,8 +10,6 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -26,11 +24,9 @@ import com.opendictate.app.service.DictationPhase
 import com.opendictate.app.service.DictationStateBus
 import com.opendictate.app.service.ExternalDictationBus
 import java.util.UUID
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Records one dictation whose text goes somewhere other than the focused field. The visible panel
@@ -41,21 +37,13 @@ abstract class DictationPanelActivity : ComponentActivity() {
     private var requestId: String? = null
     private var startWhenResumed = false
     private var finished = false
-    /** The outcome is delivered and the panel waits for work that needs it in front. */
-    private var holding by mutableStateOf(false)
 
-    /**
-     * Hands the outcome to whoever asked for the dictation; called once, before the panel closes.
-     * The panel stays open, showing progress, until the returned job finishes.
-     */
-    protected abstract fun deliver(outcome: ExternalDictationOutcome): Job?
+    /** Hands the outcome to whoever asked for the dictation; called once, before the panel closes. */
+    protected abstract fun deliver(outcome: ExternalDictationOutcome)
 
-    /** On-device dictation records without a key; subclasses add what their outcome needs. */
-    protected open val needsApiKey: Boolean
+    /** On-device dictation records without a key. */
+    private val needsApiKey: Boolean
         get() = OnDeviceModels.requiresApiKey(settings.model, cloudText = false)
-
-    /** A session that is being cancelled for this one needs a moment to end. */
-    protected open val waitsForRunningSession = false
 
     /** Returns true when a request survived recreation and its result is awaited again. */
     protected fun restoreRequest(savedInstanceState: Bundle?): Boolean {
@@ -73,7 +61,7 @@ abstract class DictationPanelActivity : ComponentActivity() {
         setContent {
             OpenDictateTheme(theme = settings.theme) {
                 val state by DictationStateBus.state.collectAsStateWithLifecycle()
-                content(holding || state.external && state.phase == DictationPhase.PROCESSING)
+                content(state.external && state.phase == DictationPhase.PROCESSING)
             }
         }
     }
@@ -103,13 +91,8 @@ abstract class DictationPanelActivity : ComponentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             return finishWith(ExternalDictationOutcome.Failed(DictationError.MicrophonePermission))
         }
-        if (!DictationStateBus.state.value.isActive) return request()
-        if (!waitsForRunningSession) return finishWith(ExternalDictationOutcome.Busy)
-        lifecycleScope.launch {
-            withTimeoutOrNull(RUNNING_SESSION_WAIT_MS) { DictationStateBus.state.first { !it.isActive } }
-            if (finished || requestId != null) return@launch
-            if (DictationStateBus.state.value.isActive) finishWith(ExternalDictationOutcome.Busy) else request()
-        }
+        if (DictationStateBus.state.value.isActive) return finishWith(ExternalDictationOutcome.Busy)
+        request()
     }
 
     private fun request() {
@@ -131,17 +114,12 @@ abstract class DictationPanelActivity : ComponentActivity() {
         }
     }
 
-    /** A recording was requested; a stop from now on reaches it, even before the service starts. */
-    protected val isRecording: Boolean
-        get() = requestId != null
-
     protected fun stopRecording() {
         requestId?.let { runCatching { startService(serviceIntent(DictationForegroundService.ACTION_STOP_EXTERNAL, it)) } }
     }
 
     protected fun cancel() {
-        // Leaving a holding panel lets its work go on without it, behind other apps.
-        if (finished) return if (holding) finish() else Unit
+        if (finished) return
         requestId?.let { runCatching { startService(serviceIntent(DictationForegroundService.ACTION_CANCEL_EXTERNAL, it)) } }
         finishWith(ExternalDictationOutcome.Cancelled)
     }
@@ -154,7 +132,7 @@ abstract class DictationPanelActivity : ComponentActivity() {
     protected fun finishWith(outcome: ExternalDictationOutcome) {
         if (finished) return
         finished = true
-        val pending = deliver(outcome)
+        deliver(outcome)
         val message = when (outcome) {
             is ExternalDictationOutcome.Failed -> outcome.error.userMessage(resources)
             ExternalDictationOutcome.Busy -> getString(R.string.external_dictation_busy)
@@ -162,12 +140,7 @@ abstract class DictationPanelActivity : ComponentActivity() {
         }
         message?.let { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
         requestId?.let(ExternalDictationBus::release)
-        if (pending == null || pending.isCompleted) return finish()
-        holding = true
-        lifecycleScope.launch {
-            withTimeoutOrNull(HOLD_TIMEOUT_MS) { pending.join() }
-            finish()
-        }
+        finish()
     }
 
     /** Closes without recording and without an outcome. */
@@ -178,7 +151,5 @@ abstract class DictationPanelActivity : ComponentActivity() {
 
     private companion object {
         const val KEY_REQUEST_ID = "request_id"
-        const val RUNNING_SESSION_WAIT_MS = 1_000L
-        const val HOLD_TIMEOUT_MS = 30_000L
     }
 }

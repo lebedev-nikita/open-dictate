@@ -76,6 +76,13 @@ one request to the model and one tool call per command, so a command cannot
 first look something up and then act on it. Only when the server refuses the
 call does the model see that error and try once more.
 
+While you speak, the dictation button appears at the top of the screen. A tap on
+it also finishes the command; swiping it up or aside cancels it. It keeps
+spinning until the command has run; a swipe then only hides it. With Gemini Nano
+as the text model, an invisible OpenDictate window also stays in front until Nano
+has chosen a tool, since Android answers Nano only then; the current app's
+keyboard closes meanwhile.
+
 Add servers under **Settings → Integrations → MCP servers**:
 
 - **Address**: the server's Streamable HTTP endpoint, `https://` only.

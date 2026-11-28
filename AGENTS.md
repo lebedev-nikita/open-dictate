@@ -64,10 +64,10 @@ action. Buttons are keys Android reports or buttons that Android withholds from
 apps, such as the OnePlus Plus Key: with adb-granted `READ_LOGS`, `LogButton`
 runs one logcat filtered to the bound lines' tags and reports presses and, where
 logged, releases. `ButtonGestureRecognizer` waits only for gestures bound on the
-button; the accessibility service runs the actions, and the agent command opens
-`CommandDictationActivity`, which `CommandButtonHold` ends on release. Keep the
-log out of the app otherwise: no reader without a bound button, and no unfiltered
-reader outside binding.
+button; the accessibility service runs the actions, and the agent command runs in
+`CommandSession`, shown by an overlay indicator at the top of the screen and
+ended on release after a hold. Keep the log out of the app otherwise: no reader
+without a bound button, and no unfiltered reader outside binding.
 
 `AssistantCommands` carries out a spoken command: one text-model request with the
 enabled tools of the user's MCP servers (`AssistantCommand`), then one tool call

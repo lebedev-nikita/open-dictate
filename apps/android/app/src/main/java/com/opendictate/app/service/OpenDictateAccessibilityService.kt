@@ -49,7 +49,6 @@ import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
 import com.opendictate.app.overlay.OverlayPositionMotion
 import com.opendictate.app.overlay.OverlayVisibilitySession
-import com.opendictate.app.ui.CommandDictationActivity
 import java.io.Closeable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -113,6 +112,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     /** The field of a session started by an activity command, which continues without a keyboard. */
     private var keyboardFreeTarget: AccessibilityNodeInfo? = null
     private val keyboardFreeFocus = FieldFocusGrace()
+    private var commandSession: CommandSession? = null
     private val recheckKeyboardFreeTarget = Runnable { scheduleOverlayUpdate() }
 
     override fun onServiceConnected() {
@@ -135,6 +135,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             updateKeyFiltering()
         }
         running = this
+        commandSession = CommandSession(this, windowManager, settings, scope)
         overlay = DictationOverlayView(
             context = this,
             onDictationClick = ::onOverlayTapped,
@@ -254,7 +255,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
 
     private fun buttonSessionActive(): Boolean {
         val state = DictationStateBus.state.value
-        return state.isActive || commandStartPending || ExternalDictationBus.awaitedRequestId != null
+        return state.isActive || commandStartPending || ExternalDictationBus.awaitedRequestId != null ||
+            commandSession?.isListening == true
     }
 
     private fun performButtonSignal(channel: ButtonChannel, signal: ButtonSignal) {
@@ -276,12 +278,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 }
                 handler.removeCallbacks(showNoFieldHint)
                 if (buttonBindings.actionFor(channel.button, ButtonGesture.PRESS) == ButtonAction.AGENT_COMMAND) {
-                    CommandButtonHold.cancel()
+                    commandSession?.cancel()
                 } else if (!cancelFromCommand()) {
                     // A start still on its way to the service is cancelled once its session appears.
                     cancelStartingSession = commandStartPending
                 }
-                // The command panel itself waits for the replaced session to end.
+                // The command itself waits for the replaced session to end.
                 if (action == ButtonAction.AGENT_COMMAND) startButtonAction(action, held, 0) else startAfterSessionEnds { startButtonAction(action, held, 0) }
             }
             ButtonSignal.Stop -> stopButtonSession()
@@ -289,7 +291,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 val action = channel.heldAction ?: return
                 channel.heldAction = null
                 if (action == ButtonAction.AGENT_COMMAND) {
-                    CommandButtonHold.release()
+                    commandSession?.release()
                 } else if (commandStartPending || DictationStateBus.state.value.isFieldSession()) {
                     // The service handles a stop queued behind its start, so a quick release still ends it.
                     stopDictation()
@@ -307,13 +309,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             ButtonAction.ALTERNATE_DICTATION -> startFromCommand(keyboardOptional = true, noFieldHintDelayMs = noFieldHintDelayMs,
                 postProcessingOverride = !settings.postProcessing.forMode(settings.model).enabled)
             ButtonAction.VOICE_EDIT -> startFromCommand(keyboardOptional = true, noFieldHintDelayMs = noFieldHintDelayMs, transformation = true)
-            ButtonAction.AGENT_COMMAND -> {
-                val panel = CommandButtonHold.open(held)
-                startActivity(Intent(this, CommandDictationActivity::class.java)
-                    .putExtra(CommandDictationActivity.EXTRA_PANEL, panel)
-                    .putExtra(CommandDictationActivity.EXTRA_WHILE_HELD, held)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+            ButtonAction.AGENT_COMMAND -> commandSession?.start(held)
         }
     }
 
@@ -329,10 +325,12 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** Finishes the running session, in the field or for an activity such as the command panel. */
+    /** Finishes the running session: in the field, a spoken command, or for another app's panel. */
     private fun stopButtonSession() {
         val state = DictationStateBus.state.value
+        val command = commandSession?.takeIf { it.isListening }
         when {
+            command != null -> command.stop()
             !state.isFieldSession() && ExternalDictationBus.awaitedRequestId != null ->
                 DictationCommands.perform(this, DictationCommand.STOP, keyboardOptional = true)
             // The service handles a stop queued behind its start.
@@ -377,6 +375,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         buttonAppearanceObserver?.close()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
+        commandSession?.close()
         scope.coroutineContext[Job]?.cancel()
         super.onDestroy()
     }

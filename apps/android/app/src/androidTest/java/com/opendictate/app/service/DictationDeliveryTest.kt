@@ -13,8 +13,17 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.opendictate.app.R
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
+import com.opendictate.app.model.ButtonAction
+import com.opendictate.app.model.ButtonBinding
+import com.opendictate.app.model.ButtonBindings
+import com.opendictate.app.model.ButtonGesture
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationButtonPosition
+import com.opendictate.app.model.LogButtonEdge
+import com.opendictate.app.model.LogButtonSignature
+import com.opendictate.app.model.McpServer
+import com.opendictate.app.model.McpTool
+import com.opendictate.app.model.PhoneButton
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
@@ -86,6 +95,95 @@ class DictationDeliveryTest {
                 await { !hasOverlay() }
             }
         } finally { settings.postProcessing = previousProcessing }
+    }
+
+    @Test fun doublePressShowsCommandIndicatorAtTopCenterAndItsCancelEndsTheRecording() = withCommandButton(
+        ButtonGesture.DOUBLE_PRESS,
+    ) { service, button ->
+        val listening = context.getString(R.string.command_indicator_listening)
+        instrumentation.runOnMainSync {
+            val now = SystemClock.uptimeMillis()
+            for ((edge, time) in listOf(LogButtonEdge.PRESS to now, LogButtonEdge.RELEASE to now + 60, LogButtonEdge.PRESS to now + 150)) {
+                service.onLogButton(LogButtonEvent(button, edge, time))
+            }
+        }
+        await { overlay(listening) != null }
+        await { DictationStateBus.state.value.let { it.external && it.phase == DictationPhase.LISTENING } }
+        val bounds = Rect().also { overlay(listening)!!.getBoundsInScreen(it) }
+        val metrics = context.resources.displayMetrics
+        assertTrue("Indicator must be centered: $bounds", kotlin.math.abs(bounds.centerX() - metrics.widthPixels / 2) <= 2)
+        assertTrue("Indicator must sit at the top: $bounds", bounds.top < 120 * metrics.density)
+        automation.takeScreenshot()?.let { bitmap ->
+            java.io.FileOutputStream(java.io.File(context.cacheDir, "command-indicator-screen.png")).use {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            bitmap.recycle()
+        }
+        // Cancelling records nothing further and sends nothing to OpenAI.
+        assertTrue(overlay(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+        await { overlay(listening) == null }
+        await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+        assertNull(ExternalDictationBus.awaitedRequestId)
+    }
+
+    @Test fun holdStartsTheCommandIndicatorAtOnce() = withCommandButton(ButtonGesture.HOLD) { service, button ->
+        val listening = context.getString(R.string.command_indicator_listening)
+        instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.PRESS, SystemClock.uptimeMillis())) }
+        await { overlay(listening) != null }
+        await { DictationStateBus.state.value.let { it.external && it.phase == DictationPhase.LISTENING } }
+        // A release would send the recording for transcription; cancel instead to stay offline.
+        assertTrue(overlay(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+        await { overlay(listening) == null }
+        await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+        instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.RELEASE, SystemClock.uptimeMillis())) }
+        assertNull(ExternalDictationBus.awaitedRequestId)
+    }
+
+    @Test fun geminiNanoCommandKeepsAnOpenDictateWindowInFrontUntilItEnds() = withCommandButton(ButtonGesture.HOLD) { service, button ->
+        val settings = SettingsStore(context)
+        val previous = settings.onDeviceTextProcessing
+        settings.onDeviceTextProcessing = true
+        try {
+            val listening = context.getString(R.string.command_indicator_listening)
+            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.PRESS, SystemClock.uptimeMillis())) }
+            await { overlay(listening) != null }
+            // The invisible window is an application window of this app, in front of the launcher.
+            await { frontWindowPackage() == context.packageName }
+            assertTrue(overlay(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+            await { overlay(listening) == null }
+            await { frontWindowPackage() != context.packageName }
+            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.RELEASE, SystemClock.uptimeMillis())) }
+        } finally { settings.onDeviceTextProcessing = previous }
+    }
+
+    private fun frontWindowPackage(): String? = automation.windows
+        .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION }
+        .maxByOrNull { it.layer }?.root?.packageName?.toString()
+
+    /** Binds a logged button: a press dictates into the field and [gesture] speaks a command. */
+    private fun withCommandButton(
+        gesture: ButtonGesture,
+        block: (OpenDictateAccessibilityService, LogButtonSignature) -> Unit,
+    ) = withAccessibility { settings ->
+        val previousServers = settings.mcpServers
+        val previousBindings = settings.buttonBindings
+        val tool = McpTool("add_task", "Adds a task", "{\"type\":\"object\"}")
+        settings.mcpServers = listOf(McpServer(id = "test", name = "Test",
+            url = "https://mcp.invalid/mcp", tools = listOf(tool), enabledTools = setOf(tool.name)))
+        val signature = LogButtonSignature("TestButton", "pressed", releaseLogged = true)
+        val button = PhoneButton.Log(signature)
+        settings.buttonBindings = ButtonBindings(listOfNotNull(
+            ButtonBinding(ButtonAction.DICTATION, button,
+                ButtonGesture.PRESS).takeIf { gesture == ButtonGesture.DOUBLE_PRESS },
+            ButtonBinding(ButtonAction.AGENT_COMMAND, button, gesture),
+        ))
+        try {
+            await { OpenDictateAccessibilityService.running != null }
+            block(OpenDictateAccessibilityService.running!!, signature)
+        } finally {
+            settings.mcpServers = previousServers
+            settings.buttonBindings = previousBindings
+        }
     }
 
     @Test fun recordingIsCancelledAndCanRestartAfterKeyboardReopens() = withAccessibility { _ ->
