@@ -44,11 +44,13 @@ import com.opendictate.app.model.FieldFocus
 import com.opendictate.app.model.FieldFocusGrace
 import com.opendictate.app.model.LogButtonEdge
 import com.opendictate.app.model.PhoneButton
+import com.opendictate.app.model.StatusBanner
 import com.opendictate.app.overlay.DictationOverlayMenuView
 import com.opendictate.app.overlay.DictationOverlayView
 import com.opendictate.app.overlay.OverlayMotion
 import com.opendictate.app.overlay.OverlayPositionMotion
 import com.opendictate.app.overlay.OverlayVisibilitySession
+import com.opendictate.app.overlay.StatusBannerWindow
 import java.io.Closeable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -113,6 +115,10 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private var keyboardFreeTarget: AccessibilityNodeInfo? = null
     private val keyboardFreeFocus = FieldFocusGrace()
     private var commandSession: CommandSession? = null
+    /** Shows a field session at the top of the screen while the button above the keyboard is off. */
+    private var fieldBanner: StatusBannerWindow? = null
+    /** Whether the session a command is starting edits the field instead of dictating into it. */
+    private var commandStartsVoiceEdit = false
     private val recheckKeyboardFreeTarget = Runnable { scheduleOverlayUpdate() }
 
     override fun onServiceConnected() {
@@ -156,6 +162,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             DictationStateBus.state.collectLatest { state ->
                 overlay?.render(state)
                 overlayMenu?.render(state)
+                if (state.isFieldSession()) fieldBanner?.content = fieldBannerContent(state)
                 handleTranscriptState(state)
                 val fieldSession = state.isFieldSession()
                 if (fieldSession) {
@@ -375,6 +382,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         buttonAppearanceObserver?.close()
         handler.removeCallbacksAndMessages(null)
         removeOverlay()
+        fieldBanner?.removeNow()
+        fieldBanner = null
         commandSession?.close()
         scope.coroutineContext[Job]?.cancel()
         super.onDestroy()
@@ -401,7 +410,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         }
         val hasTarget = hasEligibleTarget || keyboardFreeState == FieldFocus.Held
         if (overlayVisibilitySession.shouldShow(hasTarget, settings.floatingButtonVisible, fieldSessionActive)) {
-            showOrMoveOverlay(ime, requireNotNull(focused))
+            showSessionIndicator(ime, requireNotNull(focused))
         } else if (keyboardFreeState is FieldFocus.Waiting) {
             // Keep the indicator while the command's task switch briefly moves focus.
             handler.removeCallbacks(recheckKeyboardFreeTarget)
@@ -415,12 +424,45 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 overlay?.setMenuState(expanded = false)
             }
             removeOverlay()
+            hideFieldBanner()
             // Another app's session has its own panel and does not depend on a focused field.
             val state = DictationStateBus.state.value
             if (!hasTarget && state.isActive && !state.external) {
                 if (ime == null || keyboardFreeState == FieldFocus.Lost) onOverlayCancelled() else stopDictation()
             }
         }
+    }
+
+    /** The button above the keyboard, or the banner when that button is off and only a session shows. */
+    private fun showSessionIndicator(ime: AccessibilityWindowInfo?, focused: AccessibilityNodeInfo) {
+        if (settings.floatingButtonVisible) {
+            hideFieldBanner()
+            showOrMoveOverlay(ime, focused)
+            return
+        }
+        removeOverlay()
+        if (fieldBanner != null) return
+        val banner = StatusBannerWindow(this, windowManager, onStop = ::stopDictation, onSwipe = { onFieldBannerSwiped() })
+        if (banner.show(fieldBannerContent(DictationStateBus.state.value))) fieldBanner = banner
+    }
+
+    private fun fieldBannerContent(state: DictationState): StatusBanner =
+        if (!state.isFieldSession()) {
+            StatusBanner.field(voiceEdit = commandStartsVoiceEdit, processing = false, textStage = false)
+        } else {
+            val stage = state.activeProcessingStage
+            StatusBanner.field(voiceEdit = state.operation == DictationOperation.TRANSFORMATION,
+                processing = stage != null, textStage = stage != null && stage != DictationProcessingStage.TRANSCRIPTION)
+        }
+
+    private fun hideFieldBanner() {
+        fieldBanner?.dismiss()
+        fieldBanner = null
+    }
+
+    /** Cancels like the button's swipe; a session still starting is cancelled once it appears. */
+    private fun onFieldBannerSwiped() {
+        if (!cancelFromCommand()) cancelStartingSession = commandStartPending
     }
 
     private fun showOrMoveOverlay(
@@ -667,6 +709,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     }
 
     private fun onOverlayTapped() {
+        // A spoken command or another app's session has its own indicator, not this button.
+        if (DictationStateBus.state.value.let { it.isActive && it.external }) return
         if (DictationStateBus.state.value.isActive) {
             stopDictation()
             return
@@ -700,7 +744,8 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             keyboardFreeTarget = focused
             keyboardFreeFocus.reset()
         }
-        showOrMoveOverlay(ime, focused)
+        commandStartsVoiceEdit = transformation
+        showSessionIndicator(ime, focused)
         val started = if (transformation) {
             startTransformation { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
         } else {

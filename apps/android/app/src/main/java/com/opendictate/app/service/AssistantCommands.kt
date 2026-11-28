@@ -23,7 +23,8 @@ import com.opendictate.app.network.McpError
 import com.opendictate.app.network.OpenAiTranscriptionClient
 import com.opendictate.app.ui.userMessage
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -31,8 +32,8 @@ import kotlinx.coroutines.launch
 /**
  * Carries out a spoken command: one request to the text model with the enabled tools of the user's
  * MCP servers, then one tool call. If the server refuses the call, the model sees that error once
- * and may correct it. The outcome is shown as a notification; the command and the tool's answer are
- * never logged.
+ * and may correct it. The caller shows the outcome in its banner or the notification; the command
+ * and the tool's answer are never logged.
  */
 internal object AssistantCommands {
     private const val CHANNEL_ID = "assistant_commands"
@@ -41,17 +42,39 @@ internal object AssistantCommands {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** Completes once the outcome is shown; callers only wait for it. */
-    fun run(context: Context, command: String): Job {
+    /**
+     * Carries out a command. The caller shows the outcome, in the banner or the notification; the
+     * command runs on even when its caller is gone.
+     */
+    fun run(context: Context, command: String): Deferred<Report> {
         val application = context.applicationContext
-        return scope.launch {
-            notify(application, Report(application.getString(R.string.assistant_running), command), ongoing = true)
-            notify(application, execute(application, command), ongoing = false)
-        }
+        return scope.async { execute(application, command) }
     }
 
-    /** What the notification says; [link] is opened when the user taps it. */
-    private class Report(val title: String, val text: String, val link: String? = null)
+    /** A command's outcome; [link] is opened when the user taps it. */
+    class Report(val title: String, val text: String, val link: String? = null)
+
+    /** A command that is still being carried out, after its banner was put away. */
+    fun showRunning(context: Context, command: String) =
+        post(context, Report(context.getString(R.string.assistant_running), command), ongoing = true, silent = true)
+
+    /** The outcome; [silent] when the user has just seen it in the banner. */
+    fun showOutcome(context: Context, report: Report, silent: Boolean) =
+        post(context, report, ongoing = false, silent = silent)
+
+    /** Opens the outcome's link, as a tap on its notification does; false without one. */
+    fun open(context: Context, report: Report): Boolean {
+        val link = report.link ?: return false
+        return runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.isSuccess
+    }
+
+    /** Reports the outcome of a command whose banner is gone, once the agent is done. */
+    fun notifyWhenDone(context: Context, outcome: Deferred<Report>) {
+        val application = context.applicationContext
+        scope.launch { runCatching { outcome.await() }.onSuccess { showOutcome(application, it, silent = false) } }
+    }
 
     private suspend fun execute(context: Context, command: String): Report {
         val settings = SettingsStore(context)
@@ -99,7 +122,8 @@ internal object AssistantCommands {
         return Report(failed, context.getString(R.string.assistant_no_action))
     }
 
-    private fun notify(context: Context, report: Report, ongoing: Boolean) {
+    /** An [ongoing] notification spins only until it has words: a collapsed one shows either, and words matter more. */
+    private fun post(context: Context, report: Report, ongoing: Boolean, silent: Boolean) {
         val title = report.title
         val text = report.text
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -118,12 +142,12 @@ internal object AssistantCommands {
             manager.notify(NOTIFICATION_ID, NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_mic_chatgpt_24)
                 .setContentTitle(title)
-                .setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .apply { if (text.isNotEmpty()) setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)) }
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
                 .setOngoing(ongoing)
-                .setProgress(0, 0, ongoing)
-                .setOnlyAlertOnce(ongoing)
+                .setProgress(0, 0, ongoing && text.isEmpty())
+                // The user has seen what the banner showed; only an outcome that arrives later alerts.
+                .setSilent(silent)
                 .setAutoCancel(!ongoing)
                 .setContentIntent(open)
                 .build())

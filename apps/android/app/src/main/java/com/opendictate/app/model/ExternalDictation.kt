@@ -10,6 +10,14 @@ sealed interface ExternalDictationOutcome {
 }
 
 /**
+ * The path of a request that returns text instead of inserting it. Another app gets the Accurate
+ * path, or the phone's own recognition when it is chosen; the user's own AI agent command keeps the
+ * saved mode, so Live and on-device recognition show its words while it is spoken.
+ */
+fun externalTranscriptionModel(saved: TranscriptionModel, agentCommand: Boolean): TranscriptionModel =
+    if (agentCommand || saved == TranscriptionModel.ON_DEVICE) saved else TranscriptionModel.ACCURATE
+
+/**
  * Activity result for `android.speech.action.RECOGNIZE_SPEECH`. Codes follow `RecognizerIntent`;
  * [error] is a stable machine-readable value and never contains provider text.
  */

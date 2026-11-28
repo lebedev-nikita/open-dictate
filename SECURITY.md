@@ -254,9 +254,11 @@ Spoken commands send a transcript and the enabled tools of the user's MCP server
 to the text model in one request with `store: false`, then make one tool call
 from the phone. A successful answer is not sent back to the model; an error
 answer is sent once, cut to 1000 characters, so the model can correct its call.
-A notification opens only an `https://` link from the tool's answer. A double
-press records only while the app's own accessibility overlay shows the command
-indicator; the indicator takes no focus. Only `https://` server addresses are
+The banner and the notification open only an `https://` link from the tool's answer. A double
+press records only while the app's own accessibility overlay shows the
+command's banner at the top; it takes no focus. The command's words and outcome
+appear in that banner and, once it is put away, in the agent's notification,
+which is private on the lock screen. Only `https://` server addresses are
 accepted. A server may opt in to certificate authorities the
 user installed on the device; that trust is built per server from the platform's
 trust manager and never applies to OpenAI or other connections. Tokens are

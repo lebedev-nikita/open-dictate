@@ -70,15 +70,20 @@ same log line and count as presses.
 The AI agent command dictates a command for the tools of your MCP servers. With
 a hold, letting go sends it; with a press, the next press does. OpenDictate sends
 the text to the text model together with the tools you enabled on your MCP
-servers, the model picks one tool, and the phone calls it. The outcome arrives
-as a notification; if the tool's answer holds a link, a tap opens it. There is
+servers, the model picks one tool, and the phone calls it. The outcome appears
+in the banner described below; if the tool's answer holds a link, a tap opens it. There is
 one request to the model and one tool call per command, so a command cannot
 first look something up and then act on it. Only when the server refuses the
 call does the model see that error and try once more.
 
-While you speak, the dictation button appears at the top of the screen. A tap on
-it also finishes the command; swiping it up or aside cancels it. It keeps
-spinning until the command has run; a swipe then only hides it.
+A banner at the top of the screen follows the command: your words as they are
+recognized, the transcription, the agent at work, then what it did. Commands
+record in your current mode, so Live and On device show the words while you
+speak. While you speak, a tap on the banner finishes the command and a swipe up
+or aside cancels it. Once the agent works on it, a swipe moves it to a
+notification instead. The outcome stays for 8 seconds: swipe it up to keep it in
+notifications, aside to close it, or tap it to open its link. Left alone, it
+moves to notifications.
 
 Add servers under **Settings → Integrations → MCP servers**:
 
@@ -112,9 +117,10 @@ cancellation when the keyboard closes. Start requires the OpenDictate
 accessibility service, an open keyboard and a focused text field. Stop, toggle
 and cancel act on whichever session is running. Commands never return text.
 
-When **Button above the keyboard** is off, the button appears only while a
-session runs. It shows recording and processing; tap it to stop or swipe it
-to cancel.
+When **Button above the keyboard** is off, a banner at the top of the screen
+shows a running session: recording, then transcription and processing. Your text
+goes straight into the field. Tap the banner to stop or swipe it up or aside to
+cancel.
 
 - **Hold to talk in Automate**: a *Key pressed* block takes its YES path on
   press and its UP path on release. Send `DICTATION_START` from YES and

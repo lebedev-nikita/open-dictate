@@ -19,6 +19,8 @@ import com.opendictate.app.model.ButtonBindings
 import com.opendictate.app.model.ButtonGesture
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationButtonPosition
+import com.opendictate.app.model.ExternalDictationOutcome
+import com.opendictate.app.model.StatusBanner
 import com.opendictate.app.model.LogButtonEdge
 import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.McpServer
@@ -97,46 +99,146 @@ class DictationDeliveryTest {
         } finally { settings.postProcessing = previousProcessing }
     }
 
-    @Test fun doublePressShowsCommandIndicatorAtTopCenterAndItsCancelEndsTheRecording() = withCommandButton(
+    @Test fun doublePressShowsCommandBannerAtTopCenterAndItsCancelEndsTheRecording() = withCommandButton(
         ButtonGesture.DOUBLE_PRESS,
     ) { service, button ->
-        val listening = context.getString(R.string.command_indicator_listening)
+        val listening = context.getString(R.string.status_banner_command_listening)
         instrumentation.runOnMainSync {
             val now = SystemClock.uptimeMillis()
             for ((edge, time) in listOf(LogButtonEdge.PRESS to now, LogButtonEdge.RELEASE to now + 60, LogButtonEdge.PRESS to now + 150)) {
                 service.onLogButton(LogButtonEvent(button, edge, time))
             }
         }
-        await { overlay(listening) != null }
+        await { banner(listening) != null }
         await { DictationStateBus.state.value.let { it.external && it.phase == DictationPhase.LISTENING } }
-        val bounds = Rect().also { overlay(listening)!!.getBoundsInScreen(it) }
+        val bounds = Rect().also { banner(listening)!!.getBoundsInScreen(it) }
         val metrics = context.resources.displayMetrics
-        assertTrue("Indicator must be centered: $bounds", kotlin.math.abs(bounds.centerX() - metrics.widthPixels / 2) <= 2)
-        assertTrue("Indicator must sit at the top: $bounds", bounds.top < 120 * metrics.density)
+        assertTrue("Banner must be centered: $bounds", kotlin.math.abs(bounds.centerX() - metrics.widthPixels / 2) <= 2)
+        assertTrue("Banner must sit at the top: $bounds", bounds.top < 120 * metrics.density)
         automation.takeScreenshot()?.let { bitmap ->
-            java.io.FileOutputStream(java.io.File(context.cacheDir, "command-indicator-screen.png")).use {
+            java.io.FileOutputStream(java.io.File(context.cacheDir, "command-banner-screen.png")).use {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
             bitmap.recycle()
         }
         // Cancelling records nothing further and sends nothing to OpenAI.
-        assertTrue(overlay(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
-        await { overlay(listening) == null }
+        assertTrue(banner(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+        await { banner(listening) == null }
         await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
         assertNull(ExternalDictationBus.awaitedRequestId)
     }
 
-    @Test fun holdStartsTheCommandIndicatorAtOnce() = withCommandButton(ButtonGesture.HOLD) { service, button ->
-        val listening = context.getString(R.string.command_indicator_listening)
+    @Test fun holdStartsTheCommandBannerAtOnce() = withCommandButton(ButtonGesture.HOLD) { service, button ->
+        val listening = context.getString(R.string.status_banner_command_listening)
         instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.PRESS, SystemClock.uptimeMillis())) }
-        await { overlay(listening) != null }
+        await { banner(listening) != null }
         await { DictationStateBus.state.value.let { it.external && it.phase == DictationPhase.LISTENING } }
         // A release would send the recording for transcription; cancel instead to stay offline.
-        assertTrue(overlay(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
-        await { overlay(listening) == null }
+        assertTrue(banner(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+        await { banner(listening) == null }
         await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
         instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.RELEASE, SystemClock.uptimeMillis())) }
         assertNull(ExternalDictationBus.awaitedRequestId)
+    }
+
+    @Test fun commandShowsInTheBannerWhileTheKeyboardButtonStaysIdle() = withCommandButton(
+        ButtonGesture.HOLD,
+    ) { service, button ->
+        ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+            await { startButton() != null }
+            val listening = context.getString(R.string.status_banner_command_listening)
+            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.PRESS, SystemClock.uptimeMillis())) }
+            await { banner(listening) != null }
+            await { DictationStateBus.state.value.let { it.external && it.phase == DictationPhase.LISTENING } }
+            assertNull("The keyboard button never shows a command",
+                overlay(context.getString(R.string.overlay_active_dictation_description)))
+            // A tap on the idle button neither stops the command nor starts dictation.
+            assertTrue(startButton()!!.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            SystemClock.sleep(500)
+            assertEquals(DictationPhase.LISTENING, DictationStateBus.state.value.phase)
+            assertTrue(DictationStateBus.state.value.external)
+            assertTrue(banner(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+            await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+            await { banner(listening) == null }
+            activity.onActivity { assertEquals("before after", it.editor.text.toString()) }
+            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.RELEASE, SystemClock.uptimeMillis())) }
+        }
+    }
+
+    @Test fun commandOutcomeClosesAsideOrMovesToItsNotificationOnItsOwn() = withCommandButton(
+        ButtonGesture.HOLD,
+    ) { service, button ->
+        val notifications = context.getSystemService(android.app.NotificationManager::class.java)
+        fun hasCommandNotification() = notifications.activeNotifications.any { it.notification.channelId == "assistant_commands" }
+        notifications.cancelAll()
+        val failed = context.getString(R.string.assistant_failed)
+        for (closeAside in listOf(true, false)) {
+            SecureApiKeyStore(context).save("instrumentation-placeholder")
+            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.PRESS, SystemClock.uptimeMillis())) }
+            await { ExternalDictationBus.awaitedRequestId != null &&
+                DictationStateBus.state.value.let { it.external && it.phase == DictationPhase.LISTENING } }
+            // Without a key the agent answers at once and offline, so the outcome is a failure.
+            SecureApiKeyStore(context).clear()
+            val requestId = requireNotNull(ExternalDictationBus.awaitedRequestId)
+            instrumentation.runOnMainSync { ExternalDictationBus.deliver(requestId, ExternalDictationOutcome.Transcribed("Remind me")) }
+            context.startService(Intent(context, DictationForegroundService::class.java)
+                .setAction(DictationForegroundService.ACTION_CANCEL_EXTERNAL))
+            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.RELEASE, SystemClock.uptimeMillis())) }
+            await { banner(failed) != null }
+            assertFalse("The banner shows the outcome, not the notification", hasCommandNotification())
+            if (closeAside) {
+                assertTrue(banner(failed)!!.performAction(R.id.accessibility_action_close_banner))
+                await { banner(failed) == null }
+                SystemClock.sleep(500)
+                assertFalse("A closed outcome leaves no notification", hasCommandNotification())
+            } else {
+                val shown = SystemClock.uptimeMillis()
+                awaitFor(StatusBanner.RESULT_VISIBLE_MS + 5_000) { banner(failed) == null }
+                assertTrue("The outcome stays a while", SystemClock.uptimeMillis() - shown >= StatusBanner.RESULT_VISIBLE_MS - 1_000)
+                await { hasCommandNotification() }
+                notifications.cancelAll()
+            }
+            await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+        }
+    }
+
+    @Test fun hiddenButtonShowsFieldDictationAsTheBannerAndKeepsItsTextInTheField() = withAccessibility { settings ->
+        val previous = settings.floatingButtonVisible
+        settings.floatingButtonVisible = false
+        try {
+            ActivityScenario.launch<DeliveryFixtureActivity>(Intent(context, DeliveryFixtureActivity::class.java)).use { activity ->
+                await { OpenDictateAccessibilityService.running != null && hasKeyboard() }
+                SystemClock.sleep(500)
+                assertFalse("The hidden button must stay hidden without a session", hasOverlay())
+                instrumentation.runOnMainSync { OpenDictateAccessibilityService.running!!.startFromCommand() }
+                val listening = context.getString(R.string.status_banner_dictation_listening)
+                await { banner(listening) != null }
+                await { DictationStateBus.state.value.phase == DictationPhase.LISTENING }
+                assertNull("The button above the keyboard must stay hidden",
+                    overlay(context.getString(R.string.overlay_active_dictation_description)))
+                val metrics = context.resources.displayMetrics
+                val bounds = Rect().also { banner(listening)!!.getBoundsInScreen(it) }
+                assertTrue("Banner must sit at the top: $bounds", bounds.top < 120 * metrics.density)
+                // Live words go into the field and never into the banner.
+                val session = DictationStateBus.state.value
+                instrumentation.runOnMainSync {
+                    DictationStateBus.set(session.copy(model = TranscriptionModel.LIVE, transcript = "partial words "))
+                }
+                awaitEditor(activity, "before partial words after")
+                assertFalse(banner(listening)!!.contentDescription.toString().contains("partial"))
+                instrumentation.runOnMainSync {
+                    DictationStateBus.set(session.copy(model = TranscriptionModel.LIVE, phase = DictationPhase.PROCESSING,
+                        processingStage = DictationProcessingStage.TRANSCRIPTION, transcript = "partial words "))
+                }
+                val transcribing = context.getString(R.string.status_banner_transcribing)
+                await { banner(transcribing) != null }
+                captureScreen("dictation-banner-screen.png")
+                assertTrue(banner(transcribing)!!.performAction(R.id.accessibility_action_dismiss_overlay))
+                await { DictationStateBus.state.value.phase == DictationPhase.IDLE }
+                awaitEditor(activity, "before after")
+                await { !hasOverlay() }
+            }
+        } finally { settings.floatingButtonVisible = previous }
     }
 
     private fun frontWindowPackage(): String? = automation.windows
@@ -634,6 +736,22 @@ class DictationDeliveryTest {
 
     private fun startButton() = overlay(context.getString(R.string.overlay_start_dictation_with_actions))
 
+    /** The status banner reads its title first, then its words and a hint. */
+    private fun banner(title: String): AccessibilityNodeInfo? = automation.windows
+        .flatMap { window -> window.root?.let { listOf(it) }.orEmpty() }
+        .firstOrNull { it.contentDescription?.toString()?.startsWith("$title.") == true }
+
+    private fun hasKeyboard() = automation.windows.any {
+        it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+    }
+
+    private fun captureScreen(name: String) {
+        automation.takeScreenshot()?.let { bitmap ->
+            java.io.FileOutputStream(java.io.File(context.cacheDir, name)).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+    }
+
     private fun hasOverlay() = automation.windows.any {
         it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY
     }
@@ -707,8 +825,10 @@ class DictationDeliveryTest {
         java.io.FileInputStream(it.fileDescriptor).use { input -> input.readBytes().toString(Charsets.UTF_8) }
     }
 
-    private fun await(condition: () -> Boolean) {
-        val deadline = SystemClock.uptimeMillis() + 10_000
+    private fun await(condition: () -> Boolean) = awaitFor(10_000, condition)
+
+    private fun awaitFor(timeoutMs: Long, condition: () -> Boolean) {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (!condition()) {
             check(SystemClock.uptimeMillis() < deadline) { "Timed out waiting for dictation delivery; phase=${DictationStateBus.state.value.phase}; windows=${automation.windows.map { it.type }}" }
             SystemClock.sleep(50)

@@ -56,5 +56,12 @@ class ExternalDictationTest {
         assertEquals(ExternalCallerAccess.ASK, externalCallerAccess("com.example.other", allowed))
     }
 
+    @Test
+    fun otherAppsGetAccurateWhileTheAgentCommandKeepsTheSavedMode() {
+        assertEquals(TranscriptionModel.ACCURATE, externalTranscriptionModel(TranscriptionModel.LIVE, agentCommand = false))
+        assertEquals(TranscriptionModel.ON_DEVICE, externalTranscriptionModel(TranscriptionModel.ON_DEVICE, agentCommand = false))
+        for (model in TranscriptionModel.entries) assertEquals(model, externalTranscriptionModel(model, agentCommand = true))
+    }
+
     private fun failed(error: DictationError) = ExternalDictationOutcome.Failed(error)
 }
