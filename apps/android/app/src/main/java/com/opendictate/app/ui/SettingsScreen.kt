@@ -37,7 +37,8 @@ import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.GraphicEq
-import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.Spellcheck
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -86,6 +87,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -112,6 +114,7 @@ import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.offered
+import com.opendictate.app.model.DictationChoice
 import com.opendictate.app.model.OnDeviceStatus
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.service.DictationPhase
@@ -228,33 +231,37 @@ internal fun SettingsScreen(
                         }
                     }
 
+                    SectionTitle(stringResource(R.string.settings_models))
+                    SettingsGroup {
+                        val dictationChoice = DictationChoice.selected(state.model, state.liveModelId, state.accurateModelId)
+                        val onDeviceTitle = stringResource(R.string.dictation_model_on_device)
+                        val choiceDescriptions = mapOf(
+                            TranscriptionModel.ACCURATE to stringResource(R.string.model_accurate_description),
+                            TranscriptionModel.LIVE to stringResource(R.string.model_live_description),
+                            TranscriptionModel.ON_DEVICE to stringResource(R.string.model_on_device_description),
+                        )
+                        OptionPicker(Icons.Outlined.GraphicEq, stringResource(R.string.settings_dictation), dictationChoice,
+                            DictationChoice.options(state.modelCatalog, onDeviceOffered, dictationChoice), viewModel::selectDictation,
+                            title = { it.title ?: onDeviceTitle }, description = { choiceDescriptions[it.mode] })
+                        onDeviceProblem(state.model, state.onDeviceSpeech)?.let { problem ->
+                            Text(stringResource(problem), Modifier.padding(start = SettingsRowTextStart, end = 16.dp, bottom = 16.dp),
+                                style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+                        }
+                        // Every text task uses GPT-6 Luna, so these rows only name it; without a key they lead to the key.
+                        val textModel = com.opendictate.app.model.TextProcessingModel.title(state.textProcessingModel)
+                        listOf(
+                            Icons.Outlined.Spellcheck to R.string.postprocessing_title,
+                            Icons.Outlined.AutoFixHigh to R.string.transformation_model_title,
+                            Icons.Outlined.AutoAwesome to R.string.text_model_commands,
+                        ).forEach { (icon, label) ->
+                            SettingsDivider()
+                            if (state.hasApiKey) InfoRow(icon, stringResource(label), textModel)
+                            else ActionRow(icon, stringResource(label), stringResource(R.string.text_model_needs_key), dimmed = true, onClick = onApiKey)
+                        }
+                    }
+
                     SectionTitle(stringResource(R.string.settings_dictation))
                     SettingsGroup {
-                        ModeSelector(state.model, onDeviceOffered, viewModel::selectModel)
-                        Text(
-                            stringResource(modeDescription(state.model, state.onDeviceSpeech)),
-                            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                            style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
-                        )
-                        SettingsDivider(startInset = 16.dp)
-                        // The phone's recognizer has no choices, so its mode shows no recognition model.
-                        when (state.model) {
-                            TranscriptionModel.LIVE -> ModelPicker(Icons.Outlined.GraphicEq, stringResource(R.string.settings_recognition_model),
-                                state.liveModelId, modelOptions(state.modelCatalog.live, ModelCatalog.DEFAULT.live), viewModel::selectLiveModel)
-                            TranscriptionModel.ACCURATE -> ModelPicker(Icons.Outlined.GraphicEq, stringResource(R.string.settings_recognition_model),
-                                state.accurateModelId, modelOptions(state.modelCatalog.accurate, ModelCatalog.DEFAULT.accurate), viewModel::selectAccurateModel)
-                            TranscriptionModel.ON_DEVICE -> Unit
-                        }
-                        if (state.model != TranscriptionModel.ON_DEVICE) SettingsDivider()
-                        ModelPicker(
-                            icon = Icons.Outlined.TextFields,
-                            label = stringResource(R.string.settings_text_model),
-                            selected = com.opendictate.app.model.TextProcessingModel.selection(state.textProcessingModel, state.textProcessingServiceTier),
-                            options = com.opendictate.app.model.TextProcessingModel.defaults,
-                            onSelect = viewModel::selectTextProcessingModel,
-                            displayName = com.opendictate.app.model.TextProcessingModel::title,
-                        )
-                        SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
                         SettingsDivider()
@@ -444,20 +451,23 @@ internal fun SettingsDivider(startInset: Dp = SettingsRowTextStart) {
 }
 
 @Composable
-private fun RowCopy(title: String, subtitle: String, modifier: Modifier = Modifier) {
+private fun RowCopy(title: String, subtitle: String, modifier: Modifier = Modifier, titleColor: Color = Color.Unspecified) {
     Column(modifier) {
-        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
         if (subtitle.isNotEmpty()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
     }
 }
 
 @Composable
-internal fun ActionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+internal fun ActionRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) = ActionRow(icon, title, subtitle, dimmed = false, onClick)
+
+@Composable
+private fun ActionRow(icon: ImageVector, title: String, subtitle: String, dimmed: Boolean, onClick: () -> Unit) {
     Surface(onClick = onClick, color = SettingsSurface) {
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, Modifier.size(24.dp), tint = SettingsMuted)
             Spacer(Modifier.width(16.dp))
-            RowCopy(title, subtitle, Modifier.weight(1f))
+            RowCopy(title, subtitle, Modifier.weight(1f), titleColor = if (dimmed) SettingsMuted else Color.Unspecified)
             Spacer(Modifier.width(12.dp))
             Icon(Icons.Outlined.ChevronRight, null, Modifier.size(20.dp), tint = SettingsMuted)
         }
@@ -498,53 +508,41 @@ private fun SetupStepRow(icon: ImageVector, done: Boolean, title: String, subtit
     }
 }
 
-/** The on-device mode explains a download or a missing model; ML Kit reports both. */
-private fun modeDescription(model: TranscriptionModel, onDevice: OnDeviceStatus?): Int = when (model) {
-    TranscriptionModel.LIVE -> R.string.model_live_description
-    TranscriptionModel.ACCURATE -> R.string.model_accurate_description
-    TranscriptionModel.ON_DEVICE -> when (onDevice) {
-        null, OnDeviceStatus.AVAILABLE -> R.string.model_on_device_description
-        OnDeviceStatus.UNAVAILABLE -> R.string.model_on_device_unavailable
-        OnDeviceStatus.DOWNLOADABLE, OnDeviceStatus.DOWNLOADING -> R.string.model_on_device_downloading
-    }
+/** The on-device choice explains a download or a missing model; ML Kit reports both. */
+private fun onDeviceProblem(model: TranscriptionModel, onDevice: OnDeviceStatus?): Int? = when {
+    model != TranscriptionModel.ON_DEVICE -> null
+    onDevice == OnDeviceStatus.UNAVAILABLE -> R.string.model_on_device_unavailable
+    onDevice == OnDeviceStatus.DOWNLOADABLE || onDevice == OnDeviceStatus.DOWNLOADING -> R.string.model_on_device_downloading
+    else -> null
 }
 
+/** A row that names the chosen option and opens a menu of [options], each with an optional description. */
 @Composable
-private fun ModeSelector(selected: TranscriptionModel, onDeviceOffered: Boolean, onSelect: (TranscriptionModel) -> Unit) {
-    // The phone's own mode is offered only where it recognizes speech, but stays visible while chosen.
-    val models = listOfNotNull(TranscriptionModel.ACCURATE, TranscriptionModel.LIVE,
-        TranscriptionModel.ON_DEVICE.takeIf { onDeviceOffered || selected == it })
-    val labels = mapOf(
-        TranscriptionModel.ACCURATE to stringResource(R.string.settings_mode_accurate),
-        TranscriptionModel.LIVE to stringResource(R.string.settings_mode_live),
-        TranscriptionModel.ON_DEVICE to stringResource(R.string.settings_mode_on_device),
-    )
-    SettingsChoiceRow(
-        options = models.map(labels::getValue),
-        selectedIndex = models.indexOf(selected),
-        onSelect = { onSelect(models[it]) },
-        modifier = Modifier.padding(16.dp),
-    )
-}
-
-@Composable
-private fun ModelPicker(icon: ImageVector, label: String, selected: String, options: List<String>, onSelect: (String) -> Unit, enabled: Boolean = true, displayName: (String) -> String = { it }) {
+private fun <T> OptionPicker(icon: ImageVector, label: String, selected: T, options: List<T>, onSelect: (T) -> Unit,
+    title: (T) -> String, description: @Composable (T) -> String? = { null }) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        Surface(onClick = { expanded = true }, enabled = enabled, color = SettingsSurface) {
+        Surface(onClick = { expanded = true }, color = SettingsSurface) {
             Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, Modifier.size(24.dp), tint = SettingsMuted)
                 Spacer(Modifier.width(16.dp))
-                RowCopy(label, displayName(selected), Modifier.weight(1f))
+                RowCopy(label, title(selected), Modifier.weight(1f))
                 Spacer(Modifier.width(12.dp))
                 Icon(Icons.Outlined.UnfoldMore, null, Modifier.size(20.dp), tint = SettingsMuted)
             }
         }
-        DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
-            options.forEach { id ->
-                DropdownMenuItem(text = { Text(displayName(id)) },
-                    onClick = { onSelect(id); expanded = false },
-                    leadingIcon = { if (id == selected) Icon(Icons.Outlined.Check, null) else Spacer(Modifier.size(24.dp)) })
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                val detail = description(option)
+                DropdownMenuItem(
+                    text = {
+                        Column(Modifier.padding(vertical = if (detail == null) 0.dp else 4.dp)) {
+                            Text(title(option))
+                            detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = SettingsMuted) }
+                        }
+                    },
+                    onClick = { onSelect(option); expanded = false },
+                    leadingIcon = { if (option == selected) Icon(Icons.Outlined.Check, null) else Spacer(Modifier.size(24.dp)) })
             }
         }
     }

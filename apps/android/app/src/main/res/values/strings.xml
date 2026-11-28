@@ -44,10 +44,10 @@
     <string name="hero_subtitle">One button above the keyboard — dictation and text editing in any app.</string>
 
     <string name="model_live_title">Instant</string>
-    <string name="model_live_description">Words appear as you speak.</string>
+    <string name="model_live_description">Words appear as you speak</string>
     <string name="model_live_badge">WHILE SPEAKING</string>
     <string name="model_accurate_title">More accurate</string>
-    <string name="model_accurate_description">Text appears when you finish.</string>
+    <string name="model_accurate_description">Text appears when you finish</string>
     <string name="model_accurate_badge">DEFAULT</string>
     <string name="models_refresh">Refresh OpenAI models</string>
     <string name="models_loading">Refreshing models…</string>
@@ -201,7 +201,6 @@
     <string name="settings_listening">Listening</string>
     <string name="settings_processing">Preparing your text…</string>
     <string name="settings_dictation">Dictation</string>
-    <string name="settings_recognition_model">Recognition model</string>
     <string name="settings_dictionary">Personal dictionary</string>
     <string name="settings_dictionary_empty">Names, terms and uncommon words</string>
     <string name="settings_dictionary_count">Dictionary entries: %1$d</string>
@@ -214,8 +213,6 @@
     <string name="settings_done">Done</string>
     <string name="settings_active_hint">Tap the keyboard button again to stop</string>
     <string name="settings_processing_hint">Your text will appear when it is ready</string>
-    <string name="settings_mode_accurate">Accurate</string>
-    <string name="settings_mode_live">Live</string>
     <string name="replacements_title">Word replacements</string>
     <string name="replacements_summary">Configured replacements: %1$d</string>
     <string name="replacements_enable">Enable word replacements</string>
@@ -305,7 +302,6 @@
     <string name="history_transcription_time_description">Transcription: %1$s s</string>
     <string name="history_postprocessing_time_description">Post-processing: %1$s s</string>
     <string name="history_live_description">Live dictation</string>
-    <string name="settings_text_model">Text model</string>
     <string name="chatgpt_connect">Continue with ChatGPT</string>
     <string name="chatgpt_disconnect">Disconnect</string>
     <string name="chatgpt_key_required">First save an API key for transcription.</string>
@@ -476,7 +472,7 @@
         <item quantity="one">%1$d server</item>
         <item quantity="other">%1$d servers</item>
     </plurals>
-    <string name="mcp_servers_intro">Assign a phone button to the AI agent command under Phone buttons. The text model picks one tool of these servers and the phone calls it. Enabled tools are sent to OpenAI with each command.</string>
+    <string name="mcp_servers_intro">Assign a phone button to the AI agent command under Phone buttons. The AI agent commands model picks one tool of these servers and the phone calls it. Enabled tools are sent to OpenAI with each command.</string>
     <string name="mcp_server_add">Add a server</string>
     <string name="mcp_server_sheet_edit">Edit the server</string>
     <string name="mcp_server_edit">Edit %1$s</string>
@@ -513,9 +509,13 @@
     <string name="mcp_try_run">Run</string>
     <!-- On-device recognition -->
     <string name="api_key_optional_on_device">Needed only for OpenAI models</string>
-    <string name="api_key_needed_or_on_device">Required for OpenAI, or choose On device</string>
+    <string name="api_key_needed_or_on_device">Required for OpenAI, or choose the on-device model</string>
+    <string name="dictation_model_on_device">On-device model</string>
+    <string name="settings_models">Models</string>
+    <string name="text_model_commands">AI agent commands</string>
+    <string name="text_model_needs_key">Requires an OpenAI key</string>
     <string name="settings_mode_on_device">On device</string>
-    <string name="model_on_device_description">Words appear as you speak. Audio stays on the phone.</string>
+    <string name="model_on_device_description">No key, right on the phone</string>
     <string name="model_on_device_downloading">The speech model is downloading. Dictation works once it finishes.</string>
     <string name="model_on_device_unavailable">This phone can’t recognize this language on its own.</string>
     <string name="error_on_device_unavailable">On-device recognition isn’t ready. Choose another mode in settings.</string>

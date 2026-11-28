@@ -276,7 +276,9 @@ Search matches English, Russian, native names and language codes. Rows stay alph
 
 The shared Text model / Текстовая модель selector sits beside transcription models on both platforms and stays visible in Live for transformation. Its built-in list contains only GPT-6 Luna (`gpt-6-luna`), selected by default. This saved choice is independent of post-processing options: transformation and post-processing use the immutable session-start model snapshot; Accurate retry captures it at invocation.
 
-Android reuses the existing `ModelPicker` full-width row and native dropdown, with display names, selected check and existing inset dividers. macOS uses a right-aligned native `Picker` in an `HStack`, with a visible localized row label, hidden duplicate picker label, intrinsic width and disabled state while a session is active. Keep native typography, wrapping, theme and spacing; no free-form model editor or extra option is introduced. Surface briefs record the selector's **ship** review and its ten valid native captures. No new visual token or shipping raster asset is added.
+Android instead groups models in a Models / Модели section above Dictation. Its Dictation row lists the transcription models and, where the phone recognizes speech, the On-device model; the chosen model sets the Live, Accurate or on-device mode. Post-processing, Text transformation and AI agent commands are plain rows that name GPT-6 Luna, the only text model; without a key they say an OpenAI key is required and open the key dialog. macOS keeps the shared selector below.
+
+Android uses a full-width picker row and native dropdown, with display names, selected check and existing inset dividers. macOS uses a right-aligned native `Picker` in an `HStack`, with a visible localized row label, hidden duplicate picker label, intrinsic width and disabled state while a session is active. Keep native typography, wrapping, theme and spacing; no free-form model editor or extra option is introduced. Surface briefs record the selector's **ship** review and its ten valid native captures. No new visual token or shipping raster asset is added.
 
 ### Native ChatGPT Plan Connection
 

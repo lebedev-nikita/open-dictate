@@ -7,6 +7,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.opendictate.app.MainActivity
 import com.opendictate.app.R
 import com.opendictate.app.data.SettingsStore
+import androidx.lifecycle.ViewModelProvider
+import com.opendictate.app.model.DictationChoice
+import com.opendictate.app.model.TranscriptionModel
 import org.junit.Rule
 import org.junit.Test
 
@@ -23,11 +26,12 @@ class DictationSettingsTest {
         prefs.edit().putBoolean(legacyKey, true).commit()
         try {
             compose.activityRule.scenario.recreate()
-            listOf(R.string.settings_mode_live, R.string.settings_mode_accurate).forEach { mode ->
-                compose.onNodeWithText(context.getString(mode)).performScrollTo().performClick()
-                compose.onNodeWithText(context.getString(R.string.settings_recognition_model)).assertIsDisplayed()
-                if (mode == R.string.settings_mode_accurate) {
-                    compose.onNodeWithText(context.getString(R.string.postprocessing_title)).performScrollTo().assertIsDisplayed()
+            listOf(DictationChoice(TranscriptionModel.LIVE, "gpt-live-transcribe"),
+                DictationChoice(TranscriptionModel.ACCURATE, "gpt-transcribe")).forEach { choice ->
+                compose.runOnIdle { ViewModelProvider(compose.activity)[MainViewModel::class.java].selectDictation(choice) }
+                compose.onNodeWithText(requireNotNull(choice.title)).performScrollTo().assertIsDisplayed()
+                if (choice.mode == TranscriptionModel.ACCURATE) {
+                    compose.onAllNodesWithText(context.getString(R.string.postprocessing_title)).onLast().performScrollTo().assertIsDisplayed()
                     compose.onNodeWithContentDescription(context.getString(R.string.postprocessing_default_enabled))
                         .performScrollTo().assertIsDisplayed()
                     compose.onAllNodesWithText(context.getString(R.string.postprocessing_punctuation)).assertCountEquals(1)

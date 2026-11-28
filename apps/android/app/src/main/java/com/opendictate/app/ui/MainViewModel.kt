@@ -32,6 +32,7 @@ import com.opendictate.app.model.McpServer
 import com.opendictate.app.model.ModelCatalog
 import com.opendictate.app.model.OnDeviceModels
 import com.opendictate.app.model.OnDeviceStatus
+import com.opendictate.app.model.DictationChoice
 import com.opendictate.app.model.PhoneButton
 import com.opendictate.app.ondevice.OnDeviceSpeech
 import com.opendictate.app.model.TranscriptionModel
@@ -62,8 +63,8 @@ data class MainUiState(
     val liveModelId: String = ModelCatalog.DEFAULT.live.first(),
     val accurateModelId: String = ModelCatalog.DEFAULT.accurate.first(),
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
+    /** The OpenAI model for post-processing, text transformation and AI agent commands. */
     val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
-    val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.STANDARD,
     /** Whether the phone recognizes the dictation language itself; null until ML Kit has answered. */
     val onDeviceSpeech: OnDeviceStatus? = null,
     val modelsLoading: Boolean = false,
@@ -155,7 +156,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             (application as OpenDictateApplication).driveSync.state.collect {
                 mutableState.update { current -> current.copy(model = settings.model, prompt = settings.prompt,
-                    postProcessing = settings.postProcessing, textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
+                    postProcessing = settings.postProcessing, textProcessingModel = settings.textProcessingModel,
                     liveModelId = settings.liveModelId, accurateModelId = settings.accurateModelId) }
             }
         }
@@ -282,12 +283,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(accurateModelId = id) }
     }
 
-    fun selectTextProcessingModel(id: String) {
-        if (!com.opendictate.app.model.TextProcessingModel.isValid(id)) return
-        val model = com.opendictate.app.model.TextProcessingModel.model(id)
-        val tier = com.opendictate.app.model.TextProcessingModel.tier(id)
-        settings.textProcessingModel = model
-        mutableState.update { it.copy(textProcessingModel = model, textProcessingServiceTier = tier) }
+    /** The chosen model also sets the mode: streaming, after recording, or on the phone. */
+    fun selectDictation(choice: DictationChoice) {
+        when (choice.mode) {
+            TranscriptionModel.LIVE -> selectLiveModel(choice.modelId)
+            TranscriptionModel.ACCURATE -> selectAccurateModel(choice.modelId)
+            TranscriptionModel.ON_DEVICE -> Unit
+        }
+        selectModel(choice.mode)
     }
 
     fun savePostProcessing(value: com.opendictate.app.model.PostProcessingSettings) {
@@ -595,7 +598,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         languages = settings.languages,
         prompt = settings.prompt,
         postProcessing = settings.postProcessing,
-        textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
+        textProcessingModel = settings.textProcessingModel,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         floatingButtonVisible = settings.floatingButtonVisible,
         buttonBindings = settings.buttonBindings,
