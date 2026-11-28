@@ -1,5 +1,7 @@
 # OpenDictate agent guide
 
+Always reply to the user in Russian unless they ask for another language.
+
 ## Product contract
 
 OpenDictate is an Android/macOS monorepo. Both apps insert OpenAI speech
