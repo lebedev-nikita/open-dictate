@@ -282,17 +282,12 @@ and are cleared when the feature is turned off. These sessions use a temporary
 cache WAV deleted after transcription, are never inserted into a field and return
 only fixed error codes.
 
-The On device mode and Gemini Nano text model use ML Kit GenAI
-(`genai-speech-recognition`, `genai-prompt`). ML Kit binds to the AICore system
-service and adds package visibility for AICore and Google Text-to-Speech.
-Microphone PCM reaches the recognizer through an in-memory pipe; the only file is
-the existing retry recording. AICore failures become fixed error reasons, and its
-messages are not kept. AICore refuses text requests unless the app is in front
-(`BACKGROUND_USE_BLOCKED`); the app then uses the OpenAI text model when a key is
-saved and never brings a window forward to get around this. The one exception is
-a spoken command the user started with a phone button: while its indicator shows,
-a transparent OpenDictate window stays in front until the model has chosen a
-tool, at most 30 seconds, so Gemini Nano can answer. ML Kit's datatransport
+The On device mode uses ML Kit GenAI speech recognition
+(`genai-speech-recognition`). ML Kit binds to the AICore system service and adds
+package visibility for AICore and Google Text-to-Speech. Microphone PCM reaches
+the recognizer through an in-memory pipe; the only file is the existing retry
+recording. Recognizer failures become fixed error reasons, and their messages are
+not kept. Text requests always go to the OpenAI text model. ML Kit's datatransport
 backend (`TransportBackendDiscovery`) is removed from the merged manifest, so its
 usage statistics are dropped instead of uploaded; recheck this after every ML Kit
 update.

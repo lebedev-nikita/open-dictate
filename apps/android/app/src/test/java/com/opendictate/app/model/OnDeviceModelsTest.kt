@@ -32,14 +32,12 @@ class OnDeviceModelsTest {
         assertTrue(OnDeviceModels.requiresApiKey(TranscriptionModel.ACCURATE, cloudText = false))
     }
 
-    @Test fun `recognition is offered as Gemini Nano only when AICore offers text too`() {
-        val withoutNano = OnDeviceAvailability(speech = OnDeviceStatus.AVAILABLE, text = OnDeviceStatus.UNAVAILABLE)
-        assertFalse(withoutNano.speechOffered)
-        assertFalse(withoutNano.textOffered)
-        val downloadable = OnDeviceAvailability(speech = OnDeviceStatus.DOWNLOADABLE, text = OnDeviceStatus.DOWNLOADABLE)
-        assertTrue(downloadable.speechOffered)
-        assertTrue(downloadable.textOffered)
-        assertFalse(OnDeviceAvailability(speech = OnDeviceStatus.UNAVAILABLE, text = OnDeviceStatus.AVAILABLE).speechOffered)
+    @Test fun `the mode is offered once the recognizer answers with anything but unavailable`() {
+        assertFalse((null as OnDeviceStatus?).offered)
+        assertFalse(OnDeviceStatus.UNAVAILABLE.offered)
+        assertTrue(OnDeviceStatus.DOWNLOADABLE.offered)
+        assertTrue(OnDeviceStatus.DOWNLOADING.offered)
+        assertTrue(OnDeviceStatus.AVAILABLE.offered)
     }
 
     @Test fun `the on-device mode streams like Live and is never read from the synced choice`() {

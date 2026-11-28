@@ -5,7 +5,7 @@ import java.util.Locale
 enum class TranscriptionModel(val apiName: String) {
     LIVE("gpt-live-transcribe"),
     ACCURATE("gpt-transcribe"),
-    /** Gemini Nano on this phone. A local choice: it is never synced, since other devices may lack it. */
+    /** Recognition on this phone. A local choice: it is never synced, since other devices may lack it. */
     ON_DEVICE(OnDeviceModels.ID);
 
     /** Text appears while the user speaks, so cancelling must restore the field. */

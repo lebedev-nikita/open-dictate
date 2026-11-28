@@ -30,9 +30,10 @@ import com.opendictate.app.model.ErrorRoute
 import com.opendictate.app.model.ErrorStage
 import com.opendictate.app.model.ExternalDictationOutcome
 import com.opendictate.app.model.OnDeviceModels
+import com.opendictate.app.model.PostProcessingResult
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.network.OpenAiTranscriptionClient
-import com.opendictate.app.ondevice.GeminiNano
+import com.opendictate.app.ondevice.OnDeviceSpeech
 import com.opendictate.app.ui.userMessage
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
@@ -130,7 +131,7 @@ class DictationForegroundService : Service() {
             settings.postProcessing, postProcessingOverride.takeUnless { external })
         val model = options.model
         val apiKey = SecureApiKeyStore(this).get()?.takeIf(String::isNotBlank)
-        // Voice editing needs the cloud text model: Android blocks Gemini Nano text behind other apps.
+        // Voice editing needs the OpenAI text model even when the phone recognizes the speech.
         if (apiKey == null && OnDeviceModels.requiresApiKey(model, cloudText = operation == DictationOperation.TRANSFORMATION)) {
             externalRequestId?.let { ExternalDictationBus.deliver(it, ExternalDictationOutcome.Failed(DictationError.MissingApiKey)) }
             publishError(DictationError.MissingApiKey, operation = operation)
@@ -150,12 +151,10 @@ class DictationForegroundService : Service() {
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val textProcessingServiceTier = settings.textProcessingServiceTier
-        val text = TextRequests(apiClient, apiKey, settings.onDeviceTextProcessing, textProcessingModel,
-            textProcessingServiceTier, chatGPTAccount)
         val diagnostics = DictationDiagnostics((application as OpenDictateApplication).errorHistoryStore, model,
             if (operation == DictationOperation.TRANSFORMATION) ErrorOperation.VOICE_EDIT else ErrorOperation.DICTATION)
         activeDiagnostics = diagnostics
-        val textRoute = text.route(chatGPTAccount)
+        val textRoute = if (chatGPTAccount != null) ErrorRoute.CHATGPT else ErrorRoute.OPENAI_API
         val speechLocale = OnDeviceModels.speechLocale(settings.languages, systemLanguageTags())
         val postProcessing = options.postProcessing
         activePostProcessingEnabled = operation == DictationOperation.DICTATION && postProcessing.shouldProcess
@@ -191,7 +190,6 @@ class DictationForegroundService : Service() {
             var postProcessingFailed = false
             var transcriptionMillis: Long? = null
             var postProcessingMillis: Long? = null
-            var postProcessedOnDevice = false
             suspend fun stopRecording() = withContext(NonCancellable) {
                 try { recorder.stop() } finally {
                     runCatching { savedRecording?.finish() }
@@ -252,7 +250,7 @@ class DictationForegroundService : Service() {
                                 savedRecording = (application as OpenDictateApplication)
                                     .lastDictationAudioStore.begin(scope)
                             }
-                            GeminiNano.transcribe(
+                            OnDeviceSpeech.transcribe(
                                 locale = speechLocale,
                                 scope = scope,
                                 recorder = recorder,
@@ -308,19 +306,29 @@ class DictationForegroundService : Service() {
                     val result = if (operation == DictationOperation.TRANSFORMATION) {
                         publishProcessingStage(sessionId, operation, model, DictationProcessingStage.TRANSFORMATION)
                         updateNotification(true, operation)
-                        diagnostics.stage(ErrorStage.TRANSFORMATION, textRoute, text.diagnosticModelId)
-                        val transformation = text.transform(requireNotNull(sourceText), transcript.trim()).bind().value
+                        diagnostics.stage(ErrorStage.TRANSFORMATION, textRoute, textProcessingModel)
+                        val transformation = apiClient.transformText(
+                            apiKey = requireNotNull(apiKey),
+                            sourceText = requireNotNull(sourceText),
+                            instruction = transcript.trim(),
+                            modelId = textProcessingModel,
+                            serviceTier = textProcessingServiceTier,
+                            chatGPTAccount = chatGPTAccount,
+                        ).bind()
                         modelMessage = transformation.message
                         transformation.text
                     } else {
                         if (postProcessing.shouldProcess) {
                             publishProcessingStage(sessionId, operation, model, DictationProcessingStage.POST_PROCESSING)
                         }
-                        diagnostics.stage(ErrorStage.POST_PROCESSING, textRoute, text.diagnosticModelId)
-                        val timed = measureRequest(SystemClock::elapsedRealtime) { text.postProcess(transcript, postProcessing, languages) }
+                        diagnostics.stage(ErrorStage.POST_PROCESSING, textRoute, textProcessingModel)
+                        // Only the Accurate path post-processes, and it always has a key.
+                        val timed = measureRequest(SystemClock::elapsedRealtime) {
+                            if (!postProcessing.shouldProcess) PostProcessingResult(transcript)
+                            else apiClient.postProcess(requireNotNull(apiKey), transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier)
+                        }
                         if (postProcessing.shouldProcess) postProcessingMillis = timed.milliseconds
-                        postProcessedOnDevice = timed.value.onDevice
-                        val processed = timed.value.value
+                        val processed = timed.value
                         ensureActive()
                         processed.failure?.let { diagnostics.record(it.failureDetails) }
                         postProcessingFailed = processed.failed
@@ -350,8 +358,8 @@ class DictationForegroundService : Service() {
                                         TranscriptionModel.ACCURATE -> accurateModelId
                                         TranscriptionModel.ON_DEVICE -> OnDeviceModels.ID
                                     },
-                                    postProcessingModelId = text.modelId(postProcessedOnDevice).takeIf { postProcessing.shouldProcess },
-                                    postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess && !postProcessedOnDevice })
+                                    postProcessingModelId = textProcessingModel.takeIf { postProcessing.shouldProcess },
+                                    postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                             }
                         }
                     }
@@ -407,11 +415,9 @@ class DictationForegroundService : Service() {
         val chatGPTAccount = (application as OpenDictateApplication).chatGPT.activeAccount()
         val textProcessingModel = settings.textProcessingModel
         val textProcessingServiceTier = settings.textProcessingServiceTier
-        val text = TextRequests(apiClient, apiKey, settings.onDeviceTextProcessing, textProcessingModel,
-            textProcessingServiceTier, chatGPTAccount)
         val diagnostics = DictationDiagnostics((application as OpenDictateApplication).errorHistoryStore, model, ErrorOperation.RETRY)
         activeDiagnostics = diagnostics
-        val textRoute = text.route(chatGPTAccount)
+        val textRoute = if (chatGPTAccount != null) ErrorRoute.CHATGPT else ErrorRoute.OPENAI_API
         val postProcessing = settings.postProcessing.forMode(model)
         activePostProcessingEnabled = postProcessing.shouldProcess
         activeOperation = DictationOperation.DICTATION
@@ -438,10 +444,9 @@ class DictationForegroundService : Service() {
                     if (postProcessing.shouldProcess) {
                         publishProcessingStage(sessionId, DictationOperation.DICTATION, model, DictationProcessingStage.POST_PROCESSING)
                     }
-                    diagnostics.stage(ErrorStage.POST_PROCESSING, textRoute, text.diagnosticModelId)
-                    val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { text.postProcess(transcript, postProcessing, languages) }
-                    val processedOnDevice = postProcessingAttempt.value.onDevice
-                    val processed = postProcessingAttempt.value.value
+                    diagnostics.stage(ErrorStage.POST_PROCESSING, textRoute, textProcessingModel)
+                    val postProcessingAttempt = measureRequest(SystemClock::elapsedRealtime) { apiClient.postProcess(apiKey, transcript, postProcessing, languages, textProcessingModel, chatGPTAccount, textProcessingServiceTier) }
+                    val processed = postProcessingAttempt.value
                     ensureActive()
                     processed.failure?.let { diagnostics.record(it.failureDetails) }
                     val result = replacements.apply(processed.text)
@@ -460,8 +465,8 @@ class DictationForegroundService : Service() {
                                 transcriptionMillis = transcription.milliseconds,
                                 postProcessingMillis = postProcessingAttempt.milliseconds.takeIf { postProcessing.shouldProcess },
                                 transcriptionModelId = accurateModelId,
-                                postProcessingModelId = text.modelId(processedOnDevice).takeIf { postProcessing.shouldProcess },
-                                postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess && !processedOnDevice })
+                                postProcessingModelId = textProcessingModel.takeIf { postProcessing.shouldProcess },
+                                postProcessingServiceTier = textProcessingServiceTier.takeIf { postProcessing.shouldProcess })
                         }
                     }
                     if (completed && processed.failed) showPostProcessingError()

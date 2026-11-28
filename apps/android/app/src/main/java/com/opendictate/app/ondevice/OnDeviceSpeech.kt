@@ -8,13 +8,6 @@ import arrow.core.right
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.common.GenAiException
 import com.google.mlkit.genai.common.audio.AudioSource
-import com.google.mlkit.genai.prompt.Candidate
-import com.google.mlkit.genai.prompt.Generation
-import com.google.mlkit.genai.prompt.GenerativeModel
-import com.google.mlkit.genai.prompt.SystemInstruction
-import com.google.mlkit.genai.prompt.TextPart
-import com.google.mlkit.genai.prompt.generateContentRequest
-import com.google.mlkit.genai.schema.tools.FunctionDeclaration
 import com.google.mlkit.genai.speechrecognition.SpeechRecognition
 import com.google.mlkit.genai.speechrecognition.SpeechRecognizer
 import com.google.mlkit.genai.speechrecognition.SpeechRecognizerOptions
@@ -42,24 +35,16 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Gemini Nano through ML Kit GenAI and Android's AICore service. Audio and text stay on the phone.
- * AICore lets recognition run behind other apps, but answers text requests only while an
- * OpenDictate window is in front; callers fall back to the OpenAI text model for those.
+ * Speech recognition on the phone through ML Kit GenAI. It prefers the Gemini Nano model that
+ * Android's AICore runs and otherwise uses the phone's older on-device model; audio stays on the
+ * phone either way, and recognition keeps working while another app is in front.
  */
-object GeminiNano {
-    /** Whether AICore offers Gemini Nano for text; failures mean the phone has no usable Nano. */
-    suspend fun textStatus(): OnDeviceStatus = withModel { it.checkStatus().toStatus() } ?: OnDeviceStatus.UNAVAILABLE
-
-    suspend fun speechStatus(locale: String): OnDeviceStatus =
+object OnDeviceSpeech {
+    /** Failures mean the phone cannot recognize [locale] on its own. */
+    suspend fun status(locale: String): OnDeviceStatus =
         withRecognizer(locale) { it.checkStatus().toStatus() } ?: OnDeviceStatus.UNAVAILABLE
 
-    /** Downloads what AICore still needs; returns the status afterwards. */
-    suspend fun downloadText(): OnDeviceStatus = withModel { model ->
-        model.download().catch { }.collect { }
-        model.checkStatus().toStatus()
-    } ?: OnDeviceStatus.UNAVAILABLE
-
-    suspend fun downloadSpeech(locale: String): OnDeviceStatus = withRecognizer(locale) { recognizer ->
+    suspend fun download(locale: String): OnDeviceStatus = withRecognizer(locale) { recognizer ->
         recognizer.download().catch { }.collect { }
         recognizer.checkStatus().toStatus()
     } ?: OnDeviceStatus.UNAVAILABLE
@@ -153,54 +138,9 @@ object GeminiNano {
         }
     }
 
-    /** One text request. Returns [DictationError.OnDeviceBlocked] when Android refuses it from the background. */
-    suspend fun generate(instructions: String, input: String, maxOutputTokens: Int = MAX_OUTPUT_TOKENS): Either<DictationError, String> =
-        respond(instructions, input, maxOutputTokens, tools = emptyList()).map { it.text }
-
-    /** A text request that may call one of [tools]; see [com.opendictate.app.model.OnDeviceAssistant]. */
-    suspend fun respond(
-        instructions: String,
-        input: String,
-        maxOutputTokens: Int = MAX_OUTPUT_TOKENS,
-        tools: List<FunctionDeclaration>,
-    ): Either<DictationError, Candidate> = withContext(Dispatchers.Default) {
-        val model = Generation.getClient()
-        try {
-            if (model.checkStatus().toStatus() != OnDeviceStatus.AVAILABLE) return@withContext DictationError.OnDeviceUnavailable.left()
-            val systemPrompt = model.isSystemPromptAvailable()
-            val request = if (systemPrompt) {
-                generateContentRequest(SystemInstruction(instructions), TextPart(input)) { configure(maxOutputTokens, tools) }
-            } else {
-                generateContentRequest(TextPart("$instructions\n\n$input")) { configure(maxOutputTokens, tools) }
-            }
-            val candidate = model.generateContent(request).candidates.firstOrNull()
-                ?: return@withContext DictationError.EmptyResult.left()
-            if (candidate.finishReason == Candidate.FinishReason.MAX_TOKENS) return@withContext DictationError.InvalidResponse.left()
-            candidate.right()
-        } catch (error: CancellationException) {
-            throw error
-        } catch (error: Exception) {
-            error.toError().left()
-        } finally {
-            model.close()
-        }
-    }
-
-    private fun com.google.mlkit.genai.prompt.GenerateContentRequest.Builder.configure(maxOutputTokens: Int, tools: List<FunctionDeclaration>) {
-        temperature = 0f
-        topK = 1
-        this.maxOutputTokens = maxOutputTokens
-        if (tools.isNotEmpty()) setTools(tools)
-    }
-
     private fun options(locale: String) = speechRecognizerOptions {
         this.locale = Locale.forLanguageTag(locale)
         preferredMode = SpeechRecognizerOptions.Mode.MODE_ADVANCED
-    }
-
-    private suspend fun <T> withModel(block: suspend (GenerativeModel) -> T): T? = withContext(Dispatchers.Default) {
-        val model = runCatching { Generation.getClient() }.getOrNull() ?: return@withContext null
-        try { block(model) } catch (error: CancellationException) { throw error } catch (_: Exception) { null } finally { model.close() }
     }
 
     private suspend fun <T> withRecognizer(locale: String, block: suspend (SpeechRecognizer) -> T): T? = withContext(Dispatchers.Default) {
@@ -221,7 +161,6 @@ object GeminiNano {
             .filterIsInstance<GenAiException>().firstOrNull()?.errorCode
         return when (code) {
             null -> DictationError.from(this)
-            GenAiException.ErrorCode.BACKGROUND_USE_BLOCKED -> DictationError.OnDeviceBlocked
             GenAiException.ErrorCode.NOT_AVAILABLE, GenAiException.ErrorCode.NOT_SUPPORTED,
             GenAiException.ErrorCode.AICORE_INCOMPATIBLE, GenAiException.ErrorCode.NEEDS_SYSTEM_UPDATE,
             GenAiException.ErrorCode.NOT_ENOUGH_DISK_SPACE -> DictationError.OnDeviceUnavailable
@@ -237,7 +176,6 @@ object GeminiNano {
         .build()
     /** 12 seconds of 40 ms chunks, the bound of the Live path's queue. */
     private const val MAX_QUEUED_CHUNKS = 300
-    private const val MAX_OUTPUT_TOKENS = 1_024
     private const val DRAIN_TIMEOUT_MS = 2_000L
     private const val FINAL_RESULT_TIMEOUT_MS = 10_000L
 }

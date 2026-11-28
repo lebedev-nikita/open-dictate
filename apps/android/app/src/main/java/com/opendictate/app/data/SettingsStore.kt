@@ -32,6 +32,8 @@ class SettingsStore(context: Context) {
         }
         prefs.edit { remove("postprocessing") }
         prefs.edit { remove("custom_transcription_prompt"); remove("transcription_prompt_configured"); remove("transformation_model"); remove("transformation_model_id") }
+        // Left by the removed Gemini Nano text model.
+        prefs.edit { remove("on_device_text_processing") }
     }
 
     var theme: AppTheme
@@ -126,11 +128,6 @@ class SettingsStore(context: Context) {
 
     private val syncedModel: TranscriptionModel
         get() = TranscriptionModel.fromStored(prefs.getString(KEY_MODEL, null))
-
-    /** Gemini Nano handles text requests first when it can; device-local like on-device recognition. */
-    var onDeviceTextProcessing: Boolean
-        get() = prefs.getBoolean(KEY_ON_DEVICE_TEXT_PROCESSING, false)
-        set(value) = prefs.edit { putBoolean(KEY_ON_DEVICE_TEXT_PROCESSING, value) }
 
     var liveModelId: String
         get() = preferredModelId(
@@ -349,7 +346,6 @@ class SettingsStore(context: Context) {
         private const val KEY_THEME = "theme"
         private const val KEY_MODEL = "model"
         private const val KEY_ON_DEVICE_RECOGNITION = "on_device_recognition"
-        private const val KEY_ON_DEVICE_TEXT_PROCESSING = "on_device_text_processing"
         private const val KEY_LIVE_MODEL_ID = "live_model_id"
         private const val KEY_ACCURATE_MODEL_ID = "accurate_model_id"
         private const val KEY_MODEL_CATALOG = "model_catalog"

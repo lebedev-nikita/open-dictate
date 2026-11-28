@@ -10,8 +10,8 @@ val keyAliasValue = providers.environmentVariable("KEY_ALIAS")
 val keyPasswordValue = providers.environmentVariable("KEY_PASSWORD")
 val storePasswordValue = providers.environmentVariable("STORE_PASSWORD")
 val releaseStore = layout.buildDirectory.file("keystore/opendictate-release.jks")
-val appVersionName = providers.gradleProperty("appVersionName").orElse("0.17.0-rc.10")
-val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(161)
+val appVersionName = providers.gradleProperty("appVersionName").orElse("0.17.0-rc.11")
+val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(162)
 val previewVersionSuffix = providers.gradleProperty("previewVersionSuffix").orElse("-preview")
 
 if (signingKey.isPresent) {
@@ -110,7 +110,6 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:3.5.2")
     implementation("net.openid:appauth:0.11.1")
     implementation("com.google.android.gms:play-services-auth:22.0.0")
-    implementation("com.google.mlkit:genai-prompt:1.0.0-beta5")
     implementation("com.google.mlkit:genai-speech-recognition:1.0.0-alpha2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")

@@ -18,9 +18,7 @@ import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.model.CommandIndicatorStage
 import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.ExternalDictationOutcome
-import com.opendictate.app.model.OnDeviceModels
 import com.opendictate.app.overlay.CommandIndicatorView
-import com.opendictate.app.ui.CommandFrontActivity
 import com.opendictate.app.ui.userMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -54,18 +52,15 @@ internal class CommandSession(
     fun start(held: Boolean) {
         current?.let { if (it.executing.value) it.cancel() else if (it.isActive) return }
         if (!settings.assistantCommandsAvailable) return
-        // On-device dictation records without a key; the command still needs Gemini Nano or OpenAI for text.
-        val onDeviceText = settings.onDeviceTextProcessing
-        val needsKey = OnDeviceModels.requiresApiKey(settings.model, cloudText = false) || !onDeviceText
-        if (needsKey && !SecureApiKeyStore(context).hasKey()) return toast(DictationError.MissingApiKey.userMessage(context.resources))
+        // On-device dictation records without a key, but the OpenAI text model decides the command.
+        if (!SecureApiKeyStore(context).hasKey()) return toast(DictationError.MissingApiKey.userMessage(context.resources))
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             return toast(DictationError.MicrophonePermission.userMessage(context.resources))
         }
-        val run = Run(held, onDeviceText)
+        val run = Run(held)
         // Android starts a background microphone only behind a visible window, so the indicator comes first.
         if (!run.showIndicator()) return toast(context.getString(R.string.command_microphone_unavailable))
         current = run
-        run.holdFront()
         run.job = scope.launch {
             try {
                 run.execute()
@@ -94,8 +89,7 @@ internal class CommandSession(
         current?.close()
     }
 
-    /** [onDeviceText] keeps an invisible OpenDictate window in front until Gemini Nano has decided. */
-    private inner class Run(val held: Boolean, private val onDeviceText: Boolean) {
+    private inner class Run(val held: Boolean) {
         var job: Job? = null
         val executing = MutableStateFlow(false)
         private var requestId: String? = null
@@ -137,10 +131,7 @@ internal class CommandSession(
             when (outcome) {
                 is ExternalDictationOutcome.Transcribed -> {
                     executing.value = true
-                    val running = AssistantCommands.run(context, outcome.text)
-                    withTimeoutOrNull(FRONT_TIMEOUT_MS) { running.decided.join() }
-                    releaseFront()
-                    running.done.join()
+                    AssistantCommands.run(context, outcome.text).join()
                 }
                 is ExternalDictationOutcome.Failed -> toast(outcome.error.userMessage(context.resources))
                 ExternalDictationOutcome.Busy -> toast(context.getString(R.string.external_dictation_busy))
@@ -159,16 +150,7 @@ internal class CommandSession(
             job?.cancel()
         }
 
-        fun holdFront() {
-            if (onDeviceText) runCatching { CommandFrontActivity.open(context, this) }.onFailure { Log.w(TAG, "Could not open command window", it) }
-        }
-
-        private fun releaseFront() {
-            if (onDeviceText) CommandFrontActivity.close(this)
-        }
-
         fun finish() {
-            releaseFront()
             requestId?.let(ExternalDictationBus::release)
             requestId = null
             executing.value = false
@@ -179,7 +161,6 @@ internal class CommandSession(
         }
 
         fun close() {
-            releaseFront()
             val view = indicator
             indicator = null
             cancel()
@@ -228,7 +209,6 @@ internal class CommandSession(
     private companion object {
         const val TAG = "OpenDictateCommand"
         const val RUNNING_SESSION_WAIT_MS = 1_000L
-        const val FRONT_TIMEOUT_MS = 30_000L
         // The ripples already leave a margin, so the button sits close below the status bar.
         const val TOP_MARGIN_DP = 2
         const val FALLBACK_STATUS_BAR_DP = 24

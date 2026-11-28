@@ -143,7 +143,7 @@ private fun ErrorHistoryRow(entry: ErrorHistoryEntry, onCopy: () -> Unit) {
                 entry.context.model?.let {
                     add(when (it) {
                         DiagnosticModel.OTHER -> stringResource(R.string.error_model_other)
-                        DiagnosticModel.NANO -> com.opendictate.app.model.OnDeviceModels.TITLE
+                        DiagnosticModel.NANO -> stringResource(R.string.settings_mode_on_device)
                         else -> it.id
                     })
                 }

@@ -516,16 +516,16 @@
     <string name="mcp_try_label">Command, as you would say it</string>
     <string name="mcp_try_hint">The outcome arrives as a notification</string>
     <string name="mcp_try_run">Run</string>
-    <!-- Gemini Nano -->
+    <!-- On-device recognition -->
     <string name="api_key_optional_on_device">Needed only for OpenAI models</string>
+    <string name="api_key_needed_or_on_device">Required for OpenAI, or choose On device</string>
     <string name="settings_mode_on_device">On device</string>
     <string name="model_on_device_description">Words appear as you speak. Audio stays on the phone.</string>
-    <string name="model_on_device_downloading">Gemini Nano is downloading. Dictation works once it finishes.</string>
-    <string name="model_on_device_unavailable">Gemini Nano is unavailable on this phone.</string>
-    <string name="text_model_on_device_hint">Over other apps, Android blocks Gemini Nano, so %1$s is used.</string>
-    <string name="text_model_on_device_downloading">Gemini Nano is downloading.</string>
-    <string name="error_on_device_unavailable">Gemini Nano is not ready. Choose another mode in settings.</string>
-    <string name="error_reason_on_device_unavailable">Gemini Nano was unavailable</string>
+    <string name="model_on_device_downloading">The speech model is downloading. Dictation works once it finishes.</string>
+    <string name="model_on_device_unavailable">This phone can’t recognize this language on its own.</string>
+    <string name="error_on_device_unavailable">On-device recognition isn’t ready. Choose another mode in settings.</string>
+    <string name="error_reason_on_device_unavailable">On-device recognition was unavailable</string>
+    <!-- Only in history entries from the removed Gemini Nano text model. -->
     <string name="error_reason_on_device_blocked">Android allows Gemini Nano only while OpenDictate is open</string>
-    <string name="error_reason_on_device_busy">Gemini Nano is busy; try again later</string>
+    <string name="error_reason_on_device_busy">On-device recognition is busy; try again later</string>
 </resources>

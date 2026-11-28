@@ -78,10 +78,7 @@ call does the model see that error and try once more.
 
 While you speak, the dictation button appears at the top of the screen. A tap on
 it also finishes the command; swiping it up or aside cancels it. It keeps
-spinning until the command has run; a swipe then only hides it. With Gemini Nano
-as the text model, an invisible OpenDictate window also stays in front until Nano
-has chosen a tool, since Android answers Nano only then; the current app's
-keyboard closes meanwhile.
+spinning until the command has run; a swipe then only hides it.
 
 Add servers under **Settings → Integrations → MCP servers**:
 
@@ -153,7 +150,7 @@ permission. Revoke access under **Control from other apps** in settings.
 
 A request records with a small panel and transcribes with the Accurate path,
 current post-processing, dictionary and replacements. When the dictation mode
-is **On device**, it uses Gemini Nano on the phone instead, with replacements
+is **On device**, it uses the phone's own recognition instead, with replacements
 and without post-processing. The panel's **Done**
 button, `DICTATION_STOP` or `DICTATION_TOGGLE` finishes it. Cancel, back or
 `DICTATION_CANCEL` discards it. The transcript is saved to history; its audio

@@ -82,7 +82,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ML Kit, which runs Gemini Nano, uploads usage statistics to Google through this backend.
+        <!-- ML Kit, which recognizes speech on the phone, uploads usage statistics to Google through this backend.
              Without it ML Kit drops them on the phone; no other library uses it. -->
         <service
             android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
@@ -93,15 +93,6 @@
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             tools:node="remove" />
 
-
-        <!-- Started only by the app: Gemini Nano answers a spoken command only while an app window is in front. -->
-        <activity
-            android:name=".ui.CommandFrontActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:noHistory="true"
-            android:taskAffinity=""
-            android:theme="@style/Theme.OpenDictate.Invisible" />
 
         <!-- Commands cannot identify senders; they only control dictation into the focused field. -->
         <receiver

@@ -4,32 +4,17 @@ import java.util.Locale
 
 enum class OnDeviceStatus { UNAVAILABLE, DOWNLOADABLE, DOWNLOADING, AVAILABLE }
 
-/** What AICore reported for this phone; [speech] is for the locale on-device dictation would use. */
-data class OnDeviceAvailability(
-    val speech: OnDeviceStatus = OnDeviceStatus.UNAVAILABLE,
-    val text: OnDeviceStatus = OnDeviceStatus.UNAVAILABLE,
-) {
-    /**
-     * AICore offering text is the sign that the phone has Gemini Nano. Recognition alone can be
-     * the older on-device model, which this app does not present as Gemini Nano.
-     */
-    val textOffered: Boolean get() = text != OnDeviceStatus.UNAVAILABLE
-    val speechOffered: Boolean get() = textOffered && speech != OnDeviceStatus.UNAVAILABLE
-}
+/** The phone can recognize speech once anything missing is downloaded; unknown until ML Kit answers. */
+val OnDeviceStatus?.offered: Boolean get() = this != null && this != OnDeviceStatus.UNAVAILABLE
 
-/**
- * Pure rules for Gemini Nano, which AICore runs on supported phones. Recognition works while
- * another app is in front; Android blocks text generation unless an OpenDictate window is.
- */
+/** Pure rules for speech recognition on the phone, which needs no key and works behind other apps. */
 object OnDeviceModels {
+    /** Stored in history and diagnostics; kept from the release that introduced the mode. */
     const val ID = "gemini-nano"
-    const val TITLE = "Gemini Nano"
-
-    fun title(modelId: String): String = if (modelId == ID) TITLE else modelId
 
     /**
      * On-device dictation needs no key. [cloudText] marks sessions that need the OpenAI text model
-     * or the Accurate path, such as voice editing: Android blocks Nano text behind other apps.
+     * or the Accurate path, such as voice editing.
      */
     fun requiresApiKey(model: TranscriptionModel, cloudText: Boolean): Boolean =
         model != TranscriptionModel.ON_DEVICE || cloudText

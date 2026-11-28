@@ -4,8 +4,8 @@ Connect Google Drive in Settings on Android and macOS, using the same Google
 account. Sync transfers the dictionary, word replacement rules and enabled
 states, post-processing rules, Live/Accurate mode and selected Live and Accurate model IDs.
 API keys, audio, transcripts/history, app exclusions and permissions are excluded. Model access still depends on each device's
-OpenAI API key and local model catalogue. Android's On device mode and Gemini Nano text model
-stay on the phone that chose them; other devices keep the synced Live/Accurate mode and text model.
+OpenAI API key and local model catalogue. Android's On device mode stays on the phone that
+chose it; other devices keep the synced Live/Accurate mode.
 
 Local changes upload automatically after **15 seconds without further edits**.
 Dictionary typing and consecutive replacement/model edits are batched into one update.
