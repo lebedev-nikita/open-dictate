@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -54,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -70,6 +72,7 @@ import com.opendictate.app.R
 import com.opendictate.app.model.McpAuth
 import com.opendictate.app.model.McpServer
 import com.opendictate.app.network.McpError
+import com.opendictate.app.service.AgentCommandTileService
 import java.util.UUID
 
 /**
@@ -107,7 +110,10 @@ internal fun McpServersScreen(
                         onToolEnabled = { tool, enabled -> onToolEnabled(server.id, tool, enabled) })
                 }
                 Button({ adding = true }, Modifier.align(Alignment.End)) { Text(stringResource(R.string.mcp_server_add)) }
-                if (servers.any { it.activeTools.isNotEmpty() }) TryCommand(onTryCommand)
+                if (servers.any { it.activeTools.isNotEmpty() }) {
+                    QuickSettingsTile()
+                    TryCommand(onTryCommand)
+                }
             }
         }
     }
@@ -186,6 +192,29 @@ private fun ServerCard(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Offers the Quick Settings tile that starts a command; older Android adds it in the panel's editor. */
+@Composable
+private fun QuickSettingsTile() {
+    val context = LocalContext.current
+    Column {
+        SectionTitle(stringResource(R.string.quick_tile_title))
+        SettingsGroup {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.quick_tile_hint), style = MaterialTheme.typography.bodyMedium)
+                    if (!AgentCommandTileService.canRequestAdd) {
+                        Text(stringResource(R.string.quick_tile_edit_hint), style = MaterialTheme.typography.bodySmall, color = SettingsMuted)
+                    }
+                }
+                if (AgentCommandTileService.canRequestAdd) {
+                    Spacer(Modifier.width(12.dp))
+                    OutlinedButton({ AgentCommandTileService.requestAdd(context) }) { Text(stringResource(R.string.quick_tile_add)) }
                 }
             }
         }

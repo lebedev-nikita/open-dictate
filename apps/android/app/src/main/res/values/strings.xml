@@ -131,6 +131,7 @@
     <string name="overlay_add_to_dictionary">Add to dictionary</string>
     <string name="overlay_paste_last">Paste last</string>
     <string name="overlay_last_dictation">Last dictation</string>
+    <string name="overlay_agent_command_description">Say a command for the AI agent</string>
     <string name="overlay_last_dictation_description">Transcribe the latest recorded dictation again</string>
     <string name="overlay_paste_last_description">Paste the latest transcript from history into this field</string>
     <string name="overlay_no_transcripts">No transcripts saved yet</string>
@@ -503,6 +504,11 @@
     <string name="mcp_server_sign_in">Sign in</string>
     <string name="mcp_server_refresh">Refresh</string>
     <string name="mcp_server_choose_tools">Choose tools</string>
+    <string name="quick_tile_title">Quick Settings</string>
+    <string name="quick_tile_hint">A tap on the tile starts a command, a second tap sends it.</string>
+    <string name="quick_tile_edit_hint">Add it while editing the Quick Settings panel.</string>
+    <string name="quick_tile_add">Add tile</string>
+    <string name="quick_tile_already_added">The tile is already in Quick Settings</string>
     <string name="mcp_try_title">Try a command</string>
     <string name="mcp_try_label">Command, as you would say it</string>
     <string name="mcp_try_hint">The outcome arrives as a notification</string>

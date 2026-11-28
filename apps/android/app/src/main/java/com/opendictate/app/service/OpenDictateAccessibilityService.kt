@@ -3,6 +3,7 @@ package com.opendictate.app.service
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -11,6 +12,7 @@ import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -156,6 +158,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             onPasteLastClick = ::onPasteLastTapped,
             onLastDictationClick = ::onLastDictationTapped,
             onAlternateDictationClick = ::onAlternateDictationTapped,
+            onAgentCommandClick = ::onAgentCommandTapped,
         )
         scope.launch {
             var wasFieldSession = false
@@ -524,6 +527,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
                 primaryOffsetY = requireNotNull(overlayLayoutParams).y,
                 showTransformation = transformationAvailable,
                 showDictionary = dictionaryAvailable,
+                showAgentCommand = settings.assistantCommandsAvailable,
             )
         } else {
             removeMenuOverlay()
@@ -534,11 +538,13 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         primaryOffsetY: Int,
         showTransformation: Boolean,
         showDictionary: Boolean,
+        showAgentCommand: Boolean,
     ) {
         val view = overlayMenu ?: return
         view.setPrimaryPostProcessingEnabled(settings.postProcessing.forMode(settings.model).enabled)
         view.setTransformationAvailable(showTransformation)
         view.setDictionaryAvailable(showDictionary)
+        view.setAgentCommandAvailable(showAgentCommand)
         val density = resources.displayMetrics.density
         val width = OverlayMotion.windowWidthPx(density, showMenu = true)
         val menuLayout = OverlayMotion.menuWindowLayout(
@@ -547,6 +553,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
             density = density,
             showTransformation = showTransformation,
             showDictionary = showDictionary,
+            showAgentCommand = showAgentCommand,
             appearance = settings.dictationButtonAppearance,
             topInsetPx = overlayTopInsetPx,
         )
@@ -642,7 +649,7 @@ class OpenDictateAccessibilityService : AccessibilityService() {
         }
 
         if (overlayMenuExpanded) {
-            showOrMoveMenuOverlay(nextOffsetY, transformationAvailable, dictionaryAvailable)
+            showOrMoveMenuOverlay(nextOffsetY, transformationAvailable, dictionaryAvailable, settings.assistantCommandsAvailable)
         }
 
         if (motion.isAtRest) {
@@ -773,6 +780,37 @@ class OpenDictateAccessibilityService : AccessibilityService() {
     private fun onAlternateDictationTapped(postProcessingEnabled: Boolean) {
         if (DictationStateBus.state.value.isActive) return
         startOrdinaryDictation(postProcessingEnabled)
+    }
+
+    /** The menu starts a spoken command; its banner at the top takes the second tap. */
+    private fun onAgentCommandTapped() {
+        if (DictationStateBus.state.value.isActive) return
+        setOverlayMenuExpanded(false)
+        commandSession?.start(held = false)
+    }
+
+    /**
+     * The Quick Settings tile starts a spoken command, or finishes the one it is listening to. The
+     * shade covers the command's banner, so it closes first.
+     */
+    internal fun toggleAgentCommandFromTile() {
+        dismissNotificationShade()
+        val session = commandSession ?: return
+        if (session.isListening) session.stop() else session.start(held = false)
+    }
+
+    internal val agentCommandListening: Boolean
+        get() = commandSession?.isListening == true
+
+    @SuppressLint("MissingPermission")
+    private fun dismissNotificationShade() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
+        } else {
+            // Android 12 restricted this broadcast; before it, any app could send it without a permission.
+            @Suppress("DEPRECATION")
+            sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
+        }
     }
 
     private fun startOrdinaryDictation(postProcessingOverride: Boolean? = null): Boolean {

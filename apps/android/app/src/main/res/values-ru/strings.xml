@@ -128,6 +128,7 @@
     <string name="overlay_add_to_dictionary">В словарь</string>
     <string name="overlay_paste_last">Вставить последнюю</string>
     <string name="overlay_last_dictation">Последняя диктовка</string>
+    <string name="overlay_agent_command_description">Произнести команду ИИ-агенту</string>
     <string name="overlay_last_dictation_description">Повторно распознать последнюю записанную диктовку</string>
     <string name="overlay_paste_last_description">Вставить последнюю транскрипцию из истории в это поле</string>
     <string name="overlay_no_transcripts">В истории пока нет транскрипций</string>
@@ -503,6 +504,11 @@
     <string name="mcp_server_sign_in">Войти</string>
     <string name="mcp_server_refresh">Обновить</string>
     <string name="mcp_server_choose_tools">Выбрать инструменты</string>
+    <string name="quick_tile_title">Быстрые настройки</string>
+    <string name="quick_tile_hint">Касание плитки начинает команду, второе отправляет её.</string>
+    <string name="quick_tile_edit_hint">Добавьте её, изменяя панель быстрых настроек.</string>
+    <string name="quick_tile_add">Добавить плитку</string>
+    <string name="quick_tile_already_added">Плитка уже в быстрых настройках</string>
     <string name="mcp_try_title">Проверить команду</string>
     <string name="mcp_try_label">Команда, как вы бы её произнесли</string>
     <string name="mcp_try_hint">Результат придёт уведомлением</string>
