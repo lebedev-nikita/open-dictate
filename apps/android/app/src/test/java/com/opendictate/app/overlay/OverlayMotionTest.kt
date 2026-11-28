@@ -219,6 +219,18 @@ class OverlayMotionTest {
     }
 
     @Test
+    fun `agent command action increases menu height by one action and gap`() {
+        val density = 3f
+        assertEquals(
+            OverlayMotion.menuHeightPx(density, true, showDictionary = true) +
+                OverlayMotion.actionHeightPx(density) + OverlayMotion.gapPx(density),
+            OverlayMotion.menuHeightPx(density, true, showDictionary = true, showAgentCommand = true),
+        )
+        val withCommand = OverlayMotion.menuWindowLayout(0, 4_000, density, false, showAgentCommand = true)
+        assertEquals(OverlayMotion.menuWindowHeightPx(density, false, showAgentCommand = true), withCommand.height)
+    }
+
+    @Test
     fun `swipe to cancel follows leftward motion and clamps its travel`() {
         val density = 2f
 

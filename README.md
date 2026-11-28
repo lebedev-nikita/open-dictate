@@ -37,6 +37,8 @@ no backend, analytics or account to create.
 - Voice-directed editing of the selection, or the whole field without a selection,
   using the shared text model (GPT-6 Luna by default).
 - Configurable Accurate post-processing with punctuation and editable value-format examples, a transcription dictionary, local history with request durations and on-device search.
+- Android AI agent commands: a spoken command calls one tool of your MCP servers. Start it
+  from a phone button, the long-press menu or a Quick Settings tile.
 - English/Russian settings, automatic speech language detection and language hints.
 - Focus guards prevent delayed text from being inserted in another field or app.
 - Optional [ChatGPT plan usage](docs/chatgpt-plan.md) for Luna text processing; transcription still requires an API key.

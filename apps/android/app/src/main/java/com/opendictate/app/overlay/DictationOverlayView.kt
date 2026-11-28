@@ -94,6 +94,7 @@ class DictationOverlayMenuView(
     onPasteLastClick: () -> Unit,
     onLastDictationClick: () -> Unit,
     onAlternateDictationClick: (Boolean) -> Unit,
+    onAgentCommandClick: () -> Unit,
 ) : ScrollView(context) {
     private val density = resources.displayMetrics.density
     private val actions = LinearLayout(context).apply {
@@ -103,6 +104,7 @@ class DictationOverlayMenuView(
     }
     private var transformationAvailable: Boolean? = null
     private var dictionaryAvailable: Boolean? = null
+    private var agentCommandAvailable: Boolean? = null
     private var alternatePostProcessingEnabled = true
     private val alternateDictationButton = OverlayMenuActionView(
         context = context,
@@ -138,6 +140,13 @@ class DictationOverlayMenuView(
         iconResource = R.drawable.ic_mic_chatgpt_24,
         labelResource = R.string.overlay_last_dictation,
         descriptionResource = R.string.overlay_last_dictation_description,
+    )
+    private val agentCommandButton = OverlayMenuActionView(
+        context = context,
+        onClick = onAgentCommandClick,
+        iconResource = R.drawable.ic_agent_command_24,
+        labelResource = R.string.button_action_agent_command,
+        descriptionResource = R.string.overlay_agent_command_description,
     )
     init {
         isHorizontalScrollBarEnabled = false
@@ -183,8 +192,11 @@ class DictationOverlayMenuView(
         )
         actions.addView(alternateDictationButton,
             LinearLayout.LayoutParams(OverlayMotion.widthPx(density, showMenu = true), OverlayMotion.actionHeightPx(density)))
+        actions.addView(agentCommandButton,
+            LinearLayout.LayoutParams(OverlayMotion.widthPx(density, showMenu = true), OverlayMotion.actionHeightPx(density)))
         setTransformationAvailable(false)
         setDictionaryAvailable(false)
+        setAgentCommandAvailable(false)
     }
 
     fun render(state: DictationState) {
@@ -193,6 +205,7 @@ class DictationOverlayMenuView(
         transformationButton.render(state)
         pasteLastButton.render(state)
         dictionaryButton.render(state)
+        agentCommandButton.render(state)
     }
 
     fun setPrimaryPostProcessingEnabled(enabled: Boolean) {
@@ -213,6 +226,17 @@ class DictationOverlayMenuView(
         dictionaryAvailable = available
         dictionaryButton.visibility = if (available) VISIBLE else GONE
         updateTrailingButtons()
+    }
+
+    /** The AI agent command needs a tool of an MCP server to call. */
+    fun setAgentCommandAvailable(available: Boolean) {
+        if (agentCommandAvailable == available) return
+        agentCommandAvailable = available
+        agentCommandButton.visibility = if (available) VISIBLE else GONE
+        (alternateDictationButton.layoutParams as LinearLayout.LayoutParams).apply {
+            bottomMargin = if (available) OverlayMotion.gapPx(density) else 0
+            alternateDictationButton.layoutParams = this
+        }
     }
 
     private fun updateTrailingButtons() {

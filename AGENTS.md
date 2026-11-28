@@ -65,8 +65,10 @@ logged, releases. `ButtonGestureRecognizer` waits only for gestures bound on the
 button; the accessibility service runs the actions, and the agent command runs in
 `CommandSession` and ends on release after a hold. One banner at the top shows
 the command from its recording to its outcome; Android starts a background
-microphone only behind a visible window, so the banner comes first. The button
-above the keyboard never shows a command. An outcome swiped up, or left alone,
+microphone only behind a visible window, so the banner comes first. The
+long-press menu and `AgentCommandTileService` (Quick Settings, which closes the
+shade first) start the same command; a second tap of the tile or the banner's
+stop finishes it. The button above the keyboard never shows a command. An outcome swiped up, or left alone,
 moves to the agent's notification; swiped aside it closes. Keep the log out of the app otherwise: no reader
 without a bound button, and no unfiltered reader outside binding.
 
