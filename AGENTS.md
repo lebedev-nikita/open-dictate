@@ -70,10 +70,14 @@ above the keyboard never shows a command. An outcome swiped up, or left alone,
 moves to the agent's notification; swiped aside it closes. Keep the log out of the app otherwise: no reader
 without a bound button, and no unfiltered reader outside binding.
 
-`AssistantCommands` carries out a spoken command: one text-model request with the
-enabled tools of the user's MCP servers (`AssistantCommand`), then one tool call
-through `McpClient` (MCP Kotlin SDK over Streamable HTTP), reported as a
-notification. Only an error answer returns to the model, once, to correct the call. `McpSignIn` signs in with AppAuth and a loopback redirect.
+`AssistantCommands` carries out a spoken command with `AssistantAgent`, a Koog
+agent over the enabled tools of the user's MCP servers (`AssistantCommand`). The
+model may call several tools in one turn, which run in parallel, or call them one
+after another; every answer returns to the model until it replies in words, within
+`MAX_ROUNDS` turns and `MAX_CALLS` calls. Koog's OpenAI client builds the Responses
+requests, `OpenAiTranscriptionClient` sends them on the key or plan route, and tools
+run through `McpClient` (MCP Kotlin SDK over Streamable HTTP). Koog logs prompts and
+tool data through SLF4J: keep `slf4j-simple` excluded so SLF4J has no provider. `McpSignIn` signs in with AppAuth and a loopback redirect.
 Servers and tool lists live in `SettingsStore`, tokens in `McpSecrets`; never log
 commands, tool arguments, tool answers or tokens.
 

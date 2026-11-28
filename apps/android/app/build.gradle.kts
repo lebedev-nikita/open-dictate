@@ -10,8 +10,8 @@ val keyAliasValue = providers.environmentVariable("KEY_ALIAS")
 val keyPasswordValue = providers.environmentVariable("KEY_PASSWORD")
 val storePasswordValue = providers.environmentVariable("STORE_PASSWORD")
 val releaseStore = layout.buildDirectory.file("keystore/opendictate-release.jks")
-val appVersionName = providers.gradleProperty("appVersionName").orElse("0.17.0-rc.13")
-val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(164)
+val appVersionName = providers.gradleProperty("appVersionName").orElse("0.17.0-rc.14")
+val appVersionCode = providers.gradleProperty("appVersionCode").map(String::toInt).orElse(165)
 val previewVersionSuffix = providers.gradleProperty("previewVersionSuffix").orElse("-preview")
 
 if (signingKey.isPresent) {
@@ -88,6 +88,12 @@ android {
     testOptions.unitTests.isIncludeAndroidResources = true
 }
 
+configurations.configureEach {
+    // Koog brings slf4j-simple, which would print its log lines, with tool arguments and answers,
+    // to logcat. Without it SLF4J discards them.
+    exclude(group = "org.slf4j", module = "slf4j-simple")
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
     implementation(composeBom)
@@ -106,8 +112,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("io.arrow-kt:arrow-core:2.2.3")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    // Koog runs spoken commands as an agent: tool calls, their results and the next model turn.
+    implementation("ai.koog:agents-core:1.3.0")
     implementation("io.modelcontextprotocol:kotlin-sdk-client:0.16.0")
-    implementation("io.ktor:ktor-client-okhttp:3.5.2")
+    // Koog and the MCP SDK share Ktor; one version keeps their modules binary compatible.
+    implementation(platform("io.ktor:ktor-bom:3.5.2"))
+    implementation("io.ktor:ktor-client-okhttp")
     implementation("net.openid:appauth:0.11.1")
     implementation("com.google.android.gms:play-services-auth:22.0.0")
     implementation("com.google.mlkit:genai-speech-recognition:1.0.0-alpha2")

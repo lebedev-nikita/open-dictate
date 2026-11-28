@@ -250,10 +250,16 @@ from the app's own screen. A press toggles dictation into the focused field unde
 the usual guards. Any app that can write the same log line can trigger a press,
 but not read the result.
 
-Spoken commands send a transcript and the enabled tools of the user's MCP servers
-to the text model in one request with `store: false`, then make one tool call
-from the phone. A successful answer is not sent back to the model; an error
-answer is sent once, cut to 1000 characters, so the model can correct its call.
+Spoken commands run as an agent. The transcript and the enabled tools of the
+user's MCP servers go to the text model with `store: false`; the phone makes the
+tool calls the model asks for, several at once when they are independent, and
+sends each answer back, cut to 8000 characters, until the model replies in words.
+A command makes at most 6 rounds of calls and 12 calls in all. Tool answers
+therefore reach OpenAI, and one tool's answer can steer the model's next calls
+among the enabled tools: the model is told to treat answers as data, but tools
+should be enabled together only when the user trusts them with each other's data.
+Koog, which runs the agent, logs through SLF4J; `slf4j-simple` is excluded, so
+SLF4J has no provider and discards those lines.
 The banner and the notification open only an `https://` link from the tool's answer. A double
 press records only while the app's own accessibility overlay shows the
 command's banner at the top; it takes no focus. The command's words and outcome

@@ -8,13 +8,9 @@ import arrow.core.raise.ensure
 import arrow.core.right
 import com.opendictate.app.audio.PcmAudioRecorder
 import com.opendictate.app.data.transcriptionKeywords
-import com.opendictate.app.model.AssistantCommand
-import com.opendictate.app.model.AssistantDecision
-import com.opendictate.app.model.AssistantFunction
 import com.opendictate.app.model.DiagnosticException
 import com.opendictate.app.model.DictationError
 import com.opendictate.app.model.DictationLanguage
-import com.opendictate.app.model.FailedCall
 import com.opendictate.app.model.ErrorReason
 import com.opendictate.app.model.FailureDetails
 import com.opendictate.app.model.ModelCatalog
@@ -158,22 +154,10 @@ class OpenAiTranscriptionClient(
             }
         }
 
-    /** Asks the text model which tool carries out a spoken command; see [AssistantCommand]. */
-    internal suspend fun assistantDecision(
-        apiKey: String,
-        command: String,
-        functions: List<AssistantFunction>,
-        modelId: String = TextProcessingModel.ID,
-        chatGPTAccount: String? = null,
-        failed: FailedCall? = null,
-    ): Either<DictationError, AssistantDecision> =
+    /** Sends one turn of a spoken command to the text model; see [AssistantAgent]. */
+    internal suspend fun assistantResponse(apiKey: String, body: JSONObject, chatGPTAccount: String? = null): Either<DictationError, JSONObject> =
         withTimeoutOrNull(TRANSFORMATION_TIMEOUT_MS) {
-            withContext(Dispatchers.IO) {
-                either {
-                    val body = textResponse(apiKey, AssistantCommand.request(command, functions, modelId, failed), chatGPTAccount).bind()
-                    requestAttempt { AssistantCommand.decision(body, functions) }.bind()
-                }
-            }
+            withContext(Dispatchers.IO) { textResponse(apiKey, body, chatGPTAccount) }
         } ?: DictationError.Timeout.left()
 
     private suspend fun textResponse(apiKey: String, body: JSONObject, account: String?): Either<DictationError, JSONObject> {

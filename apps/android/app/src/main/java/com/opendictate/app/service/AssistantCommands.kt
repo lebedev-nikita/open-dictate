@@ -14,13 +14,14 @@ import com.opendictate.app.data.McpSecrets
 import com.opendictate.app.data.SecureApiKeyStore
 import com.opendictate.app.data.SettingsStore
 import com.opendictate.app.model.AssistantCommand
-import com.opendictate.app.model.AssistantDecision
-import com.opendictate.app.model.AssistantFunction
 import com.opendictate.app.model.DictationError
-import com.opendictate.app.model.FailedCall
+import com.opendictate.app.model.McpServer
+import com.opendictate.app.network.AssistantAgent
+import com.opendictate.app.network.AssistantRun
 import com.opendictate.app.network.McpClient
 import com.opendictate.app.network.McpError
 import com.opendictate.app.network.OpenAiTranscriptionClient
+import com.opendictate.app.network.ToolCallOutcome
 import com.opendictate.app.ui.userMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -30,10 +31,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * Carries out a spoken command: one request to the text model with the enabled tools of the user's
- * MCP servers, then one tool call. If the server refuses the call, the model sees that error once
- * and may correct it. The caller shows the outcome in its banner or the notification; the command
- * and the tool's answer are never logged.
+ * Carries out a spoken command with [AssistantAgent]: the text model sees the enabled tools of the
+ * user's MCP servers, calls several at once or one after another, reads their answers and closes
+ * with a sentence. The caller shows the outcome in its banner or the notification; the command,
+ * the tools' arguments and answers are never logged.
  */
 internal object AssistantCommands {
     private const val CHANNEL_ID = "assistant_commands"
@@ -85,41 +86,50 @@ internal object AssistantCommands {
             ?: return Report(failed, DictationError.MissingApiKey.userMessage(context.resources))
         val chatGPT = (context as OpenDictateApplication).chatGPT
         val client = OpenAiTranscriptionClient(chatGPT)
-        fun action(function: AssistantFunction) = context.getString(R.string.assistant_action, function.server.name, function.tool.name)
-        fun refused(call: FailedCall) = Report(context.getString(R.string.assistant_tool_error, action(call.function)),
-            call.error.take(MAX_RESULT_LENGTH).ifBlank { context.getString(R.string.mcp_error_failed, call.function.server.name) })
-        var failedCall: FailedCall? = null
-        // The second round exists only to let the model correct a call the server refused.
-        repeat(2) {
-            val decision = client.assistantDecision(apiKey, command, functions, settings.textProcessingModel, chatGPT.activeAccount(), failedCall)
-                // Without a second answer the refusal is the outcome.
-                .fold({ error -> return failedCall?.let(::refused) ?: Report(failed, error.userMessage(context.resources)) }, { it })
-            val call = when (decision) {
-                AssistantDecision.Nothing -> return Report(failed, context.getString(R.string.assistant_no_action))
-                is AssistantDecision.Reply -> return Report(context.getString(R.string.assistant_reply), decision.text)
-                is AssistantDecision.Call -> decision
-            }
-            val server = call.function.server
-            val result = McpClient().callTool(server, McpSecrets(context).token(server), call.function.tool.name, call.argumentsJson).fold(
-                { error ->
-                    return Report(failed, when (error) {
-                        McpError.SignInNeeded -> context.getString(R.string.mcp_error_sign_in, server.name)
-                        is McpError.Unreachable -> context.getString(R.string.mcp_error_unreachable, server.name)
-                        is McpError.Failed -> context.getString(R.string.mcp_error_failed, server.name)
-                    })
-                },
-                { it },
-            )
-            val answer = AssistantCommand.answer(result.text)
-            if (!result.isError) {
-                return Report(action(call.function), answer.text?.take(MAX_RESULT_LENGTH)
-                    ?: context.getString(if (answer.link != null) R.string.assistant_done_open else R.string.assistant_done), answer.link)
-            }
-            val refusal = FailedCall(call.function, call.argumentsJson, answer.text ?: result.text)
-            if (failedCall != null) return refused(refusal)
-            failedCall = refusal
+        val account = chatGPT.activeAccount()
+        val secrets = McpSecrets(context)
+        val mcp = McpClient()
+        val run = AssistantAgent(
+            functions = functions,
+            modelId = settings.textProcessingModel,
+            send = { body -> client.assistantResponse(apiKey, body, account) },
+            callTool = { function, arguments -> mcp.callTool(function.server, secrets.token(function.server), function.tool.name, arguments) },
+        ).run(command)
+        return report(context, run)
+    }
+
+    /**
+     * The outcome as the user sees it: the actions that worked, the model's closing sentence, and the
+     * last link a tool answered with. Without a working action, the first failure explains itself.
+     */
+    private fun report(context: Context, run: AssistantRun): Report {
+        fun actions(calls: List<ToolCallOutcome>) = calls.map {
+            context.getString(R.string.assistant_action, it.function.server.name, it.function.tool.name)
+        }.distinct().joinToString(", ")
+        val reply = run.reply.getOrNull()?.takeIf(String::isNotBlank)?.take(MAX_RESULT_LENGTH)
+        val failed = context.getString(R.string.assistant_failed)
+        if (run.calls.isEmpty()) {
+            if (reply != null) return Report(context.getString(R.string.assistant_reply), reply)
+            return Report(failed, run.reply.fold({ it.userMessage(context.resources) }, { context.getString(R.string.assistant_no_action) }))
         }
-        return Report(failed, context.getString(R.string.assistant_no_action))
+        val done = run.calls.filterNot { it.isError }
+        if (done.isEmpty()) {
+            val first = run.calls.first()
+            val server = first.function.server
+            val text = first.error?.let { mcpMessage(context, it, server) } ?: reply
+                ?: first.answer.text?.take(MAX_RESULT_LENGTH) ?: context.getString(R.string.mcp_error_failed, server.name)
+            return Report(context.getString(R.string.assistant_tool_error, actions(run.calls)), text)
+        }
+        val link = done.mapNotNull { it.answer.link }.lastOrNull()
+        val text = reply ?: done.singleOrNull()?.answer?.text?.take(MAX_RESULT_LENGTH)
+            ?: context.getString(if (link != null) R.string.assistant_done_open else R.string.assistant_done)
+        return Report(actions(done), text, link)
+    }
+
+    private fun mcpMessage(context: Context, error: McpError, server: McpServer) = when (error) {
+        McpError.SignInNeeded -> context.getString(R.string.mcp_error_sign_in, server.name)
+        is McpError.Unreachable -> context.getString(R.string.mcp_error_unreachable, server.name)
+        is McpError.Failed -> context.getString(R.string.mcp_error_failed, server.name)
     }
 
     /** An [ongoing] notification spins only until it has words: a collapsed one shows either, and words matter more. */

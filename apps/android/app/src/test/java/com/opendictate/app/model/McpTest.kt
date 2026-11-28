@@ -69,73 +69,38 @@ class McpTest {
     }
 
     @Test
-    fun requestOffersEnabledToolsAndAsksForOneCall() {
-        val functions = AssistantCommand.functions(listOf(code.copy(enabledTools = setOf("t3_thread_launch"))))
-        val request = AssistantCommand.request("Запусти тред про тесты", functions, "gpt-6-luna")
-        assertEquals("gpt-6-luna", request.getString("model"))
-        assertEquals("Запусти тред про тесты", request.getString("input"))
-        assertFalse(request.getBoolean("store"))
-        assertFalse(request.getBoolean("parallel_tool_calls"))
-        assertEquals(1, request.getJSONArray("tools").length())
-        val offered = request.getJSONArray("tools").getJSONObject(0)
-        assertEquals("function", offered.getString("type"))
-        assertEquals("s1_t3_thread_launch", offered.getString("name"))
-        assertEquals("[T3 Code] Does t3_thread_launch", offered.getString("description"))
-        assertFalse(offered.getBoolean("strict"))
-        assertEquals("string", offered.getJSONObject("parameters").getJSONObject("properties").getJSONObject("prompt").getString("type"))
-    }
-
-    @Test
     fun aToolWithoutASchemaStillGetsAnObjectSchema() {
-        val server = McpServer("e", "Bare", "https://bare.example/mcp").withTools(listOf(McpTool("ping", "", "")))
-        val parameters = AssistantCommand.request("ping", AssistantCommand.functions(listOf(server)), "m")
-            .getJSONArray("tools").getJSONObject(0).getJSONObject("parameters")
+        val parameters = AssistantCommand.parameters("")
         assertEquals("object", parameters.getString("type"))
         assertEquals(0, parameters.getJSONObject("properties").length())
+        val written = AssistantCommand.parameters("""{"properties":{"room":{"type":"string","enum":["кухня","спальня"]}}}""")
+        assertEquals("object", written.getString("type"))
+        assertEquals(2, written.getJSONObject("properties").getJSONObject("room").getJSONArray("enum").length())
     }
 
     @Test
-    fun aFunctionCallBecomesACallOfItsTool() {
-        val functions = AssistantCommand.functions(listOf(code, home))
-        val response = JSONObject("""{"output":[{"type":"reasoning"},{"type":"function_call","call_id":"c1","name":"s2_light_turn_on","arguments":"{\"prompt\":\"кухня\"}"}]}""")
-        val decision = AssistantCommand.decision(response, functions) as AssistantDecision.Call
-        assertEquals("light.turn_on", decision.function.tool.name)
-        assertEquals("Home", decision.function.server.name)
-        assertEquals("кухня", JSONObject(decision.argumentsJson).getString("prompt"))
+    fun functionToolsAreNotStrictUnlessTheySaySo() {
+        val request = JSONObject("""{"tools":[{"type":"function","name":"a"},{"type":"function","name":"b","strict":true},{"type":"web_search"}]}""")
+        val tools = AssistantCommand.withLenientTools(request).getJSONArray("tools")
+        assertFalse(tools.getJSONObject(0).getBoolean("strict"))
+        assertTrue(tools.getJSONObject(1).getBoolean("strict"))
+        assertFalse(tools.getJSONObject(2).has("strict"))
+        assertEquals(JSONObject("{}").toString(), AssistantCommand.withLenientTools(JSONObject("{}")).toString())
     }
 
     @Test
-    fun wordsWithoutACallAreAReply() {
-        val response = JSONObject("""{"output":[{"type":"message","content":[{"type":"output_text","text":"Нет подходящего инструмента."}]}]}""")
-        assertEquals(AssistantDecision.Reply("Нет подходящего инструмента."), AssistantCommand.decision(response, emptyList()))
-    }
-
-    @Test
-    fun anUnknownFunctionOrAnEmptyAnswerIsNothing() {
-        val unknown = JSONObject("""{"output":[{"type":"function_call","name":"s9_other","arguments":"{}"}]}""")
-        assertEquals(AssistantDecision.Nothing, AssistantCommand.decision(unknown, AssistantCommand.functions(listOf(code))))
-        assertEquals(AssistantDecision.Nothing, AssistantCommand.decision(JSONObject("{}"), emptyList()))
-    }
-
-    @Test
-    fun aRefusedCallIsShownToTheModelOnce() {
-        val functions = AssistantCommand.functions(listOf(code))
-        // Seen with T3 Code: a thread launched from outside a thread needs a project or none at all.
-        val failed = FailedCall(functions[0], """{"title":"ping"}""", "Pass projectId: this MCP client is not running inside a T3 thread.")
-        val input = AssistantCommand.request("создай новый thread с текстом ping", functions, "m", failed).getJSONArray("input")
-        assertEquals(2, input.length())
-        assertEquals("создай новый thread с текстом ping", input.getJSONObject(0).getString("content"))
-        val note = input.getJSONObject(1).getString("content")
-        assertTrue(note.contains("s1_t3_thread_launch({\"title\":\"ping\"})"))
-        assertTrue(note.contains("Pass projectId"))
+    fun aLongToolAnswerIsCutForTheModel() {
+        assertEquals(8_000, AssistantCommand.toolOutput("x".repeat(20_000)).length)
+        assertEquals("(empty answer)", AssistantCommand.toolOutput(" "))
+        assertEquals("ok", AssistantCommand.toolOutput("ok"))
     }
 
     @Test
     fun theUsersNotesAboutServersReachTheModel() {
         val noted = code.copy(hint = "When no project is named, pass scratch: true.")
-        val instructions = AssistantCommand.request("ping", AssistantCommand.functions(listOf(noted, home)), "m").getString("instructions")
+        val instructions = AssistantCommand.instructions(AssistantCommand.functions(listOf(noted, home)))
         assertTrue(instructions.endsWith("- T3 Code: When no project is named, pass scratch: true."))
-        assertFalse(AssistantCommand.request("ping", AssistantCommand.functions(listOf(code)), "m").getString("instructions").contains("Notes from the user"))
+        assertFalse(AssistantCommand.instructions(AssistantCommand.functions(listOf(code))).contains("Notes from the user"))
         assertEquals(noted, McpServer.listFromJson(McpServer.listToJson(listOf(noted))).single())
     }
 
