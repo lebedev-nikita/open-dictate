@@ -174,9 +174,8 @@ fun OpenDictateApp(viewModel: MainViewModel = viewModel()) {
                 HardwareButtonScreen(
                     state = state,
                     onBack = { showHardwareButton = false },
-                    onBindKey = viewModel::setDictationKey,
-                    onLearned = viewModel::setLogButtonSignature,
-                    onUnbind = viewModel::unbindHardwareButton,
+                    onBind = viewModel::bindButton,
+                    onUnbind = viewModel::unbindButton,
                     onMcpServers = { showMcpServers = true },
                     modifier = Modifier.padding(padding),
                 )

@@ -8,6 +8,7 @@ import com.opendictate.app.model.AppFilter
 import com.opendictate.app.model.AppFilterMode
 import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.AppTheme
+import com.opendictate.app.model.ButtonBindings
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.LogButtonSignature
 import com.opendictate.app.model.McpServer
@@ -47,35 +48,39 @@ class SettingsStore(context: Context) {
             putString(KEY_BUTTON_POSITION, value.position.name)
         }
 
-    /** Hardware key that dictates while held in a text field; 0 when none is bound. Device-local. */
-    var dictationKeyCode: Int
-        get() = prefs.getInt(KEY_DICTATION_KEY_CODE, 0)
-        set(value) = prefs.edit { putInt(KEY_DICTATION_KEY_CODE, value) }
+    /**
+     * Which phone button and gesture run each action. Device-local. The single button bound before
+     * actions were chosen is moved here once.
+     */
+    var buttonBindings: ButtonBindings
+        get() {
+            prefs.getString(KEY_BUTTON_BINDINGS, null)?.let { return ButtonBindings.fromJson(it) }
+            val legacyTag = prefs.getString(KEY_LOG_BUTTON_TAG, null)
+            val legacyMessage = prefs.getString(KEY_LOG_BUTTON_MESSAGE, null)
+            val legacyKey = prefs.getInt(KEY_DICTATION_KEY_CODE, 0)
+            if (legacyKey == 0 && legacyTag == null) return ButtonBindings()
+            val signature = if (legacyTag != null && legacyMessage != null) {
+                LogButtonSignature(legacyTag, legacyMessage, prefs.getBoolean(KEY_LOG_BUTTON_RELEASE, false))
+            } else {
+                null
+            }
+            return ButtonBindings.fromLegacy(legacyKey, signature).also { buttonBindings = it }
+        }
+        set(value) = prefs.edit {
+            putString(KEY_BUTTON_BINDINGS, value.toJson())
+            remove(KEY_DICTATION_KEY_CODE)
+            remove(KEY_LOG_BUTTON_TAG)
+            remove(KEY_LOG_BUTTON_MESSAGE)
+            remove(KEY_LOG_BUTTON_RELEASE)
+        }
 
-    fun observeDictationKey(onChange: (Int) -> Unit): Closeable {
+    fun observeButtonBindings(onChange: (ButtonBindings) -> Unit): Closeable {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == null || key == KEY_DICTATION_KEY_CODE) onChange(dictationKeyCode)
+            if (key == null || key == KEY_BUTTON_BINDINGS) onChange(buttonBindings)
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-
-    /** The log line of a button that Android hides from apps; null when none is bound. Device-local. */
-    var logButtonSignature: LogButtonSignature?
-        get() {
-            val tag = prefs.getString(KEY_LOG_BUTTON_TAG, null) ?: return null
-            val message = prefs.getString(KEY_LOG_BUTTON_MESSAGE, null) ?: return null
-            return LogButtonSignature(tag, message, prefs.getBoolean(KEY_LOG_BUTTON_RELEASE, false))
-        }
-        set(value) = prefs.edit {
-            if (value == null) {
-                remove(KEY_LOG_BUTTON_TAG); remove(KEY_LOG_BUTTON_MESSAGE); remove(KEY_LOG_BUTTON_RELEASE)
-            } else {
-                putString(KEY_LOG_BUTTON_TAG, value.tag)
-                putString(KEY_LOG_BUTTON_MESSAGE, value.message)
-                putBoolean(KEY_LOG_BUTTON_RELEASE, value.releaseLogged)
-            }
-        }
 
     /** MCP servers for spoken commands, with the tools each last offered. Device-local, never synced. */
     var mcpServers: List<McpServer>
@@ -88,14 +93,6 @@ class SettingsStore(context: Context) {
     /** Whether a spoken command has any tool to call; read on every button press. */
     val assistantCommandsAvailable: Boolean
         get() = prefs.getBoolean(KEY_MCP_COMMANDS, false)
-
-    fun observeLogButton(onChange: () -> Unit): Closeable {
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == null || key.startsWith(LOG_BUTTON_PREFIX)) onChange()
-        }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-        return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }
 
     /** When false, the button above the keyboard appears only while a session runs. */
     var floatingButtonVisible: Boolean
@@ -347,10 +344,10 @@ class SettingsStore(context: Context) {
         private val APP_FILTER_KEYS = setOf(KEY_APP_FILTER_MODE, KEY_EXCLUDED_PACKAGES, KEY_ALLOWED_PACKAGES)
         private const val KEY_DICTATION_KEY_CODE = "dictation_key_code"
         private const val KEY_FLOATING_BUTTON_VISIBLE = "floating_button_visible"
-        private const val LOG_BUTTON_PREFIX = "log_button_"
-        private const val KEY_LOG_BUTTON_TAG = LOG_BUTTON_PREFIX + "tag"
-        private const val KEY_LOG_BUTTON_MESSAGE = LOG_BUTTON_PREFIX + "message"
-        private const val KEY_LOG_BUTTON_RELEASE = LOG_BUTTON_PREFIX + "release"
+        private const val KEY_LOG_BUTTON_TAG = "log_button_tag"
+        private const val KEY_LOG_BUTTON_MESSAGE = "log_button_message"
+        private const val KEY_LOG_BUTTON_RELEASE = "log_button_release"
+        private const val KEY_BUTTON_BINDINGS = "button_bindings"
         private const val KEY_MCP_SERVERS = "mcp_servers"
         private const val KEY_MCP_COMMANDS = "mcp_commands_available"
         private const val KEY_EXTERNAL_DICTATION_PACKAGES = "external_dictation_packages"

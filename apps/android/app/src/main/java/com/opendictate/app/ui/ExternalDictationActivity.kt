@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.opendictate.app.R
 import com.opendictate.app.model.ExternalCallerAccess
 import com.opendictate.app.model.ExternalDictationContract
@@ -61,6 +62,9 @@ import com.opendictate.app.model.ExternalDictationOutcome
 import com.opendictate.app.model.externalCallerAccess
 import com.opendictate.app.model.toResult
 import com.opendictate.app.service.AssistantCommands
+import com.opendictate.app.service.CommandButtonHold
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * Answers `android.speech.action.RECOGNIZE_SPEECH` for apps the user allowed. The result goes back
@@ -134,8 +138,8 @@ class ExternalDictationActivity : DictationPanelActivity() {
 }
 
 /**
- * Dictates a command after a button's double press and hands the text to [AssistantCommands], which
- * asks the model for a tool and calls it. Only the app itself can start it.
+ * Dictates a command for the AI agent, started by a phone button, and hands the text to
+ * [AssistantCommands], which asks the model for a tool and calls it. Only the app itself can start it.
  */
 class CommandDictationActivity : DictationPanelActivity() {
     override val waitsForRunningSession = true
@@ -144,6 +148,22 @@ class CommandDictationActivity : DictationPanelActivity() {
         super.onCreate(savedInstanceState)
         if (!settings.assistantCommandsAvailable) return abandon()
         if (!restoreRequest(savedInstanceState)) startWhenResumed()
+        val panel = intent.getLongExtra(EXTRA_PANEL, 0L)
+        val held = intent.getBooleanExtra(EXTRA_WHILE_HELD, false)
+        if (panel != 0L) {
+            lifecycleScope.launch {
+                val signal = CommandButtonHold.signal.first { signal ->
+                    signal != null && signal.panel == panel &&
+                        (signal.kind == CommandButtonHold.Kind.CANCELLED || held && signal.kind == CommandButtonHold.Kind.RELEASED)
+                }
+                when {
+                    signal?.kind == CommandButtonHold.Kind.CANCELLED -> cancel()
+                    // A button released before recording began leaves nothing to send.
+                    isRecording -> stopRecording()
+                    else -> cancel()
+                }
+            }
+        }
         showPanel { processing ->
             ExternalDictationPanel(
                 destination = stringResource(R.string.assistant_command_destination),
@@ -160,6 +180,14 @@ class CommandDictationActivity : DictationPanelActivity() {
 
     override fun deliver(outcome: ExternalDictationOutcome) {
         if (outcome is ExternalDictationOutcome.Transcribed) AssistantCommands.run(applicationContext, outcome.text)
+    }
+
+    companion object {
+        /** The [CommandButtonHold] number of the panel, whose signals it follows. */
+        const val EXTRA_PANEL = "com.opendictate.app.extra.COMMAND_PANEL"
+
+        /** The command ends when the button comes up. */
+        const val EXTRA_WHILE_HELD = "com.opendictate.app.extra.WHILE_HELD"
     }
 }
 

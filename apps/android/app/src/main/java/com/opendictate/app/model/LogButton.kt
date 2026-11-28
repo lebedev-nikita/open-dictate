@@ -41,21 +41,23 @@ data class LogButtonSignature(val tag: String, val message: String, val releaseL
     }
 }
 
-/** Turns the lines of a learned button into presses. */
+enum class LogButtonEdge { PRESS, RELEASE }
+
+/** Turns the lines of a learned button into presses and, when they are logged, releases. */
 class LogPressDetector(private val releaseLogged: Boolean) {
     private var lastLineMs: Long? = null
     private var awaitedReleaseOfMs: Long? = null
 
-    /** Returns true when the line logged at [timeMs] begins a new press. */
-    fun onLine(timeMs: Long): Boolean {
+    /** Returns what the line logged at [timeMs] begins, or null for another line of the same event. */
+    fun onLine(timeMs: Long): LogButtonEdge? {
         val sameBurst = lastLineMs?.let { LogLine.gapMs(it, timeMs) <= BURST_GAP_MS } == true
         lastLineMs = timeMs
-        if (sameBurst) return false
+        if (sameBurst) return null
         val pressedAt = awaitedReleaseOfMs
         awaitedReleaseOfMs = null
-        if (pressedAt != null && LogLine.gapMs(pressedAt, timeMs) <= RELEASE_TIMEOUT_MS) return false
+        if (pressedAt != null && LogLine.gapMs(pressedAt, timeMs) <= RELEASE_TIMEOUT_MS) return LogButtonEdge.RELEASE
         if (releaseLogged) awaitedReleaseOfMs = timeMs
-        return true
+        return LogButtonEdge.PRESS
     }
 
     companion object {
@@ -63,10 +65,10 @@ class LogPressDetector(private val releaseLogged: Boolean) {
         const val BURST_GAP_MS = 25L
 
         /**
-         * Nobody holds a button this long, so a later line is a new press. This also recovers the
-         * order of presses and releases after a line was missed.
+         * A hold that dictates a command lasts no longer, so a later line is a new press. This also
+         * recovers the order of presses and releases after a line was missed.
          */
-        const val RELEASE_TIMEOUT_MS = 10_000L
+        const val RELEASE_TIMEOUT_MS = 60_000L
     }
 }
 

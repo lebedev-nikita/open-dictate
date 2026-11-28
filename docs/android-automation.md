@@ -34,24 +34,41 @@ that line. Reading the log needs a permission that only adb can grant:
 adb shell pm grant com.opendictate.app android.permission.READ_LOGS
 ```
 
-After that, **Settings → Dictation button → Hardware button → Bind a button**
-also finds such buttons. Follow its three steps: press the button three times,
-press both volume buttons, then try the button. OpenDictate finds the line that
-only your button leaves, and the last step names each press as the app
-understands it. A button that Android does report as a key is bound by its first
-press instead, and works by holding.
+## Phone buttons
 
-A press of a button found this way starts dictation into the focused text field
-and the next press finishes it, with or without an open keyboard.
+**Settings → Dictation button → Phone buttons** lists the actions a button can
+run: dictation, dictation with the opposite post-processing setting, editing
+text by voice, and a command for the AI agent. Choose a button and a gesture for
+each:
+
+- **Press** starts the action; the next press of a bound button finishes it.
+- **Hold** runs the action until you let go.
+- **Double press** starts the action; the next press finishes it. When the same
+  button also has a press, the press starts at once and a second press soon
+  after replaces it.
+
+Each gesture of a button runs one action, and several buttons can be bound. A
+button that Android reports as a key is bound by its first press under
+**Another button**. Volume buttons work by holding, so a short press still
+changes the volume, and a key works as usual when none of its actions can start.
+Field actions start with or without an open keyboard when a button found in the
+log runs them.
+
+With log access, **Another button** also finds a button that Android hides.
+Follow its three steps: press the button three times, press both volume buttons,
+then try the button. OpenDictate finds the line that only your button leaves,
+and the last step names each gesture and the action it runs. A button that
+leaves no line when it comes up cannot be held.
 
 Android asks to allow log access each time the app starts reading, and only
 while the app is open. After a restart of the phone or the app, a notification
 asks you to open OpenDictate once. Key presses sent through adb can leave the
 same log line and count as presses.
 
-## Spoken commands for MCP servers
+## AI agent commands
 
-A double press of such a button dictates a command instead. OpenDictate sends
+The AI agent command dictates a command for the tools of your MCP servers. With
+a hold, letting go sends it; with a press, the next press does. OpenDictate sends
 the text to the text model together with the tools you enabled on your MCP
 servers, the model picks one tool, and the phone calls it. The outcome arrives
 as a notification; if the tool's answer holds a link, a tap opens it. There is

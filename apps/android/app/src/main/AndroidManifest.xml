@@ -87,7 +87,7 @@
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             tools:node="remove" />
 
-        <!-- Started only by the app, for a spoken command after a double press of a bound button. -->
+        <!-- Started only by the app, for a spoken AI agent command from a bound phone button. -->
         <activity
             android:name=".ui.CommandDictationActivity"
             android:excludeFromRecents="true"

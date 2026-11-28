@@ -118,6 +118,10 @@ abstract class DictationPanelActivity : ComponentActivity() {
         }
     }
 
+    /** A recording was requested; a stop from now on reaches it, even before the service starts. */
+    protected val isRecording: Boolean
+        get() = requestId != null
+
     protected fun stopRecording() {
         requestId?.let { runCatching { startService(serviceIntent(DictationForegroundService.ACTION_STOP_EXTERNAL, it)) } }
     }

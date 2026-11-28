@@ -1,5 +1,7 @@
 # OpenDictate agent guide
 
+Always reply to the user in Russian unless they ask for another language.
+
 ## Product contract
 
 OpenDictate is an Android/macOS monorepo. Both apps insert OpenAI speech
@@ -45,12 +47,17 @@ Meeting audio never touches disk; transcripts stay local, outside Drive.
 5. `PcmAudioRecorder` emits 24 kHz, mono, PCM16 chunks every 40 ms. `WavFile`
    adds the container only for the accurate path.
 
-`LogButton` serves buttons that Android withholds from apps, such as the OnePlus
-Plus Key: with adb-granted `READ_LOGS` and a bound button, it runs logcat filtered
-to the learned line's tag and reports presses. `ButtonTapGesture` turns presses
-into a toggle and, when MCP tools are enabled, a double press that dictates a
-command through `CommandDictationActivity`. Keep the log out of the app otherwise:
-no reader without a bound button, and no unfiltered reader outside binding.
+Phone buttons are bound per action: `ButtonBindings` gives dictation, the
+alternate dictation, voice editing and the AI agent command each at most one
+button and gesture (press, hold or double press), and a button's gesture runs one
+action. Buttons are keys Android reports or buttons that Android withholds from
+apps, such as the OnePlus Plus Key: with adb-granted `READ_LOGS`, `LogButton`
+runs one logcat filtered to the bound lines' tags and reports presses and, where
+logged, releases. `ButtonGestureRecognizer` waits only for gestures bound on the
+button; the accessibility service runs the actions, and the agent command opens
+`CommandDictationActivity`, which `CommandButtonHold` ends on release. Keep the
+log out of the app otherwise: no reader without a bound button, and no unfiltered
+reader outside binding.
 
 `AssistantCommands` carries out a spoken command: one text-model request with the
 enabled tools of the user's MCP servers (`AssistantCommand`), then one tool call

@@ -273,7 +273,7 @@ internal fun SettingsScreen(
                             viewModel::setFloatingButtonVisible)
                         SettingsDivider()
                         ActionRow(Icons.Outlined.SmartButton, stringResource(R.string.dictation_key_title),
-                            hardwareButtonSummary(LocalContext.current.resources, state.dictationKeyCode, state.logButtonTag), onHardwareButton)
+                            hardwareButtonSummary(LocalContext.current.resources, state.buttonBindings), onHardwareButton)
                         SettingsDivider()
                         ActionRow(Icons.Outlined.Tune, stringResource(R.string.dictation_button_appearance),
                             stringResource(R.string.dictation_button_appearance_summary,
