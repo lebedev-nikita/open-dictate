@@ -23,11 +23,10 @@ no backend, analytics or account to create.
 
 - **Live** (`gpt-live-transcribe`) inserts text as you speak.
 - **Accurate** (`gpt-transcribe`) transcribes a completed recording.
-- **On device** (Android phones with Gemini Nano) recognizes speech on the phone with
-  Gemini Nano through ML Kit and Android AICore. Text appears as you speak, audio stays
-  on the phone, and no API key is needed. Gemini Nano can also be the text model, but
-  Android allows it only while OpenDictate is open; over other apps the OpenAI text
-  model is used.
+- **On device** (Android phones that recognize the dictation language themselves)
+  recognizes speech on the phone through ML Kit, with Gemini Nano where Android AICore
+  offers it. Text appears as you speak, audio stays on the phone, and no API key is
+  needed. Voice editing and spoken commands still use the OpenAI text model.
 - **Post-processing → Enabled by default** chooses the main Android button's Accurate behavior.
   Punctuation and value-formatting settings stay available when it is off; changing
   the default preserves those rules.

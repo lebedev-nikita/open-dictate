@@ -192,13 +192,11 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
 - In the Live and Accurate modes, microphone audio is sent directly to OpenAI
   during dictation. Any mode's latest recording is sent to OpenAI only when you
   explicitly retry it.
-- On phones with Gemini Nano, the On device mode recognizes speech with Gemini
-  Nano through Google ML Kit and Android's AICore service. Audio goes to AICore
-  on the phone and is not sent to OpenAI. Choosing Gemini Nano as the text model
-  sends post-processing, voice-editing and spoken-command text to AICore first.
-  Android lets AICore answer only while an OpenDictate window is in front, so
-  text requests made over other apps go to OpenAI as before when a key is saved.
-  Both choices stay on the phone and are not synchronized. AICore may download
+- On phones that recognize the dictation language themselves, the On device
+  mode recognizes speech through Google ML Kit and Android's AICore service,
+  with Gemini Nano where the phone has it. Audio stays on the phone and is not
+  sent to OpenAI. Voice-editing and spoken-command text still goes to OpenAI.
+  The choice stays on the phone and is not synchronized. AICore may download
   model files from Google. ML Kit would also report usage statistics to Google,
   such as the device model, app version, latencies, error codes and configured
   language; OpenDictate removes the component that uploads them, so they are

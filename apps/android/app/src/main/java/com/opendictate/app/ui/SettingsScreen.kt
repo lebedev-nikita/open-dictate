@@ -111,8 +111,7 @@ import com.opendictate.app.model.DictationKeys
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.AppTheme
 import com.opendictate.app.model.ModelCatalog
-import com.opendictate.app.model.OnDeviceAvailability
-import com.opendictate.app.model.OnDeviceModels
+import com.opendictate.app.model.offered
 import com.opendictate.app.model.OnDeviceStatus
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.service.DictationPhase
@@ -146,6 +145,7 @@ internal fun SettingsScreen(
     val syncState by viewModel.driveSync.state.collectAsStateWithLifecycle()
     // On-device dictation works without a key, which then only unlocks the OpenAI models.
     val keyReady = state.hasApiKey || state.model == TranscriptionModel.ON_DEVICE
+    val onDeviceOffered = state.onDeviceSpeech.offered
     val ready = keyReady && state.microphoneGranted && state.accessibilityEnabled
     val missingSteps = listOf(keyReady, state.microphoneGranted, state.accessibilityEnabled).count { !it }
     val colors = MaterialTheme.colorScheme
@@ -215,6 +215,7 @@ internal fun SettingsScreen(
                                     stringResource(when {
                                         state.hasApiKey -> R.string.api_key_saved
                                         keyReady -> R.string.api_key_optional_on_device
+                                        onDeviceOffered -> R.string.api_key_needed_or_on_device
                                         else -> R.string.api_key_needed
                                     }), onApiKey)
                                 SettingsDivider()
@@ -229,41 +230,30 @@ internal fun SettingsScreen(
 
                     SectionTitle(stringResource(R.string.settings_dictation))
                     SettingsGroup {
-                        ModeSelector(state.model, state.onDevice?.speechOffered == true, viewModel::selectModel)
+                        ModeSelector(state.model, onDeviceOffered, viewModel::selectModel)
                         Text(
-                            stringResource(modeDescription(state.model, state.onDevice)),
+                            stringResource(modeDescription(state.model, state.onDeviceSpeech)),
                             Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                             style = MaterialTheme.typography.bodyMedium, color = SettingsMuted,
                         )
                         SettingsDivider(startInset = 16.dp)
+                        // The phone's recognizer has no choices, so its mode shows no recognition model.
                         when (state.model) {
                             TranscriptionModel.LIVE -> ModelPicker(Icons.Outlined.GraphicEq, stringResource(R.string.settings_recognition_model),
                                 state.liveModelId, modelOptions(state.modelCatalog.live, ModelCatalog.DEFAULT.live), viewModel::selectLiveModel)
                             TranscriptionModel.ACCURATE -> ModelPicker(Icons.Outlined.GraphicEq, stringResource(R.string.settings_recognition_model),
                                 state.accurateModelId, modelOptions(state.modelCatalog.accurate, ModelCatalog.DEFAULT.accurate), viewModel::selectAccurateModel)
-                            TranscriptionModel.ON_DEVICE -> ModelPicker(Icons.Outlined.GraphicEq, stringResource(R.string.settings_recognition_model),
-                                OnDeviceModels.ID, listOf(OnDeviceModels.ID), {}, displayName = OnDeviceModels::title)
+                            TranscriptionModel.ON_DEVICE -> Unit
                         }
-                        SettingsDivider()
-                        val cloudTextModel = com.opendictate.app.model.TextProcessingModel.selection(state.textProcessingModel, state.textProcessingServiceTier)
+                        if (state.model != TranscriptionModel.ON_DEVICE) SettingsDivider()
                         ModelPicker(
                             icon = Icons.Outlined.TextFields,
                             label = stringResource(R.string.settings_text_model),
-                            selected = if (state.onDeviceTextProcessing) OnDeviceModels.ID else cloudTextModel,
-                            options = com.opendictate.app.model.TextProcessingModel.defaults +
-                                listOfNotNull(OnDeviceModels.ID.takeIf { state.onDevice?.textOffered == true || state.onDeviceTextProcessing }),
+                            selected = com.opendictate.app.model.TextProcessingModel.selection(state.textProcessingModel, state.textProcessingServiceTier),
+                            options = com.opendictate.app.model.TextProcessingModel.defaults,
                             onSelect = viewModel::selectTextProcessingModel,
-                            displayName = { if (it == OnDeviceModels.ID) OnDeviceModels.TITLE else com.opendictate.app.model.TextProcessingModel.title(it) },
+                            displayName = com.opendictate.app.model.TextProcessingModel::title,
                         )
-                        if (state.onDeviceTextProcessing) {
-                            val downloading = state.onDevice?.text in setOf(OnDeviceStatus.DOWNLOADABLE, OnDeviceStatus.DOWNLOADING)
-                            Text(
-                                if (downloading) stringResource(R.string.text_model_on_device_downloading)
-                                else stringResource(R.string.text_model_on_device_hint, com.opendictate.app.model.TextProcessingModel.title(cloudTextModel)),
-                                Modifier.padding(start = SettingsRowTextStart, end = 16.dp, bottom = 16.dp),
-                                style = MaterialTheme.typography.bodySmall, color = SettingsMuted,
-                            )
-                        }
                         SettingsDivider()
                         ActionRow(Icons.Outlined.Language, stringResource(R.string.dictation_languages_title),
                             state.languages.summary(), { languagesOpen = true })
@@ -508,21 +498,20 @@ private fun SetupStepRow(icon: ImageVector, done: Boolean, title: String, subtit
     }
 }
 
-/** The on-device mode explains a download or a missing model; AICore reports both. */
-private fun modeDescription(model: TranscriptionModel, onDevice: OnDeviceAvailability?): Int = when (model) {
+/** The on-device mode explains a download or a missing model; ML Kit reports both. */
+private fun modeDescription(model: TranscriptionModel, onDevice: OnDeviceStatus?): Int = when (model) {
     TranscriptionModel.LIVE -> R.string.model_live_description
     TranscriptionModel.ACCURATE -> R.string.model_accurate_description
-    TranscriptionModel.ON_DEVICE -> when {
-        onDevice == null -> R.string.model_on_device_description
-        !onDevice.speechOffered -> R.string.model_on_device_unavailable
-        onDevice.speech != OnDeviceStatus.AVAILABLE -> R.string.model_on_device_downloading
-        else -> R.string.model_on_device_description
+    TranscriptionModel.ON_DEVICE -> when (onDevice) {
+        null, OnDeviceStatus.AVAILABLE -> R.string.model_on_device_description
+        OnDeviceStatus.UNAVAILABLE -> R.string.model_on_device_unavailable
+        OnDeviceStatus.DOWNLOADABLE, OnDeviceStatus.DOWNLOADING -> R.string.model_on_device_downloading
     }
 }
 
 @Composable
 private fun ModeSelector(selected: TranscriptionModel, onDeviceOffered: Boolean, onSelect: (TranscriptionModel) -> Unit) {
-    // The phone's own mode is offered only with Gemini Nano, but stays visible while chosen.
+    // The phone's own mode is offered only where it recognizes speech, but stays visible while chosen.
     val models = listOfNotNull(TranscriptionModel.ACCURATE, TranscriptionModel.LIVE,
         TranscriptionModel.ON_DEVICE.takeIf { onDeviceOffered || selected == it })
     val labels = mapOf(

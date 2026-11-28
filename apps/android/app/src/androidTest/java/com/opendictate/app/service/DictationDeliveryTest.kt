@@ -139,23 +139,6 @@ class DictationDeliveryTest {
         assertNull(ExternalDictationBus.awaitedRequestId)
     }
 
-    @Test fun geminiNanoCommandKeepsAnOpenDictateWindowInFrontUntilItEnds() = withCommandButton(ButtonGesture.HOLD) { service, button ->
-        val settings = SettingsStore(context)
-        val previous = settings.onDeviceTextProcessing
-        settings.onDeviceTextProcessing = true
-        try {
-            val listening = context.getString(R.string.command_indicator_listening)
-            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.PRESS, SystemClock.uptimeMillis())) }
-            await { overlay(listening) != null }
-            // The invisible window is an application window of this app, in front of the launcher.
-            await { frontWindowPackage() == context.packageName }
-            assertTrue(overlay(listening)!!.performAction(R.id.accessibility_action_dismiss_overlay))
-            await { overlay(listening) == null }
-            await { frontWindowPackage() != context.packageName }
-            instrumentation.runOnMainSync { service.onLogButton(LogButtonEvent(button, LogButtonEdge.RELEASE, SystemClock.uptimeMillis())) }
-        } finally { settings.onDeviceTextProcessing = previous }
-    }
-
     private fun frontWindowPackage(): String? = automation.windows
         .filter { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION }
         .maxByOrNull { it.layer }?.root?.packageName?.toString()

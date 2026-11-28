@@ -30,11 +30,10 @@ import com.opendictate.app.model.DictationButtonAppearance
 import com.opendictate.app.model.DictationLanguage
 import com.opendictate.app.model.McpServer
 import com.opendictate.app.model.ModelCatalog
-import com.opendictate.app.model.OnDeviceAvailability
 import com.opendictate.app.model.OnDeviceModels
 import com.opendictate.app.model.OnDeviceStatus
 import com.opendictate.app.model.PhoneButton
-import com.opendictate.app.ondevice.GeminiNano
+import com.opendictate.app.ondevice.OnDeviceSpeech
 import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.model.TranscriptionResponseTimeout
 import com.opendictate.app.network.McpClient
@@ -65,10 +64,8 @@ data class MainUiState(
     val modelCatalog: ModelCatalog = ModelCatalog.DEFAULT,
     val textProcessingModel: String = com.opendictate.app.model.TextProcessingModel.ID,
     val textProcessingServiceTier: com.opendictate.app.model.TextProcessingServiceTier = com.opendictate.app.model.TextProcessingServiceTier.STANDARD,
-    /** Gemini Nano answers text requests first; a device-local choice. */
-    val onDeviceTextProcessing: Boolean = false,
-    /** Null until AICore has answered. */
-    val onDevice: OnDeviceAvailability? = null,
+    /** Whether the phone recognizes the dictation language itself; null until ML Kit has answered. */
+    val onDeviceSpeech: OnDeviceStatus? = null,
     val modelsLoading: Boolean = false,
     val modelsError: Boolean = false,
     val newModelCount: Int = 0,
@@ -227,41 +224,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectModel(model: TranscriptionModel) {
         settings.model = model
         mutableState.update { it.copy(model = model) }
-        if (model == TranscriptionModel.ON_DEVICE) prepareOnDevice(speech = true)
+        if (model == TranscriptionModel.ON_DEVICE) prepareOnDevice()
     }
 
-    /** Asks AICore what this phone offers; recognition depends on the dictation language. */
+    /** Asks ML Kit whether this phone recognizes speech itself; that depends on the dictation language. */
     fun refreshOnDevice() {
         onDeviceJob?.cancel()
         onDeviceJob = viewModelScope.launch {
-            val text = GeminiNano.textStatus()
-            val speech = if (text == OnDeviceStatus.UNAVAILABLE) OnDeviceStatus.UNAVAILABLE
-                else GeminiNano.speechStatus(speechLocale())
-            mutableState.update { it.copy(onDevice = OnDeviceAvailability(speech, text)) }
+            val speech = OnDeviceSpeech.status(speechLocale())
+            mutableState.update { it.copy(onDeviceSpeech = speech) }
         }
     }
 
-    /** Emulators have no AICore; tests show the states of a phone with Gemini Nano. */
+    /** Emulators lack the recognizer; tests show the states of a phone that has it. */
     @androidx.annotation.VisibleForTesting
-    internal fun showOnDeviceAvailability(availability: OnDeviceAvailability?) {
+    internal fun showOnDeviceSpeech(status: OnDeviceStatus?) {
         onDeviceJob?.cancel()
-        mutableState.update { it.copy(onDevice = availability) }
+        mutableState.update { it.copy(onDeviceSpeech = status) }
     }
 
-    /** AICore downloads what the phone lacks once the user chooses it. */
-    private fun prepareOnDevice(speech: Boolean) {
-        val current = mutableState.value.onDevice ?: return
-        if ((if (speech) current.speech else current.text) != OnDeviceStatus.DOWNLOADABLE) return
+    /** ML Kit downloads what the phone lacks once the user chooses it. */
+    private fun prepareOnDevice() {
+        if (mutableState.value.onDeviceSpeech != OnDeviceStatus.DOWNLOADABLE) return
         val locale = speechLocale()
-        mutableState.update {
-            it.copy(onDevice = if (speech) current.copy(speech = OnDeviceStatus.DOWNLOADING) else current.copy(text = OnDeviceStatus.DOWNLOADING))
-        }
-        viewModelScope.launch {
-            val status = if (speech) GeminiNano.downloadSpeech(locale) else GeminiNano.downloadText()
-            mutableState.update {
-                val latest = it.onDevice ?: current
-                it.copy(onDevice = if (speech) latest.copy(speech = status) else latest.copy(text = status))
-            }
+        mutableState.update { it.copy(onDeviceSpeech = OnDeviceStatus.DOWNLOADING) }
+        onDeviceJob?.cancel()
+        onDeviceJob = viewModelScope.launch {
+            val status = OnDeviceSpeech.download(locale)
+            mutableState.update { it.copy(onDeviceSpeech = status) }
         }
     }
 
@@ -293,11 +283,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectTextProcessingModel(id: String) {
-        // Gemini Nano is a local choice; the synced OpenAI model stays for other devices and fallback.
-        val onDevice = id == OnDeviceModels.ID
-        settings.onDeviceTextProcessing = onDevice
-        mutableState.update { it.copy(onDeviceTextProcessing = onDevice) }
-        if (onDevice) return prepareOnDevice(speech = false)
         if (!com.opendictate.app.model.TextProcessingModel.isValid(id)) return
         val model = com.opendictate.app.model.TextProcessingModel.model(id)
         val tier = com.opendictate.app.model.TextProcessingModel.tier(id)
@@ -611,7 +596,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prompt = settings.prompt,
         postProcessing = settings.postProcessing,
         textProcessingModel = settings.textProcessingModel, textProcessingServiceTier = settings.textProcessingServiceTier,
-        onDeviceTextProcessing = settings.onDeviceTextProcessing,
         selectionDictionaryActionEnabled = isSelectionDictionaryActionEnabled(),
         floatingButtonVisible = settings.floatingButtonVisible,
         buttonBindings = settings.buttonBindings,

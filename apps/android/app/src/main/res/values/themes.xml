@@ -18,9 +18,4 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
-
-    <!-- A window that shows nothing and appears and leaves without animation. -->
-    <style name="Theme.OpenDictate.Invisible" parent="Theme.OpenDictate.Panel">
-        <item name="android:windowAnimationStyle">@null</item>
-    </style>
 </resources>

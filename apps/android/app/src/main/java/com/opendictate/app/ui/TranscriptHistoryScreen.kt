@@ -356,11 +356,13 @@ private fun HistoryItem(
 private fun HistoryProcessingDetails(item: TranscriptHistoryItem) {
     val live = item.mode == TranscriptionModel.LIVE
     val streamed = item.mode?.streamsPartials == true
-    val transcriptionModel = item.transcriptionModelId?.takeIf(String::isNotBlank)?.let(OnDeviceModels::title)
+    val onDeviceTitle = stringResource(R.string.settings_mode_on_device)
+    val transcriptionModel = item.transcriptionModelId?.takeIf(String::isNotBlank)
+        ?.let { if (it == OnDeviceModels.ID) onDeviceTitle else it }
     val transcriptionMillis = item.transcriptionMillis?.takeIf { !streamed && it >= 0 }
     val postProcessingModel = item.postProcessingModelId?.takeIf { !streamed && it.isNotBlank() }?.let { modelId ->
         item.postProcessingServiceTier?.let { TextProcessingModel.selection(modelId, it) }
-            ?.let(TextProcessingModel::title) ?: OnDeviceModels.title(modelId)
+            ?.let(TextProcessingModel::title) ?: modelId
     }
     val postProcessingMillis = item.postProcessingMillis?.takeIf { !streamed && it >= 0 }
     val hasTranscription = live || transcriptionModel != null || transcriptionMillis != null

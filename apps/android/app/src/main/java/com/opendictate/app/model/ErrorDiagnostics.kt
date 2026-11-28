@@ -13,7 +13,9 @@ enum class ErrorReason {
     NETWORK, TIMEOUT, HTTP, AUTHENTICATION, CREDENTIAL_STORAGE, PROVIDER, STREAM_INCOMPLETE, INVALID_RESPONSE,
     EMPTY_RESULT, WORDS_CHANGED, NUMBERS_CHANGED, SPACING_CHANGED, VALUE_CHANGED,
     MICROPHONE_PERMISSION, MISSING_API_KEY, MISSING_RECORDING, DELIVERY_REJECTED, UNKNOWN,
-    ON_DEVICE_UNAVAILABLE, ON_DEVICE_BLOCKED, ON_DEVICE_BUSY,
+    ON_DEVICE_UNAVAILABLE, ON_DEVICE_BUSY,
+    /** Only in history from the removed Gemini Nano text model; kept so those entries still load. */
+    ON_DEVICE_BLOCKED,
 }
 
 /** Only bundled identifiers may enter diagnostics; never retain arbitrary settings strings. */
