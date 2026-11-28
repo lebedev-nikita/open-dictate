@@ -70,11 +70,12 @@ same log line and count as presses.
 The AI agent command dictates a command for the tools of your MCP servers. With
 a hold, letting go sends it; with a press, the next press does. OpenDictate sends
 the text to the text model together with the tools you enabled on your MCP
-servers, the model picks one tool, and the phone calls it. The outcome appears
-in the banner described below; if the tool's answer holds a link, a tap opens it. There is
-one request to the model and one tool call per command, so a command cannot
-first look something up and then act on it. Only when the server refuses the
-call does the model see that error and try once more.
+servers, and the phone calls the tools the model chooses. Independent calls run
+together; a call that needs another's answer waits for it, so a command can
+first look something up and then act on it. Every answer, errors included, goes
+back to the model, which closes with a short sentence. A command makes at most
+6 rounds and 12 tool calls. The outcome appears in the banner described below;
+if a tool's answer holds a link, a tap opens the last one.
 
 A banner at the top of the screen follows the command: your words as they are
 recognized, the transcription, the agent at work, then what it did. Commands

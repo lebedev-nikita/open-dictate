@@ -472,7 +472,7 @@
         <item quantity="one">%1$d server</item>
         <item quantity="other">%1$d servers</item>
     </plurals>
-    <string name="mcp_servers_intro">Assign a phone button to the AI agent command under Phone buttons. The AI agent commands model picks one tool of these servers and the phone calls it. Enabled tools are sent to OpenAI with each command.</string>
+    <string name="mcp_servers_intro">Assign a phone button to the AI agent command under Phone buttons. The model calls tools of these servers through the phone, several at once or one after another. Enabled tools and their answers are sent to OpenAI.</string>
     <string name="mcp_server_add">Add a server</string>
     <string name="mcp_server_sheet_edit">Edit the server</string>
     <string name="mcp_server_edit">Edit %1$s</string>
