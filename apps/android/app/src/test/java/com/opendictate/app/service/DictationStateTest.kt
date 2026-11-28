@@ -93,6 +93,15 @@ class DictationStateTest {
     }
 
     @Test
+    fun `a spoken command's Live words never restore the field on cancellation`() {
+        for (model in listOf(TranscriptionModel.LIVE, TranscriptionModel.ON_DEVICE)) {
+            val state = DictationState(sessionId = 42L, phase = DictationPhase.LISTENING, model = model,
+                transcript = "partial", external = true)
+            assertFalse(state.shouldRestoreTextOnCancellation())
+        }
+    }
+
+    @Test
     fun `transformation cancellation leaves the field alone`() {
         val state = DictationState(
             sessionId = 42L,

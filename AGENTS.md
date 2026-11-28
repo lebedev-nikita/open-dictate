@@ -63,8 +63,11 @@ apps, such as the OnePlus Plus Key: with adb-granted `READ_LOGS`, `LogButton`
 runs one logcat filtered to the bound lines' tags and reports presses and, where
 logged, releases. `ButtonGestureRecognizer` waits only for gestures bound on the
 button; the accessibility service runs the actions, and the agent command runs in
-`CommandSession`, shown by an overlay indicator at the top of the screen and
-ended on release after a hold. Keep the log out of the app otherwise: no reader
+`CommandSession` and ends on release after a hold. One banner at the top shows
+the command from its recording to its outcome; Android starts a background
+microphone only behind a visible window, so the banner comes first. The button
+above the keyboard never shows a command. An outcome swiped up, or left alone,
+moves to the agent's notification; swiped aside it closes. Keep the log out of the app otherwise: no reader
 without a bound button, and no unfiltered reader outside binding.
 
 `AssistantCommands` carries out a spoken command: one text-model request with the

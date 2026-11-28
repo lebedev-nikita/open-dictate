@@ -310,7 +310,8 @@ private class OverlayPrimaryActionView(
     fun render(state: DictationState) {
         processingStage = state.activeProcessingStage ?: DictationProcessingStage.TRANSCRIPTION
         showProcessingIcon = state.showsProcessingIcon
-        if (state.isActive) {
+        // A spoken command or another app's session has its own indicator; the button stays idle.
+        if (state.isActive && !state.external) {
             phase = state.phase
             operation = state.operation
         } else {

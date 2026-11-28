@@ -29,6 +29,7 @@ import com.opendictate.app.model.ErrorOperation
 import com.opendictate.app.model.ErrorRoute
 import com.opendictate.app.model.ErrorStage
 import com.opendictate.app.model.ExternalDictationOutcome
+import com.opendictate.app.model.externalTranscriptionModel
 import com.opendictate.app.model.OnDeviceModels
 import com.opendictate.app.model.PostProcessingResult
 import com.opendictate.app.model.TranscriptionModel
@@ -85,7 +86,8 @@ class DictationForegroundService : Service() {
                 if (DictationStateBus.state.value.isActive) {
                     ExternalDictationBus.deliver(requestId, ExternalDictationOutcome.Busy)
                 } else {
-                    startDictation(DictationOperation.DICTATION, externalRequestId = requestId)
+                    startDictation(DictationOperation.DICTATION, externalRequestId = requestId,
+                        agentCommand = intent.getBooleanExtra(EXTRA_AGENT_COMMAND, false))
                 }
             }
             ACTION_STOP_EXTERNAL -> if (isExternalTarget(intent.getStringExtra(EXTRA_REQUEST_ID))) requestStop()
@@ -120,14 +122,14 @@ class DictationForegroundService : Service() {
         sourceText: String? = null,
         postProcessingOverride: Boolean? = null,
         externalRequestId: String? = null,
+        agentCommand: Boolean = false,
     ) {
         val external = externalRequestId != null
         val settings = SettingsStore(this)
-        // Other apps use the Accurate path with the saved post-processing rules, or the phone's own
-        // recognition when it is chosen.
+        // External requests keep the saved post-processing rules.
         val savedModel = settings.model
         val options = com.opendictate.app.model.DictationStartOptions.resolve(
-            if (external && savedModel != TranscriptionModel.ON_DEVICE) TranscriptionModel.ACCURATE else savedModel,
+            if (external) externalTranscriptionModel(savedModel, agentCommand) else savedModel,
             settings.postProcessing, postProcessingOverride.takeUnless { external })
         val model = options.model
         val apiKey = SecureApiKeyStore(this).get()?.takeIf(String::isNotBlank)
@@ -223,7 +225,8 @@ class DictationForegroundService : Service() {
                     val transcript = when (model) {
                         TranscriptionModel.LIVE -> {
                             diagnostics.stage(ErrorStage.TRANSCRIPTION, ErrorRoute.OPENAI_API, liveModelId)
-                            if (operation == DictationOperation.DICTATION) {
+                            // A spoken command's audio is never kept for a retry into a field.
+                            if (operation == DictationOperation.DICTATION && !external) {
                                 savedRecording = (application as OpenDictateApplication)
                                     .lastDictationAudioStore.begin(scope)
                             }
@@ -709,6 +712,8 @@ class DictationForegroundService : Service() {
         const val ACTION_STOP_EXTERNAL = "com.opendictate.app.action.STOP_EXTERNAL_DICTATION"
         const val ACTION_CANCEL_EXTERNAL = "com.opendictate.app.action.CANCEL_EXTERNAL_DICTATION"
         const val EXTRA_REQUEST_ID = "com.opendictate.app.extra.REQUEST_ID"
+        /** An external request from the AI agent command, which records in the saved mode. */
+        const val EXTRA_AGENT_COMMAND = "com.opendictate.app.extra.AGENT_COMMAND"
         private const val CHANNEL_ID = "dictation"
         private const val ERROR_CHANNEL_ID = "errors"
         private const val NOTIFICATION_ID = 41

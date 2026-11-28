@@ -388,7 +388,7 @@
     <string name="notification_text_external_recording">Tap Stop when you are done</string>
     <string name="notification_text_external_processing">The text will go to the app that asked for it</string>
     <string name="floating_button_title">Button above the keyboard</string>
-    <string name="floating_button_subtitle">When off, it appears only while dictating</string>
+    <string name="floating_button_subtitle">When off, dictation shows at the top of the screen</string>
     <string name="command_no_field">Focus a text field to dictate</string>
     <string name="command_microphone_unavailable">Android did not allow the microphone to start</string>
     <string name="dictation_key_title">Phone buttons</string>
@@ -457,13 +457,8 @@
     <string name="log_button_try_hint">Each press is named the way the app understands it. Other buttons do nothing here.</string>
     <string name="log_button_try_idle">Press the button</string>
     <string name="log_button_double_unused">not used</string>
-    <string name="command_indicator_listening">Listening to a command. Tap to finish, swipe away to cancel.</string>
-    <string name="command_indicator_transcribing">Transcribing the command. Swipe away to cancel.</string>
-    <string name="command_indicator_executing">Carrying out the command. Swipe away to hide.</string>
-    <string name="command_indicator_cancel">Cancel the command</string>
-    <string name="command_indicator_hide">Hide</string>
     <string name="assistant_channel">Spoken commands</string>
-    <string name="assistant_running">Carrying out the command…</string>
+    <string name="assistant_running">Carrying out the command</string>
     <string name="assistant_failed">The command was not carried out</string>
     <string name="assistant_no_tools">Add an MCP server and choose its tools in settings.</string>
     <string name="assistant_no_action">The model did not choose an action.</string>
@@ -528,4 +523,18 @@
     <!-- Only in history entries from the removed Gemini Nano text model. -->
     <string name="error_reason_on_device_blocked">Android allows Gemini Nano only while OpenDictate is open</string>
     <string name="error_reason_on_device_busy">On-device recognition is busy; try again later</string>
+    <string name="status_banner_command_listening">Listening to a command</string>
+    <string name="status_banner_command_transcribing">Transcribing the command</string>
+    <string name="status_banner_dictation_listening">Listening</string>
+    <string name="status_banner_transcribing">Transcribing</string>
+    <string name="status_banner_postprocessing">Processing the text</string>
+    <string name="status_banner_edit_listening">Listening to an edit</string>
+    <string name="status_banner_editing">Editing the text</string>
+    <string name="status_banner_hint_stop">Tap to finish, swipe away to cancel</string>
+    <string name="status_banner_hint_cancel">Swipe away to cancel</string>
+    <string name="status_banner_cancel">Cancel</string>
+    <string name="status_banner_hint_result">Swipe up to keep it in notifications, or aside to close</string>
+    <string name="status_banner_hint_to_notification">Swipe away to move it to notifications</string>
+    <string name="status_banner_to_notification">Move to notifications</string>
+    <string name="status_banner_close">Close</string>
 </resources>

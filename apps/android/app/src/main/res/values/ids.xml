@@ -3,5 +3,6 @@
     <item name="accessibility_action_cancel_dictation" type="id" />
     <item name="accessibility_action_cancel_transformation" type="id" />
     <item name="accessibility_action_dismiss_overlay" type="id" />
+    <item name="accessibility_action_close_banner" type="id" />
     <item name="accessibility_action_toggle_overlay_menu" type="id" />
 </resources>

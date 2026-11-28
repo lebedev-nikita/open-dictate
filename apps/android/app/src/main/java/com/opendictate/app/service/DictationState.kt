@@ -67,8 +67,9 @@ data class DictationState(
     internal fun acceptsCancellation(sessionId: Long): Boolean =
         sessionId != 0L && acceptsActiveUpdate(sessionId)
 
+    /** Another app's or a spoken command's words never reach the field, so nothing there is restored. */
     internal fun shouldRestoreTextOnCancellation(): Boolean =
-        operation == DictationOperation.DICTATION && model?.streamsPartials == true
+        operation == DictationOperation.DICTATION && !external && model?.streamsPartials == true
 }
 
 object DictationStateBus {

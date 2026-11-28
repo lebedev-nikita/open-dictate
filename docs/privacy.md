@@ -256,12 +256,13 @@ Google Account. See [setup and conflict behavior](https://github.com/lebedev-nik
   together with the names, descriptions and argument schemas of the enabled
   tools and any note you wrote for a server. The model's chosen tool call, with
   arguments taken from your words, is then sent from your phone to that MCP
-  server, and the server's answer is shown in a notification. If the server
+  server, and the server's answer is shown in a banner or notification. If the server
   answers with an error, that error goes to the model once so it can correct the
   call; other answers do not. Nothing goes to a server you did not add. Server addresses
   and tool lists are stored in app-private preferences, and tokens are encrypted
-  with Android Keystore; none of them are synchronized. These transcripts are
-  saved to history like other dictations, and their audio is deleted after use.
+  with Android Keystore; none of them are synchronized. A command is recorded in
+  your current dictation mode. These transcripts are saved to history like other
+  dictations, and their audio is not kept.
 - Control from other apps is off by default. When you turn it on, any app on the
   device can start, stop or cancel dictation into the field you are editing; the
   recording is always shown on screen and can be cancelled. Text is returned to
