@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.platform.app.InstrumentationRegistry
 import com.opendictate.app.MainActivity
 import com.opendictate.app.R
+import com.opendictate.app.model.TranscriptionModel
 import com.opendictate.app.data.*
 import com.opendictate.app.model.*
 import org.junit.Assert.*
@@ -22,6 +23,10 @@ import java.util.Locale
 class PostProcessingSettingsTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private fun label(id: Int) = compose.activity.getString(id)
+    private fun choose(mode: TranscriptionModel, modelId: String) {
+        compose.runOnIdle { androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java].selectDictation(com.opendictate.app.model.DictationChoice(mode, modelId)) }
+        compose.waitForIdle()
+    }
     private fun action(id: Int) { compose.onNodeWithText(label(id)).performScrollTo().performClick(); compose.waitForIdle() }
     private fun dateField() = compose.onNode(hasSetTextAction() and hasContentDescription(ValueKind.DATE.title(compose.activity.resources.configuration.locales[0].language == "ru")))
     private fun closeKeyboard() { androidx.test.espresso.Espresso.closeSoftKeyboard(); compose.waitForIdle() }
@@ -40,14 +45,14 @@ class PostProcessingSettingsTest {
                     if ((language in store.languages) != (language == DictationLanguage.ENGLISH || language == DictationLanguage.RUSSIAN)) viewModel.toggleLanguage(language)
                 }
             }
-            action(R.string.settings_mode_live)
+            choose(TranscriptionModel.LIVE, "gpt-live-transcribe")
             compose.onNodeWithContentDescription(label(R.string.postprocessing_default_enabled)).assertDoesNotExist()
-            action(R.string.settings_mode_accurate)
+            choose(TranscriptionModel.ACCURATE, "gpt-transcribe")
             compose.onNodeWithContentDescription(label(R.string.postprocessing_default_enabled)).performScrollTo().assertIsOff()
             compose.onNodeWithText(label(R.string.postprocessing_punctuation)).assertExists()
             compose.onNodeWithText(label(R.string.postprocessing_values)).assertExists()
             assertFalse(store.postProcessing.enabled); assertTrue(store.postProcessing.punctuation)
-            compose.onNodeWithText(label(R.string.postprocessing_title)).performScrollTo().assertIsDisplayed()
+            compose.onAllNodesWithText(label(R.string.postprocessing_title)).onLast().performScrollTo().assertIsDisplayed()
             capture("default-settings-top")
             compose.onNodeWithText(label(R.string.postprocessing_value_rules)).performScrollTo().assertIsDisplayed()
             capture("default-settings")

@@ -42,10 +42,10 @@
     <string name="hero_subtitle">Одна кнопка над клавиатурой — диктовка и правка текста в любом приложении.</string>
 
     <string name="model_live_title">Мгновенно</string>
-    <string name="model_live_description">Слова появляются прямо во время речи.</string>
+    <string name="model_live_description">Слова появляются во время речи</string>
     <string name="model_live_badge">ВО ВРЕМЯ РЕЧИ</string>
     <string name="model_accurate_title">Точнее</string>
-    <string name="model_accurate_description">Текст появляется после записи.</string>
+    <string name="model_accurate_description">Текст появляется после записи</string>
     <string name="model_accurate_badge">ПО УМОЛЧАНИЮ</string>
     <string name="models_refresh">Обновить модели OpenAI</string>
     <string name="models_loading">Обновление моделей…</string>
@@ -198,7 +198,6 @@
     <string name="settings_listening">Слушаю</string>
     <string name="settings_processing">Подготовка текста…</string>
     <string name="settings_dictation">Диктовка</string>
-    <string name="settings_recognition_model">Модель распознавания</string>
     <string name="settings_dictionary">Личный словарь</string>
     <string name="settings_dictionary_empty">Имена, термины и редкие слова</string>
     <string name="settings_dictionary_count">Записей в словаре: %1$d</string>
@@ -211,8 +210,6 @@
     <string name="settings_done">Готово</string>
     <string name="settings_active_hint">Нажмите кнопку ещё раз, чтобы закончить</string>
     <string name="settings_processing_hint">Текст появится, когда будет готов</string>
-    <string name="settings_mode_accurate">Точнее</string>
-    <string name="settings_mode_live">Сразу</string>
     <string name="replacements_title">Автозамена</string>
     <string name="replacements_summary">Настроено автозамен: %1$d</string>
     <string name="replacements_enable">Включить автозамену</string>
@@ -301,7 +298,6 @@
     <string name="history_transcription_time_description">Транскрипция: %1$s с</string>
     <string name="history_postprocessing_time_description">Постобработка: %1$s с</string>
     <string name="history_live_description">Диктовка Live</string>
-    <string name="settings_text_model">Текстовая модель</string>
     <string name="chatgpt_connect">Подключить ChatGPT</string>
     <string name="chatgpt_disconnect">Отключить</string>
     <string name="chatgpt_key_required">Сначала сохраните API-ключ для транскрипции.</string>
@@ -476,7 +472,7 @@
         <item quantity="many">%1$d серверов</item>
         <item quantity="other">%1$d сервера</item>
     </plurals>
-    <string name="mcp_servers_intro">Назначьте кнопку телефона команде ИИ-агенту в разделе «Кнопки телефона». Текстовая модель выбирает один инструмент этих серверов, и телефон вызывает его. Включённые инструменты отправляются в OpenAI с каждой командой.</string>
+    <string name="mcp_servers_intro">Назначьте кнопку телефона команде ИИ-агенту в разделе «Кнопки телефона». Модель для команд ИИ-агенту выбирает один инструмент этих серверов, и телефон вызывает его. Включённые инструменты отправляются в OpenAI с каждой командой.</string>
     <string name="mcp_server_add">Добавить сервер</string>
     <string name="mcp_server_sheet_edit">Изменить сервер</string>
     <string name="mcp_server_edit">Изменить «%1$s»</string>
@@ -513,9 +509,13 @@
     <string name="mcp_try_run">Выполнить</string>
     <!-- On-device recognition -->
     <string name="api_key_optional_on_device">Нужен только для моделей OpenAI</string>
-    <string name="api_key_needed_or_on_device">Нужен для OpenAI, или выберите «Локально»</string>
+    <string name="api_key_needed_or_on_device">Нужен для OpenAI, или выберите локальную модель</string>
+    <string name="dictation_model_on_device">Локальная модель</string>
+    <string name="settings_models">Модели</string>
+    <string name="text_model_commands">Команды ИИ-агенту</string>
+    <string name="text_model_needs_key">Нужен ключ OpenAI</string>
     <string name="settings_mode_on_device">Локально</string>
-    <string name="model_on_device_description">Слова появляются во время речи. Звук не покидает телефон.</string>
+    <string name="model_on_device_description">Без ключа, прямо на телефоне</string>
     <string name="model_on_device_downloading">Модель речи загружается. Диктовка заработает после загрузки.</string>
     <string name="model_on_device_unavailable">Телефон не может сам распознавать этот язык.</string>
     <string name="error_on_device_unavailable">Локальное распознавание не готово. Выберите другой режим в настройках.</string>
