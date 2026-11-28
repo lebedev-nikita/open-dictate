@@ -75,12 +75,14 @@ class TranscriptHistoryStore(context: Context, databaseName: String = DATABASE_N
                 put(COLUMN_TEXT, normalized)
                 put(COLUMN_CREATED_AT, createdAtEpochMillis)
                 put(COLUMN_MODE, mode?.name)
-                put(COLUMN_TRANSCRIPTION_MILLIS, transcriptionMillis.takeUnless { mode == TranscriptionModel.LIVE })
-                put(COLUMN_POSTPROCESSING_MILLIS, postProcessingMillis.takeUnless { mode == TranscriptionModel.LIVE })
+                // Streamed text has no separate transcription wait and is never post-processed.
+                val streamed = mode?.streamsPartials == true
+                put(COLUMN_TRANSCRIPTION_MILLIS, transcriptionMillis.takeUnless { streamed })
+                put(COLUMN_POSTPROCESSING_MILLIS, postProcessingMillis.takeUnless { streamed })
                 put(COLUMN_TRANSCRIPTION_MODEL, transcriptionModelId)
-                put(COLUMN_POSTPROCESSING_MODEL, postProcessingModelId.takeUnless { mode == TranscriptionModel.LIVE })
+                put(COLUMN_POSTPROCESSING_MODEL, postProcessingModelId.takeUnless { streamed })
                 put(COLUMN_POSTPROCESSING_SERVICE_TIER, postProcessingServiceTier?.apiValue
-                    .takeIf { mode != TranscriptionModel.LIVE && postProcessingModelId != null })
+                    .takeIf { !streamed && postProcessingModelId != null })
             },
         )
     }

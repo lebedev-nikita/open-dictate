@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import com.opendictate.app.R
 import com.opendictate.app.data.TranscriptHistoryItem
 import com.opendictate.app.model.TranscriptionModel
+import com.opendictate.app.model.OnDeviceModels
 import com.opendictate.app.model.TextProcessingModel
 import java.text.DateFormat
 import java.util.Date
@@ -354,13 +355,14 @@ private fun HistoryItem(
 @Composable
 private fun HistoryProcessingDetails(item: TranscriptHistoryItem) {
     val live = item.mode == TranscriptionModel.LIVE
-    val transcriptionModel = item.transcriptionModelId?.takeIf(String::isNotBlank)
-    val transcriptionMillis = item.transcriptionMillis?.takeIf { !live && it >= 0 }
-    val postProcessingModel = item.postProcessingModelId?.takeIf { !live && it.isNotBlank() }?.let { modelId ->
+    val streamed = item.mode?.streamsPartials == true
+    val transcriptionModel = item.transcriptionModelId?.takeIf(String::isNotBlank)?.let(OnDeviceModels::title)
+    val transcriptionMillis = item.transcriptionMillis?.takeIf { !streamed && it >= 0 }
+    val postProcessingModel = item.postProcessingModelId?.takeIf { !streamed && it.isNotBlank() }?.let { modelId ->
         item.postProcessingServiceTier?.let { TextProcessingModel.selection(modelId, it) }
-            ?.let(TextProcessingModel::title) ?: modelId
+            ?.let(TextProcessingModel::title) ?: OnDeviceModels.title(modelId)
     }
-    val postProcessingMillis = item.postProcessingMillis?.takeIf { !live && it >= 0 }
+    val postProcessingMillis = item.postProcessingMillis?.takeIf { !streamed && it >= 0 }
     val hasTranscription = live || transcriptionModel != null || transcriptionMillis != null
     val hasPostProcessing = postProcessingModel != null || postProcessingMillis != null
     if (!hasTranscription && !hasPostProcessing) return

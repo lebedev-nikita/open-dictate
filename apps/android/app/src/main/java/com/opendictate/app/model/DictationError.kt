@@ -24,6 +24,11 @@ sealed class DictationError(final override val failureDetails: FailureDetails) :
         }
     }
     data object Unexpected : DictationError(FailureDetails(ErrorReason.UNKNOWN))
+    /** Gemini Nano is missing, still downloading, or does not support the chosen language. */
+    data object OnDeviceUnavailable : DictationError(FailureDetails(ErrorReason.ON_DEVICE_UNAVAILABLE))
+    /** Android answers on-device text requests only while an OpenDictate window is in front. */
+    data object OnDeviceBlocked : DictationError(FailureDetails(ErrorReason.ON_DEVICE_BLOCKED))
+    data object OnDeviceBusy : DictationError(FailureDetails(ErrorReason.ON_DEVICE_BUSY))
 
     companion object {
         fun from(error: Throwable): DictationError {

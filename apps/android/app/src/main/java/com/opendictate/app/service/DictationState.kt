@@ -68,7 +68,7 @@ data class DictationState(
         sessionId != 0L && acceptsActiveUpdate(sessionId)
 
     internal fun shouldRestoreTextOnCancellation(): Boolean =
-        operation == DictationOperation.DICTATION && model == TranscriptionModel.LIVE
+        operation == DictationOperation.DICTATION && model?.streamsPartials == true
 }
 
 object DictationStateBus {

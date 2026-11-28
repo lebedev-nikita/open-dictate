@@ -15,6 +15,16 @@ The user chooses between two paths:
   partial transcripts while the user speaks.
 - `ACCURATE` records a temporary WAV file and sends it to
   `/v1/audio/transcriptions` with `gpt-transcribe` after recording stops.
+- `ON_DEVICE` (Android, offered only where AICore has Gemini Nano) streams the
+  same PCM to ML Kit speech recognition and applies partial text like `LIVE`.
+  It needs no key, and the choice stays on the device, outside Drive sync.
+
+Gemini Nano can also be the Android text model, again a device-local choice.
+AICore answers text only while an OpenDictate window is in front
+(`BACKGROUND_USE_BLOCKED` otherwise), so `TextRequests` falls back to the
+OpenAI text model over other apps. Never bring a window forward to avoid this.
+ML Kit's usage statistics are dropped by removing the datatransport backend
+from the manifest; keep it removed, and check that it still is after ML Kit updates.
 
 There is no backend. Audio goes directly from the device to OpenAI. The user
 supplies the API key, secured with Android Keystore or macOS Keychain. Preserve this
@@ -95,6 +105,8 @@ product.
 - `apps/android/app/src/main/java/com/opendictate/app/service/`: accessibility integration,
   foreground dictation lifecycle, text composition, and session state.
 - `apps/android/app/src/main/java/com/opendictate/app/network/`: OpenAI HTTP/WebSocket client.
+- `apps/android/app/src/main/java/com/opendictate/app/ondevice/`: Gemini Nano through ML Kit
+  GenAI and AICore; pure rules live in `model/OnDeviceModels.kt` and `model/OnDeviceText.kt`.
 - `apps/android/app/src/main/java/com/opendictate/app/audio/`: PCM capture and WAV encoding.
 - `apps/android/app/src/main/java/com/opendictate/app/data/`: encrypted credentials and local
   preferences.

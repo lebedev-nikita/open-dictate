@@ -13,11 +13,12 @@ enum class ErrorReason {
     NETWORK, TIMEOUT, HTTP, AUTHENTICATION, CREDENTIAL_STORAGE, PROVIDER, STREAM_INCOMPLETE, INVALID_RESPONSE,
     EMPTY_RESULT, WORDS_CHANGED, NUMBERS_CHANGED, SPACING_CHANGED, VALUE_CHANGED,
     MICROPHONE_PERMISSION, MISSING_API_KEY, MISSING_RECORDING, DELIVERY_REJECTED, UNKNOWN,
+    ON_DEVICE_UNAVAILABLE, ON_DEVICE_BLOCKED, ON_DEVICE_BUSY,
 }
 
 /** Only bundled identifiers may enter diagnostics; never retain arbitrary settings strings. */
 enum class DiagnosticModel(val id: String) {
-    LIVE("gpt-live-transcribe"), ACCURATE("gpt-transcribe"), TEXT("gpt-6-luna"), OTHER("other");
+    LIVE("gpt-live-transcribe"), ACCURATE("gpt-transcribe"), TEXT("gpt-6-luna"), NANO("gemini-nano"), OTHER("other");
 
     companion object {
         fun fromId(id: String): DiagnosticModel = entries.firstOrNull { it.id == id } ?: OTHER

@@ -109,9 +109,28 @@ class SettingsStore(context: Context) {
         return Closeable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
+    /**
+     * The dictation mode. On-device recognition is a device-local choice layered over the synced
+     * Live/Accurate choice, which other devices keep receiving and which returns when it is left.
+     */
     var model: TranscriptionModel
+        get() = if (prefs.getBoolean(KEY_ON_DEVICE_RECOGNITION, false)) TranscriptionModel.ON_DEVICE else syncedModel
+        set(value) {
+            if (value == TranscriptionModel.ON_DEVICE) {
+                prefs.edit { putBoolean(KEY_ON_DEVICE_RECOGNITION, true) }
+            } else {
+                prefs.edit { putBoolean(KEY_ON_DEVICE_RECOGNITION, false) }
+                saveSynced { putString(KEY_MODEL, value.name) }
+            }
+        }
+
+    private val syncedModel: TranscriptionModel
         get() = TranscriptionModel.fromStored(prefs.getString(KEY_MODEL, null))
-        set(value) = saveSynced { putString(KEY_MODEL, value.name) }
+
+    /** Gemini Nano handles text requests first when it can; device-local like on-device recognition. */
+    var onDeviceTextProcessing: Boolean
+        get() = prefs.getBoolean(KEY_ON_DEVICE_TEXT_PROCESSING, false)
+        set(value) = prefs.edit { putBoolean(KEY_ON_DEVICE_TEXT_PROCESSING, value) }
 
     var liveModelId: String
         get() = preferredModelId(
@@ -240,7 +259,7 @@ class SettingsStore(context: Context) {
         val replacements = replacementPrefs.getString("document", null) ?: "{\"schemaVersion\":1,\"rules\":[]}"
         ReplacementDocument.fromJson(replacements)
         return mutableMapOf<String, String?>(
-        "dictionary" to prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty(), "mode" to model.name.lowercase(),
+        "dictionary" to prefs.getString(KEY_PROMPT, DEFAULT_PROMPT).orEmpty(), "mode" to syncedModel.name.lowercase(),
         "liveModel" to prefs.getString(KEY_LIVE_MODEL_ID, ModelCatalog.DEFAULT.live.first()).orEmpty(),
         "accurateModel" to prefs.getString(KEY_ACCURATE_MODEL_ID, ModelCatalog.DEFAULT.accurate.first()).orEmpty(),
         "postprocessingRules" to postProcessing.rulesJson(),
@@ -329,6 +348,8 @@ class SettingsStore(context: Context) {
         private const val KEY_BUTTON_POSITION = "dictation_button_position"
         private const val KEY_THEME = "theme"
         private const val KEY_MODEL = "model"
+        private const val KEY_ON_DEVICE_RECOGNITION = "on_device_recognition"
+        private const val KEY_ON_DEVICE_TEXT_PROCESSING = "on_device_text_processing"
         private const val KEY_LIVE_MODEL_ID = "live_model_id"
         private const val KEY_ACCURATE_MODEL_ID = "accurate_model_id"
         private const val KEY_MODEL_CATALOG = "model_catalog"

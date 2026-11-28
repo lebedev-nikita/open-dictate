@@ -86,6 +86,13 @@ class DictationStateTest {
     }
 
     @Test
+    fun `on-device cancellation restores the field like Live`() {
+        val state = DictationState(sessionId = 42L, phase = DictationPhase.LISTENING,
+            model = TranscriptionModel.ON_DEVICE, transcript = "partial")
+        assertTrue(state.shouldRestoreTextOnCancellation())
+    }
+
+    @Test
     fun `transformation cancellation leaves the field alone`() {
         val state = DictationState(
             sessionId = 42L,

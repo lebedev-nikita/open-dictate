@@ -128,6 +128,9 @@ private fun ErrorHistoryRow(entry: ErrorHistoryEntry, onCopy: () -> Unit) {
         ErrorReason.MISSING_RECORDING -> R.string.error_reason_missing_recording
         ErrorReason.DELIVERY_REJECTED -> R.string.error_reason_delivery_rejected
         ErrorReason.UNKNOWN -> R.string.error_reason_unknown
+        ErrorReason.ON_DEVICE_UNAVAILABLE -> R.string.error_reason_on_device_unavailable
+        ErrorReason.ON_DEVICE_BLOCKED -> R.string.error_reason_on_device_blocked
+        ErrorReason.ON_DEVICE_BUSY -> R.string.error_reason_on_device_busy
     }
     Surface(shape = RoundedCornerShape(16.dp), color = SettingsSurface) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -138,7 +141,11 @@ private fun ErrorHistoryRow(entry: ErrorHistoryEntry, onCopy: () -> Unit) {
             val metadata = buildList {
                 add(route)
                 entry.context.model?.let {
-                    add(if (it == DiagnosticModel.OTHER) stringResource(R.string.error_model_other) else it.id)
+                    add(when (it) {
+                        DiagnosticModel.OTHER -> stringResource(R.string.error_model_other)
+                        DiagnosticModel.NANO -> com.opendictate.app.model.OnDeviceModels.TITLE
+                        else -> it.id
+                    })
                 }
                 entry.failure.httpStatus?.let { add("HTTP $it") }
                 entry.durationMillis?.let { add(stringResource(R.string.error_history_duration, it)) }

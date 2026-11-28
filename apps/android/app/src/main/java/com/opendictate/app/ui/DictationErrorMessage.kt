@@ -21,4 +21,7 @@ internal fun DictationError.userMessage(resources: Resources): String = when (th
     DictationError.EmptyTransformation -> resources.getString(R.string.error_transformation_empty)
     is DictationError.Rejected -> resources.getString(R.string.postprocessing_failed)
     DictationError.Unexpected -> resources.getString(R.string.error_transcription_failed)
+    DictationError.OnDeviceUnavailable -> resources.getString(R.string.error_on_device_unavailable)
+    DictationError.OnDeviceBlocked -> resources.getString(R.string.error_reason_on_device_blocked)
+    DictationError.OnDeviceBusy -> resources.getString(R.string.error_reason_on_device_busy)
 }
