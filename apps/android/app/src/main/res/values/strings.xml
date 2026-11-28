@@ -457,7 +457,11 @@
     <string name="log_button_try_hint">Each press is named the way the app understands it. Other buttons do nothing here.</string>
     <string name="log_button_try_idle">Press the button</string>
     <string name="log_button_double_unused">not used</string>
-    <string name="assistant_command_destination">Command for the AI agent</string>
+    <string name="command_indicator_listening">Listening to a command. Tap to finish, swipe away to cancel.</string>
+    <string name="command_indicator_transcribing">Transcribing the command. Swipe away to cancel.</string>
+    <string name="command_indicator_executing">Carrying out the command. Swipe away to hide.</string>
+    <string name="command_indicator_cancel">Cancel the command</string>
+    <string name="command_indicator_hide">Hide</string>
     <string name="assistant_channel">Spoken commands</string>
     <string name="assistant_running">Carrying out the command…</string>
     <string name="assistant_failed">The command was not carried out</string>
